@@ -1,0 +1,1043 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Opony.app — 01 Home · W:12.1</title>
+<!--
+  Screen: Home / Lista punktów
+  Ref:    docs/plan-sprintow.md → W:12.1
+  US:     US-04a (lista providerów), US-04b (cena + slot), US-06 (filtry), US-38 (lokalizacja)
+  Tone:   industrial-dark · graphite + amber accent · editorial typography
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Bebas+Neue&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    /* surfaces */
+    --bg: #0A0B0E;
+    --bg-tint-top: #12141A;
+    --surface: #14171D;
+    --surface-raised: #1B1E26;
+    --surface-hover: #23272F;
+    /* borders */
+    --border: #262A34;
+    --border-strong: #363B47;
+    --hairline: rgba(255, 255, 255, 0.06);
+    /* text */
+    --text-primary: #F5F4EF;
+    --text-secondary: #9EA2AD;
+    --text-muted: #60646F;
+    --text-on-accent: #0A0B0E;
+    /* accent */
+    --accent: #FF6B1A;
+    --accent-hover: #FF8039;
+    --accent-muted: rgba(255, 107, 26, 0.14);
+    --accent-border: rgba(255, 107, 26, 0.32);
+    --accent-glow: rgba(255, 107, 26, 0.45);
+    /* semantic */
+    --success: #2EE0A0;
+    --warning: #FFB020;
+    --danger: #FF5757;
+    /* fonts */
+    --font-display: 'Bebas Neue', sans-serif;
+    --font-body: 'Archivo', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body { height: 100%; }
+
+  body {
+    /* scale phone so it always fits in viewport without zooming.
+       subtracts label + caption + paddings; never scales above 1 (desktop) */
+    --phone-scale: min(1, calc((100vh - 240px) / 852), calc((100vw - 60px) / 393));
+    font-family: var(--font-body);
+    background: var(--bg);
+    color: var(--text-primary);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    background-image:
+      radial-gradient(ellipse 70% 50% at 50% 0%, rgba(255, 107, 26, 0.07) 0%, transparent 60%),
+      radial-gradient(ellipse 50% 30% at 90% 100%, rgba(46, 224, 160, 0.03) 0%, transparent 60%),
+      linear-gradient(180deg, var(--bg-tint-top) 0%, var(--bg) 30%);
+    background-attachment: fixed;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 48px 24px 80px;
+    gap: 28px;
+  }
+
+  /* wrapper z policzonym rozmiarem — pochłania transform:scale phona w layoucie */
+  .phone-holder {
+    width: calc(393px * var(--phone-scale));
+    height: calc(852px * var(--phone-scale));
+    position: relative;
+    flex-shrink: 0;
+  }
+
+  /* ====== Canvas label (outside phone) ====== */
+  .canvas-label {
+    width: 100%;
+    max-width: 560px;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: baseline;
+    gap: 20px;
+    padding-bottom: 18px;
+    border-bottom: 1px solid var(--border);
+  }
+  .film-strip {
+    font-family: var(--font-display);
+    font-size: 34px;
+    letter-spacing: 3px;
+    line-height: 1;
+  }
+  .slug {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    border-left: 1px solid var(--border);
+    padding-left: 18px;
+  }
+  .canvas-meta {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-secondary);
+    letter-spacing: 1px;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .canvas-meta .pulse {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 0 4px var(--accent-muted);
+    animation: pulse 1800ms ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 4px var(--accent-muted); opacity: 1; }
+    50%      { box-shadow: 0 0 0 8px transparent; opacity: 0.6; }
+  }
+
+  /* ====== Phone frame ====== */
+  .phone {
+    width: 393px;
+    height: 852px;
+    border-radius: 54px;
+    background: var(--bg);
+    border: 10px solid #0D0E12;
+    box-shadow:
+      0 0 0 1px #1C1E24,
+      0 40px 120px rgba(0, 0, 0, 0.7),
+      0 24px 48px rgba(0, 0, 0, 0.45),
+      inset 0 0 0 1px rgba(255, 255, 255, 0.03);
+    overflow: hidden;
+    position: absolute;
+    top: 0;
+    left: 0;
+    isolation: isolate;
+    transform: scale(var(--phone-scale));
+    transform-origin: top left;
+  }
+  /* Dynamic Island */
+  .phone::before {
+    content: '';
+    position: absolute;
+    top: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 124px;
+    height: 36px;
+    border-radius: 24px;
+    background: #000;
+    z-index: 100;
+  }
+  /* home indicator */
+  .phone::after {
+    content: '';
+    position: absolute;
+    bottom: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 134px;
+    height: 5px;
+    border-radius: 3px;
+    background: var(--text-primary);
+    opacity: 0.28;
+    z-index: 100;
+  }
+
+  /* ====== Status bar ====== */
+  .status-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 36px 0;
+    height: 54px;
+    font-weight: 700;
+    font-size: 15px;
+    color: var(--text-primary);
+    position: relative;
+    z-index: 90;
+  }
+  .status-right {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--text-primary);
+  }
+
+  /* ====== Screen shell ====== */
+  .screen {
+    position: absolute;
+    top: 54px;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* ====== App header ====== */
+  .app-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 20px 12px;
+  }
+  .wordmark {
+    font-family: var(--font-display);
+    font-size: 30px;
+    letter-spacing: 4px;
+    line-height: 1;
+    color: var(--text-primary);
+    display: inline-flex;
+    align-items: baseline;
+    gap: 4px;
+  }
+  .wordmark .dot {
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    background: var(--accent);
+    border-radius: 50%;
+    transform: translateY(-3px);
+    box-shadow: 0 0 12px var(--accent-glow);
+  }
+  /* ====== Context strip ====== */
+  .context {
+    padding: 4px 20px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .context-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+  }
+  .context-icon-wrap {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .context-icon-wrap.accent {
+    background: var(--accent-muted);
+    border-color: var(--accent-border);
+  }
+  .context-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.4px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    line-height: 1;
+    margin-bottom: 2px;
+  }
+  .context-value {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+    line-height: 1.1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .context-col { flex: 1; min-width: 0; }
+  .tire-tag {
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: 11px;
+    letter-spacing: 0.5px;
+    padding: 4px 8px;
+    border-radius: 5px;
+    background: var(--accent-muted);
+    border: 1px solid var(--accent-border);
+    color: var(--accent);
+    white-space: nowrap;
+  }
+  .change-btn {
+    font-family: var(--font-body);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.3px;
+    text-transform: uppercase;
+    color: var(--accent);
+    background: transparent;
+    border: none;
+    padding: 6px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 120ms ease;
+  }
+  .change-btn:hover { background: var(--accent-muted); }
+
+  /* ====== Search ====== */
+  .search-row { padding: 0 20px 12px; }
+  .search-input {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 13px 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    transition: border-color 140ms ease;
+  }
+  .search-input:focus-within { border-color: var(--accent-border); }
+  .search-input input {
+    flex: 1;
+    background: none;
+    border: none;
+    outline: none;
+    color: var(--text-primary);
+    font-family: var(--font-body);
+    font-size: 14px;
+  }
+  .search-input input::placeholder { color: var(--text-muted); }
+
+  /* ====== Toggle + filter row ====== */
+  .toggle-row {
+    padding: 0 20px 14px;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+  }
+  .segmented {
+    display: flex;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 3px;
+    gap: 2px;
+  }
+  .seg {
+    padding: 8px 14px;
+    border-radius: 7px;
+    font-family: var(--font-body);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    color: var(--text-secondary);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 160ms ease;
+  }
+  .seg:hover { color: var(--text-primary); }
+  .seg.active {
+    background: var(--accent);
+    color: var(--text-on-accent);
+    box-shadow: 0 4px 14px rgba(255, 107, 26, 0.35);
+  }
+  .count-badge {
+    margin-left: auto;
+    font-family: var(--font-mono);
+    font-weight: 500;
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 0.5px;
+  }
+  .count-badge strong { color: var(--text-primary); font-weight: 700; }
+
+  .filter-row {
+    padding: 0 20px 14px;
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .filter-row::-webkit-scrollbar { display: none; }
+  .chip {
+    flex-shrink: 0;
+    padding: 8px 14px;
+    border-radius: 999px;
+    font-family: var(--font-body);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    transition: all 160ms ease;
+  }
+  .chip:hover { background: var(--surface-hover); color: var(--text-primary); }
+  .chip.active {
+    background: var(--accent-muted);
+    border-color: var(--accent-border);
+    color: var(--accent);
+  }
+  .chip.sort-chip { margin-left: auto; background: transparent; }
+
+  /* ====== List ====== */
+  .list {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 0 20px 110px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    scrollbar-width: thin;
+  }
+  .list::-webkit-scrollbar { width: 3px; }
+  .list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  /* ====== Card ====== */
+  .card {
+    position: relative;
+    flex-shrink: 0;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    box-shadow: 0 8px 22px rgba(0, 0, 0, 0.3);
+    overflow: hidden;
+    cursor: pointer;
+    transition: transform 180ms ease, border-color 180ms ease, background 180ms ease;
+    animation: fadeRise 520ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  }
+  .card:nth-child(1) { animation-delay: 60ms; }
+  .card:nth-child(2) { animation-delay: 140ms; }
+  .card:nth-child(3) { animation-delay: 220ms; }
+  .card:nth-child(4) { animation-delay: 300ms; }
+  @keyframes fadeRise {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: var(--hairline);
+  }
+  .card:hover {
+    border-color: var(--border-strong);
+    background: var(--surface-raised);
+    transform: translateY(-2px);
+  }
+  .card:active { transform: scale(0.995); }
+  .card-head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .monogram {
+    width: 46px;
+    height: 46px;
+    border-radius: 10px;
+    background: var(--bg);
+    border: 1px solid var(--accent-border);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-display);
+    font-size: 22px;
+    letter-spacing: 1.5px;
+    color: var(--accent);
+    flex-shrink: 0;
+  }
+  .avatar-photo {
+    width: 46px;
+    height: 46px;
+    border-radius: 10px;
+    object-fit: cover;
+    border: 1px solid var(--border-strong);
+    flex-shrink: 0;
+    display: block;
+    background: var(--bg);
+  }
+  .card-title-col { flex: 1; min-width: 0; }
+  .card-name {
+    font-size: 17px;
+    font-weight: 700;
+    line-height: 22px;
+    margin-bottom: 4px;
+    color: var(--text-primary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .meta-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  /* Mobilny = wyróżnik (tylko ten typ dostaje tag; stacjonarny jest default = bez tagu). */
+  .mobile-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 8px;
+    border-radius: 5px;
+    background: var(--accent-muted);
+    border: 1px solid var(--accent-border);
+    color: var(--accent);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    box-shadow: 0 0 0 0 var(--accent-glow);
+  }
+  .dot-sep {
+    width: 3px;
+    height: 3px;
+    background: var(--text-muted);
+    border-radius: 50%;
+  }
+  .meta-inline {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+  .heart {
+    width: 36px;
+    height: 36px;
+    border-radius: 999px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-secondary);
+    transition: color 160ms ease, background 160ms ease;
+  }
+  .heart.active { color: var(--accent); }
+  .heart:hover { background: var(--surface-hover); }
+
+  .rating {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+  }
+  .rating-stars {
+    display: inline-flex;
+    align-items: center;
+    gap: 1px;
+  }
+  .rating-stars svg { display: block; }
+  .rating-val { font-weight: 700; color: var(--text-primary); }
+  .rating-count { font-size: 12px; color: var(--text-muted); margin-left: 2px; }
+
+  .price-block {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+  }
+  .overline {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.3px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+    line-height: 1;
+  }
+  .price-inline {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 4px;
+  }
+  .price-value {
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: 30px;
+    line-height: 1;
+    color: var(--text-primary);
+  }
+  .price-currency {
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--accent);
+  }
+  .price-for {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 4px;
+    font-weight: 500;
+  }
+  .price-arrow {
+    width: 34px;
+    height: 34px;
+    border-radius: 999px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-secondary);
+    flex-shrink: 0;
+  }
+
+  .slot {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding-top: 4px;
+    font-size: 13px;
+  }
+  .slot-label { color: var(--text-secondary); }
+  .slot-val {
+    margin-left: auto;
+    font-weight: 700;
+    color: var(--text-primary);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .slot-val.urgent { color: var(--accent); }
+  .slot-val.urgent::before {
+    content: '';
+    width: 7px;
+    height: 7px;
+    background: var(--accent);
+    border-radius: 50%;
+    box-shadow: 0 0 0 4px var(--accent-muted);
+    animation: pulse 1800ms ease-in-out infinite;
+  }
+
+  /* ====== Bottom nav ====== */
+  .bottom-nav {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--bg);
+    border-top: 1px solid var(--border);
+    padding: 10px 0 34px;
+    display: flex;
+    z-index: 60;
+    box-shadow: 0 -12px 24px rgba(0, 0, 0, 0.45);
+  }
+  .nav-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    padding-top: 6px;
+    position: relative;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--text-secondary);
+    font-family: var(--font-body);
+    transition: color 160ms ease;
+  }
+  .nav-item:hover { color: var(--text-primary); }
+  .nav-item.active { color: var(--accent); }
+  .nav-item.active::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    width: 38px;
+    height: 2px;
+    border-radius: 2px;
+    background: var(--accent);
+    box-shadow: 0 0 10px var(--accent-glow);
+  }
+  .nav-item .label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.4px;
+  }
+  .nav-item.active .label { font-weight: 700; }
+  .nav-item .badge {
+    position: absolute;
+    top: 3px;
+    right: 30%;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    border-radius: 8px;
+    background: var(--accent);
+    color: var(--text-on-accent);
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: 9px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid var(--bg);
+  }
+
+  /* ====== Caption footer outside phone ====== */
+  .caption {
+    max-width: 560px;
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 0.5px;
+  }
+  .caption strong {
+    color: var(--text-secondary);
+    font-weight: 500;
+    display: block;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    font-size: 10px;
+  }
+  .caption em {
+    color: var(--accent);
+    font-style: normal;
+  }
+
+</style>
+</head>
+<body>
+
+  <header class="canvas-label">
+    <span class="film-strip">OPONY — 01</span>
+    <span class="slug">home · lista punktów</span>
+    <span class="canvas-meta"><span class="pulse"></span>W:12.1 · US-04a / 04b / 06 / 38</span>
+  </header>
+
+  <div class="phone-holder">
+  <main class="phone" role="region" aria-label="Mockup iPhone — ekran Home">
+    <div class="status-bar">
+      <span>9:41</span>
+      <span class="status-right" aria-hidden="true">
+        <!-- signal -->
+        <svg width="18" height="12" viewBox="0 0 18 12" fill="currentColor"><rect x="0" y="8" width="3" height="4" rx="0.5"/><rect x="5" y="5" width="3" height="7" rx="0.5"/><rect x="10" y="2" width="3" height="10" rx="0.5"/><rect x="15" y="0" width="3" height="12" rx="0.5" opacity="0.4"/></svg>
+        <!-- wifi -->
+        <svg width="16" height="12" viewBox="0 0 16 12" fill="currentColor"><path d="M8 11.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z"/><path d="M4 7.5a6 6 0 0 1 8 0l-1 1a4.6 4.6 0 0 0-6 0l-1-1Z"/><path d="M1.5 4.5a10 10 0 0 1 13 0l-1 1a8.5 8.5 0 0 0-11 0l-1-1Z" opacity="0.6"/></svg>
+        <!-- battery -->
+        <svg width="26" height="12" viewBox="0 0 26 12" fill="none"><rect x="0.5" y="0.5" width="22" height="11" rx="3" stroke="currentColor" opacity="0.5"/><rect x="2" y="2" width="19" height="8" rx="1.5" fill="currentColor"/><rect x="23" y="4" width="2" height="4" rx="1" fill="currentColor" opacity="0.5"/></svg>
+      </span>
+    </div>
+
+    <div class="screen">
+
+      <!-- HEADER -->
+      <div class="app-header">
+        <div class="wordmark">OPONY<span class="dot"></span></div>
+      </div>
+
+      <!-- CONTEXT -->
+      <div class="context">
+        <div class="context-row">
+          <span class="context-icon-wrap accent">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+          </span>
+          <div class="context-col">
+            <div class="context-label">Lokalizacja</div>
+            <div class="context-value">Nowy Sącz Centrum</div>
+          </div>
+          <button class="change-btn">Zmień →</button>
+        </div>
+        <div class="context-row">
+          <span class="context-icon-wrap">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 17h14M7 12l1.5-4.5A2 2 0 0 1 10.4 6h3.2a2 2 0 0 1 1.9 1.5L17 12"/><path d="M5 17v1a1 1 0 0 0 1 1h1a1 1 0 0 0 1-1v-1M16 17v1a1 1 0 0 0 1 1h1a1 1 0 0 0 1-1v-1"/><path d="M5 12h14v5H5z"/><circle cx="7.5" cy="14.5" r="0.5" fill="currentColor"/><circle cx="16.5" cy="14.5" r="0.5" fill="currentColor"/></svg>
+          </span>
+          <div class="context-col">
+            <div class="context-label">Pojazd</div>
+            <div class="context-value">Ford Focus 2019</div>
+          </div>
+          <span class="tire-tag">205/55 R16</span>
+        </div>
+      </div>
+
+      <!-- SEARCH -->
+      <div class="search-row">
+        <div class="search-input">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4-4"/></svg>
+          <input placeholder="Szukaj nazwy lub ulicy..." />
+        </div>
+      </div>
+
+      <!-- TOGGLE -->
+      <div class="toggle-row">
+        <div class="segmented" role="tablist">
+          <button class="seg" role="tab" aria-selected="false">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3V6Z"/><path d="M9 3v15M15 6v15"/></svg>
+            Mapa
+          </button>
+          <button class="seg active" role="tab" aria-selected="true">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13"/><circle cx="3.5" cy="6" r="1" fill="currentColor"/><circle cx="3.5" cy="12" r="1" fill="currentColor"/><circle cx="3.5" cy="18" r="1" fill="currentColor"/></svg>
+            Lista
+          </button>
+        </div>
+        <span class="count-badge"><strong>4</strong> PUNKTY</span>
+      </div>
+
+      <!-- FILTERS -->
+      <div class="filter-row">
+        <button class="chip active">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+          Dziś
+        </button>
+        <button class="chip">Jutro</button>
+        <button class="chip">Weekend</button>
+        <button class="chip">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 17h14M7 12l1.5-4.5A2 2 0 0 1 10.4 6h3.2a2 2 0 0 1 1.9 1.5L17 12"/><path d="M5 12h14v5H5z"/><circle cx="7.5" cy="17" r="1.5" fill="currentColor"/><circle cx="16.5" cy="17" r="1.5" fill="currentColor"/></svg>
+          Z dojazdem
+        </button>
+        <button class="chip">Ocena 4.5+</button>
+        <button class="chip">Do 200 zł</button>
+        <button class="chip sort-chip">
+          Cena ↓
+        </button>
+      </div>
+
+      <!-- LIST -->
+      <div class="list">
+
+        <!-- Card 1 — najbliższy, FAV, "Dziś" (urgent) — avatar photo -->
+        <article class="card">
+          <header class="card-head">
+            <img class="avatar-photo" src="https://picsum.photos/seed/mobilopony-kasia/92/92" alt="MobilOpony Kasia — zdjęcie punktu" />
+            <div class="card-title-col">
+              <div class="card-name">MobilOpony Kasia</div>
+              <div class="meta-row">
+                <span class="mobile-tag">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 17h14M7 12l1.5-4.5A2 2 0 0 1 10.4 6h3.2a2 2 0 0 1 1.9 1.5L17 12"/><path d="M5 12h14v5H5z"/><circle cx="7.5" cy="17" r="1.5" fill="currentColor"/><circle cx="16.5" cy="17" r="1.5" fill="currentColor"/></svg>
+                  Z dojazdem
+                </span>
+                <span class="dot-sep"></span>
+                <span class="meta-inline">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                  2,1 km
+                </span>
+              </div>
+            </div>
+            <button class="heart active" aria-label="Ulubione">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78Z"/></svg>
+            </button>
+          </header>
+          <div class="rating">
+            <span class="rating-stars" aria-hidden="true">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="var(--accent)"><polygon points="12 2 15 9 22 9.5 17 14 18.5 21 12 17.5 5.5 21 7 14 2 9.5 9 9 12 2"/></svg>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="var(--accent)"><polygon points="12 2 15 9 22 9.5 17 14 18.5 21 12 17.5 5.5 21 7 14 2 9.5 9 9 12 2"/></svg>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="var(--accent)"><polygon points="12 2 15 9 22 9.5 17 14 18.5 21 12 17.5 5.5 21 7 14 2 9.5 9 9 12 2"/></svg>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="var(--accent)"><polygon points="12 2 15 9 22 9.5 17 14 18.5 21 12 17.5 5.5 21 7 14 2 9.5 9 9 12 2"/></svg>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="var(--accent)" opacity="0.4"><polygon points="12 2 15 9 22 9.5 17 14 18.5 21 12 17.5 5.5 21 7 14 2 9.5 9 9 12 2"/></svg>
+            </span>
+            <span class="rating-val">4,8</span>
+            <span class="rating-count">(127 opinii)</span>
+          </div>
+          <div class="price-block">
+            <div>
+              <div class="overline">Cena dla Twoich opon</div>
+              <div class="price-inline">
+                <span class="price-value">180</span>
+                <span class="price-currency">zł</span>
+              </div>
+              <div class="price-for">wymiana 4 opon · 205/55 R16</div>
+            </div>
+            <div class="price-arrow" aria-hidden="true">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg>
+            </div>
+          </div>
+          <div class="slot">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+            <span class="slot-label">Najbliższy termin</span>
+            <span class="slot-val urgent">Dziś 16:30</span>
+          </div>
+        </article>
+
+        <!-- Card 2 — "Jutro" -->
+        <article class="card">
+          <header class="card-head">
+            <div class="monogram">SW</div>
+            <div class="card-title-col">
+              <div class="card-name">Szybka Wymiana</div>
+              <div class="meta-row">
+                <span class="mobile-tag">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 17h14M7 12l1.5-4.5A2 2 0 0 1 10.4 6h3.2a2 2 0 0 1 1.9 1.5L17 12"/><path d="M5 12h14v5H5z"/><circle cx="7.5" cy="17" r="1.5" fill="currentColor"/><circle cx="16.5" cy="17" r="1.5" fill="currentColor"/></svg>
+                  Z dojazdem
+                </span>
+                <span class="dot-sep"></span>
+                <span class="meta-inline">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                  3,8 km
+                </span>
+              </div>
+            </div>
+            <button class="heart" aria-label="Dodaj do ulubionych">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78Z"/></svg>
+            </button>
+          </header>
+          <div class="rating">
+            <span class="rating-stars" aria-hidden="true">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="var(--accent)"><polygon points="12 2 15 9 22 9.5 17 14 18.5 21 12 17.5 5.5 21 7 14 2 9.5 9 9 12 2"/></svg>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="var(--accent)"><polygon points="12 2 15 9 22 9.5 17 14 18.5 21 12 17.5 5.5 21 7 14 2 9.5 9 9 12 2"/></svg>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="var(--accent)"><polygon points="12 2 15 9 22 9.5 17 14 18.5 21 12 17.5 5.5 21 7 14 2 9.5 9 9 12 2"/></svg>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="var(--accent)"><polygon points="12 2 15 9 22 9.5 17 14 18.5 21 12 17.5 5.5 21 7 14 2 9.5 9 9 12 2"/></svg>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="var(--accent)" opacity="0.4"><polygon points="12 2 15 9 22 9.5 17 14 18.5 21 12 17.5 5.5 21 7 14 2 9.5 9 9 12 2"/></svg>
+            </span>
+            <span class="rating-val">4,5</span>
+            <span class="rating-count">(43 opinie)</span>
+          </div>
+          <div class="price-block">
+            <div>
+              <div class="overline">Cena dla Twoich opon</div>
+              <div class="price-inline">
+                <span class="price-value">200</span>
+                <span class="price-currency">zł</span>
+              </div>
+              <div class="price-for">wymiana 4 opon · 205/55 R16</div>
+            </div>
+            <div class="price-arrow" aria-hidden="true">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg>
+            </div>
+          </div>
+          <div class="slot">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+            <span class="slot-label">Najbliższy termin</span>
+            <span class="slot-val">Jutro 9:00</span>
+          </div>
+        </article>
+
+        <!-- Card 3 — stacjonarny, wysoka ocena -->
+        <article class="card">
+          <header class="card-head">
+            <div class="monogram">VP</div>
+            <div class="card-title-col">
+              <div class="card-name">Vulkanizator Pro</div>
+              <div class="meta-row">
+                <span class="meta-inline">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                  4,2 km
+                </span>
+              </div>
+            </div>
+            <button class="heart" aria-label="Dodaj do ulubionych">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78Z"/></svg>
+            </button>
+          </header>
+          <div class="rating">
+            <span class="rating-stars" aria-hidden="true">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="var(--accent)"><polygon points="12 2 15 9 22 9.5 17 14 18.5 21 12 17.5 5.5 21 7 14 2 9.5 9 9 12 2"/></svg>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="var(--accent)"><polygon points="12 2 15 9 22 9.5 17 14 18.5 21 12 17.5 5.5 21 7 14 2 9.5 9 9 12 2"/></svg>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="var(--accent)"><polygon points="12 2 15 9 22 9.5 17 14 18.5 21 12 17.5 5.5 21 7 14 2 9.5 9 9 12 2"/></svg>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="var(--accent)"><polygon points="12 2 15 9 22 9.5 17 14 18.5 21 12 17.5 5.5 21 7 14 2 9.5 9 9 12 2"/></svg>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="var(--accent)"><polygon points="12 2 15 9 22 9.5 17 14 18.5 21 12 17.5 5.5 21 7 14 2 9.5 9 9 12 2"/></svg>
+            </span>
+            <span class="rating-val">4,9</span>
+            <span class="rating-count">(218 opinii)</span>
+          </div>
+          <div class="price-block">
+            <div>
+              <div class="overline">Cena dla Twoich opon</div>
+              <div class="price-inline">
+                <span class="price-value">220</span>
+                <span class="price-currency">zł</span>
+              </div>
+              <div class="price-for">wymiana 4 opon · 205/55 R16</div>
+            </div>
+            <div class="price-arrow" aria-hidden="true">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg>
+            </div>
+          </div>
+          <div class="slot">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+            <span class="slot-label">Najbliższy termin</span>
+            <span class="slot-val">Jutro 12:15</span>
+          </div>
+        </article>
+
+      </div>
+
+      <!-- BOTTOM NAV -->
+      <nav class="bottom-nav" aria-label="Nawigacja główna">
+        <button class="nav-item active">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4-4"/></svg>
+          <span class="label">Szukaj</span>
+        </button>
+        <button class="nav-item">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M3 10h18M8 2v4M16 2v4"/><circle cx="12" cy="15" r="1.5" fill="currentColor"/></svg>
+          <span class="label">Rezerwacje</span>
+          <span class="badge">1</span>
+        </button>
+        <button class="nav-item">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>
+          <span class="label">Profil</span>
+        </button>
+      </nav>
+    </div>
+  </main>
+
+  </div>
+
+  <footer class="caption">
+    <div>
+      <strong>Komponenty użyte</strong>
+      Header · Context strip · Search input · Segmented (Mapa/Lista) · Filter chips · Provider card × 3 · Bottom nav
+    </div>
+    <div>
+      <strong>Do iteracji / pytania</strong>
+      kierunek OK? kolor <em>amber</em>, typografia <em>Bebas + Archivo + JetBrains Mono</em>, układ karty, urgent slot „Dziś"
+    </div>
+  </footer>
+
+</body>
+</html>

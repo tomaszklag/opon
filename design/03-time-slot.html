@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Opony.app — 03 Wybór slotu · W:12.3</title>
+<!--
+  Screen: Wybór slotu (kalendarz + godziny)
+  Ref:    docs/plan-sprintow.md → W:12.3
+  US:     US-08a (wybór slotu), US-08b (adres dla mobilnego), US-09 (notatka — opcj.)
+  Tone:   industrial-dark · step 2/3 · compact calendar + slot chipy
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Bebas+Neue&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0A0B0E;
+    --bg-tint-top: #12141A;
+    --surface: #14171D;
+    --surface-raised: #1B1E26;
+    --surface-hover: #23272F;
+    --border: #262A34;
+    --border-strong: #363B47;
+    --hairline: rgba(255, 255, 255, 0.06);
+    --text-primary: #F5F4EF;
+    --text-secondary: #9EA2AD;
+    --text-muted: #60646F;
+    --text-on-accent: #0A0B0E;
+    --accent: #FF6B1A;
+    --accent-hover: #FF8039;
+    --accent-muted: rgba(255, 107, 26, 0.14);
+    --accent-border: rgba(255, 107, 26, 0.32);
+    --accent-glow: rgba(255, 107, 26, 0.45);
+    --success: #2EE0A0;
+    --warning: #FFB020;
+    --danger: #FF5757;
+    --font-display: 'Bebas Neue', sans-serif;
+    --font-body: 'Archivo', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    --phone-scale: min(1, calc((100vh - 240px) / 852), calc((100vw - 60px) / 393));
+    font-family: var(--font-body);
+    background: var(--bg);
+    color: var(--text-primary);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    background-image:
+      radial-gradient(ellipse 70% 50% at 50% 0%, rgba(255, 107, 26, 0.07) 0%, transparent 60%),
+      radial-gradient(ellipse 50% 30% at 90% 100%, rgba(46, 224, 160, 0.03) 0%, transparent 60%),
+      linear-gradient(180deg, var(--bg-tint-top) 0%, var(--bg) 30%);
+    background-attachment: fixed;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 48px 24px 80px;
+    gap: 28px;
+  }
+
+  .phone-holder {
+    width: calc(393px * var(--phone-scale));
+    height: calc(852px * var(--phone-scale));
+    position: relative;
+    flex-shrink: 0;
+  }
+
+  .canvas-label {
+    width: 100%;
+    max-width: 560px;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: baseline;
+    gap: 20px;
+    padding-bottom: 18px;
+    border-bottom: 1px solid var(--border);
+  }
+  .film-strip { font-family: var(--font-display); font-size: 34px; letter-spacing: 3px; line-height: 1; }
+  .slug {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    border-left: 1px solid var(--border);
+    padding-left: 18px;
+  }
+  .canvas-meta {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-secondary);
+    letter-spacing: 1px;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .canvas-meta .pulse {
+    display: inline-block;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 0 4px var(--accent-muted);
+    animation: pulse 1800ms ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 4px var(--accent-muted); opacity: 1; }
+    50%      { box-shadow: 0 0 0 8px transparent; opacity: 0.6; }
+  }
+
+  /* Phone */
+  .phone {
+    width: 393px;
+    height: 852px;
+    border-radius: 54px;
+    background: var(--bg);
+    border: 10px solid #0D0E12;
+    box-shadow:
+      0 0 0 1px #1C1E24,
+      0 40px 120px rgba(0, 0, 0, 0.7),
+      0 24px 48px rgba(0, 0, 0, 0.45),
+      inset 0 0 0 1px rgba(255, 255, 255, 0.03);
+    overflow: hidden;
+    position: absolute;
+    top: 0; left: 0;
+    isolation: isolate;
+    transform: scale(var(--phone-scale));
+    transform-origin: top left;
+  }
+  .phone::before {
+    content: '';
+    position: absolute;
+    top: 12px; left: 50%;
+    transform: translateX(-50%);
+    width: 124px; height: 36px;
+    border-radius: 24px;
+    background: #000;
+    z-index: 100;
+  }
+  .phone::after {
+    content: '';
+    position: absolute;
+    bottom: 8px; left: 50%;
+    transform: translateX(-50%);
+    width: 134px; height: 5px;
+    border-radius: 3px;
+    background: var(--text-primary);
+    opacity: 0.28;
+    z-index: 100;
+  }
+
+  .status-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 36px 0;
+    height: 54px;
+    font-weight: 700;
+    font-size: 15px;
+  }
+  .status-bar .right { display: inline-flex; gap: 6px; align-items: center; }
+
+  .screen {
+    position: absolute;
+    top: 54px; left: 0; right: 0; bottom: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* ====== Nav + Steps ====== */
+  .nav-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 16px 4px;
+  }
+  .back-btn {
+    width: 40px; height: 40px;
+    border-radius: 10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    cursor: pointer;
+  }
+  .back-btn:hover { background: var(--surface); border-color: var(--border-strong); }
+  .nav-title {
+    font-family: var(--font-display);
+    font-size: 26px;
+    letter-spacing: 2.5px;
+    line-height: 1;
+    color: var(--text-primary);
+  }
+
+  .stepper {
+    padding: 12px 20px 14px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    flex: 0 0 auto;
+  }
+  .step-num {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 1.5px solid var(--border-strong);
+    background: var(--bg);
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .step.done .step-num {
+    background: var(--accent-muted);
+    border-color: var(--accent-border);
+    color: var(--accent);
+  }
+  .step.active .step-num {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--text-on-accent);
+    box-shadow: 0 0 0 4px var(--accent-muted);
+  }
+  .step-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+  .step.done .step-label { color: var(--text-secondary); }
+  .step.active .step-label { color: var(--accent); }
+  .step-line {
+    flex: 1;
+    height: 1.5px;
+    background: var(--border);
+    min-width: 18px;
+    margin: 0 2px;
+    margin-top: -14px;
+    border-radius: 2px;
+  }
+  .step-line.done { background: var(--accent); }
+
+  /* ====== Context strip ====== */
+  .context {
+    padding: 12px 20px 14px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border-top: 1px solid var(--border);
+  }
+  .ctx-avatar {
+    width: 44px; height: 44px;
+    border-radius: 10px;
+    object-fit: cover;
+    border: 1px solid var(--border-strong);
+    flex-shrink: 0;
+  }
+  .ctx-col { flex: 1; min-width: 0; }
+  .ctx-name {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .ctx-line {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-top: 3px;
+  }
+  .ctx-tire {
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: 11px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: var(--accent-muted);
+    border: 1px solid var(--accent-border);
+    color: var(--accent);
+  }
+  .ctx-price {
+    font-family: var(--font-mono);
+    font-weight: 700;
+    color: var(--text-primary);
+  }
+  .ctx-change {
+    font-family: var(--font-body);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 1.1px;
+    text-transform: uppercase;
+    color: var(--accent);
+    background: transparent;
+    border: none;
+    padding: 8px 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .ctx-change:hover { background: var(--accent-muted); }
+
+  /* ====== Scroll area ====== */
+  .content {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 16px 20px 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+    scrollbar-width: thin;
+  }
+  .content::-webkit-scrollbar { width: 3px; }
+  .content::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  /* ====== Date picker ====== */
+  .cal-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+  .cal-title {
+    font-family: var(--font-display);
+    font-size: 22px;
+    letter-spacing: 2px;
+    color: var(--text-primary);
+    line-height: 1;
+  }
+  .cal-year {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 1px;
+    margin-left: 6px;
+  }
+  .cal-nav {
+    display: inline-flex;
+    gap: 6px;
+    align-items: center;
+  }
+  .cal-btn {
+    width: 30px; height: 30px;
+    border-radius: 8px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
+  .cal-btn:hover { background: var(--surface-hover); border-color: var(--border-strong); }
+  .cal-today {
+    padding: 6px 10px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    cursor: pointer;
+  }
+  .cal-today:hover { background: var(--surface); }
+
+  .days-row {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding-bottom: 2px;
+    scrollbar-width: none;
+  }
+  .days-row::-webkit-scrollbar { display: none; }
+  .day-chip {
+    flex-shrink: 0;
+    width: 56px;
+    padding: 10px 4px 8px;
+    border-radius: 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    cursor: pointer;
+    transition: all 140ms ease;
+    position: relative;
+  }
+  .day-chip:hover { background: var(--surface-hover); }
+  .day-chip.selected {
+    background: var(--accent);
+    border-color: var(--accent);
+    box-shadow: 0 6px 18px rgba(255, 107, 26, 0.35);
+  }
+  .day-chip.weekend { opacity: 0.55; }
+  .day-chip.unavailable {
+    opacity: 0.35;
+    cursor: not-allowed;
+  }
+  .day-dow {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+  .day-chip.selected .day-dow { color: var(--text-on-accent); opacity: 0.7; }
+  .day-num {
+    font-family: var(--font-display);
+    font-size: 22px;
+    letter-spacing: 1px;
+    line-height: 1;
+    color: var(--text-primary);
+  }
+  .day-chip.selected .day-num { color: var(--text-on-accent); }
+  .day-avail-dot {
+    width: 4px; height: 4px;
+    border-radius: 50%;
+    background: var(--success);
+    margin-top: 2px;
+  }
+  .day-chip.selected .day-avail-dot { background: var(--text-on-accent); }
+  .day-chip.unavailable .day-avail-dot { background: var(--border-strong); }
+
+  /* ====== Slot groups ====== */
+  .slot-group { display: flex; flex-direction: column; gap: 10px; }
+  .slot-group-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .slot-group-label {
+    font-family: var(--font-display);
+    font-size: 14px;
+    letter-spacing: 2px;
+    color: var(--text-secondary);
+  }
+  .slot-group-count {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--text-muted);
+    letter-spacing: 0.5px;
+  }
+  .slot-group-line {
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  .slots-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+  .slot {
+    position: relative;
+    padding: 12px 8px;
+    border-radius: 10px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--text-primary);
+    text-align: center;
+    cursor: pointer;
+    transition: all 140ms ease;
+  }
+  .slot:hover { background: var(--surface-hover); border-color: var(--border-strong); }
+  .slot.selected {
+    background: var(--accent);
+    color: var(--text-on-accent);
+    border-color: var(--accent);
+    box-shadow: 0 6px 18px rgba(255, 107, 26, 0.35);
+  }
+  .slot.selected::after {
+    content: '';
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--text-on-accent);
+  }
+  .slot.taken {
+    color: var(--text-muted);
+    background: transparent;
+    border-color: var(--border);
+    text-decoration: line-through;
+    text-decoration-color: var(--text-muted);
+    cursor: not-allowed;
+  }
+  .slot.taken:hover { background: transparent; border-color: var(--border); }
+
+  /* ====== Sticky bottom ====== */
+  .sticky {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    padding: 12px 20px 30px;
+    background: var(--bg);
+    border-top: 1px solid var(--border);
+    box-shadow: 0 -14px 28px rgba(0, 0, 0, 0.5);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    z-index: 40;
+  }
+
+  .summary {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    background: var(--surface-raised);
+    border: 1px solid var(--accent-border);
+    border-radius: 10px;
+  }
+  .summary-check {
+    width: 24px; height: 24px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: var(--text-on-accent);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .summary-col { flex: 1; min-width: 0; }
+  .summary-main {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1.2;
+  }
+  .summary-sub {
+    font-size: 11px;
+    color: var(--text-secondary);
+    margin-top: 2px;
+  }
+
+  .cta-row {
+    display: flex;
+    gap: 12px;
+    align-items: stretch;
+  }
+  .cta-price-col {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 2px;
+    min-width: 76px;
+  }
+  .cta-label {
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    line-height: 1;
+  }
+  .cta-price {
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: 22px;
+    color: var(--text-primary);
+    line-height: 1;
+  }
+  .cta-price .zl { font-size: 12px; color: var(--accent); margin-left: 2px; }
+
+  .cta-btn {
+    flex: 1;
+    background: var(--accent);
+    color: var(--text-on-accent);
+    border: none;
+    padding: 14px 16px;
+    border-radius: 12px;
+    font-family: var(--font-body);
+    font-weight: 800;
+    font-size: 14px;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    box-shadow: 0 6px 18px rgba(255, 107, 26, 0.4);
+    transition: transform 120ms ease, background 120ms ease;
+  }
+  .cta-btn:hover { background: var(--accent-hover); }
+  .cta-btn:active { transform: scale(0.98); }
+  .cta-btn.disabled {
+    background: var(--surface);
+    color: var(--text-muted);
+    box-shadow: none;
+    cursor: not-allowed;
+  }
+
+  /* footer note */
+  .caption {
+    max-width: 560px;
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 0.5px;
+  }
+  .caption strong {
+    color: var(--text-secondary);
+    font-weight: 500;
+    display: block;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    font-size: 10px;
+  }
+  .caption em { color: var(--accent); font-style: normal; }
+</style>
+</head>
+<body>
+
+  <header class="canvas-label">
+    <span class="film-strip">OPONY — 03</span>
+    <span class="slug">wybór slotu · kalendarz + godziny</span>
+    <span class="canvas-meta"><span class="pulse"></span>W:12.3 · US-08a / 08b</span>
+  </header>
+
+  <div class="phone-holder">
+  <main class="phone" role="region" aria-label="Mockup — wybór terminu">
+
+    <div class="status-bar" aria-hidden="true">
+      <span>9:41</span>
+      <span class="right">
+        <svg width="18" height="12" viewBox="0 0 18 12" fill="currentColor"><rect x="0" y="8" width="3" height="4" rx="0.5"/><rect x="5" y="5" width="3" height="7" rx="0.5"/><rect x="10" y="2" width="3" height="10" rx="0.5"/><rect x="15" y="0" width="3" height="12" rx="0.5" opacity="0.4"/></svg>
+        <svg width="16" height="12" viewBox="0 0 16 12" fill="currentColor"><path d="M8 11.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z"/><path d="M4 7.5a6 6 0 0 1 8 0l-1 1a4.6 4.6 0 0 0-6 0l-1-1Z"/><path d="M1.5 4.5a10 10 0 0 1 13 0l-1 1a8.5 8.5 0 0 0-11 0l-1-1Z" opacity="0.6"/></svg>
+        <svg width="26" height="12" viewBox="0 0 26 12" fill="none"><rect x="0.5" y="0.5" width="22" height="11" rx="3" stroke="currentColor" opacity="0.5"/><rect x="2" y="2" width="19" height="8" rx="1.5" fill="currentColor"/><rect x="23" y="4" width="2" height="4" rx="1" fill="currentColor" opacity="0.5"/></svg>
+      </span>
+    </div>
+
+    <div class="screen">
+
+      <!-- NAV -->
+      <div class="nav-row">
+        <button class="back-btn" aria-label="Wstecz">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+        </button>
+        <h1 class="nav-title">Wybierz termin</h1>
+      </div>
+
+      <!-- STEPPER -->
+      <div class="stepper" role="progressbar" aria-valuemin="1" aria-valuemax="3" aria-valuenow="2">
+        <div class="step done">
+          <span class="step-num">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7"/></svg>
+          </span>
+          <span class="step-label">Adres</span>
+        </div>
+        <span class="step-line done"></span>
+        <div class="step active">
+          <span class="step-num">2</span>
+          <span class="step-label">Termin</span>
+        </div>
+        <span class="step-line"></span>
+        <div class="step">
+          <span class="step-num">3</span>
+          <span class="step-label">Płatność</span>
+        </div>
+      </div>
+
+      <!-- CONTEXT -->
+      <div class="context">
+        <img class="ctx-avatar" src="https://picsum.photos/seed/mobilopony-kasia/88/88" alt="" />
+        <div class="ctx-col">
+          <div class="ctx-name">MobilOpony Kasia</div>
+          <div class="ctx-line">
+            <span class="ctx-tire">205/55 R16</span>
+            <span class="ctx-price">180 zł</span>
+            <span>·</span>
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+            <span>ul. Lwowska 12</span>
+          </div>
+        </div>
+        <button class="ctx-change" aria-label="Zmień adres wizyty">Zmień</button>
+      </div>
+
+      <!-- CONTENT -->
+      <div class="content">
+
+        <!-- CALENDAR -->
+        <section>
+          <div class="cal-head">
+            <div>
+              <span class="cal-title">Kwiecień</span>
+              <span class="cal-year">2026</span>
+            </div>
+            <div class="cal-nav">
+              <button class="cal-today">Dziś</button>
+              <button class="cal-btn" aria-label="Poprzedni miesiąc">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+              </button>
+              <button class="cal-btn" aria-label="Następny miesiąc">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="days-row" role="tablist" aria-label="Dostępne dni">
+            <button class="day-chip" role="tab">
+              <span class="day-dow">Nie</span>
+              <span class="day-num">13</span>
+              <span class="day-avail-dot" title="są wolne terminy"></span>
+            </button>
+            <button class="day-chip selected" role="tab" aria-selected="true">
+              <span class="day-dow">Pon</span>
+              <span class="day-num">14</span>
+              <span class="day-avail-dot"></span>
+            </button>
+            <button class="day-chip" role="tab">
+              <span class="day-dow">Wt</span>
+              <span class="day-num">15</span>
+              <span class="day-avail-dot"></span>
+            </button>
+            <button class="day-chip" role="tab">
+              <span class="day-dow">Śr</span>
+              <span class="day-num">16</span>
+              <span class="day-avail-dot"></span>
+            </button>
+            <button class="day-chip unavailable" role="tab" aria-disabled="true">
+              <span class="day-dow">Cz</span>
+              <span class="day-num">17</span>
+              <span class="day-avail-dot"></span>
+            </button>
+            <button class="day-chip" role="tab">
+              <span class="day-dow">Pt</span>
+              <span class="day-num">18</span>
+              <span class="day-avail-dot"></span>
+            </button>
+            <button class="day-chip weekend" role="tab">
+              <span class="day-dow">Sob</span>
+              <span class="day-num">19</span>
+              <span class="day-avail-dot"></span>
+            </button>
+            <button class="day-chip weekend unavailable" role="tab" aria-disabled="true">
+              <span class="day-dow">Nd</span>
+              <span class="day-num">20</span>
+              <span class="day-avail-dot"></span>
+            </button>
+          </div>
+        </section>
+
+        <!-- MORNING -->
+        <section class="slot-group">
+          <div class="slot-group-head">
+            <span class="slot-group-label">RANO</span>
+            <span class="slot-group-line"></span>
+            <span class="slot-group-count">4 dostępne</span>
+          </div>
+          <div class="slots-grid">
+            <button class="slot">08:00</button>
+            <button class="slot">08:45</button>
+            <button class="slot">09:30</button>
+            <button class="slot selected" aria-pressed="true">10:15</button>
+            <button class="slot taken" aria-disabled="true">11:00</button>
+            <button class="slot taken" aria-disabled="true">11:45</button>
+          </div>
+        </section>
+
+        <!-- AFTERNOON -->
+        <section class="slot-group">
+          <div class="slot-group-head">
+            <span class="slot-group-label">POPOŁUDNIE</span>
+            <span class="slot-group-line"></span>
+            <span class="slot-group-count">3 dostępne</span>
+          </div>
+          <div class="slots-grid">
+            <button class="slot">13:00</button>
+            <button class="slot">13:45</button>
+            <button class="slot taken" aria-disabled="true">14:30</button>
+            <button class="slot">15:15</button>
+          </div>
+        </section>
+
+        <!-- EVENING -->
+        <section class="slot-group">
+          <div class="slot-group-head">
+            <span class="slot-group-label">WIECZÓR</span>
+            <span class="slot-group-line"></span>
+            <span class="slot-group-count">2 dostępne</span>
+          </div>
+          <div class="slots-grid">
+            <button class="slot">16:00</button>
+            <button class="slot">16:45</button>
+          </div>
+        </section>
+
+      </div>
+
+      <!-- STICKY BOTTOM -->
+      <div class="sticky">
+        <div class="summary">
+          <span class="summary-check" aria-hidden="true">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7"/></svg>
+          </span>
+          <div class="summary-col">
+            <div class="summary-main">Pon 14 kwi, 10:15–11:00</div>
+            <div class="summary-sub">~45 min · MobilOpony Kasia → Lwowska 12</div>
+          </div>
+        </div>
+        <div class="cta-row">
+          <div class="cta-price-col">
+            <span class="cta-label">Razem</span>
+            <span class="cta-price">180<span class="zl">zł</span></span>
+          </div>
+          <button class="cta-btn">
+            Zapłać i zarezerwuj
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </main>
+  </div>
+
+  <footer class="caption">
+    <div>
+      <strong>Sekcje</strong>
+      Nav (back + tytuł) · Stepper 1/2/3 · Context (provider + opony + adres + zmień) · Kalendarz horyzontalny · Sloty 3 grupy (RANO/POPOŁUDNIE/WIECZÓR) · Sticky summary + CTA
+    </div>
+    <div>
+      <strong>Stany slotów</strong>
+      <em>wolny</em> (surface) · <em>wybrany</em> (amber + kropka) · <em>zajęty</em> (strikethrough, dim) · dzień <em>weekend</em> wyciszony · dzień <em>unavailable</em> = 35% opacity
+    </div>
+  </footer>
+
+</body>
+</html>

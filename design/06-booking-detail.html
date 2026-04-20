@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Opony.app — 06 Szczegół rezerwacji · W:12.10</title>
+<!--
+  Screen: Szczegół rezerwacji
+  Ref:    docs/plan-sprintow.md → W:12.10
+  US:     US-13 (szczegół), US-07 (anulowanie), US-08a (zmiana terminu), US-16 (oceń COMPLETED)
+  Tone:   industrial-dark · sticky code header + vertical timeline
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Bebas+Neue&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0A0B0E;
+    --bg-tint-top: #12141A;
+    --surface: #14171D;
+    --surface-raised: #1B1E26;
+    --surface-hover: #23272F;
+    --border: #262A34;
+    --border-strong: #363B47;
+    --hairline: rgba(255, 255, 255, 0.06);
+    --text-primary: #F5F4EF;
+    --text-secondary: #9EA2AD;
+    --text-muted: #60646F;
+    --text-on-accent: #0A0B0E;
+    --accent: #FF6B1A;
+    --accent-hover: #FF8039;
+    --accent-muted: rgba(255, 107, 26, 0.14);
+    --accent-border: rgba(255, 107, 26, 0.32);
+    --accent-glow: rgba(255, 107, 26, 0.45);
+    --success: #2EE0A0;
+    --success-muted: rgba(46, 224, 160, 0.14);
+    --success-border: rgba(46, 224, 160, 0.32);
+    --warning: #FFB020;
+    --warning-muted: rgba(255, 176, 32, 0.14);
+    --warning-border: rgba(255, 176, 32, 0.32);
+    --danger: #FF5757;
+    --danger-muted: rgba(255, 87, 87, 0.12);
+    --danger-border: rgba(255, 87, 87, 0.32);
+    --font-display: 'Bebas Neue', sans-serif;
+    --font-body: 'Archivo', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    --phone-scale: min(1, calc((100vh - 240px) / 852), calc((100vw - 60px) / 393));
+    font-family: var(--font-body);
+    background: var(--bg);
+    color: var(--text-primary);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    background-image:
+      radial-gradient(ellipse 70% 50% at 50% 0%, rgba(255, 107, 26, 0.07) 0%, transparent 60%),
+      radial-gradient(ellipse 50% 30% at 90% 100%, rgba(46, 224, 160, 0.03) 0%, transparent 60%),
+      linear-gradient(180deg, var(--bg-tint-top) 0%, var(--bg) 30%);
+    background-attachment: fixed;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 48px 24px 80px;
+    gap: 28px;
+  }
+
+  .phone-holder {
+    width: calc(393px * var(--phone-scale));
+    height: calc(852px * var(--phone-scale));
+    position: relative;
+    flex-shrink: 0;
+  }
+
+  .canvas-label {
+    width: 100%;
+    max-width: 560px;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: baseline;
+    gap: 20px;
+    padding-bottom: 18px;
+    border-bottom: 1px solid var(--border);
+  }
+  .film-strip { font-family: var(--font-display); font-size: 34px; letter-spacing: 3px; line-height: 1; }
+  .slug {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    border-left: 1px solid var(--border);
+    padding-left: 18px;
+  }
+  .canvas-meta {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-secondary);
+    letter-spacing: 1px;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .canvas-meta .pulse {
+    display: inline-block;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 0 4px var(--accent-muted);
+    animation: pulse 1800ms ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 4px var(--accent-muted); opacity: 1; }
+    50%      { box-shadow: 0 0 0 8px transparent; opacity: 0.6; }
+  }
+  @keyframes softPulse {
+    0%, 100% { box-shadow: 0 0 0 3px var(--accent-muted); opacity: 1; }
+    50%      { box-shadow: 0 0 0 7px transparent; opacity: 0.85; }
+  }
+
+  /* Phone */
+  .phone {
+    width: 393px;
+    height: 852px;
+    border-radius: 54px;
+    background: var(--bg);
+    border: 10px solid #0D0E12;
+    box-shadow:
+      0 0 0 1px #1C1E24,
+      0 40px 120px rgba(0, 0, 0, 0.7),
+      0 24px 48px rgba(0, 0, 0, 0.45),
+      inset 0 0 0 1px rgba(255, 255, 255, 0.03);
+    overflow: hidden;
+    position: absolute;
+    top: 0; left: 0;
+    isolation: isolate;
+    transform: scale(var(--phone-scale));
+    transform-origin: top left;
+  }
+  .phone::before {
+    content: '';
+    position: absolute;
+    top: 12px; left: 50%;
+    transform: translateX(-50%);
+    width: 124px; height: 36px;
+    border-radius: 24px;
+    background: #000;
+    z-index: 100;
+  }
+  .phone::after {
+    content: '';
+    position: absolute;
+    bottom: 8px; left: 50%;
+    transform: translateX(-50%);
+    width: 134px; height: 5px;
+    border-radius: 3px;
+    background: var(--text-primary);
+    opacity: 0.28;
+    z-index: 100;
+  }
+
+  .status-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 36px 0;
+    height: 54px;
+    font-weight: 700;
+    font-size: 15px;
+  }
+  .status-bar .right { display: inline-flex; gap: 6px; align-items: center; }
+
+  .screen {
+    position: absolute;
+    top: 54px; left: 0; right: 0; bottom: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* ====== Top bar (sticky poza scrollem) ====== */
+  .top-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 16px 14px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .icon-btn-sm {
+    width: 40px; height: 40px;
+    border-radius: 10px;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .icon-btn-sm:hover { background: var(--surface); border-color: var(--border-strong); }
+  .top-code-col {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+  .top-code-label {
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 1.3px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    line-height: 1;
+  }
+  .top-code {
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: 18px;
+    letter-spacing: 1.2px;
+    color: var(--text-primary);
+    line-height: 1;
+  }
+  .top-code .hy { color: var(--accent); }
+
+  /* ====== Scroll area ====== */
+  .content {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 20px 20px 100px;
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+    scrollbar-width: thin;
+  }
+  .content::-webkit-scrollbar { width: 3px; }
+  .content::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  /* ====== STATUS HERO ====== */
+  .status-hero {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .status-pill-xl {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 5px 10px;
+    border-radius: 6px;
+    font-family: var(--font-body);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 1.3px;
+    text-transform: uppercase;
+    background: var(--accent-muted);
+    border: 1px solid var(--accent-border);
+    color: var(--accent);
+    width: fit-content;
+  }
+  .status-pill-xl::before {
+    content: '';
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-muted);
+    animation: softPulse 1800ms ease-in-out infinite;
+  }
+  .countdown-big {
+    font-family: var(--font-display);
+    font-size: 48px;
+    line-height: 1;
+    letter-spacing: 2px;
+    color: var(--text-primary);
+  }
+  .countdown-sub {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--text-secondary);
+    font-size: 14px;
+  }
+  .countdown-sub .dot-sep {
+    width: 3px; height: 3px;
+    border-radius: 50%;
+    background: var(--text-muted);
+  }
+  .countdown-time {
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--text-primary);
+  }
+
+  /* ====== Section title (spójny z ekranu 02) ====== */
+  .section-title {
+    font-family: var(--font-display);
+    font-size: 20px;
+    letter-spacing: 2.2px;
+    color: var(--text-primary);
+    line-height: 1;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+  }
+  .section-title .sub {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--text-muted);
+    letter-spacing: 0.5px;
+    font-weight: 500;
+  }
+
+  /* ====== Details card ====== */
+  .details-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+  }
+  .d-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  .d-row:last-child { border-bottom: none; }
+  .d-ico {
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-secondary);
+    flex-shrink: 0;
+  }
+  .d-col { flex: 1; min-width: 0; }
+  .d-label {
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+  .d-value {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+    line-height: 1.3;
+  }
+  .d-sub {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-top: 2px;
+  }
+  .d-link {
+    font-family: var(--font-body);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 1.1px;
+    text-transform: uppercase;
+    color: var(--accent);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    margin-top: 4px;
+  }
+  .tire-tag {
+    display: inline-flex;
+    margin-left: 6px;
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: 11px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: var(--accent-muted);
+    border: 1px solid var(--accent-border);
+    color: var(--accent);
+  }
+  .note-quote {
+    font-family: var(--font-body);
+    font-style: italic;
+    font-size: 13px;
+    color: var(--text-primary);
+    line-height: 1.4;
+    padding-left: 10px;
+    border-left: 2px solid var(--accent);
+  }
+
+  /* ====== Payment ====== */
+  .payment-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .pay-main {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .pay-left { display: flex; align-items: center; gap: 12px; }
+  .pay-ico {
+    width: 38px; height: 38px;
+    border-radius: 10px;
+    background: var(--success-muted);
+    border: 1px solid var(--success-border);
+    color: var(--success);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .pay-col { display: flex; flex-direction: column; gap: 2px; }
+  .pay-method {
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    line-height: 1;
+  }
+  .pay-amount {
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: 22px;
+    color: var(--text-primary);
+    line-height: 1;
+  }
+  .pay-amount .zl { color: var(--accent); font-size: 12px; margin-left: 2px; }
+
+  .paid-badge-big {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 10px;
+    border-radius: 6px;
+    background: var(--success-muted);
+    border: 1px solid var(--success-border);
+    color: var(--success);
+    font-family: var(--font-body);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+  }
+
+  .pay-notice {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 10px 12px;
+    background: var(--bg);
+    border: 1px dashed var(--border);
+    border-radius: 10px;
+    font-size: 12px;
+    line-height: 1.4;
+    color: var(--text-secondary);
+  }
+  .pay-notice strong { color: var(--text-primary); font-weight: 700; }
+  .pay-notice svg { color: var(--accent); flex-shrink: 0; margin-top: 1px; }
+
+  /* ====== TIMELINE ====== */
+  .timeline-wrap {
+    position: relative;
+    padding-left: 28px;
+  }
+  /* Główna pionowa linia */
+  .timeline-wrap::before {
+    content: '';
+    position: absolute;
+    left: 9px;
+    top: 8px;
+    bottom: 14px;
+    width: 1.5px;
+    background: linear-gradient(to bottom,
+      var(--accent) 0%,
+      var(--accent) calc(100% - 90px),
+      var(--border) calc(100% - 70px),
+      var(--border) 100%);
+  }
+  .tl-event {
+    position: relative;
+    padding-bottom: 18px;
+  }
+  .tl-event:last-child { padding-bottom: 0; }
+  .tl-event::before {
+    content: '';
+    position: absolute;
+    left: -28px;
+    top: 3px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--accent);
+    outline: 1.5px solid var(--accent);
+    outline-offset: 1px;
+  }
+  .tl-event.upcoming::before {
+    background: var(--bg);
+    outline-color: var(--accent-border);
+    box-shadow: 0 0 0 3px var(--accent-muted);
+    animation: softPulse 1800ms ease-in-out infinite;
+  }
+  .tl-event.future::before {
+    background: var(--bg);
+    outline-color: var(--border-strong);
+  }
+  .tl-label {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1.2;
+  }
+  .tl-event.upcoming .tl-label { color: var(--accent); }
+  .tl-event.future .tl-label { color: var(--text-muted); }
+  .tl-time {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 0.5px;
+    margin-top: 3px;
+  }
+
+  /* ====== Actions ====== */
+  .actions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 4px;
+  }
+  .btn {
+    padding: 14px 16px;
+    border-radius: 12px;
+    font-family: var(--font-body);
+    font-weight: 800;
+    font-size: 14px;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border: 1px solid transparent;
+    transition: transform 120ms ease, background 120ms ease;
+  }
+  .btn-primary {
+    background: var(--accent);
+    color: var(--text-on-accent);
+    box-shadow: 0 6px 18px rgba(255, 107, 26, 0.4);
+  }
+  .btn-primary:hover { background: var(--accent-hover); }
+  .btn-primary:active { transform: scale(0.98); }
+
+  .btn-secondary {
+    background: transparent;
+    color: var(--text-primary);
+    border-color: var(--border);
+  }
+  .btn-secondary:hover { background: var(--surface); border-color: var(--border-strong); }
+
+  .btn-danger-link {
+    background: transparent;
+    border: none;
+    color: var(--danger);
+    padding: 10px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.4px;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  .btn-danger-link:hover { color: #FF7A7A; }
+
+  /* ====== Bottom nav ====== */
+  .bottom-nav {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    background: var(--bg);
+    border-top: 1px solid var(--border);
+    padding: 10px 0 34px;
+    display: flex;
+    z-index: 60;
+    box-shadow: 0 -12px 24px rgba(0, 0, 0, 0.45);
+  }
+  .nav-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    padding-top: 6px;
+    position: relative;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--text-secondary);
+    font-family: var(--font-body);
+  }
+  .nav-item:hover { color: var(--text-primary); }
+  .nav-item.active { color: var(--accent); }
+  .nav-item.active::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    width: 38px;
+    height: 2px;
+    border-radius: 2px;
+    background: var(--accent);
+    box-shadow: 0 0 10px var(--accent-glow);
+  }
+  .nav-item .label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.4px;
+  }
+  .nav-item.active .label { font-weight: 700; }
+
+  /* footer caption */
+  .caption {
+    max-width: 560px;
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 0.5px;
+  }
+  .caption strong {
+    color: var(--text-secondary);
+    font-weight: 500;
+    display: block;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    font-size: 10px;
+  }
+  .caption em { color: var(--accent); font-style: normal; }
+</style>
+</head>
+<body>
+
+  <header class="canvas-label">
+    <span class="film-strip">OPONY — 06</span>
+    <span class="slug">szczegół rezerwacji</span>
+    <span class="canvas-meta"><span class="pulse"></span>W:12.10 · US-13 / 07 / 16</span>
+  </header>
+
+  <div class="phone-holder">
+  <main class="phone" role="region" aria-label="Mockup — szczegół rezerwacji">
+
+    <div class="status-bar" aria-hidden="true">
+      <span>9:41</span>
+      <span class="right">
+        <svg width="18" height="12" viewBox="0 0 18 12" fill="currentColor"><rect x="0" y="8" width="3" height="4" rx="0.5"/><rect x="5" y="5" width="3" height="7" rx="0.5"/><rect x="10" y="2" width="3" height="10" rx="0.5"/><rect x="15" y="0" width="3" height="12" rx="0.5" opacity="0.4"/></svg>
+        <svg width="16" height="12" viewBox="0 0 16 12" fill="currentColor"><path d="M8 11.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z"/><path d="M4 7.5a6 6 0 0 1 8 0l-1 1a4.6 4.6 0 0 0-6 0l-1-1Z"/><path d="M1.5 4.5a10 10 0 0 1 13 0l-1 1a8.5 8.5 0 0 0-11 0l-1-1Z" opacity="0.6"/></svg>
+        <svg width="26" height="12" viewBox="0 0 26 12" fill="none"><rect x="0.5" y="0.5" width="22" height="11" rx="3" stroke="currentColor" opacity="0.5"/><rect x="2" y="2" width="19" height="8" rx="1.5" fill="currentColor"/><rect x="23" y="4" width="2" height="4" rx="1" fill="currentColor" opacity="0.5"/></svg>
+      </span>
+    </div>
+
+    <div class="screen">
+
+      <!-- TOP BAR -->
+      <div class="top-bar">
+        <button class="icon-btn-sm" aria-label="Wstecz">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+        </button>
+        <div class="top-code-col">
+          <span class="top-code-label">Kod rezerwacji</span>
+          <span class="top-code">OPN<span class="hy">-</span>4F2K</span>
+        </div>
+        <button class="icon-btn-sm" aria-label="Udostępnij">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/></svg>
+        </button>
+      </div>
+
+      <!-- CONTENT -->
+      <div class="content">
+
+        <!-- STATUS HERO -->
+        <section class="status-hero" aria-labelledby="status">
+          <span class="status-pill-xl" id="status">Potwierdzona</span>
+          <h1 class="countdown-big">Za 3 dni</h1>
+          <div class="countdown-sub">
+            <span>Poniedziałek, 14 kwietnia</span>
+            <span class="dot-sep"></span>
+            <span class="countdown-time">10:15 – 11:00</span>
+          </div>
+        </section>
+
+        <!-- DETAILS -->
+        <section aria-labelledby="sec-details">
+          <h2 class="section-title" id="sec-details">
+            Szczegóły
+            <span class="sub">~45 min wizyty</span>
+          </h2>
+          <div class="details-card">
+            <div class="d-row">
+              <span class="d-ico" aria-hidden="true">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 17h14M7 12l1.5-4.5A2 2 0 0 1 10.4 6h3.2a2 2 0 0 1 1.9 1.5L17 12"/><path d="M5 12h14v5H5z"/><circle cx="7.5" cy="17" r="1.5" fill="currentColor"/><circle cx="16.5" cy="17" r="1.5" fill="currentColor"/></svg>
+              </span>
+              <div class="d-col">
+                <div class="d-label">Warsztat</div>
+                <div class="d-value">MobilOpony Kasia</div>
+                <a class="d-link" href="#">
+                  Zobacz profil
+                  <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg>
+                </a>
+              </div>
+            </div>
+            <div class="d-row">
+              <span class="d-ico" aria-hidden="true">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+              </span>
+              <div class="d-col">
+                <div class="d-label">Adres wizyty</div>
+                <div class="d-value">ul. Lwowska 12</div>
+                <div class="d-sub">33-300 Nowy Sącz · Twój dom</div>
+              </div>
+            </div>
+            <div class="d-row">
+              <span class="d-ico" aria-hidden="true">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M2 12h20M12 2c3 3.5 4.5 7.3 4.5 10S15 19.5 12 22c-3-2.5-4.5-7.3-4.5-10S9 5.5 12 2Z"/></svg>
+              </span>
+              <div class="d-col">
+                <div class="d-label">Pojazd</div>
+                <div class="d-value">Ford Focus 2019 <span class="tire-tag">205/55 R16</span></div>
+              </div>
+            </div>
+            <div class="d-row">
+              <span class="d-ico" aria-hidden="true">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
+              </span>
+              <div class="d-col">
+                <div class="d-label">Twoja notatka</div>
+                <div class="note-quote">„Proszę dzwonić przed przyjazdem, domofon nie działa."</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- PAYMENT -->
+        <section aria-labelledby="sec-pay">
+          <h2 class="section-title" id="sec-pay">
+            Płatność
+            <span class="sub">Paragon #4F2K</span>
+          </h2>
+          <div class="payment-card">
+            <div class="pay-main">
+              <div class="pay-left">
+                <span class="pay-ico" aria-hidden="true">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+                </span>
+                <div class="pay-col">
+                  <span class="pay-method">BLIK</span>
+                  <span class="pay-amount">180<span class="zl">zł</span></span>
+                </div>
+              </div>
+              <span class="paid-badge-big">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7"/></svg>
+                Opłacone
+              </span>
+            </div>
+            <div class="pay-notice">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v5"/><circle cx="12" cy="16" r="0.5" fill="currentColor"/></svg>
+              <div><strong>Anulowanie do 2 h przed wizytą</strong> = pełny zwrot na konto w ciągu 3–5 dni roboczych.</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- TIMELINE -->
+        <section aria-labelledby="sec-timeline">
+          <h2 class="section-title" id="sec-timeline">
+            Status
+            <span class="sub">4 zdarzenia</span>
+          </h2>
+          <div class="timeline-wrap">
+            <div class="tl-event">
+              <div class="tl-label">Rezerwacja utworzona</div>
+              <div class="tl-time">13 kwi 2026 · 18:42</div>
+            </div>
+            <div class="tl-event">
+              <div class="tl-label">Płatność BLIK zatwierdzona</div>
+              <div class="tl-time">13 kwi 2026 · 18:42</div>
+            </div>
+            <div class="tl-event">
+              <div class="tl-label">Provider zaakceptował termin</div>
+              <div class="tl-time">13 kwi 2026 · 18:50</div>
+            </div>
+            <div class="tl-event upcoming">
+              <div class="tl-label">Wizyta — za 3 dni</div>
+              <div class="tl-time">14 kwi 2026 · 10:15</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ACTIONS -->
+        <div class="actions">
+          <button class="btn btn-primary" type="button">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 10h18M8 2v4M16 2v4M12 14v4M10 16h4"/></svg>
+            Dodaj do kalendarza
+          </button>
+          <button class="btn btn-secondary" type="button">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 4v5h-5"/></svg>
+            Zmień termin
+          </button>
+          <button class="btn btn-danger-link" type="button">
+            Anuluj rezerwację
+          </button>
+        </div>
+
+      </div>
+
+      <!-- BOTTOM NAV (Rezerwacje active) -->
+      <nav class="bottom-nav" aria-label="Nawigacja główna">
+        <button class="nav-item">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4-4"/></svg>
+          <span class="label">Szukaj</span>
+        </button>
+        <button class="nav-item active">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M3 10h18M8 2v4M16 2v4"/><circle cx="12" cy="15" r="1.5" fill="currentColor"/></svg>
+          <span class="label">Rezerwacje</span>
+        </button>
+        <button class="nav-item">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>
+          <span class="label">Profil</span>
+        </button>
+      </nav>
+
+    </div>
+  </main>
+  </div>
+
+  <footer class="caption">
+    <div>
+      <strong>Sekcje</strong>
+      Top bar (back + kod OPN-4F2K z amber dywizem + share) · Status hero (pill POTWIERDZONA pulsująca + <em>Za 3 dni</em> w Bebas 48px) · Details card (warsztat, adres, pojazd z tire-tag, notatka w italic z amber borderem) · Payment (BLIK + Opłacone badge + polityka anulowania) · Timeline pionowy (4 zdarzenia, ostatni <em>pulsujący</em>) · Actions · Bottom nav Rezerwacje active
+    </div>
+    <div>
+      <strong>Stany</strong>
+      Dla <em>COMPLETED</em>: zamiast „Zmień termin/Anuluj" — CTA „⭐ Oceń wizytę" (amber) lub „Zobacz moją ocenę" · Dla <em>CANCELLED</em>: timeline + notice o zwrocie zamiast actions · Dla <em>NO_SHOW</em>: banner + kontakt do providera
+    </div>
+  </footer>
+
+</body>
+</html>

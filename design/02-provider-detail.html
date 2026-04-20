@@ -1,0 +1,1331 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Opony.app — 02 Karta punktu · W:12.2</title>
+<!--
+  Screen: Karta punktu (profil providera)
+  Ref:    docs/plan-sprintow.md → W:12.2
+  US:     US-04 (profil), US-16 (opinie widoczne publicznie), US-18 (cennik)
+  Tone:   industrial-dark · graphite + amber · hero photo z overlayem
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Bebas+Neue&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0A0B0E;
+    --bg-tint-top: #12141A;
+    --surface: #14171D;
+    --surface-raised: #1B1E26;
+    --surface-hover: #23272F;
+    --border: #262A34;
+    --border-strong: #363B47;
+    --hairline: rgba(255, 255, 255, 0.06);
+    --text-primary: #F5F4EF;
+    --text-secondary: #9EA2AD;
+    --text-muted: #60646F;
+    --text-on-accent: #0A0B0E;
+    --accent: #FF6B1A;
+    --accent-hover: #FF8039;
+    --accent-muted: rgba(255, 107, 26, 0.14);
+    --accent-border: rgba(255, 107, 26, 0.32);
+    --accent-glow: rgba(255, 107, 26, 0.45);
+    --success: #2EE0A0;
+    --warning: #FFB020;
+    --danger: #FF5757;
+    --font-display: 'Bebas Neue', sans-serif;
+    --font-body: 'Archivo', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    --phone-scale: min(1, calc((100vh - 240px) / 852), calc((100vw - 60px) / 393));
+    font-family: var(--font-body);
+    background: var(--bg);
+    color: var(--text-primary);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    background-image:
+      radial-gradient(ellipse 70% 50% at 50% 0%, rgba(255, 107, 26, 0.07) 0%, transparent 60%),
+      radial-gradient(ellipse 50% 30% at 90% 100%, rgba(46, 224, 160, 0.03) 0%, transparent 60%),
+      linear-gradient(180deg, var(--bg-tint-top) 0%, var(--bg) 30%);
+    background-attachment: fixed;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 48px 24px 80px;
+    gap: 28px;
+  }
+
+  .phone-holder {
+    width: calc(393px * var(--phone-scale));
+    height: calc(852px * var(--phone-scale));
+    position: relative;
+    flex-shrink: 0;
+  }
+
+  .canvas-label {
+    width: 100%;
+    max-width: 560px;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: baseline;
+    gap: 20px;
+    padding-bottom: 18px;
+    border-bottom: 1px solid var(--border);
+  }
+  .film-strip { font-family: var(--font-display); font-size: 34px; letter-spacing: 3px; line-height: 1; }
+  .slug {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    border-left: 1px solid var(--border);
+    padding-left: 18px;
+  }
+  .canvas-meta {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-secondary);
+    letter-spacing: 1px;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .canvas-meta .pulse {
+    display: inline-block;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 0 4px var(--accent-muted);
+    animation: pulse 1800ms ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 4px var(--accent-muted); opacity: 1; }
+    50%      { box-shadow: 0 0 0 8px transparent; opacity: 0.6; }
+  }
+
+  /* Phone frame */
+  .phone {
+    width: 393px;
+    height: 852px;
+    border-radius: 54px;
+    background: var(--bg);
+    border: 10px solid #0D0E12;
+    box-shadow:
+      0 0 0 1px #1C1E24,
+      0 40px 120px rgba(0, 0, 0, 0.7),
+      0 24px 48px rgba(0, 0, 0, 0.45),
+      inset 0 0 0 1px rgba(255, 255, 255, 0.03);
+    overflow: hidden;
+    position: absolute;
+    top: 0;
+    left: 0;
+    isolation: isolate;
+    transform: scale(var(--phone-scale));
+    transform-origin: top left;
+  }
+  .phone::before {
+    content: '';
+    position: absolute;
+    top: 12px; left: 50%;
+    transform: translateX(-50%);
+    width: 124px; height: 36px;
+    border-radius: 24px;
+    background: #000;
+    z-index: 100;
+  }
+  .phone::after {
+    content: '';
+    position: absolute;
+    bottom: 8px; left: 50%;
+    transform: translateX(-50%);
+    width: 134px; height: 5px;
+    border-radius: 3px;
+    background: var(--text-primary);
+    opacity: 0.28;
+    z-index: 100;
+  }
+
+  /* Status bar (biała na hero — na jasnym tle) */
+  .status-bar {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 36px 0;
+    height: 54px;
+    font-weight: 700;
+    font-size: 15px;
+    color: var(--text-primary);
+    z-index: 50;
+    mix-blend-mode: difference; /* czytelne niezależnie od tła zdjęcia */
+  }
+  .status-bar .right {
+    display: inline-flex;
+    gap: 6px;
+    align-items: center;
+  }
+
+  .screen {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+  }
+
+  /* jednolita strefa scrollowania — hero + content razem */
+  .scroll-area {
+    position: absolute;
+    inset: 0;
+    overflow-y: auto;
+    scrollbar-width: thin;
+  }
+  .scroll-area::-webkit-scrollbar { width: 3px; }
+  .scroll-area::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  /* sticky top bar — pojawia się gdy hero zjedzie z ekranu */
+  .sticky-header {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    z-index: 30;
+    background: rgba(10, 11, 14, 0.96);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transform: translateY(-100%);
+    transition: transform 240ms cubic-bezier(0.2, 0.8, 0.2, 1);
+    will-change: transform;
+  }
+  .sticky-header.visible { transform: translateY(0); }
+  .sh-btn {
+    width: 36px; height: 36px;
+    border-radius: 10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .sh-btn.active { color: var(--accent); }
+  .sh-name {
+    flex: 1;
+    font-family: var(--font-display);
+    font-size: 22px;
+    letter-spacing: 1.8px;
+    color: var(--text-primary);
+    line-height: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* ===== HERO ===== */
+  .hero {
+    position: relative;
+    height: 320px;
+    flex-shrink: 0;
+    background: linear-gradient(135deg, #2C1810, #0A0B0E);
+    overflow: hidden;
+  }
+  .hero img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .hero::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(180deg, rgba(10,11,14,0.35) 0%, rgba(10,11,14,0) 30%, rgba(10,11,14,0) 50%, rgba(10,11,14,0.85) 100%);
+    pointer-events: none;
+    z-index: 2;
+  }
+
+  .hero-top {
+    position: absolute;
+    top: 62px;
+    left: 16px;
+    right: 16px;
+    display: flex;
+    justify-content: space-between;
+    z-index: 10;
+  }
+  .fab {
+    width: 40px;
+    height: 40px;
+    border-radius: 999px;
+    background: rgba(10, 11, 14, 0.55);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: background 160ms ease, transform 160ms ease;
+  }
+  .fab:hover { background: rgba(10, 11, 14, 0.75); }
+  .fab:active { transform: scale(0.95); }
+  .fab.active { color: var(--accent); }
+
+  .hero-counter {
+    position: absolute;
+    top: 76px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 1px;
+    color: var(--text-primary);
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: rgba(10, 11, 14, 0.55);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  .hero-counter strong { color: var(--accent); font-weight: 700; }
+
+  .hero-dots {
+    position: absolute;
+    bottom: 18px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 6px;
+    z-index: 10;
+  }
+  .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.35);
+    transition: width 200ms ease, background 200ms ease;
+  }
+  .dot.active {
+    width: 22px;
+    background: var(--accent);
+  }
+
+  .hero-overlay {
+    position: absolute;
+    left: 20px;
+    right: 20px;
+    bottom: 40px;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .mobile-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 8px;
+    border-radius: 5px;
+    background: var(--accent-muted);
+    border: 1px solid var(--accent-border);
+    color: var(--accent);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    width: fit-content;
+  }
+  .hero-title {
+    font-family: var(--font-display);
+    font-size: 40px;
+    line-height: 1;
+    letter-spacing: 2px;
+    color: var(--text-primary);
+    text-shadow: 0 2px 14px rgba(0, 0, 0, 0.6);
+  }
+  .hero-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--text-primary);
+    flex-wrap: wrap;
+  }
+  .hero-meta .chunk {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .hero-meta .sep {
+    width: 3px; height: 3px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.4);
+  }
+  .rating-strong {
+    font-weight: 700;
+    color: var(--text-primary);
+  }
+  .rating-count {
+    color: var(--text-secondary);
+  }
+
+  /* ===== CONTENT ===== */
+  .content {
+    padding: 24px 20px 160px;
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+  }
+
+  .section-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 14px;
+  }
+  .section-title {
+    font-family: var(--font-display);
+    font-size: 22px;
+    letter-spacing: 2.5px;
+    color: var(--text-primary);
+    line-height: 1;
+  }
+  .section-sub {
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    font-weight: 600;
+  }
+  .section-link {
+    font-family: var(--font-body);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: var(--accent);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  /* === Pricing table === */
+  .pricing-table {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+  }
+  .pricing-row {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .pricing-row:last-child { border-bottom: none; }
+  .pricing-row.highlight {
+    background: var(--accent-muted);
+    padding-left: 19px;
+  }
+  .pricing-row.highlight::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    background: var(--accent);
+  }
+  .pricing-row .size-col {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .size {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+  .your-tag {
+    padding: 2px 6px;
+    background: var(--accent);
+    color: var(--text-on-accent);
+    font-family: var(--font-body);
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    border-radius: 3px;
+  }
+  .price {
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: 18px;
+    color: var(--text-primary);
+  }
+  .highlight .price {
+    color: var(--accent);
+    font-size: 22px;
+  }
+
+  .surcharge {
+    margin-top: 10px;
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border: 1px dashed var(--border);
+    border-radius: 10px;
+    font-size: 13px;
+    color: var(--text-secondary);
+  }
+  .surcharge-value {
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: 13px;
+    color: var(--success);
+    letter-spacing: 0.5px;
+  }
+
+  /* === Map === */
+  .map-container {
+    position: relative;
+    height: 220px;
+    background: #0F1218;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: border-color 160ms ease;
+  }
+  .map-container:hover { border-color: var(--border-strong); }
+  .map-container svg { width: 100%; height: 100%; display: block; }
+
+  .map-radius-tag {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    padding: 5px 10px;
+    background: rgba(10, 11, 14, 0.85);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid var(--accent-border);
+    border-radius: 6px;
+    color: var(--accent);
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: 12px;
+    letter-spacing: 0.5px;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .map-radius-tag::before {
+    content: 'PROMIEŃ';
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    color: var(--text-muted);
+  }
+
+  .map-center-label {
+    position: absolute;
+    bottom: 14px;
+    left: 14px;
+    padding: 6px 10px;
+    background: rgba(10, 11, 14, 0.85);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text-primary);
+    font-size: 12px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .map-center-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 0 3px rgba(255, 107, 26, 0.25);
+  }
+
+  .map-open-btn {
+    position: absolute;
+    bottom: 14px;
+    right: 14px;
+    padding: 7px 11px;
+    background: var(--accent);
+    color: var(--text-on-accent);
+    border: none;
+    border-radius: 7px;
+    font-family: var(--font-body);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    box-shadow: 0 4px 14px rgba(255, 107, 26, 0.35);
+  }
+  .map-open-btn:hover { background: var(--accent-hover); }
+
+  /* === Contact === */
+  .contact-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background 140ms ease, border-color 140ms ease;
+  }
+  .contact-row:hover {
+    background: var(--surface-hover);
+    border-color: var(--border-strong);
+  }
+  .contact-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    background: var(--accent-muted);
+    border: 1px solid var(--accent-border);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--accent);
+    flex-shrink: 0;
+  }
+  .contact-col { flex: 1; display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+  .contact-label {
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    line-height: 1;
+  }
+  .contact-value {
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: 15px;
+    color: var(--text-primary);
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .contact-cta {
+    font-family: var(--font-body);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 1.1px;
+    text-transform: uppercase;
+    color: var(--accent);
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+
+  /* === Hours === */
+  .hours-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 8px;
+    border-radius: 5px;
+    background: rgba(46, 224, 160, 0.14);
+    border: 1px solid rgba(46, 224, 160, 0.32);
+    color: var(--success);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 1.1px;
+    text-transform: uppercase;
+  }
+  .hours-status::before {
+    content: '';
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--success);
+    box-shadow: 0 0 8px rgba(46, 224, 160, 0.5);
+  }
+  .hours-status.closed {
+    background: rgba(255, 87, 87, 0.12);
+    border-color: rgba(255, 87, 87, 0.32);
+    color: var(--danger);
+  }
+  .hours-status.closed::before { background: var(--danger); box-shadow: none; }
+
+  .hours-table {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+  }
+  .hours-row {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 11px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .hours-row:last-child { border-bottom: none; }
+  .hours-row.today {
+    background: var(--accent-muted);
+    padding-left: 19px;
+  }
+  .hours-row.today::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    background: var(--accent);
+  }
+  .hours-day {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+    display: inline-flex;
+    align-items: baseline;
+    gap: 8px;
+  }
+  .hours-row.today .hours-day { color: var(--accent); font-weight: 700; }
+  .hours-today-tag {
+    font-family: var(--font-body);
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: var(--text-on-accent);
+    background: var(--accent);
+    padding: 2px 6px;
+    border-radius: 3px;
+  }
+  .hours-time {
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--text-primary);
+    letter-spacing: 0.5px;
+  }
+  .hours-row.today .hours-time { color: var(--accent); }
+  .hours-row.closed .hours-time { color: var(--text-muted); font-weight: 500; }
+
+  /* === About === */
+  .about {
+    font-size: 14px;
+    line-height: 1.65;
+    color: var(--text-secondary);
+  }
+  .about strong { color: var(--text-primary); font-weight: 700; }
+
+  .fact-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-top: 14px;
+  }
+  .fact {
+    padding: 10px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    text-align: left;
+  }
+  .fact-value {
+    font-family: var(--font-display);
+    font-size: 22px;
+    letter-spacing: 1.5px;
+    color: var(--accent);
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+  .fact-label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    line-height: 1.2;
+  }
+
+  /* === Reviews === */
+  .rating-overview {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .rating-big {
+    font-family: var(--font-display);
+    font-size: 44px;
+    letter-spacing: 2px;
+    color: var(--text-primary);
+    line-height: 1;
+  }
+  .rating-stars-row {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+  }
+  .rating-sub {
+    margin-left: auto;
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  .review {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 14px;
+  }
+  .review-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  .review-avatar {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-display);
+    font-size: 16px;
+    letter-spacing: 1px;
+    color: var(--text-secondary);
+  }
+  .review-meta-col { flex: 1; }
+  .review-name {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-primary);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .verified-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: var(--success);
+  }
+  .review-sub {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 2px;
+  }
+  .review-text {
+    font-size: 14px;
+    line-height: 1.55;
+    color: var(--text-primary);
+  }
+  .review-reply {
+    margin-top: 12px;
+    padding: 10px 12px;
+    background: var(--bg);
+    border-left: 2px solid var(--accent);
+    border-radius: 6px;
+    font-size: 13px;
+    color: var(--text-secondary);
+  }
+  .reply-label {
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: var(--accent);
+    display: block;
+    margin-bottom: 4px;
+  }
+
+  /* === STICKY CTA === */
+  .sticky-cta {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 14px 20px 34px;
+    background: var(--bg);
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    box-shadow: 0 -14px 28px rgba(0, 0, 0, 0.5);
+    z-index: 40;
+  }
+  .cta-price-col {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 78px;
+  }
+  .cta-label {
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    line-height: 1;
+  }
+  .cta-price {
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: 22px;
+    color: var(--text-primary);
+    line-height: 1;
+  }
+  .cta-price .zl { font-size: 12px; color: var(--accent); margin-left: 2px; }
+
+  .cta-btn {
+    flex: 1;
+    background: var(--accent);
+    color: var(--text-on-accent);
+    border: none;
+    padding: 14px 16px;
+    border-radius: 12px;
+    font-family: var(--font-body);
+    font-weight: 800;
+    font-size: 14px;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    box-shadow: 0 6px 18px rgba(255, 107, 26, 0.4);
+    transition: transform 120ms ease, box-shadow 120ms ease;
+  }
+  .cta-btn:hover { background: var(--accent-hover); }
+  .cta-btn:active { transform: scale(0.98); }
+
+  /* footer note */
+  .caption {
+    max-width: 560px;
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 0.5px;
+  }
+  .caption strong {
+    color: var(--text-secondary);
+    font-weight: 500;
+    display: block;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    font-size: 10px;
+  }
+  .caption em { color: var(--accent); font-style: normal; }
+</style>
+</head>
+<body>
+
+  <header class="canvas-label">
+    <span class="film-strip">OPONY — 02</span>
+    <span class="slug">karta punktu · profil providera</span>
+    <span class="canvas-meta"><span class="pulse"></span>W:12.2 · US-04 / 16 / 18</span>
+  </header>
+
+  <div class="phone-holder">
+  <main class="phone" role="region" aria-label="Mockup — karta punktu">
+
+    <div class="status-bar" aria-hidden="true">
+      <span>9:41</span>
+      <span class="right">
+        <svg width="18" height="12" viewBox="0 0 18 12" fill="currentColor"><rect x="0" y="8" width="3" height="4" rx="0.5"/><rect x="5" y="5" width="3" height="7" rx="0.5"/><rect x="10" y="2" width="3" height="10" rx="0.5"/><rect x="15" y="0" width="3" height="12" rx="0.5" opacity="0.4"/></svg>
+        <svg width="16" height="12" viewBox="0 0 16 12" fill="currentColor"><path d="M8 11.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z"/><path d="M4 7.5a6 6 0 0 1 8 0l-1 1a4.6 4.6 0 0 0-6 0l-1-1Z"/><path d="M1.5 4.5a10 10 0 0 1 13 0l-1 1a8.5 8.5 0 0 0-11 0l-1-1Z" opacity="0.6"/></svg>
+        <svg width="26" height="12" viewBox="0 0 26 12" fill="none"><rect x="0.5" y="0.5" width="22" height="11" rx="3" stroke="currentColor" opacity="0.5"/><rect x="2" y="2" width="19" height="8" rx="1.5" fill="currentColor"/><rect x="23" y="4" width="2" height="4" rx="1" fill="currentColor" opacity="0.5"/></svg>
+      </span>
+    </div>
+
+    <div class="screen">
+
+      <!-- STICKY HEADER (pojawia się po scrollu poza hero) -->
+      <div class="sticky-header" id="stickyHeader" aria-hidden="true">
+        <button class="sh-btn" aria-label="Wstecz">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+        </button>
+        <h1 class="sh-name">MobilOpony Kasia</h1>
+        <button class="sh-btn active" aria-label="Usuń z ulubionych">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78Z"/></svg>
+        </button>
+      </div>
+
+      <div class="scroll-area" id="scrollArea">
+
+      <!-- HERO -->
+      <section class="hero" aria-label="Zdjęcia punktu">
+        <img src="https://picsum.photos/seed/mobilopony-kasia-hero/800/640" alt="MobilOpony Kasia — van wymiany opon" />
+
+        <div class="hero-top">
+          <button class="fab" aria-label="Wstecz">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+          </button>
+          <button class="fab active" aria-label="Usuń z ulubionych">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78Z"/></svg>
+          </button>
+        </div>
+
+        <span class="hero-counter" aria-label="Licznik zdjęć"><strong>1</strong> / 4</span>
+
+        <div class="hero-dots" role="tablist" aria-label="Pozycja zdjęcia">
+          <span class="dot active"></span>
+          <span class="dot"></span>
+          <span class="dot"></span>
+          <span class="dot"></span>
+        </div>
+
+        <div class="hero-overlay">
+          <span class="mobile-tag">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 17h14M7 12l1.5-4.5A2 2 0 0 1 10.4 6h3.2a2 2 0 0 1 1.9 1.5L17 12"/><path d="M5 12h14v5H5z"/><circle cx="7.5" cy="17" r="1.5" fill="currentColor"/><circle cx="16.5" cy="17" r="1.5" fill="currentColor"/></svg>
+            Z dojazdem
+          </span>
+          <h1 class="hero-title">MobilOpony Kasia</h1>
+          <div class="hero-meta">
+            <span class="chunk">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="var(--accent)"><polygon points="12 2 15 9 22 9.5 17 14 18.5 21 12 17.5 5.5 21 7 14 2 9.5 9 9 12 2"/></svg>
+              <span class="rating-strong">4,8</span>
+              <span class="rating-count">(127)</span>
+            </span>
+            <span class="sep"></span>
+            <span class="chunk">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+              Pn–Pt 8–18
+            </span>
+            <span class="sep"></span>
+            <span class="chunk">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+              Nowy Sącz · 15 km
+            </span>
+          </div>
+        </div>
+      </section>
+
+      <!-- CONTENT -->
+      <div class="content">
+
+        <!-- CENNIK -->
+        <section aria-labelledby="sec-cennik">
+          <div class="section-head">
+            <h2 class="section-title" id="sec-cennik">Cennik</h2>
+            <span class="section-sub">Wymiana 4 opon</span>
+          </div>
+
+          <div class="pricing-table">
+            <div class="pricing-row">
+              <div class="size-col">
+                <span class="size">≤ 15 cali</span>
+              </div>
+              <span class="price">140 zł</span>
+            </div>
+            <div class="pricing-row highlight" aria-current="true">
+              <div class="size-col">
+                <span class="size">16 – 17 cali</span>
+                <span class="your-tag">Twoje opony</span>
+              </div>
+              <span class="price">180 zł</span>
+            </div>
+            <div class="pricing-row">
+              <div class="size-col">
+                <span class="size">≥ 18 cali</span>
+              </div>
+              <span class="price">240 zł</span>
+            </div>
+          </div>
+
+          <div class="surcharge">
+            <span>Dojazd do 10 km</span>
+            <span class="surcharge-value">w cenie</span>
+          </div>
+        </section>
+
+        <!-- O NAS -->
+        <section aria-labelledby="sec-about">
+          <div class="section-head">
+            <h2 class="section-title" id="sec-about">O nas</h2>
+          </div>
+          <p class="about">
+            <strong>MobilOpony Kasia</strong> to mobilny serwis wymiany opon działający w Nowym Sączu
+            i okolicach. Przyjeżdżamy do klienta — w domu, w pracy, pod sklepem.
+            Kompletny zestaw narzędzi, maszyna wyważająca w vanie, gwarancja jakości na 24 h.
+          </p>
+          <div class="fact-row">
+            <div class="fact">
+              <div class="fact-value">8 lat</div>
+              <div class="fact-label">Doświadczenia</div>
+            </div>
+            <div class="fact">
+              <div class="fact-value">~45 min</div>
+              <div class="fact-label">Czas wymiany</div>
+            </div>
+            <div class="fact">
+              <div class="fact-value">24 h</div>
+              <div class="fact-label">Gwarancja</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- OBSZAR DOJAZDU -->
+        <section aria-labelledby="sec-area">
+          <div class="section-head">
+            <h2 class="section-title" id="sec-area">Obszar dojazdu</h2>
+            <span class="section-sub">Nowy Sącz i okolice</span>
+          </div>
+
+          <div class="map-container" role="button" tabindex="0" aria-label="Otwórz mapę zasięgu">
+            <svg viewBox="0 0 400 240" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <defs>
+                <!-- dot grid -->
+                <pattern id="dots" x="0" y="0" width="22" height="22" patternUnits="userSpaceOnUse">
+                  <circle cx="11" cy="11" r="0.9" fill="#242833"/>
+                </pattern>
+                <!-- radial glow -->
+                <radialGradient id="areaGlow" cx="50%" cy="50%" r="55%">
+                  <stop offset="0%" stop-color="#FF6B1A" stop-opacity="0.18"/>
+                  <stop offset="70%" stop-color="#FF6B1A" stop-opacity="0.06"/>
+                  <stop offset="100%" stop-color="#FF6B1A" stop-opacity="0"/>
+                </radialGradient>
+              </defs>
+
+              <!-- base / grid -->
+              <rect width="400" height="240" fill="url(#dots)"/>
+
+              <!-- ulice — główne -->
+              <g fill="none" stroke-linecap="round">
+                <path d="M -10 180 C 80 170, 180 190, 280 175 C 340 170, 400 160, 410 155" stroke="#2C323F" stroke-width="2.5"/>
+                <path d="M -10 80 C 90 70, 180 95, 300 85 C 370 80, 410 72, 410 72" stroke="#2C323F" stroke-width="2.2"/>
+                <path d="M 80 -10 C 90 80, 100 160, 110 260" stroke="#2C323F" stroke-width="2.2"/>
+                <path d="M 300 -10 C 290 80, 300 160, 310 260" stroke="#2C323F" stroke-width="2.2"/>
+              </g>
+              <!-- ulice — poboczne -->
+              <g fill="none" stroke-linecap="round" opacity="0.7">
+                <path d="M -10 40 L 410 55" stroke="#252A36" stroke-width="1.2"/>
+                <path d="M -10 220 L 410 215" stroke="#252A36" stroke-width="1.2"/>
+                <path d="M 170 -10 L 180 260" stroke="#252A36" stroke-width="1.2"/>
+                <path d="M 220 -10 L 230 260" stroke="#252A36" stroke-width="1.2"/>
+                <path d="M 350 -10 L 340 260" stroke="#252A36" stroke-width="1.2"/>
+                <path d="M 40 -10 L 30 260" stroke="#252A36" stroke-width="1.2"/>
+              </g>
+
+              <!-- rzeka -->
+              <path d="M -10 140 Q 100 130, 180 150 T 410 135" fill="none" stroke="#1E3340" stroke-width="6" stroke-linecap="round" opacity="0.9"/>
+
+              <!-- service area glow + dashed circle -->
+              <circle cx="200" cy="120" r="105" fill="url(#areaGlow)"/>
+              <circle cx="200" cy="120" r="105" fill="none" stroke="#FF6B1A" stroke-width="1.5" stroke-dasharray="6 5" opacity="0.85"/>
+
+              <!-- center pin — baza warsztatu -->
+              <g transform="translate(200,120)">
+                <circle r="20" fill="#FF6B1A" opacity="0.28"/>
+                <circle r="11" fill="#FF6B1A"/>
+                <circle r="4.5" fill="#0A0B0E"/>
+              </g>
+            </svg>
+
+            <span class="map-radius-tag">15 km</span>
+            <span class="map-center-label">
+              <span class="map-center-dot"></span>
+              Baza: Nowy Sącz Centrum
+            </span>
+            <button class="map-open-btn" type="button">
+              Otwórz mapę
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M7 7h10v10"/></svg>
+            </button>
+          </div>
+        </section>
+
+        <!-- KONTAKT -->
+        <section aria-labelledby="sec-contact">
+          <div class="section-head">
+            <h2 class="section-title" id="sec-contact">Kontakt</h2>
+          </div>
+          <a class="contact-row" href="tel:+48501234789" aria-label="Zadzwoń do MobilOpony Kasia">
+            <span class="contact-icon" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.37 1.9.72 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.35 1.85.59 2.81.72A2 2 0 0 1 22 16.92Z"/></svg>
+            </span>
+            <div class="contact-col">
+              <span class="contact-label">Telefon</span>
+              <span class="contact-value">+48 501 234 789</span>
+            </div>
+            <span class="contact-cta">
+              Zadzwoń
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg>
+            </span>
+          </a>
+        </section>
+
+        <!-- GODZINY -->
+        <section aria-labelledby="sec-hours">
+          <div class="section-head">
+            <h2 class="section-title" id="sec-hours">Godziny pracy</h2>
+            <span class="hours-status">Otwarte · zamyka o 18:00</span>
+          </div>
+          <div class="hours-table">
+            <div class="hours-row today">
+              <span class="hours-day">Poniedziałek <span class="hours-today-tag">Dziś</span></span>
+              <span class="hours-time">8:00 – 18:00</span>
+            </div>
+            <div class="hours-row">
+              <span class="hours-day">Wtorek</span>
+              <span class="hours-time">8:00 – 18:00</span>
+            </div>
+            <div class="hours-row">
+              <span class="hours-day">Środa</span>
+              <span class="hours-time">8:00 – 18:00</span>
+            </div>
+            <div class="hours-row">
+              <span class="hours-day">Czwartek</span>
+              <span class="hours-time">8:00 – 18:00</span>
+            </div>
+            <div class="hours-row">
+              <span class="hours-day">Piątek</span>
+              <span class="hours-time">8:00 – 18:00</span>
+            </div>
+            <div class="hours-row">
+              <span class="hours-day">Sobota</span>
+              <span class="hours-time">9:00 – 14:00</span>
+            </div>
+            <div class="hours-row closed">
+              <span class="hours-day">Niedziela</span>
+              <span class="hours-time">Nieczynne</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- OPINIE -->
+        <section aria-labelledby="sec-reviews">
+          <div class="section-head">
+            <h2 class="section-title" id="sec-reviews">Opinie</h2>
+            <a class="section-link" href="#">Zobacz wszystkie <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></a>
+          </div>
+
+          <div class="rating-overview">
+            <span class="rating-big">4,8</span>
+            <span class="rating-stars-row" aria-hidden="true">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="var(--accent)"><polygon points="12 2 15 9 22 9.5 17 14 18.5 21 12 17.5 5.5 21 7 14 2 9.5 9 9 12 2"/></svg>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="var(--accent)"><polygon points="12 2 15 9 22 9.5 17 14 18.5 21 12 17.5 5.5 21 7 14 2 9.5 9 9 12 2"/></svg>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="var(--accent)"><polygon points="12 2 15 9 22 9.5 17 14 18.5 21 12 17.5 5.5 21 7 14 2 9.5 9 9 12 2"/></svg>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="var(--accent)"><polygon points="12 2 15 9 22 9.5 17 14 18.5 21 12 17.5 5.5 21 7 14 2 9.5 9 9 12 2"/></svg>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="var(--accent)" opacity="0.4"><polygon points="12 2 15 9 22 9.5 17 14 18.5 21 12 17.5 5.5 21 7 14 2 9.5 9 9 12 2"/></svg>
+            </span>
+            <span class="rating-sub">127 opinii</span>
+          </div>
+
+          <article class="review">
+            <header class="review-head">
+              <div class="review-avatar">MK</div>
+              <div class="review-meta-col">
+                <div class="review-name">
+                  Marek K.
+                  <span class="verified-badge">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7"/></svg>
+                    Zweryfikowany
+                  </span>
+                </div>
+                <div class="review-sub">
+                  <span aria-hidden="true">★★★★★</span> · 2 dni temu
+                </div>
+              </div>
+            </header>
+            <p class="review-text">
+              Szybko, sprawnie, polecam! Przyjechał 5 minut przed czasem, wymiana poszła
+              w 40 minut pod moim blokiem. Cena dokładnie jak w apce, bez dopłat.
+            </p>
+            <div class="review-reply">
+              <span class="reply-label">Odpowiedź MobilOpony Kasia</span>
+              Dziękujemy Marku! Zapraszamy ponownie 🙂
+            </div>
+          </article>
+        </section>
+
+      </div>
+
+      </div><!-- /.scroll-area -->
+
+      <!-- STICKY CTA -->
+      <div class="sticky-cta" role="region" aria-label="Rezerwacja">
+        <div class="cta-price-col">
+          <span class="cta-label">od</span>
+          <span class="cta-price">180<span class="zl">zł</span></span>
+        </div>
+        <button class="cta-btn">
+          Zarezerwuj termin
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+        </button>
+      </div>
+
+    </div>
+  </main>
+
+  </div>
+
+  <footer class="caption">
+    <div>
+      <strong>Sekcje</strong>
+      Hero (carousel 4 zdj. + fav/back) · Cennik (tier „Twoje opony" highlighted) · O nas + 3 fakty · Opinie (overview + 1 przykład z odpowiedzią) · Sticky CTA „Zarezerwuj"
+    </div>
+    <div>
+      <strong>Do iteracji</strong>
+      hero overlay <em>readability</em>, highlight ceny, layout faktów (3 kolumny), sekcja review, CTA z ceną wyjściową
+    </div>
+  </footer>
+
+  <script>
+    // Toggluje sticky header gdy hero zjedzie z ekranu
+    (function () {
+      var scroll = document.getElementById('scrollArea');
+      var header = document.getElementById('stickyHeader');
+      if (!scroll || !header) return;
+      var threshold = 240; // ~75% hero
+      function onScroll() {
+        if (scroll.scrollTop > threshold) header.classList.add('visible');
+        else header.classList.remove('visible');
+      }
+      scroll.addEventListener('scroll', onScroll, { passive: true });
+      onScroll();
+    })();
+  </script>
+
+</body>
+</html>
