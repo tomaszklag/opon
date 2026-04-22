@@ -45,7 +45,7 @@
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body { height: 100%; }
   body {
-    --phone-scale: min(1, calc((100vh - 240px) / 852), calc((100vw - 60px) / 393));
+    --phone-scale: min(1, calc((100vh - 240px) / 852px), calc((100vw - 60px) / 393px));
     font-family: var(--font-body);
     background: var(--bg);
     color: var(--text-primary);
@@ -64,12 +64,6 @@
     gap: 28px;
   }
 
-  .phone-holder {
-    width: calc(393px * var(--phone-scale));
-    height: calc(852px * var(--phone-scale));
-    position: relative;
-    flex-shrink: 0;
-  }
 
   .canvas-label {
     width: 100%;
@@ -126,11 +120,12 @@
       0 24px 48px rgba(0, 0, 0, 0.45),
       inset 0 0 0 1px rgba(255, 255, 255, 0.03);
     overflow: hidden;
-    position: absolute;
-    top: 0; left: 0;
+    position: relative;
     isolation: isolate;
+    flex-shrink: 0;
     transform: scale(var(--phone-scale));
-    transform-origin: top left;
+    transform-origin: top center;
+    margin-bottom: calc((var(--phone-scale) - 1) * 852px);
   }
   .phone::before {
     content: '';
@@ -522,7 +517,7 @@
     max-width: 560px;
     width: 100%;
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 16px;
     padding-top: 12px;
     border-top: 1px solid var(--border);
@@ -551,7 +546,6 @@
     <span class="canvas-meta"><span class="pulse"></span>W:12.4 · US-10 / 07</span>
   </header>
 
-  <div class="phone-holder">
   <main class="phone" role="region" aria-label="Mockup — potwierdzenie rezerwacji">
 
     <div class="status-bar" aria-hidden="true">
@@ -571,9 +565,9 @@
           <div class="check-badge" aria-hidden="true">
             <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7"/></svg>
           </div>
-          <h1 class="success-title" id="success-title">Rezerwacja potwierdzona</h1>
-          <p class="success-sub">Opłacona i przesłana do providera. SMS z przypomnieniem wyślemy 24 h przed wizytą.</p>
-          <div class="stepper-mini" role="progressbar" aria-valuemin="1" aria-valuemax="3" aria-valuenow="3">
+          <h1 class="success-title" id="success-title">Rezerwacja wysłana</h1>
+          <p class="success-sub">Provider otrzymał SMS i potwierdzi w ciągu 2h. Przypomnienie wyślemy 24 h przed wizytą.</p>
+          <div class="stepper-mini" role="progressbar" aria-valuemin="1" aria-valuemax="2" aria-valuenow="2">
             <span class="sm-dot" aria-hidden="true">
               <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7"/></svg>
             </span>
@@ -581,11 +575,7 @@
             <span class="sm-dot" aria-hidden="true">
               <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7"/></svg>
             </span>
-            <span class="sm-line"></span>
-            <span class="sm-dot" aria-hidden="true">
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7"/></svg>
-            </span>
-            <span class="sm-label">3 / 3</span>
+            <span class="sm-label">2 / 2</span>
           </div>
         </section>
 
@@ -648,16 +638,12 @@
 
             <div class="trow">
               <span class="tic-ico" aria-hidden="true">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
               </span>
               <div class="tic-col">
-                <div class="tic-main"><span class="tic-price">180 zł</span> · BLIK</div>
+                <div class="tic-main">Po wizycie · <span class="tic-price">180 zł</span> <span style="font-weight: 500; color: var(--text-secondary); font-size: 12px;">(szacunek)</span></div>
                 <div class="tic-sub">
-                  <span class="paid-badge">
-                    <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7"/></svg>
-                    Opłacone
-                  </span>
-                  <span>Paragon: #4F2K</span>
+                  <span>Zapłacisz providerowi bezpośrednio — gotówka lub przelew. Aplikacja darmowa w pilocie.</span>
                 </div>
               </div>
             </div>
@@ -702,7 +688,6 @@
     </div>
 
   </main>
-  </div>
 
   <footer class="caption">
     <div>

@@ -1,0 +1,993 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Opony.app — 11 Mapa · W:12.13</title>
+<!--
+  Screen: Widok mapy (alternatywa do listy z Home)
+  Ref:    docs/plan-sprintow.md → W:12.13
+  US:     US-05 (mapa + pinezki), US-06 (filtry), US-38 (lokalizacja)
+  Tone:   industrial-dark · full-screen SVG map · amber pinezki z oceną
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Bebas+Neue&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0A0B0E;
+    --bg-tint-top: #12141A;
+    --surface: #14171D;
+    --surface-raised: #1B1E26;
+    --surface-hover: #23272F;
+    --border: #262A34;
+    --border-strong: #363B47;
+    --hairline: rgba(255, 255, 255, 0.06);
+    --text-primary: #F5F4EF;
+    --text-secondary: #9EA2AD;
+    --text-muted: #60646F;
+    --text-on-accent: #0A0B0E;
+    --accent: #FF6B1A;
+    --accent-hover: #FF8039;
+    --accent-muted: rgba(255, 107, 26, 0.14);
+    --accent-border: rgba(255, 107, 26, 0.32);
+    --accent-glow: rgba(255, 107, 26, 0.45);
+    --success: #2EE0A0;
+    --warning: #FFB020;
+    --danger: #FF5757;
+    --map-bg: #0F1218;
+    --map-street: #2C323F;
+    --map-street-minor: #252A36;
+    --map-water: #1E3340;
+    --map-block: #171B23;
+    --user-pin: #5DA8FF;
+    --font-display: 'Bebas Neue', sans-serif;
+    --font-body: 'Archivo', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; overflow-x: hidden; max-width: 100vw; }
+  body {
+    --phone-scale: min(1, calc((100vh - 240px) / 852px), calc((100vw - 60px) / 393px));
+    font-family: var(--font-body);
+    background: var(--bg);
+    color: var(--text-primary);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    background-image:
+      radial-gradient(ellipse 70% 50% at 50% 0%, rgba(255, 107, 26, 0.07) 0%, transparent 60%),
+      radial-gradient(ellipse 50% 30% at 90% 100%, rgba(46, 224, 160, 0.03) 0%, transparent 60%),
+      linear-gradient(180deg, var(--bg-tint-top) 0%, var(--bg) 30%);
+    background-attachment: fixed;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 48px 24px 80px;
+    gap: 28px;
+  }
+
+  .canvas-label {
+    width: 100%;
+    max-width: 560px;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: baseline;
+    gap: 20px;
+    padding-bottom: 18px;
+    border-bottom: 1px solid var(--border);
+  }
+  .film-strip { font-family: var(--font-display); font-size: 34px; letter-spacing: 3px; line-height: 1; }
+  .slug {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    border-left: 1px solid var(--border);
+    padding-left: 18px;
+  }
+  .canvas-meta {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-secondary);
+    letter-spacing: 1px;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .canvas-meta .pulse {
+    display: inline-block;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 0 4px var(--accent-muted);
+    animation: pulse 1800ms ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 4px var(--accent-muted); opacity: 1; }
+    50%      { box-shadow: 0 0 0 8px transparent; opacity: 0.6; }
+  }
+  @keyframes userPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(93, 168, 255, 0.6); }
+    100%     { box-shadow: 0 0 0 14px rgba(93, 168, 255, 0); }
+  }
+  @keyframes userPulseKeyframes {
+    0% { box-shadow: 0 0 0 0 rgba(93, 168, 255, 0.55); }
+    100% { box-shadow: 0 0 0 14px rgba(93, 168, 255, 0); }
+  }
+
+  /* Phone */
+  .phone {
+    width: 393px;
+    height: 852px;
+    border-radius: 54px;
+    background: var(--bg);
+    border: 10px solid #0D0E12;
+    box-shadow:
+      0 0 0 1px #1C1E24,
+      0 40px 120px rgba(0, 0, 0, 0.7),
+      0 24px 48px rgba(0, 0, 0, 0.45),
+      inset 0 0 0 1px rgba(255, 255, 255, 0.03);
+    overflow: hidden;
+    position: relative;
+    isolation: isolate;
+    flex-shrink: 0;
+    transform: scale(var(--phone-scale));
+    transform-origin: top center;
+    margin-bottom: calc((var(--phone-scale) - 1) * 852px);
+  }
+  .phone::before {
+    content: '';
+    position: absolute;
+    top: 12px; left: 50%;
+    transform: translateX(-50%);
+    width: 124px; height: 36px;
+    border-radius: 24px;
+    background: #000;
+    z-index: 100;
+  }
+  .phone::after {
+    content: '';
+    position: absolute;
+    bottom: 8px; left: 50%;
+    transform: translateX(-50%);
+    width: 134px; height: 5px;
+    border-radius: 3px;
+    background: var(--text-primary);
+    opacity: 0.28;
+    z-index: 100;
+  }
+
+  .status-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 36px 0;
+    height: 54px;
+    font-weight: 700;
+    font-size: 15px;
+    position: relative;
+    z-index: 50;
+  }
+  .status-bar .right { display: inline-flex; gap: 6px; align-items: center; }
+
+  .screen {
+    position: absolute;
+    top: 54px; left: 0; right: 0; bottom: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* ====== Header ====== */
+  .app-header {
+    display: flex;
+    align-items: center;
+    padding: 10px 20px 12px;
+    flex-shrink: 0;
+  }
+  .wordmark {
+    font-family: var(--font-display);
+    font-size: 30px;
+    letter-spacing: 4px;
+    line-height: 1;
+    color: var(--text-primary);
+    display: inline-flex;
+    align-items: baseline;
+    gap: 4px;
+  }
+  .wordmark .dot {
+    display: inline-block;
+    width: 7px; height: 7px;
+    background: var(--accent);
+    border-radius: 50%;
+    transform: translateY(-3px);
+    box-shadow: 0 0 12px var(--accent-glow);
+  }
+
+  /* ====== Search ====== */
+  .search-row {
+    padding: 0 20px 10px;
+    flex-shrink: 0;
+  }
+  .search-input {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 11px 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+  }
+  .search-input input {
+    flex: 1;
+    background: none;
+    border: none;
+    outline: none;
+    color: var(--text-primary);
+    font-family: var(--font-body);
+    font-size: 14px;
+  }
+  .search-input input::placeholder { color: var(--text-muted); }
+
+  /* ====== Toggle + counter ====== */
+  .toggle-row {
+    padding: 0 20px 10px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+  }
+  .segmented {
+    display: flex;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 3px;
+    gap: 2px;
+  }
+  .seg {
+    padding: 8px 14px;
+    border-radius: 7px;
+    font-family: var(--font-body);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    color: var(--text-secondary);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .seg.active {
+    background: var(--accent);
+    color: var(--text-on-accent);
+    box-shadow: 0 4px 14px rgba(255, 107, 26, 0.35);
+  }
+  .count-badge {
+    margin-left: auto;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 0.5px;
+  }
+  .count-badge strong { color: var(--text-primary); font-weight: 700; }
+
+  /* ====== Filter chips ====== */
+  .filter-row {
+    padding: 0 20px 12px;
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    flex-shrink: 0;
+  }
+  .filter-row::-webkit-scrollbar { display: none; }
+  .chip {
+    flex-shrink: 0;
+    padding: 7px 13px;
+    border-radius: 999px;
+    font-family: var(--font-body);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+  }
+  .chip.active {
+    background: var(--accent-muted);
+    border-color: var(--accent-border);
+    color: var(--accent);
+  }
+
+  /* ====== MAP AREA ====== */
+  .map-area {
+    position: relative;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+    background: var(--map-bg);
+  }
+  .map-svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  /* User location */
+  .user-pin {
+    position: absolute;
+    top: 52%;
+    left: 32%;
+    transform: translate(-50%, -50%);
+    z-index: 10;
+  }
+  .user-pin-ring {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--user-pin);
+    box-shadow: 0 0 0 2px rgba(10, 11, 14, 0.9), 0 0 0 6px rgba(93, 168, 255, 0.25);
+    animation: userPulseKeyframes 1800ms ease-out infinite;
+  }
+  .user-pin-dir {
+    position: absolute;
+    top: 50%; left: 50%;
+    width: 36px;
+    height: 36px;
+    transform: translate(-50%, -50%);
+    background: conic-gradient(from 340deg at 50% 50%, rgba(93, 168, 255, 0.35) 0deg, rgba(93, 168, 255, 0) 40deg);
+    border-radius: 50%;
+    pointer-events: none;
+  }
+
+  /* Service area (mobile provider radius) */
+  .service-area {
+    position: absolute;
+    width: 58%;
+    aspect-ratio: 1 / 1;
+    transform: translate(-50%, -50%);
+    border: 1.5px dashed var(--accent);
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255, 107, 26, 0.14) 0%, rgba(255, 107, 26, 0.05) 55%, transparent 100%);
+    pointer-events: none;
+    z-index: 5;
+    animation: areaIn 420ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  }
+  @keyframes areaIn {
+    from { opacity: 0; transform: translate(-50%, -50%) scale(0.75); }
+    to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  }
+  .service-radius-label {
+    position: absolute;
+    top: 12%;
+    right: 6%;
+    transform: rotate(-24deg);
+    padding: 3px 8px;
+    border-radius: 5px;
+    background: rgba(10, 11, 14, 0.92);
+    border: 1px solid var(--accent-border);
+    color: var(--accent);
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: 10px;
+    letter-spacing: 0.5px;
+    pointer-events: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .service-radius-label::before {
+    content: 'ZASIĘG';
+    font-size: 8px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    color: var(--text-muted);
+  }
+
+  /* In-range indicator (success badge) */
+  .in-range-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 8px;
+    border-radius: 5px;
+    background: var(--success-muted, rgba(46, 224, 160, 0.14));
+    border: 1px solid rgba(46, 224, 160, 0.32);
+    color: var(--success);
+    font-family: var(--font-body);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 1.1px;
+    text-transform: uppercase;
+  }
+  .in-range-badge svg { stroke-width: 3; }
+
+  /* Provider pins */
+  .map-pin {
+    position: absolute;
+    transform: translate(-50%, -100%);
+    background: var(--accent);
+    color: var(--text-on-accent);
+    border-radius: 50%;
+    width: 38px;
+    height: 38px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: 12px;
+    border: 2px solid var(--bg);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.55), 0 2px 6px rgba(255, 107, 26, 0.35);
+    cursor: pointer;
+    z-index: 8;
+    transition: transform 200ms ease;
+  }
+  .map-pin::after {
+    content: '';
+    position: absolute;
+    bottom: -4px;
+    left: 50%;
+    width: 8px;
+    height: 8px;
+    transform: translateX(-50%) rotate(45deg);
+    background: var(--accent);
+    border-right: 2px solid var(--bg);
+    border-bottom: 2px solid var(--bg);
+  }
+  .map-pin:hover { transform: translate(-50%, -104%) scale(1.05); }
+  .map-pin.selected {
+    width: 48px;
+    height: 48px;
+    font-size: 14px;
+    box-shadow: 0 10px 22px rgba(0, 0, 0, 0.6), 0 0 0 6px var(--accent-muted), 0 0 20px var(--accent-glow);
+    z-index: 9;
+  }
+  .map-pin.selected::after {
+    width: 10px;
+    height: 10px;
+    bottom: -5px;
+  }
+
+  /* Zoom / locate controls */
+  .map-controls {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    z-index: 20;
+  }
+  .map-ctrl-group {
+    display: flex;
+    flex-direction: column;
+    background: rgba(10, 11, 14, 0.88);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .map-ctrl-btn {
+    width: 38px;
+    height: 38px;
+    background: transparent;
+    border: none;
+    color: var(--text-primary);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 140ms ease;
+  }
+  .map-ctrl-btn:hover { background: var(--surface-hover); }
+  .map-ctrl-divider { height: 1px; background: var(--border); }
+
+  .map-ctrl-btn.locate {
+    background: rgba(10, 11, 14, 0.88);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--accent);
+  }
+  .map-ctrl-btn.locate:hover {
+    background: var(--accent-muted);
+    border-color: var(--accent-border);
+  }
+
+  /* Mini info banner about radius */
+  .area-banner {
+    position: absolute;
+    top: 14px;
+    left: 14px;
+    padding: 6px 10px;
+    background: rgba(10, 11, 14, 0.88);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 11px;
+    color: var(--text-secondary);
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    z-index: 20;
+  }
+  .area-banner strong { color: var(--text-primary); font-weight: 700; }
+  .area-banner .ico-wrap {
+    color: var(--accent);
+    display: inline-flex;
+  }
+
+  /* ====== Mini card (overlay nad bottom navem) ====== */
+  .map-card {
+    position: absolute;
+    left: 14px;
+    right: 14px;
+    bottom: 90px;
+    z-index: 30;
+    background: var(--surface);
+    border: 1px solid var(--accent-border);
+    border-radius: 16px;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    box-shadow: 0 14px 40px rgba(0, 0, 0, 0.65);
+    animation: riseIn 420ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  }
+  @keyframes riseIn {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .map-card-head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .map-card-avatar {
+    width: 44px; height: 44px;
+    border-radius: 10px;
+    object-fit: cover;
+    border: 1px solid var(--border-strong);
+    flex-shrink: 0;
+  }
+  .map-card-title-col { flex: 1; min-width: 0; }
+  .map-card-name {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1.2;
+  }
+  .map-card-meta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 4px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    flex-wrap: wrap;
+  }
+  .mobile-tag-mini {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: var(--accent-muted);
+    border: 1px solid var(--accent-border);
+    color: var(--accent);
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 1.1px;
+    text-transform: uppercase;
+  }
+  .map-card-close {
+    width: 30px; height: 30px;
+    border-radius: 999px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+
+  .map-card-stats {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 0;
+    border-top: 1px dashed var(--border);
+  }
+  .map-card-stat {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+  .map-card-stat strong { color: var(--text-primary); font-weight: 700; }
+  .map-card-stat.price strong { font-family: var(--font-mono); font-size: 14px; }
+  .dot-sep {
+    width: 3px; height: 3px;
+    border-radius: 50%;
+    background: var(--text-muted);
+  }
+
+  .map-card-cta {
+    padding: 10px 14px;
+    background: var(--accent);
+    color: var(--text-on-accent);
+    border: none;
+    border-radius: 10px;
+    font-family: var(--font-body);
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: 0.3px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    box-shadow: 0 4px 14px rgba(255, 107, 26, 0.4);
+  }
+
+  /* ====== Bottom nav ====== */
+  .bottom-nav {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    background: var(--bg);
+    border-top: 1px solid var(--border);
+    padding: 10px 0 34px;
+    display: flex;
+    z-index: 40;
+    box-shadow: 0 -12px 24px rgba(0, 0, 0, 0.45);
+  }
+  .nav-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    padding-top: 6px;
+    position: relative;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--text-secondary);
+    font-family: var(--font-body);
+  }
+  .nav-item:hover { color: var(--text-primary); }
+  .nav-item.active { color: var(--accent); }
+  .nav-item.active::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    width: 38px;
+    height: 2px;
+    border-radius: 2px;
+    background: var(--accent);
+    box-shadow: 0 0 10px var(--accent-glow);
+  }
+  .nav-item .label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.4px;
+  }
+  .nav-item.active .label { font-weight: 700; }
+  .nav-item .badge {
+    position: absolute;
+    top: 3px;
+    right: 30%;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    border-radius: 8px;
+    background: var(--accent);
+    color: var(--text-on-accent);
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: 9px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid var(--bg);
+  }
+
+  /* footer caption */
+  .caption {
+    max-width: 560px;
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 0.5px;
+  }
+  .caption strong {
+    color: var(--text-secondary);
+    font-weight: 500;
+    display: block;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    font-size: 10px;
+  }
+  .caption em { color: var(--accent); font-style: normal; }
+</style>
+</head>
+<body>
+
+  <header class="canvas-label">
+    <span class="film-strip">OPONY — 11</span>
+    <span class="slug">mapa · widok pinezek</span>
+    <span class="canvas-meta"><span class="pulse"></span>W:12.13 · US-05 / 06 / 38</span>
+  </header>
+
+  <main class="phone" role="region" aria-label="Mockup — mapa providerów">
+
+    <div class="status-bar" aria-hidden="true">
+      <span>9:41</span>
+      <span class="right">
+        <svg width="18" height="12" viewBox="0 0 18 12" fill="currentColor"><rect x="0" y="8" width="3" height="4" rx="0.5"/><rect x="5" y="5" width="3" height="7" rx="0.5"/><rect x="10" y="2" width="3" height="10" rx="0.5"/><rect x="15" y="0" width="3" height="12" rx="0.5" opacity="0.4"/></svg>
+        <svg width="16" height="12" viewBox="0 0 16 12" fill="currentColor"><path d="M8 11.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z"/><path d="M4 7.5a6 6 0 0 1 8 0l-1 1a4.6 4.6 0 0 0-6 0l-1-1Z"/><path d="M1.5 4.5a10 10 0 0 1 13 0l-1 1a8.5 8.5 0 0 0-11 0l-1-1Z" opacity="0.6"/></svg>
+        <svg width="26" height="12" viewBox="0 0 26 12" fill="none"><rect x="0.5" y="0.5" width="22" height="11" rx="3" stroke="currentColor" opacity="0.5"/><rect x="2" y="2" width="19" height="8" rx="1.5" fill="currentColor"/><rect x="23" y="4" width="2" height="4" rx="1" fill="currentColor" opacity="0.5"/></svg>
+      </span>
+    </div>
+
+    <div class="screen">
+
+      <!-- HEADER -->
+      <div class="app-header">
+        <div class="wordmark">OPONY<span class="dot"></span></div>
+      </div>
+
+      <!-- SEARCH -->
+      <div class="search-row">
+        <div class="search-input">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4-4"/></svg>
+          <input placeholder="Szukaj nazwy lub ulicy..." />
+        </div>
+      </div>
+
+      <!-- TOGGLE -->
+      <div class="toggle-row">
+        <div class="segmented" role="tablist">
+          <button class="seg active" role="tab" aria-selected="true">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3V6Z"/><path d="M9 3v15M15 6v15"/></svg>
+            Mapa
+          </button>
+          <button class="seg" role="tab">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13"/><circle cx="3.5" cy="6" r="1" fill="currentColor"/><circle cx="3.5" cy="12" r="1" fill="currentColor"/><circle cx="3.5" cy="18" r="1" fill="currentColor"/></svg>
+            Lista
+          </button>
+        </div>
+        <span class="count-badge"><strong>4</strong> PUNKTY</span>
+      </div>
+
+      <!-- FILTERS -->
+      <div class="filter-row">
+        <button class="chip active">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+          Dziś
+        </button>
+        <button class="chip">Jutro</button>
+        <button class="chip">Weekend</button>
+        <button class="chip">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 17h14M7 12l1.5-4.5A2 2 0 0 1 10.4 6h3.2a2 2 0 0 1 1.9 1.5L17 12"/><path d="M5 12h14v5H5z"/></svg>
+          Z dojazdem
+        </button>
+        <button class="chip">Ocena 4.5+</button>
+      </div>
+
+      <!-- MAP AREA -->
+      <section class="map-area" aria-label="Mapa punktów wymiany opon">
+
+        <!-- SVG map (grid + ulice + rzeka + bloki) -->
+        <svg class="map-svg" viewBox="0 0 393 500" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <defs>
+            <pattern id="dots" x="0" y="0" width="24" height="24" patternUnits="userSpaceOnUse">
+              <circle cx="12" cy="12" r="0.9" fill="#1F2430"/>
+            </pattern>
+          </defs>
+
+          <!-- base: dark with dot grid -->
+          <rect width="393" height="500" fill="var(--map-bg)"/>
+          <rect width="393" height="500" fill="url(#dots)"/>
+
+          <!-- bloki / budynki -->
+          <g fill="var(--map-block)" stroke="none">
+            <rect x="22" y="60" width="90" height="56" rx="3"/>
+            <rect x="130" y="50" width="70" height="48" rx="3"/>
+            <rect x="220" y="70" width="65" height="60" rx="3"/>
+            <rect x="30" y="150" width="55" height="48" rx="3"/>
+            <rect x="105" y="155" width="80" height="52" rx="3"/>
+            <rect x="260" y="180" width="90" height="60" rx="3"/>
+            <rect x="15" y="270" width="75" height="68" rx="3"/>
+            <rect x="115" y="280" width="95" height="50" rx="3"/>
+            <rect x="235" y="300" width="80" height="55" rx="3"/>
+            <rect x="40" y="380" width="80" height="55" rx="3"/>
+            <rect x="150" y="400" width="65" height="60" rx="3"/>
+            <rect x="245" y="395" width="95" height="58" rx="3"/>
+          </g>
+
+          <!-- główne ulice -->
+          <g fill="none" stroke-linecap="round">
+            <path d="M -10 130 C 90 122, 200 150, 310 134 C 360 126, 400 118, 410 118" stroke="var(--map-street)" stroke-width="3"/>
+            <path d="M -10 255 C 90 248, 200 270, 310 260 C 360 254, 400 248, 410 248" stroke="var(--map-street)" stroke-width="3"/>
+            <path d="M 100 -10 C 110 80, 130 200, 140 320 C 148 400, 160 510, 170 520" stroke="var(--map-street)" stroke-width="3"/>
+            <path d="M 280 -10 C 270 80, 260 200, 270 320 C 276 420, 288 510, 300 520" stroke="var(--map-street)" stroke-width="3"/>
+          </g>
+          <!-- poboczne ulice -->
+          <g fill="none" stroke-linecap="round" opacity="0.7">
+            <path d="M -10 80 L 410 85" stroke="var(--map-street-minor)" stroke-width="1.3"/>
+            <path d="M -10 350 L 410 346" stroke="var(--map-street-minor)" stroke-width="1.3"/>
+            <path d="M -10 440 L 410 436" stroke="var(--map-street-minor)" stroke-width="1.3"/>
+            <path d="M 40 -10 L 50 510" stroke="var(--map-street-minor)" stroke-width="1.3"/>
+            <path d="M 200 -10 L 210 510" stroke="var(--map-street-minor)" stroke-width="1.3"/>
+            <path d="M 350 -10 L 340 510" stroke="var(--map-street-minor)" stroke-width="1.3"/>
+          </g>
+
+          <!-- rzeka -->
+          <path d="M -10 370 Q 100 360, 200 380 T 410 370" fill="none" stroke="var(--map-water)" stroke-width="8" stroke-linecap="round" opacity="0.85"/>
+
+          <!-- delikatny amber glow wokół user location (centrum obszaru) -->
+          <radialGradient id="areaGlow2" cx="32%" cy="52%" r="30%">
+            <stop offset="0%" stop-color="#FF6B1A" stop-opacity="0.08"/>
+            <stop offset="100%" stop-color="#FF6B1A" stop-opacity="0"/>
+          </radialGradient>
+          <rect width="393" height="500" fill="url(#areaGlow2)"/>
+        </svg>
+
+        <!-- Banner info -->
+        <div class="area-banner">
+          <span class="ico-wrap" aria-hidden="true">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+          </span>
+          <span><strong>Nowy Sącz</strong> · 15 km</span>
+        </div>
+
+        <!-- Map controls -->
+        <div class="map-controls">
+          <div class="map-ctrl-group">
+            <button class="map-ctrl-btn" aria-label="Powiększ">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+            </button>
+            <span class="map-ctrl-divider"></span>
+            <button class="map-ctrl-btn" aria-label="Pomniejsz">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/></svg>
+            </button>
+          </div>
+          <button class="map-ctrl-btn locate" aria-label="Moja lokalizacja">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
+          </button>
+        </div>
+
+        <!-- Service radius — tylko dla wybranego providera mobilnego -->
+        <div class="service-area" style="top: 38%; left: 45%;" aria-hidden="true">
+          <span class="service-radius-label">15&nbsp;km</span>
+        </div>
+
+        <!-- Provider pins -->
+        <button class="map-pin selected" style="top: 38%; left: 45%;" aria-label="MobilOpony Kasia — 4,8 — wybrany">
+          4.8
+        </button>
+        <button class="map-pin" style="top: 28%; left: 68%;" aria-label="Szybka Wymiana — 4,5">
+          4.5
+        </button>
+        <button class="map-pin" style="top: 65%; left: 62%;" aria-label="Vulkanizator Pro — 4,9">
+          4.9
+        </button>
+        <button class="map-pin" style="top: 72%; left: 22%;" aria-label="TireX Mobilny — 4,3">
+          4.3
+        </button>
+
+        <!-- User location -->
+        <div class="user-pin" aria-label="Twoja lokalizacja">
+          <div class="user-pin-dir"></div>
+          <div class="user-pin-ring"></div>
+        </div>
+
+        <!-- Mini-card (selected provider) -->
+        <article class="map-card" aria-label="Szczegóły wybranego punktu">
+          <div class="map-card-head">
+            <img class="map-card-avatar" src="https://picsum.photos/seed/mobilopony-kasia/88/88" alt="" />
+            <div class="map-card-title-col">
+              <div class="map-card-name">MobilOpony Kasia</div>
+              <div class="map-card-meta">
+                <span class="mobile-tag-mini">
+                  <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 17h14M7 12l1.5-4.5A2 2 0 0 1 10.4 6h3.2a2 2 0 0 1 1.9 1.5L17 12"/><path d="M5 12h14v5H5z"/></svg>
+                  Z dojazdem
+                </span>
+                <span class="in-range-badge" title="Twój adres jest w strefie obsługi">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7"/></svg>
+                  W zasięgu
+                </span>
+              </div>
+            </div>
+            <button class="map-card-close" aria-label="Zamknij">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+            </button>
+          </div>
+
+          <div class="map-card-stats">
+            <span class="map-card-stat">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="var(--accent)"><polygon points="12 2 15 9 22 9.5 17 14 18.5 21 12 17.5 5.5 21 7 14 2 9.5 9 9 12 2"/></svg>
+              <strong>4,8</strong> (127)
+            </span>
+            <span class="dot-sep"></span>
+            <span class="map-card-stat price">
+              <strong>180 zł</strong>
+            </span>
+            <span class="dot-sep"></span>
+            <span class="map-card-stat">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+              <strong>2,1 km</strong>
+            </span>
+          </div>
+
+          <button class="map-card-cta" type="button">
+            Zobacz profil
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+          </button>
+        </article>
+
+      </section>
+
+      <!-- BOTTOM NAV (Szukaj active) -->
+      <nav class="bottom-nav" aria-label="Nawigacja główna">
+        <button class="nav-item active">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4-4"/></svg>
+          <span class="label">Szukaj</span>
+        </button>
+        <button class="nav-item">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M3 10h18M8 2v4M16 2v4"/><circle cx="12" cy="15" r="1.5" fill="currentColor"/></svg>
+          <span class="label">Rezerwacje</span>
+          <span class="badge">1</span>
+        </button>
+        <button class="nav-item">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>
+          <span class="label">Profil</span>
+        </button>
+      </nav>
+
+    </div>
+  </main>
+
+  <footer class="caption">
+    <div>
+      <strong>Sekcje</strong>
+      Header OPONY + search + toggle <em>Mapa active</em> + chipsy filtrów · Full-screen mapa SVG (grid, ulice, rzeka, bloki, subtle amber glow przy user) · Banner „Nowy Sącz · 15 km" · Map controls (+/−, locate-me) · 4 provider pinezki (1 selected większy) · User location pin (niebieski pulsujący) · Mini-card dla selected z avatar/name/stats/CTA · Bottom nav Szukaj active
+    </div>
+    <div>
+      <strong>Detale pinezek</strong>
+      Pin: amber kółko 38px + mini-trójkąt dolny (bubble marker) + ocena w <em>mono</em> · Selected: 48px + glow ring + amber halo · User: niebieska kropka 14px z pulsującym ringiem (animacja userPulseKeyframes) + conic-gradient „kierunek widzenia" · Mini-card z amber-border + rise-in animation
+    </div>
+  </footer>
+
+</body>
+</html>

@@ -1,6 +1,8 @@
 # Analiza biznesowa — Opony.app
 
 > Miasto pilotażowe: **Nowy Sącz**. Dokument opisuje kontekst rynkowy, persony, konkurencję, monetyzację, koszty, unit economics i strategię GTM.
+>
+> **Status:** Design phase zamknięty (2026-04-22, 38 ekranów HTML w [`/design`](../design/)). Ten dokument opisuje *biznes*, nie *wizualne* — dla UX/UI idź do [plan-sprintow.md §12.Z](plan-sprintow.md#12z-pełny-zakres-design-phase--38-ekranów) lub otwórz bezpośrednio pliki `.html`. Sekcje §16 (unit economics) i §17 (GTM) zawierają liczby dla docelowego modelu v0.5+ z płatnościami — w POC v0 aplikacja jest **darmowa** (ADR-004), prowizja 0%.
 
 ## 1. Kontekst
 
@@ -129,26 +131,32 @@ Dwa razy w roku (wiosna/jesień) miliony kierowców w Polsce wymieniają opony. 
 
 ## 4. Kluczowe przepływy UX
 
+> 🎨 **Finalne ekrany** w [`/design`](../design/) — 39 HTML mockupów. Mapowanie flow → pliki poniżej.
+
 ### 4.1. Rezerwacja — happy path klienta (< 2 minuty)
 
+🎨 **Design:** [`01-home.html`](../design/01-home.html) → [`02-provider-detail.html`](../design/02-provider-detail.html) → [`03-time-slot.html`](../design/03-time-slot.html) → [`04-booking-confirmed.html`](../design/04-booking-confirmed.html)
+
 ```
-[Otwórz app] → [Mapa z punktami w okolicy]
+[Otwórz app] → [Lista warsztatów w N. Sączu]
      ↓
-[Dotknij punkt] → [Karta: cena 180 zł, ocena 4.7, wolne dziś 14:00]
+[Dotknij warsztat] → [Karta: cena 180 zł, ocena 4.8, wolne dziś 14:30]
      ↓
-[Rezerwuj 14:00] → [Auto-wybór: Ford Focus 2019 → 205/55 R16]
+[Wybierz slot] → [Auto-wybór pojazdu: Opel Astra → 205/55 R16]
      ↓
-[Potwierdź] → [Push: "Potwierdzone. Jutro 14:00, ul. X"]
+[Potwierdź] → [Kod OPN-4F2K, SMS, płatność u providera — ADR-004]
 ```
 
 ### 4.2. Obsługa mobilnego punktu — dzień pracy operatora
 
+🎨 **Design:** [`b2b-01-dashboard.html`](../design/b2b-01-dashboard.html) → [`b2b-09-kalendarz.html`](../design/b2b-09-kalendarz.html) → [`b2b-08-szczegol-rezerwacji.html`](../design/b2b-08-szczegol-rezerwacji.html)
+
 ```
-Rano: [Panel → Trasa dnia] → 5 wizyt, zoptymalizowana kolejność
+Rano: [Panel → Pulpit dnia] → 5 wizyt dnia + PENDING inbox
      ↓
-Wizyta 1: [Nawiguj] → [Rozpocznij] → [Zakończ] → [Klient ocenia]
+Wizyta 1: [Szczegół] → [Nawiguj] → [Rozpocznij] → [Zakończ] → [Klient ocenia]
      ↓
-System auto-reshuffluje trasę jeśli wizyta opóźniona > 15 min
+Provider odpowiada na opinie z poziomu b2b-10-opinie.html
 ```
 
 ## 9. Weryfikacja (kryteria sukcesu MVP)
@@ -232,6 +240,9 @@ Dodatkowe koszty jednorazowe:
 **Uwaga:** marketing 2 000 PLN/mc (nie 3 000 jak zakładano dla Poznania) — Nowy Sącz ma niższy CPC, mocniejszy word-of-mouth i mniejszy audience. Szczyt (marzec–maj, wrzesień–listopad): 4 000 PLN/mc. Poza szczytem: 1 000 PLN/mc. Średnia uśredniona: ~2 000 PLN/mc.
 
 ### 16.3. Koszty zmienne (na rezerwację)
+
+> ⚠️ **POC v0 bez płatności (ADR-004 w `architektura.md`).** Aplikacja darmowa w pilocie Nowego Sącza — brak prowizji, brak payment processing P24. Liczby w tabeli poniżej + §16.4–16.7 **dotyczą docelowego modelu v0.5+** (gdy włączymy monetyzację). W pilocie v0: UM = **0 PLN**, revenue = **0 PLN**, burn = koszty stałe + Twilio SMS (~1,20 PLN/rez). Patrz §16.9 „Monetization gate v0.5".
+
 
 Scenariusze zależne od wyboru dostawcy SMS:
 
@@ -349,6 +360,43 @@ Scenariusz bazowy z UM = 10,00 PLN (Twilio + P24), stałe ~4k/mc:
 - Bez oddzielnego dev utrzymaniowego (founder + mid-dev utrzymują) → oszczędność 144k/rok.
 - **Razem runway: ~200 000 PLN**, burn rok 1: ~180k.
 - Realny scenariusz dla bootstrappera z oszczędnościami.
+
+### 16.9. Monetization gate — v0.5 (ADR-004)
+
+**Kontekst:** POC v0 uruchamiamy jako **aplikację darmową** w pilocie Nowego Sącza. Klient rezerwuje, provider akceptuje, wizyta się odbywa — klient płaci providerowi offline (gotówka/przelew). Platforma zarabia **0 zł prowizji** w pilocie.
+
+**Co to oznacza dla unit economics v0 (pilot Nowego Sącza, 3–6 mc):**
+- Revenue: 0 PLN / rezerwację (brak prowizji)
+- Payment processing P24: 0 PLN (nie zaimplementowany)
+- UM: **0 PLN** (target dla v0.5: ~10 PLN)
+- Burn rok 1 (Nowy Sącz): ~371k PLN runway, faktyczna strata ~331k PLN + **~30–50k dodatkowego burn** bo nie ma revenue od rezerwacji
+- Break-even infra: **nieosiągalny w v0** (zamierzone — walidacja funnel, nie monetyzacji)
+
+**Co walidujemy w v0 bez monetyzacji:**
+1. Funnel konwersji klienta (landing → OTP → profile → vehicle → first booking)
+2. Retention providerów (czy 8+ zostaje po 3 mc?)
+3. No-show rate (target <10% z BLIK depozytu → realistic 20–30% bez depozytu)
+4. Rating distribution (czy ≥4,5 avg dla top 5 providerów?)
+5. Provider acceptance rate (ile % rezerwacji akceptowanych w SLA 2h?)
+6. Provider bypass rate (ile klientów wraca bezpośrednio do providera po 1 wizycie?)
+
+**Kryteria „włącz monetyzację w v0.5":**
+- ≥ 8 aktywnych providerów × 3 mc w pilocie
+- ≥ 100 rez/mc w szczycie sezonu
+- No-show < 25% (bez BLIK)
+- NPS provider ≥ 40 (czy providerzy *chcą* zostać gdy zaczniemy pobierać 8%?)
+- 3 providerów zadeklaruje chęć zostania przy 8% (podpisany regulamin v0.5)
+
+**Wybór monetyzacji v0.5 (A vs B):**
+- **Opcja A: Miesięczne fakturowanie NET 14** — my wystawiamy fakturę na 8% z poprzedniego miesiąca. Plusy: cash flow platformy predykowalny; minusy: bad debt risk (2-3 niepłacących × 20 = −30% revenue), wymaga windykacji.
+- **Opcja B: Przelewy24 marketplace split** — auto-split 8% platforma, 92% provider przy każdej transakcji online. Plusy: zero ręcznej pracy, brak bad debt; minusy: lead time P24 verification (3-5 dni) per provider, wyższy friction onboarding.
+
+Decyzję A vs B **podejmujemy po pilocie** na bazie zachowania providerów i klientów. Obie opcje trzymamy jako kandydatów — zbieramy dane (US-XX `actualAmount` jest poza v0 scope, ale provider w v0.5 panelu widzi sumę przewidywanych prowizji z cennika + liczby bookingów COMPLETED).
+
+**Timeline monetizacji:**
+- v0: 5–6 tyg. development → 3–6 mc pilot Nowego Sącza
+- v0.5 gate review (po 3 mc pilota): decyzja A vs B → 2–3 tyg. implementacji → deploy
+- v0.5 full revenue: ~8–9 mc od startu pilota
 
 ### 16.8. Dźwignie poprawy ekonomiki
 
@@ -578,6 +626,8 @@ Scenariusz bazowy z UM = 10,00 PLN (Twilio + P24), stałe ~4k/mc:
 - `opony.app/p/<slug>` — profil każdego providera (long tail).
 - `opony.app/blog/kiedy-wymienic-opony` — evergreen content.
 - `opony.app/blog/rozmiar-opon-ford-focus` — per-model content (SEO magnet).
+
+> **Architektoniczna uwaga:** Landing `opony.app` to **osobny artefakt** (trzeci z trójki: landing / mobile Expo / panel Next.js — patrz ADR-001 w `architektura.md`). Wybór Next.js Static Export (SSG) wynika z potrzeby SEO/crawlability — mobile Expo+RNW nie ma dobrego SSR dla Google. Landing linkuje do `app.opony.app` (klient) i `panel.opony.app` (provider signup).
 
 **Partnerstwa lokalne:**
 - Myjnie samochodowe (3–4 w mieście) → stojak z ulotkami + QR code „−10% na pierwszą wymianę z kodem MYJNIA".

@@ -1,0 +1,1548 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Opony Panel — B2B-09 Kalendarz · Widok tygodnia</title>
+<!--
+  Screen: Panel providera — Kalendarz (widok tygodnia, rozbudowany z W:12.5)
+  Ref:    docs/plan-sprintow.md → W:12.5 extended (panel.opony.app — desktop-first)
+  US:     US-22 (kalendarz), US-21 (dashboard dnia), US-30 (manual booking)
+  Tone:   industrial-dark · week grid + positioned bookings · current time indicator · today column highlight
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Bebas+Neue&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0A0B0E;
+    --bg-tint-top: #12141A;
+    --surface: #14171D;
+    --surface-raised: #1B1E26;
+    --surface-hover: #23272F;
+    --border: #262A34;
+    --border-strong: #363B47;
+    --hairline: rgba(255, 255, 255, 0.06);
+    --text-primary: #F5F4EF;
+    --text-secondary: #9EA2AD;
+    --text-muted: #60646F;
+    --text-on-accent: #0A0B0E;
+    --accent: #FF6B1A;
+    --accent-hover: #FF8039;
+    --accent-muted: rgba(255, 107, 26, 0.14);
+    --accent-border: rgba(255, 107, 26, 0.32);
+    --accent-glow: rgba(255, 107, 26, 0.45);
+    --success: #2EE0A0;
+    --success-muted: rgba(46, 224, 160, 0.14);
+    --success-border: rgba(46, 224, 160, 0.32);
+    --warning: #FFB020;
+    --warning-muted: rgba(255, 176, 32, 0.14);
+    --warning-border: rgba(255, 176, 32, 0.32);
+    --danger: #FF5757;
+    --danger-muted: rgba(255, 87, 87, 0.12);
+    --danger-border: rgba(255, 87, 87, 0.32);
+    --info: #5DA8FF;
+    --info-muted: rgba(93, 168, 255, 0.14);
+    --info-border: rgba(93, 168, 255, 0.32);
+    --font-display: 'Bebas Neue', sans-serif;
+    --font-body: 'Archivo', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; overflow-x: hidden; max-width: 100vw; }
+  body {
+    --desktop-scale: min(1, calc((100vh - 200px) / 900px), calc((100vw - 80px) / 1440px));
+    font-family: var(--font-body);
+    background: var(--bg);
+    color: var(--text-primary);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    background-image:
+      radial-gradient(ellipse 70% 50% at 50% 0%, rgba(255, 107, 26, 0.05) 0%, transparent 60%),
+      radial-gradient(ellipse 50% 30% at 90% 100%, rgba(46, 224, 160, 0.02) 0%, transparent 60%),
+      linear-gradient(180deg, var(--bg-tint-top) 0%, var(--bg) 30%);
+    background-attachment: fixed;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 40px 40px 60px;
+    gap: 24px;
+  }
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 4px var(--accent-muted); opacity: 1; }
+    50%      { box-shadow: 0 0 0 8px transparent; opacity: 0.6; }
+  }
+  @keyframes softPulse {
+    0%, 100% { box-shadow: 0 0 0 3px var(--accent-muted); opacity: 1; }
+    50%      { box-shadow: 0 0 0 7px transparent; opacity: 0.85; }
+  }
+
+  .canvas-label {
+    width: 100%;
+    max-width: 1440px;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: baseline;
+    gap: 20px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  .film-strip { font-family: var(--font-display); font-size: 32px; letter-spacing: 3px; line-height: 1; }
+  .slug {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    border-left: 1px solid var(--border);
+    padding-left: 18px;
+  }
+  .canvas-meta {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-secondary);
+    letter-spacing: 1px;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .canvas-meta .pulse {
+    display: inline-block;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 0 4px var(--accent-muted);
+    animation: pulse 1800ms ease-in-out infinite;
+  }
+
+  /* Desktop frame */
+  .desktop-frame {
+    width: 1440px;
+    height: 900px;
+    background: var(--bg);
+    border-radius: 14px;
+    border: 1px solid #1C1E24;
+    box-shadow: 0 40px 120px rgba(0, 0, 0, 0.6), 0 20px 40px rgba(0, 0, 0, 0.4);
+    overflow: hidden;
+    position: relative;
+    flex-shrink: 0;
+    transform: scale(var(--desktop-scale));
+    transform-origin: top center;
+    margin-bottom: calc((var(--desktop-scale) - 1) * 900px);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .browser-chrome {
+    height: 44px;
+    background: linear-gradient(180deg, #1A1D23, #14171D);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    gap: 16px;
+    flex-shrink: 0;
+  }
+  .traffic-lights { display: inline-flex; gap: 8px; }
+  .light { width: 12px; height: 12px; border-radius: 50%; }
+  .light.red { background: #FF5F57; }
+  .light.yellow { background: #FEBC2E; }
+  .light.green { background: #28C840; }
+  .browser-tabs { display: inline-flex; gap: 2px; }
+  .browser-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-bottom: none;
+    border-radius: 8px 8px 0 0;
+    font-size: 12px;
+    color: var(--text-primary);
+    position: relative;
+    top: 6px;
+  }
+  .browser-tab .favicon {
+    width: 14px; height: 14px;
+    border-radius: 3px;
+    background: var(--accent);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-display);
+    font-size: 9px;
+    color: var(--text-on-accent);
+    letter-spacing: 0.5px;
+  }
+  .browser-address {
+    flex: 1;
+    max-width: 480px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+  .browser-address .lock { color: var(--success); }
+  .browser-address .url { color: var(--text-primary); }
+  .browser-address .path { color: var(--text-secondary); }
+
+  /* App root */
+  .app-root {
+    flex: 1;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: 220px 1fr;
+  }
+  .sidebar {
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    padding: 20px 14px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .sb-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px 18px;
+  }
+  .sb-brand .wordmark {
+    font-family: var(--font-display);
+    font-size: 26px;
+    letter-spacing: 3px;
+    line-height: 1;
+    color: var(--text-primary);
+    display: inline-flex;
+    align-items: baseline;
+    gap: 3px;
+  }
+  .sb-brand .dot {
+    display: inline-block;
+    width: 6px; height: 6px;
+    background: var(--accent);
+    border-radius: 50%;
+    transform: translateY(-2px);
+    box-shadow: 0 0 10px var(--accent-glow);
+  }
+  .sb-brand .panel-tag {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    padding: 2px 5px;
+    border-radius: 4px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    font-weight: 700;
+    margin-left: auto;
+  }
+  .sb-section-label {
+    font-family: var(--font-body);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 1.3px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    padding: 8px 10px 4px;
+  }
+  .sb-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 10px;
+    border-radius: 8px;
+    background: transparent;
+    border: 1px solid transparent;
+    color: var(--text-secondary);
+    font-family: var(--font-body);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: left;
+    width: 100%;
+    transition: background 140ms ease, color 140ms ease;
+  }
+  .sb-item:hover { background: var(--surface-hover); color: var(--text-primary); }
+  .sb-item.active {
+    background: var(--accent-muted);
+    color: var(--accent);
+    border-color: var(--accent-border);
+  }
+  .sb-badge {
+    margin-left: auto;
+    min-width: 20px; height: 18px;
+    padding: 0 6px;
+    background: var(--accent);
+    color: var(--text-on-accent);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 700;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .sb-spacer { flex: 1; }
+  .sb-user {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    cursor: pointer;
+  }
+  .sb-avatar {
+    width: 34px; height: 34px;
+    border-radius: 9px;
+    background: linear-gradient(135deg, #FF8039 0%, #C73F0A 100%);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-display);
+    font-size: 15px;
+    color: var(--text-on-accent);
+    letter-spacing: 1.5px;
+    flex-shrink: 0;
+  }
+  .sb-user-col { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  .sb-user-name {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1.1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .sb-user-role {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    color: var(--accent);
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    font-weight: 700;
+  }
+
+  /* Main */
+  .main { display: flex; flex-direction: column; overflow: hidden; }
+  .topbar {
+    height: 58px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 24px;
+    gap: 12px;
+    flex-shrink: 0;
+  }
+  .tb-breadcrumb {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--text-muted);
+    font-weight: 600;
+  }
+  .tb-breadcrumb .sep { color: var(--border-strong); }
+  .tb-breadcrumb .current { color: var(--text-primary); font-weight: 700; }
+  .tb-spacer { flex: 1; }
+
+  /* View switcher */
+  .view-switcher {
+    display: inline-flex;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 3px;
+    gap: 2px;
+  }
+  .view-btn {
+    padding: 7px 14px;
+    border-radius: 7px;
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    font-family: var(--font-body);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    cursor: pointer;
+  }
+  .view-btn:hover { color: var(--text-primary); }
+  .view-btn.active {
+    background: var(--accent);
+    color: var(--text-on-accent);
+    box-shadow: 0 4px 10px rgba(255, 107, 26, 0.3);
+  }
+
+  /* Date nav */
+  .date-nav {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .date-nav-btn {
+    width: 34px; height: 34px;
+    border-radius: 8px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
+  .date-nav-btn:hover { background: var(--surface-hover); border-color: var(--border-strong); }
+  .date-nav-range {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 4px 14px;
+    min-width: 180px;
+  }
+  .date-nav-range .main {
+    font-family: var(--font-display);
+    font-size: 20px;
+    letter-spacing: 1.5px;
+    line-height: 1;
+    color: var(--text-primary);
+  }
+  .date-nav-range .sub {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--text-muted);
+    letter-spacing: 0.5px;
+    margin-top: 3px;
+  }
+
+  .today-btn {
+    padding: 7px 12px;
+    border-radius: 8px;
+    background: var(--accent-muted);
+    border: 1px solid var(--accent-border);
+    color: var(--accent);
+    font-family: var(--font-body);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    cursor: pointer;
+  }
+  .today-btn:hover { background: rgba(255, 107, 26, 0.22); }
+
+  .tb-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-family: var(--font-body);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-primary);
+  }
+  .tb-btn:hover { background: var(--surface); border-color: var(--border-strong); }
+  .tb-btn.primary {
+    background: var(--accent);
+    color: var(--text-on-accent);
+    border-color: var(--accent);
+    font-weight: 800;
+    box-shadow: 0 4px 12px rgba(255, 107, 26, 0.3);
+  }
+
+  /* ====== CONTENT ====== */
+  .content {
+    flex: 1;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: 1fr 280px;
+    overflow: hidden;
+  }
+
+  /* Calendar container */
+  .cal-container {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border-right: 1px solid var(--border);
+  }
+
+  /* Day header row */
+  .day-header {
+    display: grid;
+    grid-template-columns: 64px repeat(7, 1fr);
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    flex-shrink: 0;
+  }
+  .day-col-head {
+    padding: 12px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    border-left: 1px solid var(--border);
+    position: relative;
+  }
+  .day-col-head:first-child { border-left: none; }
+  .day-col-head.today {
+    background: linear-gradient(180deg, var(--accent-muted), transparent);
+  }
+  .day-col-head.today::after {
+    content: '';
+    position: absolute;
+    bottom: -1px; left: 0; right: 0;
+    height: 2px;
+    background: var(--accent);
+  }
+  .day-col-head.closed {
+    background: repeating-linear-gradient(
+      -45deg,
+      transparent,
+      transparent 6px,
+      rgba(255, 87, 87, 0.04) 6px,
+      rgba(255, 87, 87, 0.04) 12px
+    );
+  }
+  .day-abbr {
+    font-family: var(--font-display);
+    font-size: 18px;
+    letter-spacing: 1.5px;
+    line-height: 1;
+    color: var(--text-secondary);
+  }
+  .day-col-head.today .day-abbr { color: var(--accent); }
+  .day-col-head.closed .day-abbr { opacity: 0.5; }
+  .day-date {
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: 15px;
+    color: var(--text-primary);
+    line-height: 1;
+    letter-spacing: 0.3px;
+  }
+  .day-col-head.today .day-date { color: var(--accent); }
+  .day-col-head.closed .day-date { color: var(--text-muted); }
+  .day-stat {
+    font-size: 9px;
+    font-weight: 700;
+    color: var(--text-muted);
+    letter-spacing: 0.5px;
+    margin-top: 2px;
+  }
+  .day-stat.active { color: var(--accent); font-weight: 800; }
+  .today-badge {
+    position: absolute;
+    top: 8px; right: 8px;
+    padding: 1px 5px;
+    background: var(--accent);
+    color: var(--text-on-accent);
+    font-family: var(--font-body);
+    font-size: 8px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    border-radius: 3px;
+  }
+
+  /* Grid body */
+  .cal-body {
+    flex: 1;
+    overflow-y: auto;
+    display: grid;
+    grid-template-columns: 64px repeat(7, 1fr);
+    position: relative;
+    scrollbar-width: thin;
+  }
+  .cal-body::-webkit-scrollbar { width: 6px; }
+  .cal-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  /* Hour rail */
+  .hour-rail {
+    grid-column: 1;
+    display: flex;
+    flex-direction: column;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    position: sticky;
+    left: 0;
+    z-index: 5;
+  }
+  .hour-cell {
+    height: 60px;
+    padding: 4px 8px 0;
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-end;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--text-muted);
+    letter-spacing: 0.3px;
+    border-bottom: 1px solid var(--hairline);
+  }
+  .hour-cell:last-child { border-bottom: none; }
+
+  /* Day column */
+  .day-col {
+    position: relative;
+    border-left: 1px solid var(--border);
+  }
+  .day-col.today {
+    background: linear-gradient(180deg, rgba(255, 107, 26, 0.03), transparent);
+  }
+  .day-col.closed {
+    background: repeating-linear-gradient(
+      -45deg,
+      transparent,
+      transparent 8px,
+      rgba(95, 99, 112, 0.05) 8px,
+      rgba(95, 99, 112, 0.05) 16px
+    );
+  }
+  .day-col-inner {
+    position: relative;
+    height: 660px; /* 11 hours × 60px */
+  }
+  .hour-gridline {
+    position: absolute;
+    left: 0; right: 0;
+    height: 1px;
+    background: var(--hairline);
+    pointer-events: none;
+  }
+  .half-gridline {
+    position: absolute;
+    left: 0; right: 0;
+    height: 1px;
+    background: rgba(255, 255, 255, 0.025);
+    pointer-events: none;
+  }
+
+  /* Booking block */
+  .booking {
+    position: absolute;
+    left: 4px;
+    right: 4px;
+    border-radius: 7px;
+    padding: 6px 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: all 140ms ease;
+    font-family: var(--font-body);
+    font-size: 11px;
+  }
+  .booking:hover {
+    transform: translateY(-1px);
+    filter: brightness(1.1);
+  }
+  .booking.confirmed {
+    background: linear-gradient(135deg, rgba(255, 107, 26, 0.3), rgba(255, 107, 26, 0.15));
+    border: 1px solid var(--accent);
+    border-left: 3px solid var(--accent);
+  }
+  .booking.pending {
+    background: linear-gradient(135deg, rgba(255, 176, 32, 0.25), rgba(255, 176, 32, 0.12));
+    border: 1px solid var(--warning-border);
+    border-left: 3px solid var(--warning);
+  }
+  .booking.progress {
+    background: linear-gradient(135deg, rgba(93, 168, 255, 0.25), rgba(93, 168, 255, 0.12));
+    border: 1px solid var(--info-border);
+    border-left: 3px solid var(--info);
+  }
+  .booking.completed {
+    background: rgba(46, 224, 160, 0.08);
+    border: 1px solid var(--success-border);
+    border-left: 3px solid var(--success);
+    opacity: 0.75;
+  }
+  .booking.past {
+    opacity: 0.45;
+  }
+
+  .booking-time {
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: 10px;
+    color: var(--text-primary);
+    letter-spacing: 0.3px;
+  }
+  .booking.completed .booking-time { color: var(--success); }
+  .booking.pending .booking-time { color: var(--warning); }
+  .booking.progress .booking-time { color: var(--info); }
+  .booking-client {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .booking-meta {
+    font-size: 9px;
+    color: var(--text-secondary);
+    letter-spacing: 0.3px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .booking-badge {
+    position: absolute;
+    top: 4px; right: 4px;
+    padding: 1px 4px;
+    border-radius: 3px;
+    font-family: var(--font-body);
+    font-size: 8px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .booking.pending .booking-badge {
+    background: var(--warning);
+    color: var(--bg);
+  }
+  .booking.progress .booking-badge {
+    background: var(--info);
+    color: var(--bg);
+  }
+
+  /* Current time indicator */
+  .now-line {
+    position: absolute;
+    left: 64px;
+    right: 0;
+    height: 2px;
+    background: var(--accent);
+    box-shadow: 0 0 10px var(--accent-glow);
+    z-index: 10;
+    pointer-events: none;
+  }
+  .now-line::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: -5px;
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 0 3px var(--bg), 0 0 0 4px var(--accent), 0 0 12px var(--accent-glow);
+    animation: softPulse 1800ms ease-in-out infinite;
+  }
+  .now-label {
+    position: absolute;
+    left: 16px;
+    top: -9px;
+    padding: 3px 7px;
+    background: var(--accent);
+    color: var(--text-on-accent);
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: 10px;
+    letter-spacing: 0.3px;
+    border-radius: 4px;
+    z-index: 11;
+  }
+
+  /* Closed day message */
+  .closed-msg {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    font-family: var(--font-body);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    white-space: nowrap;
+  }
+
+  /* RIGHT side — day summary / filters */
+  .side {
+    padding: 20px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+  }
+  .side::-webkit-scrollbar { width: 5px; }
+  .side::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  .side-sec-title {
+    font-family: var(--font-display);
+    font-size: 16px;
+    letter-spacing: 1.8px;
+    color: var(--text-primary);
+    line-height: 1;
+    margin-bottom: 2px;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+  }
+  .side-sec-title .hint {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--text-muted);
+    letter-spacing: 0.5px;
+    font-weight: 500;
+  }
+
+  /* Week stats */
+  .week-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .stat-box {
+    padding: 10px 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+  }
+  .stat-box.accent {
+    background: linear-gradient(135deg, var(--accent-muted), transparent);
+    border-color: var(--accent-border);
+  }
+  .stat-val {
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: 20px;
+    color: var(--text-primary);
+    letter-spacing: 0.3px;
+    line-height: 1;
+  }
+  .stat-val.accent { color: var(--accent); }
+  .stat-val.warn { color: var(--warning); }
+  .stat-val .u { font-size: 10px; color: var(--text-muted); font-weight: 700; margin-left: 2px; }
+  .stat-lbl {
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 1.1px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-top: 4px;
+  }
+
+  /* Legend */
+  .legend {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    color: var(--text-secondary);
+  }
+  .legend-swatch {
+    width: 10px; height: 10px;
+    border-radius: 3px;
+    border-left: 3px solid transparent;
+    flex-shrink: 0;
+  }
+  .legend-swatch.confirmed { background: rgba(255, 107, 26, 0.3); border-left-color: var(--accent); }
+  .legend-swatch.pending { background: rgba(255, 176, 32, 0.25); border-left-color: var(--warning); }
+  .legend-swatch.progress { background: rgba(93, 168, 255, 0.25); border-left-color: var(--info); }
+  .legend-swatch.completed { background: rgba(46, 224, 160, 0.08); border-left-color: var(--success); }
+  .legend-count {
+    margin-left: auto;
+    font-family: var(--font-mono);
+    font-weight: 700;
+    color: var(--text-primary);
+    font-size: 11px;
+    letter-spacing: 0.3px;
+  }
+
+  /* Filter chips */
+  .filter-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .filter-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 10px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    color: var(--text-secondary);
+    font-family: var(--font-body);
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    letter-spacing: 0.3px;
+  }
+  .filter-chip:hover { background: var(--surface-hover); color: var(--text-primary); }
+  .filter-chip.active {
+    background: var(--accent-muted);
+    border-color: var(--accent-border);
+    color: var(--accent);
+  }
+
+  /* PENDING card */
+  .pending-card {
+    padding: 12px 14px;
+    background: linear-gradient(135deg, var(--warning-muted), transparent);
+    border: 1px solid var(--warning-border);
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .pending-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .pending-head .ico {
+    width: 26px; height: 26px;
+    border-radius: 7px;
+    background: var(--warning);
+    color: var(--bg);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .pending-title {
+    font-family: var(--font-body);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 1.1px;
+    text-transform: uppercase;
+    color: var(--warning);
+  }
+  .pending-body {
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--text-secondary);
+  }
+  .pending-body strong { color: var(--text-primary); font-weight: 700; }
+  .pending-body em {
+    font-family: var(--font-mono);
+    font-style: normal;
+    color: var(--warning);
+    font-weight: 700;
+  }
+  .pending-cta {
+    padding: 8px 12px;
+    background: var(--warning);
+    color: var(--bg);
+    border: none;
+    border-radius: 8px;
+    font-family: var(--font-body);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+  }
+
+  /* Empty footer */
+  .cal-foot-hint {
+    padding: 10px 12px;
+    background: var(--surface);
+    border: 1px dashed var(--border);
+    border-radius: 8px;
+    font-size: 11px;
+    color: var(--text-muted);
+    line-height: 1.5;
+  }
+  .cal-foot-hint strong { color: var(--text-primary); font-weight: 700; }
+
+  /* footer caption */
+  .caption {
+    max-width: 1440px;
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 0.5px;
+  }
+  .caption strong {
+    color: var(--text-secondary);
+    font-weight: 500;
+    display: block;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    font-size: 10px;
+  }
+  .caption em { color: var(--accent); font-style: normal; }
+</style>
+</head>
+<body>
+
+  <header class="canvas-label">
+    <span class="film-strip">OPONY PANEL — B2B-09</span>
+    <span class="slug">kalendarz · widok tygodnia</span>
+    <span class="canvas-meta"><span class="pulse"></span>W:12.5+ · US-22 / 21 / 30</span>
+  </header>
+
+  <main class="desktop-frame" role="region" aria-label="Mockup — kalendarz providera">
+
+    <div class="browser-chrome" aria-hidden="true">
+      <span class="traffic-lights">
+        <span class="light red"></span>
+        <span class="light yellow"></span>
+        <span class="light green"></span>
+      </span>
+      <span class="browser-tabs">
+        <span class="browser-tab active">
+          <span class="favicon">O</span>
+          Opony Panel — Kalendarz
+        </span>
+      </span>
+      <span class="browser-address">
+        <svg class="lock" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+        <span class="url">panel.opony.app</span><span class="path">/calendar</span>
+      </span>
+    </div>
+
+    <div class="app-root">
+
+      <!-- SIDEBAR -->
+      <aside class="sidebar" aria-label="Nawigacja główna">
+        <div class="sb-brand">
+          <div class="wordmark">OPONY<span class="dot"></span></div>
+          <span class="panel-tag">PANEL</span>
+        </div>
+
+        <span class="sb-section-label">Dziś</span>
+        <button class="sb-item">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>
+          Dashboard
+        </button>
+        <button class="sb-item active">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 10h18M8 2v4M16 2v4"/></svg>
+          Kalendarz
+        </button>
+        <button class="sb-item">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11H5a2 2 0 0 0-2 2v7h18v-7a2 2 0 0 0-2-2h-4M9 11V5a3 3 0 0 1 6 0v6M9 11h6"/></svg>
+          Rezerwacje
+          <span class="sb-badge">12</span>
+        </button>
+
+        <span class="sb-section-label">Warsztat</span>
+        <button class="sb-item">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          Cennik
+        </button>
+        <button class="sb-item">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+          Godziny pracy
+        </button>
+        <button class="sb-item">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+          Strefa obsługi
+        </button>
+        <button class="sb-item">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15 9 22 9.5 17 14 18.5 21 12 17.5 5.5 21 7 14 2 9.5 9 9 12 2"/></svg>
+          Opinie
+          <span class="sb-badge">2</span>
+        </button>
+
+        <span class="sb-section-label">Konto</span>
+        <button class="sb-item">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+          Ustawienia
+        </button>
+
+        <div class="sb-spacer"></div>
+
+        <div class="sb-user" role="button">
+          <div class="sb-avatar">MK</div>
+          <div class="sb-user-col">
+            <span class="sb-user-name">MobilOpony Kasia</span>
+            <span class="sb-user-role">Provider · APPROVED</span>
+          </div>
+        </div>
+      </aside>
+
+      <!-- MAIN -->
+      <section class="main">
+
+        <!-- TOPBAR -->
+        <header class="topbar">
+          <nav class="tb-breadcrumb">
+            <span>Panel</span>
+            <span class="sep">/</span>
+            <span class="current">Kalendarz</span>
+          </nav>
+
+          <span class="tb-spacer"></span>
+
+          <div class="view-switcher" role="tablist">
+            <button class="view-btn" role="tab">Dzień</button>
+            <button class="view-btn active" role="tab" aria-selected="true">Tydzień</button>
+            <button class="view-btn" role="tab">Miesiąc</button>
+          </div>
+
+          <span style="width: 20px;"></span>
+
+          <div class="date-nav">
+            <button class="date-nav-btn" aria-label="Poprzedni tydzień">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+            </button>
+            <div class="date-nav-range">
+              <span class="main">14 – 20 KWIETNIA</span>
+              <span class="sub">Tydzień 16 · 2026</span>
+            </div>
+            <button class="date-nav-btn" aria-label="Następny tydzień">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg>
+            </button>
+            <button class="today-btn" type="button">Dziś</button>
+          </div>
+
+          <span class="tb-spacer"></span>
+
+          <button class="tb-btn">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+            Eksport .ics
+          </button>
+          <button class="tb-btn primary">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+            Wizyta ręczna
+          </button>
+        </header>
+
+        <!-- CONTENT -->
+        <div class="content">
+
+          <!-- CALENDAR -->
+          <div class="cal-container">
+
+            <!-- Day header row -->
+            <div class="day-header">
+              <div style="padding: 14px 6px; border-right: 1px solid var(--border); font-family: var(--font-mono); font-size: 9px; color: var(--text-muted); letter-spacing: 0.5px; text-align: center;">CET</div>
+
+              <div class="day-col-head today">
+                <span class="today-badge">Dziś</span>
+                <span class="day-abbr">PON</span>
+                <span class="day-date">14 kwi</span>
+                <span class="day-stat active">5 wizyt</span>
+              </div>
+              <div class="day-col-head">
+                <span class="day-abbr">WT</span>
+                <span class="day-date">15 kwi</span>
+                <span class="day-stat">3 wizyty</span>
+              </div>
+              <div class="day-col-head">
+                <span class="day-abbr">ŚR</span>
+                <span class="day-date">16 kwi</span>
+                <span class="day-stat">2 wizyty</span>
+              </div>
+              <div class="day-col-head">
+                <span class="day-abbr">CZ</span>
+                <span class="day-date">17 kwi</span>
+                <span class="day-stat">4 wizyty</span>
+              </div>
+              <div class="day-col-head">
+                <span class="day-abbr">PT</span>
+                <span class="day-date">18 kwi</span>
+                <span class="day-stat">3 wizyty</span>
+              </div>
+              <div class="day-col-head">
+                <span class="day-abbr">SB</span>
+                <span class="day-date">19 kwi</span>
+                <span class="day-stat">2 wizyty</span>
+              </div>
+              <div class="day-col-head closed">
+                <span class="day-abbr">ND</span>
+                <span class="day-date">20 kwi</span>
+                <span class="day-stat">—</span>
+              </div>
+            </div>
+
+            <!-- Grid body -->
+            <div class="cal-body">
+
+              <!-- Hour rail -->
+              <div class="hour-rail">
+                <div class="hour-cell">8:00</div>
+                <div class="hour-cell">9:00</div>
+                <div class="hour-cell">10:00</div>
+                <div class="hour-cell">11:00</div>
+                <div class="hour-cell">12:00</div>
+                <div class="hour-cell">13:00</div>
+                <div class="hour-cell">14:00</div>
+                <div class="hour-cell">15:00</div>
+                <div class="hour-cell">16:00</div>
+                <div class="hour-cell">17:00</div>
+                <div class="hour-cell">18:00</div>
+              </div>
+
+              <!-- Monday (today) -->
+              <div class="day-col today">
+                <div class="day-col-inner">
+                  <div class="hour-gridline" style="top: 60px;"></div>
+                  <div class="hour-gridline" style="top: 120px;"></div>
+                  <div class="hour-gridline" style="top: 180px;"></div>
+                  <div class="hour-gridline" style="top: 240px;"></div>
+                  <div class="hour-gridline" style="top: 300px;"></div>
+                  <div class="hour-gridline" style="top: 360px;"></div>
+                  <div class="hour-gridline" style="top: 420px;"></div>
+                  <div class="hour-gridline" style="top: 480px;"></div>
+                  <div class="hour-gridline" style="top: 540px;"></div>
+                  <div class="hour-gridline" style="top: 600px;"></div>
+
+                  <!-- 08:00-08:45 Jan Nowak — COMPLETED (past) -->
+                  <div class="booking completed past" style="top: 0; height: 44px;">
+                    <span class="booking-time">08:00 – 08:45</span>
+                    <span class="booking-client">Jan Nowak</span>
+                    <span class="booking-meta">✓ wizyta zakończona</span>
+                  </div>
+
+                  <!-- 09:30-10:15 Marek K. — IN PROGRESS (now) -->
+                  <div class="booking progress" style="top: 90px; height: 44px;">
+                    <span class="booking-badge">W trakcie</span>
+                    <span class="booking-time">09:30 – 10:15</span>
+                    <span class="booking-client">Marek Kowalski</span>
+                    <span class="booking-meta">205/55 R16 · 180 zł</span>
+                  </div>
+
+                  <!-- 11:00-11:45 Anna W. — PENDING -->
+                  <div class="booking pending" style="top: 180px; height: 44px;">
+                    <span class="booking-badge">Pending</span>
+                    <span class="booking-time">11:00 – 11:45</span>
+                    <span class="booking-client">Anna Wiśniewska</span>
+                    <span class="booking-meta">195/65 R15 · 140 zł</span>
+                  </div>
+
+                  <!-- 13:45-14:30 Piotr L. — CONFIRMED -->
+                  <div class="booking confirmed" style="top: 345px; height: 44px;">
+                    <span class="booking-time">13:45 – 14:30</span>
+                    <span class="booking-client">Piotr Lewandowski</span>
+                    <span class="booking-meta">225/45 R17 · 240 zł</span>
+                  </div>
+
+                  <!-- 16:30-17:15 Katarzyna Z. — CONFIRMED -->
+                  <div class="booking confirmed" style="top: 510px; height: 44px;">
+                    <span class="booking-time">16:30 – 17:15</span>
+                    <span class="booking-client">Katarzyna Zając</span>
+                    <span class="booking-meta">215/55 R17 · 200 zł</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Tuesday -->
+              <div class="day-col">
+                <div class="day-col-inner">
+                  <div class="hour-gridline" style="top: 60px;"></div>
+                  <div class="hour-gridline" style="top: 120px;"></div>
+                  <div class="hour-gridline" style="top: 180px;"></div>
+                  <div class="hour-gridline" style="top: 240px;"></div>
+                  <div class="hour-gridline" style="top: 300px;"></div>
+                  <div class="hour-gridline" style="top: 360px;"></div>
+                  <div class="hour-gridline" style="top: 420px;"></div>
+                  <div class="hour-gridline" style="top: 480px;"></div>
+                  <div class="hour-gridline" style="top: 540px;"></div>
+                  <div class="hour-gridline" style="top: 600px;"></div>
+
+                  <div class="booking confirmed" style="top: 30px; height: 44px;">
+                    <span class="booking-time">8:30 – 9:15</span>
+                    <span class="booking-client">Tomasz Wójcik</span>
+                    <span class="booking-meta">205/60 R16</span>
+                  </div>
+                  <div class="booking confirmed" style="top: 270px; height: 44px;">
+                    <span class="booking-time">12:30 – 13:15</span>
+                    <span class="booking-client">Magda Pawlak</span>
+                    <span class="booking-meta">195/65 R15</span>
+                  </div>
+                  <div class="booking confirmed" style="top: 480px; height: 44px;">
+                    <span class="booking-time">16:00 – 16:45</span>
+                    <span class="booking-client">Robert Szymański</span>
+                    <span class="booking-meta">225/45 R17</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Wednesday -->
+              <div class="day-col">
+                <div class="day-col-inner">
+                  <div class="hour-gridline" style="top: 60px;"></div>
+                  <div class="hour-gridline" style="top: 120px;"></div>
+                  <div class="hour-gridline" style="top: 180px;"></div>
+                  <div class="hour-gridline" style="top: 240px;"></div>
+                  <div class="hour-gridline" style="top: 300px;"></div>
+                  <div class="hour-gridline" style="top: 360px;"></div>
+                  <div class="hour-gridline" style="top: 420px;"></div>
+                  <div class="hour-gridline" style="top: 480px;"></div>
+                  <div class="hour-gridline" style="top: 540px;"></div>
+                  <div class="hour-gridline" style="top: 600px;"></div>
+
+                  <div class="booking confirmed" style="top: 120px; height: 44px;">
+                    <span class="booking-time">10:00 – 10:45</span>
+                    <span class="booking-client">Elżbieta Król</span>
+                    <span class="booking-meta">215/60 R16</span>
+                  </div>
+                  <div class="booking pending" style="top: 420px; height: 44px;">
+                    <span class="booking-badge">Pending</span>
+                    <span class="booking-time">15:00 – 15:45</span>
+                    <span class="booking-client">Andrzej Nowak</span>
+                    <span class="booking-meta">205/55 R16</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Thursday — 60 min slots (override) -->
+              <div class="day-col">
+                <div class="day-col-inner">
+                  <div class="hour-gridline" style="top: 60px;"></div>
+                  <div class="hour-gridline" style="top: 120px;"></div>
+                  <div class="hour-gridline" style="top: 180px;"></div>
+                  <div class="hour-gridline" style="top: 240px;"></div>
+                  <div class="hour-gridline" style="top: 300px;"></div>
+                  <div class="hour-gridline" style="top: 360px;"></div>
+                  <div class="hour-gridline" style="top: 420px;"></div>
+                  <div class="hour-gridline" style="top: 480px;"></div>
+                  <div class="hour-gridline" style="top: 540px;"></div>
+                  <div class="hour-gridline" style="top: 600px;"></div>
+
+                  <div class="booking confirmed" style="top: 0; height: 58px;">
+                    <span class="booking-time">8:00 – 9:00</span>
+                    <span class="booking-client">Agnieszka Lis</span>
+                    <span class="booking-meta">205/55 R16 · 60 min</span>
+                  </div>
+                  <div class="booking confirmed" style="top: 120px; height: 58px;">
+                    <span class="booking-time">10:00 – 11:00</span>
+                    <span class="booking-client">Michał Kowal</span>
+                    <span class="booking-meta">225/45 R17 · 60 min</span>
+                  </div>
+                  <div class="booking confirmed" style="top: 300px; height: 58px;">
+                    <span class="booking-time">13:00 – 14:00</span>
+                    <span class="booking-client">Halina Wróbel</span>
+                    <span class="booking-meta">195/65 R15 · 60 min</span>
+                  </div>
+                  <div class="booking confirmed" style="top: 480px; height: 58px;">
+                    <span class="booking-time">16:00 – 17:00</span>
+                    <span class="booking-client">Krzysztof Zając</span>
+                    <span class="booking-meta">215/55 R17 · 60 min</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Friday -->
+              <div class="day-col">
+                <div class="day-col-inner">
+                  <div class="hour-gridline" style="top: 60px;"></div>
+                  <div class="hour-gridline" style="top: 120px;"></div>
+                  <div class="hour-gridline" style="top: 180px;"></div>
+                  <div class="hour-gridline" style="top: 240px;"></div>
+                  <div class="hour-gridline" style="top: 300px;"></div>
+                  <div class="hour-gridline" style="top: 360px;"></div>
+                  <div class="hour-gridline" style="top: 420px;"></div>
+                  <div class="hour-gridline" style="top: 480px;"></div>
+                  <div class="hour-gridline" style="top: 540px;"></div>
+                  <div class="hour-gridline" style="top: 600px;"></div>
+
+                  <div class="booking confirmed" style="top: 75px; height: 44px;">
+                    <span class="booking-time">9:15 – 10:00</span>
+                    <span class="booking-client">Joanna Nowak</span>
+                    <span class="booking-meta">205/55 R16</span>
+                  </div>
+                  <div class="booking confirmed" style="top: 255px; height: 44px;">
+                    <span class="booking-time">12:15 – 13:00</span>
+                    <span class="booking-client">Paweł Król</span>
+                    <span class="booking-meta">215/60 R16</span>
+                  </div>
+                  <div class="booking confirmed" style="top: 495px; height: 44px;">
+                    <span class="booking-time">16:15 – 17:00</span>
+                    <span class="booking-client">Barbara Maj</span>
+                    <span class="booking-meta">225/45 R17</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Saturday — 30 min slots (override, 9-14) -->
+              <div class="day-col">
+                <div class="day-col-inner">
+                  <div class="hour-gridline" style="top: 60px;"></div>
+                  <div class="hour-gridline" style="top: 120px;"></div>
+                  <div class="hour-gridline" style="top: 180px;"></div>
+                  <div class="hour-gridline" style="top: 240px;"></div>
+                  <div class="hour-gridline" style="top: 300px;"></div>
+                  <div class="hour-gridline" style="top: 360px;"></div>
+                  <div class="hour-gridline" style="top: 420px;"></div>
+                  <div class="hour-gridline" style="top: 480px;"></div>
+                  <div class="hour-gridline" style="top: 540px;"></div>
+                  <div class="hour-gridline" style="top: 600px;"></div>
+
+                  <!-- Closed morning (before 9:00) shadow -->
+                  <div style="position: absolute; top: 0; left: 0; right: 0; height: 60px; background: repeating-linear-gradient(-45deg, transparent, transparent 6px, rgba(95, 99, 112, 0.08) 6px, rgba(95, 99, 112, 0.08) 12px);"></div>
+
+                  <div class="booking confirmed" style="top: 90px; height: 30px;">
+                    <span class="booking-time">9:30 – 10:00</span>
+                    <span class="booking-client">Ewa Wiśniewska</span>
+                    <span class="booking-meta">30 min</span>
+                  </div>
+                  <div class="booking confirmed" style="top: 270px; height: 30px;">
+                    <span class="booking-time">12:30 – 13:00</span>
+                    <span class="booking-client">Adam Szczepański</span>
+                    <span class="booking-meta">30 min</span>
+                  </div>
+
+                  <!-- Closed after 14:00 -->
+                  <div style="position: absolute; top: 360px; left: 0; right: 0; bottom: 0; background: repeating-linear-gradient(-45deg, transparent, transparent 6px, rgba(95, 99, 112, 0.08) 6px, rgba(95, 99, 112, 0.08) 12px);"></div>
+                  <span class="closed-msg" style="top: 520px;">po 14:00 — zamknięte</span>
+                </div>
+              </div>
+
+              <!-- Sunday — closed -->
+              <div class="day-col closed">
+                <div class="day-col-inner">
+                  <span class="closed-msg">Niedziela · nieczynne</span>
+                </div>
+              </div>
+
+              <!-- Current time indicator at 10:05 = 125 px from top (2h5min × 60px/h) -->
+              <div class="now-line" style="top: 125px;">
+                <span class="now-label">10:05</span>
+              </div>
+
+            </div>
+
+          </div>
+
+          <!-- RIGHT SIDE -->
+          <aside class="side" aria-label="Podsumowanie tygodnia i filtry">
+
+            <!-- Week stats -->
+            <section>
+              <div class="side-sec-title">
+                Tydzień
+                <span class="hint">16 / 2026</span>
+              </div>
+              <div class="week-stats" style="margin-top: 10px;">
+                <div class="stat-box accent">
+                  <div class="stat-val accent">19<span class="u">wizyt</span></div>
+                  <div class="stat-lbl">Razem</div>
+                </div>
+                <div class="stat-box">
+                  <div class="stat-val">15<span class="u">✓</span></div>
+                  <div class="stat-lbl">Potwierdzone</div>
+                </div>
+                <div class="stat-box">
+                  <div class="stat-val warn">2<span class="u">⚠</span></div>
+                  <div class="stat-lbl">Oczekują akceptacji</div>
+                </div>
+                <div class="stat-box">
+                  <div class="stat-val" style="color: var(--success);">1<span class="u">✓</span></div>
+                  <div class="stat-lbl">Zakończone</div>
+                </div>
+              </div>
+            </section>
+
+            <!-- Legend -->
+            <section>
+              <div class="side-sec-title">Legenda</div>
+              <div class="legend" style="margin-top: 8px;">
+                <div class="legend-item">
+                  <span class="legend-swatch confirmed"></span>
+                  <span>Potwierdzona</span>
+                  <span class="legend-count">15</span>
+                </div>
+                <div class="legend-item">
+                  <span class="legend-swatch pending"></span>
+                  <span>Oczekuje</span>
+                  <span class="legend-count">2</span>
+                </div>
+                <div class="legend-item">
+                  <span class="legend-swatch progress"></span>
+                  <span>W trakcie</span>
+                  <span class="legend-count">1</span>
+                </div>
+                <div class="legend-item">
+                  <span class="legend-swatch completed"></span>
+                  <span>Zakończona</span>
+                  <span class="legend-count">1</span>
+                </div>
+              </div>
+            </section>
+
+            <!-- Filters -->
+            <section>
+              <div class="side-sec-title">Filtry</div>
+              <div class="filter-chips" style="margin-top: 8px;">
+                <button class="filter-chip active">Wszystkie</button>
+                <button class="filter-chip">Potwierdzone</button>
+                <button class="filter-chip">Oczekujące</button>
+                <button class="filter-chip">Zakończone</button>
+              </div>
+            </section>
+
+            <!-- PENDING alert -->
+            <section class="pending-card">
+              <div class="pending-head">
+                <span class="ico" aria-hidden="true">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v5"/><circle cx="12" cy="16" r="0.5" fill="currentColor"/></svg>
+                </span>
+                <span class="pending-title">2 rezerwacje czekają</span>
+              </div>
+              <div class="pending-body">
+                <strong>Anna Wiśniewska</strong> (dziś 11:00) czeka <em>1h 42 min</em>. <strong>Andrzej Nowak</strong> (śr 15:00) czeka <em>3h 18 min</em>.
+              </div>
+              <button class="pending-cta" type="button">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+                Przejrzyj teraz
+              </button>
+            </section>
+
+            <!-- Tip -->
+            <div class="cal-foot-hint">
+              <strong>Tip:</strong> Drag & drop wizytę na inny slot, aby zmienić termin. Klient dostanie SMS z nowym terminem do potwierdzenia.
+            </div>
+
+          </aside>
+
+        </div>
+
+      </section>
+    </div>
+
+  </main>
+
+  <footer class="caption">
+    <div>
+      <strong>Layout</strong>
+      Sidebar z <em>Kalendarz active</em> · Topbar: breadcrumb + view-switcher <em>Dzień / Tydzień active amber / Miesiąc</em> + date-nav ‹ 14–20 KWIETNIA · Tydzień 16 · 2026 › + „Dziś" amber chip + Eksport .ics / „Wizyta ręczna" primary · Split content: calendar (1fr) + side (280px)
+    </div>
+    <div>
+      <strong>Week grid</strong>
+      Header: 7 day-cols z datami + stat (5 wizyt/3/2/4/3/2/—), <em>Pon today</em> z amber gradient + „Dziś" badge + amber bottom border, <em>Nd closed</em> z diagonalnym striping · Hour rail 8-18 w mono · Bookings: <em>confirmed</em> amber gradient, <em>pending</em> warning z badge, <em>progress</em> blue z badge, <em>completed</em> success-green z past opacity · <em>Current time line at 10:05</em> — amber line z pulsującą kropką + label mono · Cz pokazuje 60-min slots (override), Sb 30-min (override + morning-closed striping)<br>
+      Side: Week stats 4-box (19 wizyt accent / 15 ✓ / 2 ⚠ / 1 zakończona) · Legenda z count · Filter chips · <em>PENDING alert</em> (warning yellow card z countdownem SLA) · Tip drag&drop
+    </div>
+  </footer>
+
+</body>
+</html>

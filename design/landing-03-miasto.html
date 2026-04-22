@@ -1,0 +1,1353 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Warsztaty opon w Nowym Sączu · 23 punkty · Opony.app</title>
+<!--
+  Screen: Landing opony.app/<city> — lista warsztatów w mieście (SEO long-tail)
+  Ref:    docs/plan-sprintow.md → US-40 (city-scoped), US-42 (SEO), breadcrumb z landing-02
+  Flow:   „Opony › Nowy Sącz" — kanoniczny URL dla ranking w Google („warsztat opon nowy sącz")
+  Rule:   Zero booking-flow w przeglądarce — każda karta prowadzi do /p/<slug> z deep-linkiem do app
+  Tone:   industrial-dark · desktop · city hero + workshops grid + SEO long-tail content
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Bebas+Neue&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0A0B0E;
+    --bg-tint-top: #12141A;
+    --surface: #14171D;
+    --surface-raised: #1B1E26;
+    --surface-hover: #23272F;
+    --border: #262A34;
+    --border-strong: #363B47;
+    --hairline: rgba(255, 255, 255, 0.06);
+    --text-primary: #F5F4EF;
+    --text-secondary: #9EA2AD;
+    --text-muted: #60646F;
+    --text-on-accent: #0A0B0E;
+    --accent: #FF6B1A;
+    --accent-hover: #FF8039;
+    --accent-muted: rgba(255, 107, 26, 0.14);
+    --accent-border: rgba(255, 107, 26, 0.32);
+    --accent-glow: rgba(255, 107, 26, 0.45);
+    --success: #2EE0A0;
+    --success-muted: rgba(46, 224, 160, 0.14);
+    --success-border: rgba(46, 224, 160, 0.32);
+    --warning: #FFB020;
+    --warning-muted: rgba(255, 176, 32, 0.14);
+    --warning-border: rgba(255, 176, 32, 0.32);
+    --danger: #FF5757;
+    --font-display: 'Bebas Neue', sans-serif;
+    --font-body: 'Archivo', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; overflow-x: hidden; max-width: 100vw; }
+  body {
+    --desktop-scale: min(1, calc((100vh - 200px) / 900px), calc((100vw - 80px) / 1440px));
+    font-family: var(--font-body);
+    background: var(--bg);
+    color: var(--text-primary);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    background-image:
+      radial-gradient(ellipse 70% 50% at 50% 0%, rgba(255, 107, 26, 0.05) 0%, transparent 60%),
+      linear-gradient(180deg, var(--bg-tint-top) 0%, var(--bg) 30%);
+    background-attachment: fixed;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 40px 40px 60px;
+    gap: 24px;
+  }
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 4px var(--accent-muted); opacity: 1; }
+    50%      { box-shadow: 0 0 0 8px transparent; opacity: 0.6; }
+  }
+
+  .canvas-label {
+    width: 100%;
+    max-width: 1440px;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: baseline;
+    gap: 20px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  .film-strip .frame { display: block; font-family: var(--font-display); font-size: 36px; letter-spacing: 4px; line-height: 1; color: var(--text-primary); }
+  .film-strip .frame-num { font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); letter-spacing: 1.5px; display: block; margin-top: 4px; font-weight: 700; }
+  .slug {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    border-left: 1px solid var(--border);
+    padding-left: 18px;
+  }
+  .canvas-meta {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-secondary);
+    letter-spacing: 1px;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .canvas-meta .pulse {
+    display: inline-block;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 0 4px var(--accent-muted);
+    animation: pulse 1800ms ease-in-out infinite;
+  }
+
+  .desktop-frame {
+    width: 1440px;
+    height: 900px;
+    background: var(--bg);
+    border-radius: 14px;
+    border: 1px solid #1C1E24;
+    box-shadow: 0 40px 120px rgba(0, 0, 0, 0.6), 0 20px 40px rgba(0, 0, 0, 0.4);
+    overflow: hidden;
+    position: relative;
+    flex-shrink: 0;
+    transform: scale(var(--desktop-scale));
+    transform-origin: top center;
+    margin-bottom: calc((var(--desktop-scale) - 1) * 900px);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .browser-chrome {
+    height: 44px;
+    background: linear-gradient(180deg, #1A1D23, #14171D);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    gap: 16px;
+    flex-shrink: 0;
+  }
+  .traffic-lights { display: inline-flex; gap: 8px; }
+  .light { width: 12px; height: 12px; border-radius: 50%; }
+  .light.red { background: #FF5F57; }
+  .light.yellow { background: #FEBC2E; }
+  .light.green { background: #28C840; }
+  .browser-tabs { display: inline-flex; gap: 2px; }
+  .browser-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-bottom: none;
+    border-radius: 8px 8px 0 0;
+    font-size: 12px;
+    color: var(--text-primary);
+    position: relative;
+    top: 6px;
+  }
+  .browser-tab .favicon {
+    width: 14px; height: 14px;
+    border-radius: 3px;
+    background: var(--accent);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-display);
+    font-size: 9px;
+    color: var(--text-on-accent);
+    letter-spacing: 0.5px;
+  }
+  .browser-address {
+    flex: 1;
+    max-width: 620px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+  .browser-address .lock { color: var(--success); }
+  .browser-address .url { color: var(--text-primary); }
+  .browser-address .path { color: var(--text-secondary); }
+
+  .page {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    scroll-behavior: smooth;
+    scrollbar-width: thin;
+  }
+  .page::-webkit-scrollbar { width: 8px; }
+  .page::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+  /* === Top nav === */
+  .topnav {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    padding: 14px 40px;
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    background: rgba(10, 11, 14, 0.8);
+    backdrop-filter: blur(18px);
+    border-bottom: 1px solid var(--hairline);
+  }
+  .brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+  }
+  .wordmark {
+    font-family: var(--font-display);
+    font-size: 24px;
+    letter-spacing: 3px;
+    line-height: 1;
+    color: var(--text-primary);
+    display: inline-flex;
+    align-items: baseline;
+    gap: 3px;
+  }
+  .wordmark .dot {
+    display: inline-block;
+    width: 6px; height: 6px;
+    background: var(--accent);
+    border-radius: 50%;
+    transform: translateY(-2px);
+    box-shadow: 0 0 10px var(--accent-glow);
+  }
+  .breadcrumb {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--text-muted);
+    font-weight: 600;
+  }
+  .breadcrumb a { color: var(--text-muted); text-decoration: none; }
+  .breadcrumb a:hover { color: var(--text-secondary); }
+  .breadcrumb .sep { color: var(--border-strong); }
+  .breadcrumb .current { color: var(--text-primary); font-weight: 700; }
+  .nav-spacer { flex: 1; }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 9px 14px;
+    border-radius: 8px;
+    font-family: var(--font-body);
+    font-size: 12.5px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    cursor: pointer;
+    text-decoration: none;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-primary);
+  }
+  .btn:hover { background: var(--surface-hover); border-color: var(--border-strong); }
+  .btn.primary {
+    background: var(--accent);
+    color: var(--text-on-accent);
+    border-color: transparent;
+  }
+  .btn.primary:hover { background: var(--accent-hover); }
+  .btn svg { width: 13px; height: 13px; }
+
+  /* === City hero === */
+  .city-hero {
+    padding: 40px 40px 32px;
+    display: grid;
+    grid-template-columns: 1.4fr 1fr;
+    gap: 40px;
+    align-items: center;
+    position: relative;
+    overflow: hidden;
+    border-bottom: 1px solid var(--border);
+    background:
+      radial-gradient(ellipse 60% 50% at 85% 50%, rgba(255, 107, 26, 0.12) 0%, transparent 60%);
+  }
+  .city-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 12px;
+    background: var(--accent-muted);
+    border: 1px solid var(--accent-border);
+    border-radius: 999px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 1.3px;
+    text-transform: uppercase;
+    color: var(--accent);
+    width: fit-content;
+    margin-bottom: 16px;
+  }
+  .city-eyebrow::before {
+    content: '';
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: var(--success);
+    box-shadow: 0 0 0 3px var(--success-muted);
+  }
+  .city-h1 {
+    font-family: var(--font-display);
+    font-size: 78px;
+    letter-spacing: 2.5px;
+    line-height: 0.9;
+    color: var(--text-primary);
+    margin-bottom: 16px;
+  }
+  .city-h1 .em { color: var(--accent); }
+  .city-intro {
+    font-size: 15px;
+    line-height: 1.6;
+    color: var(--text-secondary);
+    max-width: 620px;
+    margin-bottom: 20px;
+  }
+  .city-intro strong { color: var(--text-primary); font-weight: 700; }
+
+  .city-stats-row {
+    display: inline-flex;
+    gap: 20px;
+    align-items: center;
+    padding-top: 18px;
+    border-top: 1px dashed var(--border);
+  }
+  .city-stat { display: flex; flex-direction: column; gap: 2px; }
+  .stat-val {
+    font-family: var(--font-display);
+    font-size: 28px;
+    letter-spacing: 1.2px;
+    line-height: 1;
+    color: var(--text-primary);
+  }
+  .stat-val .em { color: var(--accent); }
+  .stat-val .sm { font-family: var(--font-mono); font-size: 14px; color: var(--text-secondary); font-weight: 700; }
+  .stat-lbl {
+    font-family: var(--font-mono);
+    font-size: 9.5px;
+    font-weight: 800;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+  .stat-divider { width: 1px; height: 32px; background: var(--border); }
+
+  /* City map visual */
+  .city-map {
+    position: relative;
+    width: 100%;
+    height: 240px;
+    border-radius: 16px;
+    border: 1px solid var(--border);
+    background:
+      radial-gradient(ellipse 50% 50% at 50% 50%, rgba(255, 107, 26, 0.12) 0%, transparent 60%),
+      linear-gradient(135deg, #1A1D24 0%, #14171D 60%, #1B1316 100%);
+    overflow: hidden;
+  }
+  .city-map::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+  .map-pin-mini {
+    position: absolute;
+    width: 14px; height: 14px;
+    border-radius: 50% 50% 50% 0;
+    background: var(--accent);
+    transform: rotate(-45deg);
+    box-shadow: 0 4px 10px rgba(255, 107, 26, 0.4), 0 0 0 3px rgba(255, 107, 26, 0.15);
+  }
+  .map-pin-mini::after {
+    content: '';
+    position: absolute;
+    inset: 4px;
+    background: var(--bg);
+    border-radius: 50%;
+  }
+  .map-pin-mini.featured {
+    width: 20px; height: 20px;
+    box-shadow: 0 6px 16px rgba(255, 107, 26, 0.55), 0 0 0 5px rgba(255, 107, 26, 0.18);
+    z-index: 2;
+  }
+  .map-overlay {
+    position: absolute;
+    bottom: 14px; left: 14px; right: 14px;
+    padding: 10px 14px;
+    background: rgba(10, 11, 14, 0.85);
+    backdrop-filter: blur(14px);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .map-overlay-title {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .map-overlay-title .t {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+  .map-overlay-title .v {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-primary);
+  }
+  .map-overlay-btn {
+    padding: 6px 11px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    color: var(--text-primary);
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    text-decoration: none;
+  }
+  .map-overlay-btn:hover { border-color: var(--accent-border); color: var(--accent); }
+  .map-overlay-btn svg { width: 12px; height: 12px; }
+
+  /* === Filter bar === */
+  .filter-bar {
+    padding: 20px 40px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    border-bottom: 1px solid var(--border);
+  }
+  .filter-count {
+    font-family: var(--font-display);
+    font-size: 20px;
+    letter-spacing: 1.5px;
+    line-height: 1;
+    color: var(--text-primary);
+  }
+  .filter-count .em { color: var(--accent); }
+  .filter-count-sub {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-left: 8px;
+  }
+  .filter-divider { width: 1px; height: 22px; background: var(--border); margin: 0 6px; }
+
+  .chip-filter {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    font-family: var(--font-body);
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 120ms;
+  }
+  .chip-filter:hover { color: var(--text-primary); border-color: var(--border-strong); }
+  .chip-filter.selected {
+    background: var(--accent-muted);
+    border-color: var(--accent-border);
+    color: var(--accent);
+  }
+  .chip-filter svg { width: 12px; height: 12px; }
+  .chip-filter .close {
+    color: var(--accent);
+    margin-left: 2px;
+  }
+
+  .sort-wrap {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .sort-lbl {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+  .sort-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-family: var(--font-body);
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-primary);
+    cursor: pointer;
+  }
+  .sort-pill:hover { border-color: var(--border-strong); }
+  .sort-pill svg { width: 12px; height: 12px; color: var(--text-muted); }
+
+  /* === Workshops grid === */
+  .grid-pad {
+    padding: 24px 40px 40px;
+  }
+  .workshops-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+  }
+  .wsh-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    cursor: pointer;
+    text-decoration: none;
+    color: inherit;
+    transition: all 140ms;
+    position: relative;
+  }
+  .wsh-card:hover {
+    border-color: var(--border-strong);
+    transform: translateY(-2px);
+    box-shadow: 0 14px 30px rgba(0, 0, 0, 0.35);
+  }
+  .wsh-card.featured {
+    border-color: var(--accent-border);
+  }
+  .wsh-card.featured::before {
+    content: '★ FEATURED';
+    position: absolute;
+    top: 10px; left: 10px;
+    z-index: 2;
+    font-family: var(--font-mono);
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    padding: 3px 7px;
+    background: var(--accent);
+    color: var(--text-on-accent);
+    border-radius: 4px;
+  }
+  .wsh-photo {
+    height: 120px;
+    position: relative;
+  }
+  .wsh-photo.a { background: linear-gradient(135deg, #2C2118 0%, #14171D 55%, #1B1316 100%); }
+  .wsh-photo.b { background: linear-gradient(135deg, #1A1D24 0%, #23272F 60%, #14171D 100%); }
+  .wsh-photo.c { background: linear-gradient(160deg, #382817 0%, #1E1A14 60%, #14171D 100%); }
+  .wsh-photo.d { background: linear-gradient(135deg, #1B2620 0%, #14171D 60%, #1A1614 100%); }
+  .wsh-photo.e { background: linear-gradient(135deg, #23272F 0%, #14171D 65%, #2C2118 100%); }
+  .wsh-photo.f { background: linear-gradient(180deg, #14171D 0%, #1A1D24 100%); }
+  .wsh-photo .mobile-tag {
+    position: absolute;
+    top: 10px; right: 10px;
+    font-family: var(--font-mono);
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    padding: 3px 7px;
+    background: rgba(10, 11, 14, 0.7);
+    backdrop-filter: blur(8px);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text-primary);
+    text-transform: uppercase;
+  }
+  .wsh-photo .mobile-tag.mobile {
+    background: var(--accent-muted);
+    border-color: var(--accent-border);
+    color: var(--accent);
+  }
+  .wsh-body {
+    padding: 14px 14px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    flex: 1;
+  }
+  .wsh-name-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+  }
+  .wsh-name {
+    font-family: var(--font-display);
+    font-size: 18px;
+    letter-spacing: 1.4px;
+    line-height: 1;
+    color: var(--text-primary);
+  }
+  .wsh-rating {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+  }
+  .wsh-rating svg { width: 11px; height: 11px; color: var(--warning); }
+  .wsh-rating strong {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 800;
+    color: var(--text-primary);
+    letter-spacing: 0.3px;
+  }
+  .wsh-rating .count { font-family: var(--font-mono); font-size: 10px; color: var(--text-muted); }
+  .wsh-meta {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    color: var(--text-muted);
+    letter-spacing: 0.3px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .wsh-meta .dot {
+    width: 2px; height: 2px;
+    border-radius: 50%;
+    background: var(--border-strong);
+    display: inline-block;
+  }
+  .wsh-tags {
+    display: inline-flex;
+    gap: 4px;
+    flex-wrap: wrap;
+  }
+  .wsh-tag {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    text-transform: uppercase;
+  }
+
+  .wsh-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    background: var(--bg);
+    border-top: 1px solid var(--hairline);
+    gap: 8px;
+  }
+  .wsh-price {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+  }
+  .wsh-price-lbl {
+    font-family: var(--font-mono);
+    font-size: 8.5px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+  .wsh-price-val {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    font-weight: 800;
+    color: var(--text-primary);
+    letter-spacing: 0.3px;
+    line-height: 1;
+  }
+  .wsh-price-val .unit { color: var(--text-secondary); font-size: 10.5px; margin-left: 1px; font-weight: 700; }
+  .wsh-price-val .em { color: var(--accent); }
+  .wsh-cta {
+    padding: 6px 10px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text-primary);
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .wsh-card:hover .wsh-cta {
+    border-color: var(--accent);
+    background: var(--accent);
+    color: var(--text-on-accent);
+  }
+  .wsh-cta svg { width: 11px; height: 11px; }
+
+  /* === SEO / long-tail sections === */
+  .seo-section {
+    padding: 56px 40px;
+    border-top: 1px solid var(--border);
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 48px;
+    align-items: start;
+  }
+  .seo-head {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 18px;
+  }
+  .seo-eyebrow {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: var(--accent);
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .seo-eyebrow::before {
+    content: '';
+    width: 24px; height: 2px;
+    background: var(--accent);
+  }
+  .seo-title {
+    font-family: var(--font-display);
+    font-size: 40px;
+    line-height: 0.95;
+    letter-spacing: 2px;
+    color: var(--text-primary);
+  }
+  .seo-body {
+    font-size: 14px;
+    line-height: 1.7;
+    color: var(--text-secondary);
+  }
+  .seo-body p { margin-bottom: 14px; }
+  .seo-body strong { color: var(--text-primary); font-weight: 700; }
+  .seo-body a { color: var(--accent); text-decoration: underline; text-decoration-color: var(--accent-border); text-underline-offset: 2px; font-weight: 700; }
+
+  /* Popular tire-size chips (SEO long-tail) */
+  .size-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 12px;
+  }
+  .size-chip {
+    padding: 6px 11px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-secondary);
+    text-decoration: none;
+    transition: all 120ms;
+  }
+  .size-chip:hover {
+    border-color: var(--accent-border);
+    color: var(--accent);
+    background: var(--accent-muted);
+  }
+
+  /* FAQ compact */
+  .faq-compact {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .faq-row {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 13px 14px;
+    cursor: pointer;
+  }
+  .faq-row:hover { border-color: var(--border-strong); }
+  .faq-row[open] { border-color: var(--accent-border); background: linear-gradient(135deg, var(--accent-muted) 0%, var(--surface) 40%); }
+  .faq-row-q {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-primary);
+  }
+  .faq-row-q svg { width: 13px; height: 13px; color: var(--text-muted); transition: transform 140ms; }
+  .faq-row[open] .faq-row-q svg { transform: rotate(45deg); color: var(--accent); }
+  .faq-row-a {
+    margin-top: 8px;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--text-secondary);
+  }
+
+  /* Footer */
+  .footer {
+    padding: 32px 40px;
+    background: var(--bg);
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    color: var(--text-muted);
+    letter-spacing: 0.3px;
+  }
+  .footer a { color: var(--text-muted); text-decoration: none; }
+  .footer a:hover { color: var(--text-secondary); }
+  .footer .legal-links { display: inline-flex; gap: 16px; }
+
+  /* States caption */
+  .states-caption {
+    width: 100%;
+    max-width: 1440px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 40px;
+    padding: 14px 0 0;
+    border-top: 1px solid var(--border);
+  }
+  .state-col { display: flex; flex-direction: column; gap: 6px; }
+  .state-col h4 {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 4px;
+  }
+  .state-col ul { list-style: none; display: flex; flex-direction: column; gap: 4px; }
+  .state-col li {
+    font-size: 11px;
+    color: var(--text-secondary);
+    line-height: 1.55;
+    padding-left: 14px;
+    position: relative;
+  }
+  .state-col li::before {
+    content: '—';
+    position: absolute;
+    left: 0;
+    color: var(--text-muted);
+  }
+  .state-col li strong { color: var(--text-primary); font-weight: 700; }
+  .state-col code {
+    font-family: var(--font-mono);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 1px 5px;
+    border-radius: 3px;
+    color: var(--accent);
+    font-size: 10px;
+  }
+</style>
+</head>
+<body>
+
+  <div class="canvas-label">
+    <div class="film-strip">
+      <span class="frame">LANDING · NOWY SĄCZ</span>
+      <span class="frame-num">FRAME · opony.app/nowy-sacz · Next.js SSG · SEO long-tail</span>
+    </div>
+    <div class="slug">CITY LISTING · 23 WARSZTATY · FILTRY · SEO CONTENT · DEEP-LINK DO APP</div>
+    <div class="canvas-meta">
+      <span class="pulse" aria-hidden="true"></span>
+      DRAFT · DESKTOP 1440 × 900 · SCROLL ↓
+    </div>
+  </div>
+
+  <div class="desktop-frame">
+
+    <div class="browser-chrome">
+      <div class="traffic-lights"><span class="light red"></span><span class="light yellow"></span><span class="light green"></span></div>
+      <div class="browser-tabs">
+        <div class="browser-tab"><span class="favicon">O</span>Warsztaty opon Nowy Sącz · Opony</div>
+      </div>
+      <div class="browser-address">
+        <svg class="lock" viewBox="0 0 16 16" width="12" height="12" fill="currentColor" aria-hidden="true"><path d="M4.5 7V5.5a3.5 3.5 0 0 1 7 0V7h.5a1 1 0 0 1 1 1v5.5a1 1 0 0 1-1 1h-8a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1h.5Zm1.5 0h4V5.5a2 2 0 0 0-4 0V7Z"/></svg>
+        <span class="url">opony.app</span><span class="path">/nowy-sacz</span>
+      </div>
+    </div>
+
+    <div class="page">
+
+      <!-- Top nav -->
+      <header class="topnav" role="banner">
+        <a href="/" class="brand">
+          <span class="wordmark">OPONY<span class="dot" aria-hidden="true"></span></span>
+        </a>
+        <nav class="breadcrumb" aria-label="Ścieżka">
+          <a href="/">Opony</a>
+          <span class="sep">›</span>
+          <span class="current">Nowy Sącz</span>
+        </nav>
+        <span class="nav-spacer"></span>
+        <a class="btn" href="#">Dla warsztatów</a>
+        <a class="btn primary" href="#">
+          Otwórz app
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="12 5 19 12 12 19"/></svg>
+        </a>
+      </header>
+
+      <!-- City hero -->
+      <section class="city-hero" aria-labelledby="h1">
+        <div>
+          <div class="city-eyebrow">Pilot LIVE · Kwiecień 2026</div>
+          <h1 class="city-h1" id="h1">WARSZTATY OPON<br>W <span class="em">NOWYM SĄCZU.</span></h1>
+          <p class="city-intro"><strong>23 zweryfikowane warsztaty</strong> — stacjonarne i mobilne z dojazdem. Dokładne ceny, realne kalendarze, zero telefonów. Rezerwacja odbywa się w aplikacji <strong>Opony</strong>.</p>
+          <div class="city-stats-row">
+            <div class="city-stat">
+              <span class="stat-val"><span class="em">23</span></span>
+              <span class="stat-lbl">Warsztaty</span>
+            </div>
+            <span class="stat-divider"></span>
+            <div class="city-stat">
+              <span class="stat-val">1,2<span class="sm">k</span></span>
+              <span class="stat-lbl">Rezerwacji Q1</span>
+            </div>
+            <span class="stat-divider"></span>
+            <div class="city-stat">
+              <span class="stat-val">4,8<span class="sm">/5</span></span>
+              <span class="stat-lbl">Średnia ocen</span>
+            </div>
+            <span class="stat-divider"></span>
+            <div class="city-stat">
+              <span class="stat-val"><span class="em">od 140</span><span class="sm">zł</span></span>
+              <span class="stat-lbl">Wymiana 4× / 15"</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="city-map" aria-label="Mapa warsztatów w Nowym Sączu">
+          <!-- decorative pins scattered -->
+          <span class="map-pin-mini" style="top:22%; left:28%"></span>
+          <span class="map-pin-mini featured" style="top:42%; left:44%"></span>
+          <span class="map-pin-mini" style="top:32%; left:62%"></span>
+          <span class="map-pin-mini" style="top:58%; left:34%"></span>
+          <span class="map-pin-mini" style="top:48%; left:72%"></span>
+          <span class="map-pin-mini" style="top:64%; left:56%"></span>
+          <span class="map-pin-mini" style="top:28%; left:78%"></span>
+          <span class="map-pin-mini" style="top:72%; left:22%"></span>
+          <div class="map-overlay">
+            <div class="map-overlay-title">
+              <span class="t">Widok mapy</span>
+              <span class="v">23 punkty · ul. Lwowska do Zabełcze</span>
+            </div>
+            <a class="map-overlay-btn" href="#">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/><path d="M21 14v6a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h6"/></svg>
+              Pełna mapa
+            </a>
+          </div>
+        </div>
+      </section>
+
+      <!-- Filter bar -->
+      <div class="filter-bar" role="search">
+        <span class="filter-count"><span class="em">23</span></span>
+        <span class="filter-count-sub">Warsztaty · Nowy Sącz</span>
+
+        <span class="filter-divider"></span>
+
+        <button class="chip-filter selected" type="button" aria-pressed="true">
+          Dostępne dziś
+          <span class="close" aria-hidden="true">×</span>
+        </button>
+        <button class="chip-filter" type="button">Jutro</button>
+        <button class="chip-filter" type="button">Weekend</button>
+
+        <span class="filter-divider"></span>
+
+        <button class="chip-filter" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 17h18l-2-7H5z"/><circle cx="7" cy="18" r="1.5" fill="currentColor"/></svg>
+          Stacjonarny
+        </button>
+        <button class="chip-filter" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="7" width="14" height="10" rx="1"/><path d="M15 10h4l3 4v3h-7"/></svg>
+          Mobilny
+        </button>
+        <button class="chip-filter" type="button">Ocena ≥ 4,5</button>
+
+        <div class="sort-wrap">
+          <span class="sort-lbl">Sortuj</span>
+          <button class="sort-pill" type="button">
+            Najbliższe
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Workshops grid -->
+      <section class="grid-pad" aria-label="Lista warsztatów">
+        <div class="workshops-grid">
+
+          <a class="wsh-card featured" href="/p/wulkanizacja-nowy-sacz">
+            <div class="wsh-photo a"></div>
+            <div class="wsh-body">
+              <div class="wsh-name-row">
+                <h3 class="wsh-name">WULKANIZACJA N. SĄCZ</h3>
+                <span class="wsh-rating">
+                  <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15 9 22 10 17 15 18 22 12 19 6 22 7 15 2 10 9 9"/></svg>
+                  <strong>4,8</strong> <span class="count">(127)</span>
+                </span>
+              </div>
+              <span class="wsh-meta">
+                <span>ul. Lwowska 45</span>
+                <span class="dot" aria-hidden="true"></span>
+                <span>Stacjonarny</span>
+                <span class="dot" aria-hidden="true"></span>
+                <span>Dziś 14:30</span>
+              </span>
+              <div class="wsh-tags">
+                <span class="wsh-tag">Osobowe</span>
+                <span class="wsh-tag">Dostawcze</span>
+                <span class="wsh-tag">Wyważanie</span>
+              </div>
+            </div>
+            <div class="wsh-footer">
+              <div class="wsh-price">
+                <span class="wsh-price-lbl">Wymiana 4× od</span>
+                <span class="wsh-price-val"><span class="em">140</span><span class="unit"> zł</span></span>
+              </div>
+              <span class="wsh-cta">
+                Zobacz profil
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+              </span>
+            </div>
+          </a>
+
+          <a class="wsh-card" href="/p/mobilopony-kasia">
+            <div class="wsh-photo b">
+              <span class="mobile-tag mobile">MOBILNY</span>
+            </div>
+            <div class="wsh-body">
+              <div class="wsh-name-row">
+                <h3 class="wsh-name">MOBILOPONY KASIA</h3>
+                <span class="wsh-rating">
+                  <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15 9 22 10 17 15 18 22 12 19 6 22 7 15 2 10 9 9"/></svg>
+                  <strong>4,9</strong> <span class="count">(94)</span>
+                </span>
+              </div>
+              <span class="wsh-meta">
+                <span>Dojazd do 20 km</span>
+                <span class="dot" aria-hidden="true"></span>
+                <span>Jutro 10:00</span>
+              </span>
+              <div class="wsh-tags">
+                <span class="wsh-tag">Osobowe</span>
+                <span class="wsh-tag">SUV</span>
+                <span class="wsh-tag">Wyważanie</span>
+              </div>
+            </div>
+            <div class="wsh-footer">
+              <div class="wsh-price">
+                <span class="wsh-price-lbl">Wymiana 4× od</span>
+                <span class="wsh-price-val">180<span class="unit"> zł</span></span>
+              </div>
+              <span class="wsh-cta">
+                Zobacz profil
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+              </span>
+            </div>
+          </a>
+
+          <a class="wsh-card" href="/p/wulkanizacja-kepa">
+            <div class="wsh-photo c"></div>
+            <div class="wsh-body">
+              <div class="wsh-name-row">
+                <h3 class="wsh-name">WULKANIZACJA KĘPA</h3>
+                <span class="wsh-rating">
+                  <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15 9 22 10 17 15 18 22 12 19 6 22 7 15 2 10 9 9"/></svg>
+                  <strong>4,7</strong> <span class="count">(82)</span>
+                </span>
+              </div>
+              <span class="wsh-meta">
+                <span>ul. Krakowska 12</span>
+                <span class="dot" aria-hidden="true"></span>
+                <span>Stacjonarny</span>
+                <span class="dot" aria-hidden="true"></span>
+                <span>Jutro 09:00</span>
+              </span>
+              <div class="wsh-tags">
+                <span class="wsh-tag">Osobowe</span>
+                <span class="wsh-tag">Sezonowa</span>
+              </div>
+            </div>
+            <div class="wsh-footer">
+              <div class="wsh-price">
+                <span class="wsh-price-lbl">Wymiana 4× od</span>
+                <span class="wsh-price-val">150<span class="unit"> zł</span></span>
+              </div>
+              <span class="wsh-cta">
+                Zobacz profil
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+              </span>
+            </div>
+          </a>
+
+          <a class="wsh-card" href="/p/auto-serwis-opon">
+            <div class="wsh-photo d"></div>
+            <div class="wsh-body">
+              <div class="wsh-name-row">
+                <h3 class="wsh-name">AUTO SERWIS OPON</h3>
+                <span class="wsh-rating">
+                  <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15 9 22 10 17 15 18 22 12 19 6 22 7 15 2 10 9 9"/></svg>
+                  <strong>4,6</strong> <span class="count">(118)</span>
+                </span>
+              </div>
+              <span class="wsh-meta">
+                <span>ul. Tarnowska 88</span>
+                <span class="dot" aria-hidden="true"></span>
+                <span>Dziś 16:45</span>
+              </span>
+              <div class="wsh-tags">
+                <span class="wsh-tag">Osobowe</span>
+                <span class="wsh-tag">Ciężarowe</span>
+                <span class="wsh-tag">TPMS</span>
+              </div>
+            </div>
+            <div class="wsh-footer">
+              <div class="wsh-price">
+                <span class="wsh-price-lbl">Wymiana 4× od</span>
+                <span class="wsh-price-val">160<span class="unit"> zł</span></span>
+              </div>
+              <span class="wsh-cta">
+                Zobacz profil
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+              </span>
+            </div>
+          </a>
+
+          <a class="wsh-card" href="/p/felgoland">
+            <div class="wsh-photo e"></div>
+            <div class="wsh-body">
+              <div class="wsh-name-row">
+                <h3 class="wsh-name">FELGOLAND</h3>
+                <span class="wsh-rating">
+                  <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15 9 22 10 17 15 18 22 12 19 6 22 7 15 2 10 9 9"/></svg>
+                  <strong>4,5</strong> <span class="count">(64)</span>
+                </span>
+              </div>
+              <span class="wsh-meta">
+                <span>ul. Zielona 7</span>
+                <span class="dot" aria-hidden="true"></span>
+                <span>Stacjonarny</span>
+                <span class="dot" aria-hidden="true"></span>
+                <span>Dziś 18:00</span>
+              </span>
+              <div class="wsh-tags">
+                <span class="wsh-tag">Osobowe</span>
+                <span class="wsh-tag">Premium ≥ 19"</span>
+                <span class="wsh-tag">Geometria</span>
+              </div>
+            </div>
+            <div class="wsh-footer">
+              <div class="wsh-price">
+                <span class="wsh-price-lbl">Wymiana 4× od</span>
+                <span class="wsh-price-val">170<span class="unit"> zł</span></span>
+              </div>
+              <span class="wsh-cta">
+                Zobacz profil
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+              </span>
+            </div>
+          </a>
+
+          <a class="wsh-card" href="/p/express-opony">
+            <div class="wsh-photo f">
+              <span class="mobile-tag mobile">MOBILNY</span>
+            </div>
+            <div class="wsh-body">
+              <div class="wsh-name-row">
+                <h3 class="wsh-name">EXPRESS OPONY</h3>
+                <span class="wsh-rating">
+                  <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15 9 22 10 17 15 18 22 12 19 6 22 7 15 2 10 9 9"/></svg>
+                  <strong>4,8</strong> <span class="count">(71)</span>
+                </span>
+              </div>
+              <span class="wsh-meta">
+                <span>Dojazd 15 km</span>
+                <span class="dot" aria-hidden="true"></span>
+                <span>Pt 11:30</span>
+              </span>
+              <div class="wsh-tags">
+                <span class="wsh-tag">Osobowe</span>
+                <span class="wsh-tag">Dostawcze</span>
+                <span class="wsh-tag">Hotel opon</span>
+              </div>
+            </div>
+            <div class="wsh-footer">
+              <div class="wsh-price">
+                <span class="wsh-price-lbl">Wymiana 4× od</span>
+                <span class="wsh-price-val">190<span class="unit"> zł</span></span>
+              </div>
+              <span class="wsh-cta">
+                Zobacz profil
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+              </span>
+            </div>
+          </a>
+
+        </div>
+      </section>
+
+      <!-- SEO content -->
+      <section class="seo-section" aria-labelledby="seo-1">
+        <div>
+          <div class="seo-head">
+            <span class="seo-eyebrow">O warsztatach</span>
+            <h2 class="seo-title" id="seo-1">WYMIANA OPON<br>W NOWYM SĄCZU.</h2>
+          </div>
+          <div class="seo-body">
+            <p><strong>Nowy Sącz</strong> to nasze miasto pilotażowe. Znamy osobiście każdego z 23 warsztatów na platformie — nie weryfikujemy „na papierze". Każdy ma aktualny wpis CEIDG, sprawdzamy adres, rozmawiamy z właścicielem.</p>
+            <p>Większość warsztatów w Nowym Sączu oferuje wymianę 4 opon w cenach od <strong>140 zł (rozmiar ≤ 15")</strong> do <strong>240 zł (≥ 18")</strong>. Dopłaty za dostawcze (+40 zł), wyważanie — zwykle w cenie. Pierwszy termin dostępny zwykle tego samego dnia lub następnego.</p>
+            <p>Mobilni wulkanizatorzy (jak <a href="/p/mobilopony-kasia">MobilOpony Kasia</a> czy <a href="/p/express-opony">Express Opony</a>) przyjeżdżają na Twój adres — pod blok, do firmy, na ogródek. Zwykle +30-50 zł za dojazd w zależności od dystansu.</p>
+          </div>
+
+          <div class="seo-head" style="margin-top: 32px">
+            <span class="seo-eyebrow">Popularne rozmiary</span>
+          </div>
+          <div class="size-chips">
+            <a class="size-chip" href="/nowy-sacz/205-55-r16">205/55 R16</a>
+            <a class="size-chip" href="/nowy-sacz/215-60-r16">215/60 R16</a>
+            <a class="size-chip" href="/nowy-sacz/195-65-r15">195/65 R15</a>
+            <a class="size-chip" href="/nowy-sacz/225-45-r17">225/45 R17</a>
+            <a class="size-chip" href="/nowy-sacz/225-40-r18">225/40 R18</a>
+            <a class="size-chip" href="/nowy-sacz/235-45-r18">235/45 R18</a>
+            <a class="size-chip" href="/nowy-sacz/205-60-r16">205/60 R16</a>
+            <a class="size-chip" href="/nowy-sacz/185-65-r15">185/65 R15</a>
+            <a class="size-chip" href="/nowy-sacz/215-55-r17">215/55 R17</a>
+            <a class="size-chip" href="/nowy-sacz/245-45-r18">245/45 R18</a>
+          </div>
+        </div>
+
+        <div>
+          <div class="seo-head">
+            <span class="seo-eyebrow">FAQ</span>
+            <h2 class="seo-title" id="seo-2">CZĘSTE<br>PYTANIA.</h2>
+          </div>
+          <div class="faq-compact">
+            <details class="faq-row" open>
+              <summary class="faq-row-q">
+                Jak długo trwa wymiana 4 opon w N. Sączu?
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              </summary>
+              <p class="faq-row-a">Typowo 30-45 min dla aut osobowych (felgi 15-17"), 60 min dla SUV-ów i premium (18"+). Warsztat pokazuje przewidywany czas przy każdym slocie.</p>
+            </details>
+            <details class="faq-row">
+              <summary class="faq-row-q">
+                Czy mogę zapłacić kartą?
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              </summary>
+              <p class="faq-row-a">Większość warsztatów akceptuje kartę, BLIK i gotówkę. Szczegół znajdziesz w profilu warsztatu. Opony.app nie pośredniczy w płatnościach — rozliczasz się z warsztatem bezpośrednio.</p>
+            </details>
+            <details class="faq-row">
+              <summary class="faq-row-q">
+                Jak zarezerwować wizytę?
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              </summary>
+              <p class="faq-row-a">Rezerwacja odbywa się w <strong>aplikacji Opony</strong> (web / iOS / Android). Wybierasz warsztat z listy, podajesz rozmiar opon, klikasz slot — potwierdzenie SMS w kilka sekund.</p>
+            </details>
+            <details class="faq-row">
+              <summary class="faq-row-q">
+                Czy są mobilni wulkanizatorzy?
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              </summary>
+              <p class="faq-row-a">Tak, w N. Sączu są dwa mobilne — <a href="/p/mobilopony-kasia">MobilOpony Kasia</a> (zasięg 20 km) i <a href="/p/express-opony">Express Opony</a> (15 km). Oznaczone tagiem „MOBILNY" na liście.</p>
+            </details>
+          </div>
+        </div>
+      </section>
+
+      <!-- Footer (compact) -->
+      <footer class="footer" role="contentinfo">
+        <span>© 2026 Opony.app · Pilot Nowy Sącz · made in Małopolska</span>
+        <div class="legal-links">
+          <a href="/">Start</a>
+          <a href="#">Dla warsztatów</a>
+          <a href="#">Regulamin</a>
+          <a href="#">RODO</a>
+          <a href="#">Kontakt</a>
+        </div>
+      </footer>
+
+    </div>
+  </div>
+
+  <!-- States caption -->
+  <div class="states-caption">
+    <div class="state-col">
+      <h4>SSG · SEO · route</h4>
+      <ul>
+        <li><strong>SSG per miasto</strong> — <code>/[city]/index.html</code> generowany przy publish/deploy; ISR 15 min jeśli zmieni się lista warsztatów.</li>
+        <li><strong>Target keywords</strong> — „warsztat opon nowy sącz", „wymiana opon nowy sącz", „wulkanizacja nowy sącz cena" (long-tail intent).</li>
+        <li><strong>JSON-LD</strong> — <code>ItemList</code> z <code>LocalBusiness</code> items (rating + address per workshop) → rich snippets „list with stars".</li>
+        <li><strong>Sub-routes SEO</strong> — size chipy generują <code>/[city]/[tireSize]</code> (np. <code>/nowy-sacz/205-55-r16</code>) — filtruje listę po zgodnych cennikach.</li>
+        <li><strong>Breadcrumb schema</strong> — <code>BreadcrumbList</code> z 2 levels (Opony › Nowy Sącz); każdy workshop to osobna ścieżka z <code>/p/&lt;slug&gt;</code>.</li>
+        <li><strong>Cache</strong> — CDN edge 1h, stale-while-revalidate 24h; full revalidate daily.</li>
+      </ul>
+    </div>
+    <div class="state-col">
+      <h4>Filtry, UX &amp; regułki</h4>
+      <ul>
+        <li><strong>Zero booking w web</strong> — klik w karta warsztatu → <code>/p/&lt;slug&gt;</code> (landing-02) z CTA „Otwórz w aplikacji" (Universal Link).</li>
+        <li><strong>Filter chips</strong> — <em>Dostępne dziś</em> selected (shareable URL <code>?avail=today</code>); combine z sortem (closest / cheapest / rating) client-side na cache'owanym JSON-ie.</li>
+        <li><strong>Mobile tag</strong> — dla providerów z <code>serviceType=MOBILE</code>; amber badge na zdjęciu, osobna filtra chip.</li>
+        <li><strong>Featured card</strong> — <code>Provider.isFeatured</code> (przyznawane przez admin w Retool); amber border + „★ FEATURED" label.</li>
+        <li><strong>Ceny „od X zł"</strong> — najniższy tier z cennika warsztatu (15") + format <code>{amount}{unit}</code>; pełne ceny w profilu.</li>
+        <li><strong>Mapa teaser</strong> — decorative pins (8 wyodrębnionych); „Pełna mapa" → <code>/nowy-sacz/mapa</code> (modal lub sub-page) albo app (mobile).</li>
+        <li><strong>A11y</strong> — karty to <code>&lt;a&gt;</code> z whole-card target; zagnieżdżone spany (nie button), by unikać nested interactives; FAQ natywny <code>&lt;details&gt;</code>.</li>
+      </ul>
+    </div>
+  </div>
+
+</body>
+</html>

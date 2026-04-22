@@ -1,0 +1,1530 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Opony Panel — B2B-14 Ustawienia konta</title>
+<!--
+  Screen: Panel providera — Ustawienia konta (kontakt, notyfikacje, pauza, sesje, RODO, danger)
+  Ref:    docs/plan-sprintow.md → W:12.11 (ustawienia), US-46 (usuń konto + eksport RODO), US-47 (zmień numer)
+  Tone:   industrial-dark · 6 sekcji ze scroll-spy · pauza warsztatu jako hero action · danger zone osobno
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Bebas+Neue&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0A0B0E;
+    --bg-tint-top: #12141A;
+    --surface: #14171D;
+    --surface-raised: #1B1E26;
+    --surface-hover: #23272F;
+    --border: #262A34;
+    --border-strong: #363B47;
+    --hairline: rgba(255, 255, 255, 0.06);
+    --text-primary: #F5F4EF;
+    --text-secondary: #9EA2AD;
+    --text-muted: #60646F;
+    --text-on-accent: #0A0B0E;
+    --accent: #FF6B1A;
+    --accent-hover: #FF8039;
+    --accent-muted: rgba(255, 107, 26, 0.14);
+    --accent-border: rgba(255, 107, 26, 0.32);
+    --accent-glow: rgba(255, 107, 26, 0.45);
+    --success: #2EE0A0;
+    --success-muted: rgba(46, 224, 160, 0.14);
+    --success-border: rgba(46, 224, 160, 0.32);
+    --warning: #FFB020;
+    --warning-muted: rgba(255, 176, 32, 0.14);
+    --warning-border: rgba(255, 176, 32, 0.32);
+    --danger: #FF5757;
+    --danger-muted: rgba(255, 87, 87, 0.12);
+    --danger-border: rgba(255, 87, 87, 0.32);
+    --font-display: 'Bebas Neue', sans-serif;
+    --font-body: 'Archivo', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; overflow-x: hidden; max-width: 100vw; }
+  body {
+    --desktop-scale: min(1, calc((100vh - 200px) / 900px), calc((100vw - 80px) / 1440px));
+    font-family: var(--font-body);
+    background: var(--bg);
+    color: var(--text-primary);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    background-image:
+      radial-gradient(ellipse 70% 50% at 50% 0%, rgba(255, 107, 26, 0.05) 0%, transparent 60%),
+      linear-gradient(180deg, var(--bg-tint-top) 0%, var(--bg) 30%);
+    background-attachment: fixed;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 40px 40px 60px;
+    gap: 24px;
+  }
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 4px var(--accent-muted); opacity: 1; }
+    50%      { box-shadow: 0 0 0 8px transparent; opacity: 0.6; }
+  }
+  @keyframes pulseDanger {
+    0%, 100% { box-shadow: 0 0 0 4px var(--danger-muted); opacity: 1; }
+    50%      { box-shadow: 0 0 0 8px transparent; opacity: 0.5; }
+  }
+
+  .canvas-label {
+    width: 100%;
+    max-width: 1440px;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: baseline;
+    gap: 20px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  .film-strip .frame { display: block; font-family: var(--font-display); font-size: 36px; letter-spacing: 4px; line-height: 1; color: var(--text-primary); }
+  .film-strip .frame-num { font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); letter-spacing: 1.5px; display: block; margin-top: 4px; font-weight: 700; }
+  .slug {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    border-left: 1px solid var(--border);
+    padding-left: 18px;
+  }
+  .canvas-meta {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-secondary);
+    letter-spacing: 1px;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .canvas-meta .pulse {
+    display: inline-block;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 0 4px var(--accent-muted);
+    animation: pulse 1800ms ease-in-out infinite;
+  }
+
+  .desktop-frame {
+    width: 1440px;
+    height: 900px;
+    background: var(--bg);
+    border-radius: 14px;
+    border: 1px solid #1C1E24;
+    box-shadow: 0 40px 120px rgba(0, 0, 0, 0.6), 0 20px 40px rgba(0, 0, 0, 0.4);
+    overflow: hidden;
+    position: relative;
+    flex-shrink: 0;
+    transform: scale(var(--desktop-scale));
+    transform-origin: top center;
+    margin-bottom: calc((var(--desktop-scale) - 1) * 900px);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .browser-chrome {
+    height: 44px;
+    background: linear-gradient(180deg, #1A1D23, #14171D);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    gap: 16px;
+    flex-shrink: 0;
+  }
+  .traffic-lights { display: inline-flex; gap: 8px; }
+  .light { width: 12px; height: 12px; border-radius: 50%; }
+  .light.red { background: #FF5F57; }
+  .light.yellow { background: #FEBC2E; }
+  .light.green { background: #28C840; }
+  .browser-tabs { display: inline-flex; gap: 2px; }
+  .browser-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-bottom: none;
+    border-radius: 8px 8px 0 0;
+    font-size: 12px;
+    color: var(--text-primary);
+    position: relative;
+    top: 6px;
+  }
+  .browser-tab .favicon {
+    width: 14px; height: 14px;
+    border-radius: 3px;
+    background: var(--accent);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-display);
+    font-size: 9px;
+    color: var(--text-on-accent);
+    letter-spacing: 0.5px;
+  }
+  .browser-address {
+    flex: 1;
+    max-width: 480px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+  .browser-address .lock { color: var(--success); }
+  .browser-address .url { color: var(--text-primary); }
+  .browser-address .path { color: var(--text-secondary); }
+
+  .app-root {
+    flex: 1;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: 220px 1fr;
+  }
+  .sidebar {
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    padding: 20px 14px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .sb-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px 18px;
+  }
+  .sb-brand .wordmark {
+    font-family: var(--font-display);
+    font-size: 26px;
+    letter-spacing: 3px;
+    line-height: 1;
+    color: var(--text-primary);
+    display: inline-flex;
+    align-items: baseline;
+    gap: 3px;
+  }
+  .sb-brand .dot {
+    display: inline-block;
+    width: 6px; height: 6px;
+    background: var(--accent);
+    border-radius: 50%;
+    transform: translateY(-2px);
+    box-shadow: 0 0 10px var(--accent-glow);
+  }
+  .sb-brand .panel-tag {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    padding: 2px 5px;
+    border-radius: 4px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    font-weight: 700;
+    margin-left: auto;
+  }
+  .sb-section-label {
+    font-family: var(--font-body);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 1.3px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    padding: 8px 10px 4px;
+  }
+  .sb-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 10px;
+    border-radius: 8px;
+    background: transparent;
+    border: 1px solid transparent;
+    color: var(--text-secondary);
+    font-family: var(--font-body);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: left;
+    width: 100%;
+    transition: background 140ms ease, color 140ms ease;
+  }
+  .sb-item:hover { background: var(--surface-hover); color: var(--text-primary); }
+  .sb-item.active {
+    background: var(--accent-muted);
+    color: var(--accent);
+    border-color: var(--accent-border);
+  }
+  .sb-badge {
+    margin-left: auto;
+    min-width: 20px; height: 18px;
+    padding: 0 6px;
+    background: var(--accent);
+    color: var(--text-on-accent);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 700;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .sb-spacer { flex: 1; }
+  .sb-user {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    cursor: pointer;
+  }
+  .sb-avatar {
+    width: 34px; height: 34px;
+    border-radius: 9px;
+    background: linear-gradient(135deg, #FF8039 0%, #C73F0A 100%);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-display);
+    font-size: 15px;
+    color: var(--text-on-accent);
+    letter-spacing: 1.5px;
+    flex-shrink: 0;
+  }
+  .sb-user-col { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  .sb-user-name {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1.1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .sb-user-role {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    color: var(--accent);
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    font-weight: 700;
+  }
+
+  /* Main */
+  .main { display: flex; flex-direction: column; overflow: hidden; }
+  .topbar {
+    height: 58px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 28px;
+    gap: 16px;
+    flex-shrink: 0;
+  }
+  .tb-breadcrumb {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--text-muted);
+    font-weight: 600;
+  }
+  .tb-breadcrumb .sep { color: var(--border-strong); }
+  .tb-breadcrumb .current { color: var(--text-primary); font-weight: 700; }
+  .tb-spacer { flex: 1; }
+  .version-pill {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    padding: 4px 8px;
+    border-radius: 5px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    letter-spacing: 0.6px;
+  }
+  .version-pill strong { color: var(--text-secondary); font-weight: 700; }
+
+  /* Content split: TOC + body */
+  .content-split {
+    flex: 1;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: 196px 1fr;
+  }
+  .toc {
+    border-right: 1px solid var(--border);
+    padding: 20px 12px 20px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    overflow-y: auto;
+  }
+  .toc-label {
+    font-family: var(--font-mono);
+    font-size: 9.5px;
+    font-weight: 800;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    padding: 0 10px 8px;
+  }
+  .toc-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    border-radius: 7px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    cursor: pointer;
+    background: transparent;
+    border: none;
+    text-align: left;
+    width: 100%;
+    transition: all 120ms;
+    position: relative;
+  }
+  .toc-item::before {
+    content: '';
+    width: 2px;
+    height: 0;
+    background: var(--accent);
+    position: absolute;
+    left: 0; top: 50%;
+    transform: translateY(-50%);
+    transition: height 120ms;
+    border-radius: 0 1px 1px 0;
+  }
+  .toc-item:hover { color: var(--text-primary); background: var(--surface-hover); }
+  .toc-item.active {
+    color: var(--accent);
+    background: var(--accent-muted);
+  }
+  .toc-item.active::before { height: 18px; }
+  .toc-item .toc-num {
+    font-family: var(--font-mono);
+    font-size: 9.5px;
+    color: var(--text-muted);
+    font-weight: 700;
+    width: 14px;
+    flex-shrink: 0;
+  }
+  .toc-item.active .toc-num { color: var(--accent); }
+  .toc-item.danger { margin-top: auto; color: var(--danger); }
+  .toc-item.danger:hover { background: var(--danger-muted); }
+
+  .body-scroll {
+    overflow-y: auto;
+    padding: 24px 32px 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    scrollbar-width: thin;
+  }
+  .body-scroll::-webkit-scrollbar { width: 6px; }
+  .body-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  /* Section card */
+  .section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px 22px 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .section.accent {
+    background: linear-gradient(135deg, rgba(255, 107, 26, 0.08) 0%, var(--surface) 60%);
+    border-color: var(--accent-border);
+  }
+  .section.danger {
+    background: linear-gradient(135deg, rgba(255, 87, 87, 0.06) 0%, var(--surface) 60%);
+    border-color: var(--danger-border);
+  }
+  .sec-head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding-bottom: 14px;
+    border-bottom: 1px dashed var(--border);
+  }
+  .sec-num {
+    width: 26px; height: 26px;
+    border-radius: 7px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 800;
+    color: var(--text-secondary);
+    letter-spacing: 0.3px;
+    flex-shrink: 0;
+  }
+  .section.accent .sec-num {
+    background: var(--accent);
+    color: var(--text-on-accent);
+    border-color: transparent;
+  }
+  .section.danger .sec-num {
+    background: var(--danger);
+    color: var(--bg);
+    border-color: transparent;
+  }
+  .sec-title-col { flex: 1; }
+  .sec-title {
+    font-family: var(--font-display);
+    font-size: 20px;
+    letter-spacing: 2px;
+    line-height: 1;
+    color: var(--text-primary);
+  }
+  .section.danger .sec-title { color: var(--danger); }
+  .sec-desc {
+    font-size: 11.5px;
+    color: var(--text-muted);
+    margin-top: 4px;
+    line-height: 1.5;
+  }
+  .sec-kicker {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 1.4px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    padding: 3px 7px;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+  }
+
+  /* Contact row */
+  .contact-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+  .contact-card {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 14px 16px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+  }
+  .contact-lbl {
+    font-family: var(--font-mono);
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .contact-lbl .verified {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: var(--success-muted);
+    border: 1px solid var(--success-border);
+    color: var(--success);
+    font-size: 9px;
+    letter-spacing: 0.5px;
+  }
+  .contact-lbl .verified svg { width: 9px; height: 9px; }
+  .contact-val-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+  .contact-val {
+    font-family: var(--font-mono);
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-primary);
+    letter-spacing: 0.5px;
+  }
+  .contact-sub {
+    font-size: 11px;
+    color: var(--text-muted);
+    line-height: 1.4;
+  }
+  .btn-ghost {
+    padding: 7px 12px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    font-family: var(--font-body);
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-primary);
+    cursor: pointer;
+    letter-spacing: 0.3px;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    flex-shrink: 0;
+  }
+  .btn-ghost:hover { background: var(--surface-hover); border-color: var(--border-strong); }
+  .btn-ghost svg { width: 11px; height: 11px; }
+  .btn-ghost.danger {
+    color: var(--danger);
+    border-color: var(--danger-border);
+  }
+  .btn-ghost.danger:hover { background: var(--danger-muted); }
+
+  /* Pauza warsztatu */
+  .pause-hero {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 14px;
+    align-items: center;
+    padding: 14px 16px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+  }
+  .pause-status-col { display: flex; flex-direction: column; gap: 4px; }
+  .pause-status-title {
+    font-family: var(--font-display);
+    font-size: 18px;
+    letter-spacing: 1.5px;
+    color: var(--text-primary);
+    line-height: 1;
+  }
+  .pause-status-sub {
+    font-size: 11.5px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+  }
+  .pause-status-sub strong { color: var(--text-primary); font-weight: 700; }
+  .pause-ico {
+    width: 48px; height: 48px;
+    border-radius: 12px;
+    background: var(--success-muted);
+    border: 1px solid var(--success-border);
+    color: var(--success);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    position: relative;
+  }
+  .pause-ico::after {
+    content: '';
+    position: absolute;
+    top: -2px; right: -2px;
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: var(--success);
+    box-shadow: 0 0 0 3px var(--surface);
+    animation: pulse 1800ms ease-in-out infinite;
+  }
+  .pause-ico svg { width: 24px; height: 24px; }
+
+  .pause-presets {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .pause-preset {
+    padding: 12px 10px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    text-align: left;
+    transition: all 120ms;
+  }
+  .pause-preset:hover { border-color: var(--border-strong); background: var(--surface-hover); }
+  .pause-preset.warning:hover {
+    border-color: var(--warning-border);
+    background: var(--warning-muted);
+  }
+  .pause-preset-lbl {
+    font-family: var(--font-mono);
+    font-size: 9.5px;
+    font-weight: 800;
+    letter-spacing: 1.3px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+  .pause-preset-val {
+    font-family: var(--font-display);
+    font-size: 15px;
+    letter-spacing: 1px;
+    color: var(--text-primary);
+    line-height: 1.1;
+  }
+  .pause-preset-hint {
+    font-size: 10px;
+    color: var(--text-muted);
+  }
+
+  /* Notifications matrix */
+  .notif-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .notif-table th {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    padding: 11px 14px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface-raised);
+  }
+  .notif-table th.channel-col {
+    text-align: center;
+    width: 86px;
+  }
+  .notif-table th .ch-ico {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px; height: 22px;
+    border-radius: 6px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    margin-right: 6px;
+  }
+  .notif-table th .ch-ico svg { width: 11px; height: 11px; }
+  .notif-table td {
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--hairline);
+    vertical-align: middle;
+  }
+  .notif-table tr:last-child td { border-bottom: none; }
+  .notif-event {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .notif-event-title {
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--text-primary);
+  }
+  .notif-event-desc {
+    font-size: 10.5px;
+    color: var(--text-muted);
+    line-height: 1.4;
+  }
+  .notif-critical {
+    font-family: var(--font-mono);
+    font-size: 8.5px;
+    font-weight: 800;
+    letter-spacing: 0.8px;
+    padding: 2px 5px;
+    border-radius: 3px;
+    background: var(--accent-muted);
+    color: var(--accent);
+    border: 1px solid var(--accent-border);
+    margin-right: 6px;
+  }
+
+  .switch {
+    width: 34px; height: 20px;
+    border-radius: 999px;
+    background: var(--accent);
+    position: relative;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 140ms;
+    border: none;
+    display: inline-block;
+  }
+  .switch::after {
+    content: '';
+    position: absolute;
+    width: 16px; height: 16px;
+    top: 2px;
+    left: 16px;
+    border-radius: 50%;
+    background: var(--text-on-accent);
+    transition: left 140ms;
+  }
+  .switch.off { background: var(--border-strong); }
+  .switch.off::after { left: 2px; }
+  .switch.disabled {
+    background: var(--border);
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+  .switch-cell { text-align: center; }
+
+  /* Sessions */
+  .session-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 14px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+  }
+  .session-item + .session-item { margin-top: 8px; }
+  .session-item.current {
+    border-color: var(--accent-border);
+    background: linear-gradient(90deg, var(--accent-muted) 0%, var(--bg) 40%);
+  }
+  .session-ico {
+    width: 36px; height: 36px;
+    border-radius: 9px;
+    background: var(--surface-raised);
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .session-item.current .session-ico {
+    background: var(--accent);
+    color: var(--text-on-accent);
+    border-color: transparent;
+  }
+  .session-ico svg { width: 16px; height: 16px; }
+  .session-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  .session-main {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .session-device {
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--text-primary);
+  }
+  .session-badge-current {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 0.8px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: var(--accent);
+    color: var(--text-on-accent);
+  }
+  .session-meta {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    color: var(--text-muted);
+    letter-spacing: 0.3px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .session-meta .dot-sep {
+    width: 2px; height: 2px;
+    border-radius: 50%;
+    background: var(--border-strong);
+    display: inline-block;
+  }
+  .session-logout-all {
+    margin-top: 8px;
+  }
+
+  /* RODO */
+  .rodo-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .rodo-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 14px 16px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+  }
+  .rodo-ico {
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    background: var(--surface-raised);
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .rodo-ico svg { width: 15px; height: 15px; }
+  .rodo-col { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+  .rodo-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-primary);
+  }
+  .rodo-sub {
+    font-size: 11px;
+    color: var(--text-muted);
+    line-height: 1.4;
+  }
+
+  /* Danger zone */
+  .danger-item {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 14px;
+    align-items: center;
+    padding: 14px 16px;
+    background: rgba(255, 87, 87, 0.04);
+    border: 1px solid var(--danger-border);
+    border-radius: 10px;
+  }
+  .danger-info { display: flex; flex-direction: column; gap: 3px; }
+  .danger-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--danger);
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+  }
+  .danger-title svg { width: 13px; height: 13px; }
+  .danger-sub {
+    font-size: 11px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    max-width: 540px;
+  }
+  .btn-danger {
+    padding: 9px 14px;
+    background: transparent;
+    border: 1px solid var(--danger-border);
+    border-radius: 8px;
+    color: var(--danger);
+    font-family: var(--font-body);
+    font-size: 11.5px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+    text-transform: uppercase;
+  }
+  .btn-danger:hover { background: var(--danger-muted); }
+  .btn-danger svg { width: 12px; height: 12px; }
+
+  /* States caption */
+  .states-caption {
+    width: 100%;
+    max-width: 1440px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 40px;
+    padding: 14px 0 0;
+    border-top: 1px solid var(--border);
+  }
+  .state-col { display: flex; flex-direction: column; gap: 6px; }
+  .state-col h4 {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 4px;
+  }
+  .state-col ul { list-style: none; display: flex; flex-direction: column; gap: 4px; }
+  .state-col li {
+    font-size: 11px;
+    color: var(--text-secondary);
+    line-height: 1.55;
+    padding-left: 14px;
+    position: relative;
+  }
+  .state-col li::before {
+    content: '—';
+    position: absolute;
+    left: 0;
+    color: var(--text-muted);
+  }
+  .state-col li strong { color: var(--text-primary); font-weight: 700; }
+  .state-col code {
+    font-family: var(--font-mono);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 1px 5px;
+    border-radius: 3px;
+    color: var(--accent);
+    font-size: 10px;
+  }
+</style>
+</head>
+<body>
+
+  <div class="canvas-label">
+    <div class="film-strip">
+      <span class="frame">B2B · USTAWIENIA KONTA</span>
+      <span class="frame-num">FRAME 14 / 14 · panel.opony.app/ustawienia</span>
+    </div>
+    <div class="slug">KONTAKT · POWIADOMIENIA · PAUZA · SESJE · RODO · DANGER</div>
+    <div class="canvas-meta">
+      <span class="pulse" aria-hidden="true"></span>
+      DRAFT · DESKTOP 1440 × 900
+    </div>
+  </div>
+
+  <div class="desktop-frame">
+
+    <div class="browser-chrome">
+      <div class="traffic-lights"><span class="light red"></span><span class="light yellow"></span><span class="light green"></span></div>
+      <div class="browser-tabs">
+        <div class="browser-tab"><span class="favicon">O</span>Opony · Panel · Ustawienia</div>
+      </div>
+      <div class="browser-address">
+        <svg class="lock" viewBox="0 0 16 16" width="12" height="12" fill="currentColor" aria-hidden="true"><path d="M4.5 7V5.5a3.5 3.5 0 0 1 7 0V7h.5a1 1 0 0 1 1 1v5.5a1 1 0 0 1-1 1h-8a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1h.5Zm1.5 0h4V5.5a2 2 0 0 0-4 0V7Z"/></svg>
+        <span class="url">panel.opony.app</span><span class="path">/ustawienia</span>
+      </div>
+    </div>
+
+    <div class="app-root">
+
+      <!-- Sidebar -->
+      <nav class="sidebar" aria-label="Nawigacja">
+        <div class="sb-brand">
+          <span class="wordmark">OPONY<span class="dot" aria-hidden="true"></span></span>
+          <span class="panel-tag">Panel</span>
+        </div>
+        <span class="sb-section-label">Operacje</span>
+        <button class="sb-item">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+          Pulpit
+        </button>
+        <button class="sb-item">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          Kalendarz
+        </button>
+        <button class="sb-item">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v18"/><path d="m5 8 7-5 7 5"/><path d="m5 16 7 5 7-5"/></svg>
+          Rezerwacje
+          <span class="sb-badge">2</span>
+        </button>
+        <button class="sb-item">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          Opinie
+        </button>
+
+        <span class="sb-section-label" style="margin-top:14px">Firma</span>
+        <button class="sb-item">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          Profil warsztatu
+        </button>
+        <button class="sb-item">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+          Godziny otwarcia
+        </button>
+        <button class="sb-item">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          Strefa dojazdu
+        </button>
+        <button class="sb-item">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          Cennik
+        </button>
+        <button class="sb-item active" aria-current="page">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          Ustawienia konta
+        </button>
+
+        <div class="sb-spacer"></div>
+
+        <div class="sb-user" role="button" tabindex="0">
+          <div class="sb-avatar">JK</div>
+          <div class="sb-user-col">
+            <span class="sb-user-name">Jan Kowalski</span>
+            <span class="sb-user-role">Właściciel</span>
+          </div>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--text-muted)"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
+      </nav>
+
+      <!-- Main -->
+      <main class="main" role="main">
+        <div class="topbar">
+          <div class="tb-breadcrumb">
+            <span>Firma</span>
+            <span class="sep">›</span>
+            <span class="current">Ustawienia konta</span>
+          </div>
+          <div class="tb-spacer"></div>
+          <span class="version-pill">
+            Panel <strong>v0.1.0</strong> · pilot Nowy Sącz
+          </span>
+        </div>
+
+        <div class="content-split">
+
+          <!-- TOC (scroll-spy) -->
+          <nav class="toc" aria-label="Spis treści ustawień">
+            <span class="toc-label">Sekcje</span>
+            <button class="toc-item active" type="button">
+              <span class="toc-num">01</span>
+              Kontakt administracyjny
+            </button>
+            <button class="toc-item" type="button">
+              <span class="toc-num">02</span>
+              Pauza warsztatu
+            </button>
+            <button class="toc-item" type="button">
+              <span class="toc-num">03</span>
+              Powiadomienia
+            </button>
+            <button class="toc-item" type="button">
+              <span class="toc-num">04</span>
+              Aktywne sesje
+            </button>
+            <button class="toc-item" type="button">
+              <span class="toc-num">05</span>
+              Dane (RODO)
+            </button>
+            <button class="toc-item danger" type="button">
+              <span class="toc-num">06</span>
+              Strefa niebezpieczna
+            </button>
+          </nav>
+
+          <!-- Scrollable body -->
+          <div class="body-scroll">
+
+            <!-- 01 Kontakt -->
+            <section class="section" id="sec-contact" aria-labelledby="t-contact">
+              <header class="sec-head">
+                <span class="sec-num">01</span>
+                <div class="sec-title-col">
+                  <h2 class="sec-title" id="t-contact">Kontakt administracyjny</h2>
+                  <p class="sec-desc">Numer telefonu służy do logowania (SMS OTP). Email otrzymuje paragony i powiadomienia administracyjne — nie jest widoczny publicznie.</p>
+                </div>
+                <span class="sec-kicker">US-47</span>
+              </header>
+
+              <div class="contact-row">
+                <div class="contact-card">
+                  <span class="contact-lbl">
+                    Telefon · login
+                    <span class="verified">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><polyline points="20 6 9 17 4 12"/></svg>
+                      Zweryfikowany
+                    </span>
+                  </span>
+                  <div class="contact-val-row">
+                    <span class="contact-val">+48 600 123 456</span>
+                    <button class="btn-ghost" type="button">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                      Zmień
+                    </button>
+                  </div>
+                  <span class="contact-sub">Zmiana wymaga OTP na stary numer, a następnie OTP na nowy. Sesja pozostanie aktywna.</span>
+                </div>
+
+                <div class="contact-card">
+                  <span class="contact-lbl">
+                    Email · administracyjny
+                    <span class="verified">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><polyline points="20 6 9 17 4 12"/></svg>
+                      OK
+                    </span>
+                  </span>
+                  <div class="contact-val-row">
+                    <span class="contact-val" style="font-size:13px">jan.kowalski@example.pl</span>
+                    <button class="btn-ghost" type="button">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                      Zmień
+                    </button>
+                  </div>
+                  <span class="contact-sub">Tu trafiają paragony za usługę Opony (w v0 pilot — <strong>0 zł</strong>, w v0.5 planowana prowizja).</span>
+                </div>
+              </div>
+            </section>
+
+            <!-- 02 Pauza warsztatu -->
+            <section class="section accent" id="sec-pause" aria-labelledby="t-pause">
+              <header class="sec-head">
+                <span class="sec-num">02</span>
+                <div class="sec-title-col">
+                  <h2 class="sec-title" id="t-pause">Pauza warsztatu</h2>
+                  <p class="sec-desc">Włącz, gdy jedziesz na urlop albo przyjmujesz awarie „off-book". Warsztat znika z wyszukiwarki klientów, ale istniejące rezerwacje są zachowane.</p>
+                </div>
+                <span class="sec-kicker">Natychmiastowe</span>
+              </header>
+
+              <div class="pause-hero">
+                <div class="pause-ico" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                </div>
+                <div class="pause-status-col">
+                  <span class="pause-status-title">WARSZTAT AKTYWNY</span>
+                  <span class="pause-status-sub">Widoczny w wyszukiwarce. Najbliższy wolny slot: <strong>dziś 14:30</strong>. Od ostatniej pauzy: <strong>37 dni</strong>.</span>
+                </div>
+                <button class="btn-ghost" type="button">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+                  Zapauzuj teraz
+                </button>
+              </div>
+
+              <div class="pause-presets">
+                <button class="pause-preset" type="button">
+                  <span class="pause-preset-lbl">Preset</span>
+                  <span class="pause-preset-val">Dziś</span>
+                  <span class="pause-preset-hint">Do 22:00 · 1 dzień</span>
+                </button>
+                <button class="pause-preset" type="button">
+                  <span class="pause-preset-lbl">Preset</span>
+                  <span class="pause-preset-val">Weekend</span>
+                  <span class="pause-preset-hint">Sob–Nd · 25–26 kwie</span>
+                </button>
+                <button class="pause-preset" type="button">
+                  <span class="pause-preset-lbl">Preset</span>
+                  <span class="pause-preset-val">Tydzień</span>
+                  <span class="pause-preset-hint">7 dni od jutra</span>
+                </button>
+                <button class="pause-preset warning" type="button">
+                  <span class="pause-preset-lbl">Własny zakres</span>
+                  <span class="pause-preset-val">Od… Do…</span>
+                  <span class="pause-preset-hint">Picker dat + godzin</span>
+                </button>
+              </div>
+            </section>
+
+            <!-- 03 Powiadomienia -->
+            <section class="section" id="sec-notifs" aria-labelledby="t-notifs">
+              <header class="sec-head">
+                <span class="sec-num">03</span>
+                <div class="sec-title-col">
+                  <h2 class="sec-title" id="t-notifs">Powiadomienia</h2>
+                  <p class="sec-desc">Wybierz kanały per typ zdarzenia. Krytyczne powiadomienia (✦) wymagają co najmniej jednego aktywnego kanału — tego nie wyłączysz całkowicie.</p>
+                </div>
+              </header>
+
+              <table class="notif-table" aria-label="Kanały powiadomień">
+                <thead>
+                  <tr>
+                    <th>Zdarzenie</th>
+                    <th class="channel-col">
+                      <span class="ch-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg></span>
+                      SMS
+                    </th>
+                    <th class="channel-col">
+                      <span class="ch-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></span>
+                      Email
+                    </th>
+                    <th class="channel-col">
+                      <span class="ch-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></span>
+                      Push
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>
+                      <div class="notif-event">
+                        <span class="notif-event-title"><span class="notif-critical">✦ KRYT.</span>Nowa rezerwacja</span>
+                        <span class="notif-event-desc">Klient umawia wizytę · status PENDING, wymaga potwierdzenia w 15 min.</span>
+                      </div>
+                    </td>
+                    <td class="switch-cell"><button class="switch" type="button" role="switch" aria-checked="true" aria-label="SMS nowa rezerwacja"></button></td>
+                    <td class="switch-cell"><button class="switch off" type="button" role="switch" aria-checked="false" aria-label="Email nowa rezerwacja"></button></td>
+                    <td class="switch-cell"><button class="switch" type="button" role="switch" aria-checked="true" aria-label="Push nowa rezerwacja"></button></td>
+                  </tr>
+                  <tr>
+                    <td>
+                      <div class="notif-event">
+                        <span class="notif-event-title"><span class="notif-critical">✦ KRYT.</span>Anulowanie rezerwacji</span>
+                        <span class="notif-event-desc">Klient anuluje — potrzebujesz wiedzieć, żeby slot wrócił do puli.</span>
+                      </div>
+                    </td>
+                    <td class="switch-cell"><button class="switch" type="button" role="switch" aria-checked="true"></button></td>
+                    <td class="switch-cell"><button class="switch off" type="button" role="switch" aria-checked="false"></button></td>
+                    <td class="switch-cell"><button class="switch" type="button" role="switch" aria-checked="true"></button></td>
+                  </tr>
+                  <tr>
+                    <td>
+                      <div class="notif-event">
+                        <span class="notif-event-title">Przypomnienie 30 min przed wizytą</span>
+                        <span class="notif-event-desc">Pomoc w planowaniu dnia — wysyłane tylko w godzinach pracy.</span>
+                      </div>
+                    </td>
+                    <td class="switch-cell"><button class="switch" type="button" role="switch" aria-checked="true"></button></td>
+                    <td class="switch-cell"><button class="switch off" type="button" role="switch" aria-checked="false"></button></td>
+                    <td class="switch-cell"><button class="switch" type="button" role="switch" aria-checked="true"></button></td>
+                  </tr>
+                  <tr>
+                    <td>
+                      <div class="notif-event">
+                        <span class="notif-event-title">Nowa opinia od klienta</span>
+                        <span class="notif-event-desc">Szybka odpowiedź do 48h zwiększa ranking warsztatu.</span>
+                      </div>
+                    </td>
+                    <td class="switch-cell"><button class="switch off" type="button" role="switch" aria-checked="false"></button></td>
+                    <td class="switch-cell"><button class="switch" type="button" role="switch" aria-checked="true"></button></td>
+                    <td class="switch-cell"><button class="switch" type="button" role="switch" aria-checked="true"></button></td>
+                  </tr>
+                  <tr>
+                    <td>
+                      <div class="notif-event">
+                        <span class="notif-event-title">Raport tygodniowy</span>
+                        <span class="notif-event-desc">Podsumowanie rezerwacji, przychodu i opinii · poniedziałek rano.</span>
+                      </div>
+                    </td>
+                    <td class="switch-cell"><button class="switch off" type="button" role="switch" aria-checked="false"></button></td>
+                    <td class="switch-cell"><button class="switch" type="button" role="switch" aria-checked="true"></button></td>
+                    <td class="switch-cell"><button class="switch off disabled" type="button" role="switch" aria-checked="false" aria-disabled="true"></button></td>
+                  </tr>
+                  <tr>
+                    <td>
+                      <div class="notif-event">
+                        <span class="notif-event-title">Nowości w platformie</span>
+                        <span class="notif-event-desc">Zmiany w panelu, nowe funkcje, zaproszenia na webinary.</span>
+                      </div>
+                    </td>
+                    <td class="switch-cell"><button class="switch off" type="button" role="switch" aria-checked="false"></button></td>
+                    <td class="switch-cell"><button class="switch off" type="button" role="switch" aria-checked="false"></button></td>
+                    <td class="switch-cell"><button class="switch off disabled" type="button" role="switch" aria-checked="false" aria-disabled="true"></button></td>
+                  </tr>
+                </tbody>
+              </table>
+            </section>
+
+            <!-- 04 Sesje -->
+            <section class="section" id="sec-sessions" aria-labelledby="t-sessions">
+              <header class="sec-head">
+                <span class="sec-num">04</span>
+                <div class="sec-title-col">
+                  <h2 class="sec-title" id="t-sessions">Aktywne sesje</h2>
+                  <p class="sec-desc">Urządzenia zalogowane do panelu. Nie widzisz czegoś swojego? Wyloguj wszystkie i zmień numer telefonu.</p>
+                </div>
+              </header>
+
+              <div>
+                <div class="session-item current">
+                  <div class="session-ico">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                  </div>
+                  <div class="session-info">
+                    <div class="session-main">
+                      <span class="session-device">Chrome 126 · macOS</span>
+                      <span class="session-badge-current">TA SESJA</span>
+                    </div>
+                    <span class="session-meta">
+                      <span>Nowy Sącz · 185.254.xxx.xxx</span>
+                      <span class="dot-sep" aria-hidden="true"></span>
+                      <span>Zalogowano dziś · 09:42</span>
+                      <span class="dot-sep" aria-hidden="true"></span>
+                      <span>Aktywna teraz</span>
+                    </span>
+                  </div>
+                </div>
+
+                <div class="session-item">
+                  <div class="session-ico">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12" y2="18"/></svg>
+                  </div>
+                  <div class="session-info">
+                    <div class="session-main">
+                      <span class="session-device">Safari 17 · iPhone 14</span>
+                    </div>
+                    <span class="session-meta">
+                      <span>Nowy Sącz</span>
+                      <span class="dot-sep" aria-hidden="true"></span>
+                      <span>Zalogowano 14 kwie · 17:18</span>
+                      <span class="dot-sep" aria-hidden="true"></span>
+                      <span>Aktywna · 2 godz temu</span>
+                    </span>
+                  </div>
+                  <button class="btn-ghost danger" type="button">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                    Wyloguj
+                  </button>
+                </div>
+
+                <div class="session-item">
+                  <div class="session-ico">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                  </div>
+                  <div class="session-info">
+                    <div class="session-main">
+                      <span class="session-device">Firefox 125 · Windows 11</span>
+                    </div>
+                    <span class="session-meta">
+                      <span>Kraków · 31.0.xxx.xxx</span>
+                      <span class="dot-sep" aria-hidden="true"></span>
+                      <span>Zalogowano 02 kwie · 11:05</span>
+                      <span class="dot-sep" aria-hidden="true"></span>
+                      <span style="color:var(--warning)">Nieaktywna · 8 dni</span>
+                    </span>
+                  </div>
+                  <button class="btn-ghost danger" type="button">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                    Wyloguj
+                  </button>
+                </div>
+
+                <button class="btn-ghost danger session-logout-all" type="button">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                  Wyloguj wszystkie inne urządzenia (2)
+                </button>
+              </div>
+            </section>
+
+            <!-- 05 Dane RODO -->
+            <section class="section" id="sec-rodo" aria-labelledby="t-rodo">
+              <header class="sec-head">
+                <span class="sec-num">05</span>
+                <div class="sec-title-col">
+                  <h2 class="sec-title" id="t-rodo">Twoje dane (RODO)</h2>
+                  <p class="sec-desc">Masz prawo otrzymać kopię swoich danych i wiedzieć, co o Tobie wiemy.</p>
+                </div>
+                <span class="sec-kicker">US-46</span>
+              </header>
+
+              <div class="rodo-row">
+                <div class="rodo-card">
+                  <div class="rodo-ico">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                  </div>
+                  <div class="rodo-col">
+                    <span class="rodo-title">Pobierz moje dane</span>
+                    <span class="rodo-sub">Wyślemy paczkę ZIP (JSON + PDF) na email administracyjny w ciągu 14 dni. Zawiera: profil firmy, rezerwacje, opinie, logi logowania.</span>
+                  </div>
+                  <button class="btn-ghost" type="button">Zamów</button>
+                </div>
+                <div class="rodo-card">
+                  <div class="rodo-ico">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                  </div>
+                  <div class="rodo-col">
+                    <span class="rodo-title">Zgłoś nieprawidłowość</span>
+                    <span class="rodo-sub">Jeśli widzisz dane, których nie powinno być — napisz do <strong>rodo@opony.app</strong>. Odpowiadamy do 72h zgodnie z art. 12 RODO.</span>
+                  </div>
+                  <button class="btn-ghost" type="button">Napisz</button>
+                </div>
+              </div>
+            </section>
+
+            <!-- 06 Danger zone -->
+            <section class="section danger" id="sec-danger" aria-labelledby="t-danger">
+              <header class="sec-head">
+                <span class="sec-num">06</span>
+                <div class="sec-title-col">
+                  <h2 class="sec-title" id="t-danger">Strefa niebezpieczna</h2>
+                  <p class="sec-desc">Akcje nieodwracalne. Dobrze pomyśl i — jeśli możesz — wyeksportuj dane przed kliknięciem.</p>
+                </div>
+                <span class="sec-kicker">US-46</span>
+              </header>
+
+              <div class="danger-item">
+                <div class="danger-info">
+                  <span class="danger-title">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    Zawieś widoczność warsztatu
+                  </span>
+                  <span class="danger-sub">Ukryj warsztat z wyszukiwarki na czas nieokreślony — bez usuwania konta. Istniejące rezerwacje pozostają, ale nowe nie mogą być składane. Odwracalne jednym kliknięciem.</span>
+                </div>
+                <button class="btn-danger" type="button">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                  Ukryj warsztat
+                </button>
+              </div>
+
+              <div class="danger-item">
+                <div class="danger-info">
+                  <span class="danger-title">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/></svg>
+                    Usuń konto i wszystkie dane
+                  </span>
+                  <span class="danger-sub">Nieodwracalne. Warsztat znika z wyszukiwarki natychmiast, dane pozostają w systemie 30 dni (okres odwołania), potem są <strong>trwale usunięte</strong>. Wymagamy potwierdzenia hasłem → SMS → wpisania nazwy warsztatu.</span>
+                </div>
+                <button class="btn-danger" type="button">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+                  Usuń konto
+                </button>
+              </div>
+            </section>
+
+          </div>
+
+        </div>
+
+      </main>
+    </div>
+  </div>
+
+  <!-- States caption -->
+  <div class="states-caption">
+    <div class="state-col">
+      <h4>Flow & walidacja</h4>
+      <ul>
+        <li><strong>Zmiana telefonu (US-47)</strong> — 2-step OTP: najpierw kod na stary numer (potwierdzenie tożsamości), potem kod na nowy; po weryfikacji sesja jest rotowana, aktywne sesje pozostają.</li>
+        <li><strong>Pauza warsztatu</strong> — flip flag <code>Provider.isActive=false</code>; wyszukiwarka filtruje natychmiast (cache TTL 30s). Presety setują auto-unpause cron.</li>
+        <li><strong>Powiadomienia KRYTYCZNE (✦)</strong> — min. 1 kanał włączony; próba wyłączenia ostatniego daje toast „Wymagany co najmniej jeden kanał".</li>
+        <li><strong>Push disabled</strong> (2 wiersze) — pokazane dla kanałów nie-obsługiwanych przez dane zdarzenie w v0 (np. „Nowości" — tylko email/broadcast).</li>
+        <li><strong>Usunięcie konta</strong> — soft-delete przez 30 dni; user dostaje SMS „Możesz wycofać przez 30 dni". Po 30 dniach hard-delete + eksport do rodo@opony.app.</li>
+        <li><strong>Wyloguj wszystkie inne</strong> — invaliduje wszystkie refresh tokens oprócz current-session; user zostaje zalogowany na aktualnym urządzeniu.</li>
+      </ul>
+    </div>
+    <div class="state-col">
+      <h4>Wzorce UI</h4>
+      <ul>
+        <li><strong>TOC scroll-spy</strong> — highlights sekcję w viewport; klik scroll-to <code>scroll-margin-top: 80px</code> dla offsetu topbar.</li>
+        <li><strong>Section numbering</strong> — 01–06 w TOC, sec-num badge i film-strip caption; ułatwia rozmowę z supportem („kliknij w 04").</li>
+        <li><strong>Pauza hero</strong> — accent section z dużą ikoną zegara + status-dot; po włączeniu pauzy tło zmienia się na <code>warning-muted</code> z countdown („Wraca za 2 dni 14:32").</li>
+        <li><strong>Notif matrix</strong> — header z mini-ikonami kanałów + switch per komórka; disabled switch ma <code>aria-disabled="true"</code> i 50% opacity.</li>
+        <li><strong>Sessions · current</strong> — amber left-gradient tła + badge „TA SESJA"; brak przycisku wyloguj (reliable self-dethrone nie ma sensu).</li>
+        <li><strong>Danger zone</strong> — own section z <code>danger-border</code>, red left gradient; przyciski outline-only (kolorowane dopiero na hover) — świadomie nie zapraszają do kliknięcia.</li>
+        <li><strong>A11y</strong> — switches mają <code>role="switch"</code> + <code>aria-checked</code>; danger buttons nie są disabled — destructive-click zawsze otwiera confirm dialog (Esc = cancel).</li>
+      </ul>
+    </div>
+  </div>
+
+</body>
+</html>

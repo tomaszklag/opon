@@ -1,0 +1,1042 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Opony Panel — B2B-02 Onboarding 1/3 · Firma · W:12.15</title>
+<!--
+  Screen: Onboarding wizard krok 1/3 — rejestracja firmy (NIP + GUS + kontakt)
+  Ref:    docs/plan-sprintow.md → W:12.15 krok 1 (panel.opony.app — desktop-first)
+  US:     US-43 (rejestracja firmy), US-45 (zgody RODO + regulamin)
+  Tone:   industrial-dark · pre-auth centered form · NIP z live GUS auto-fill · brak hasła (SMS OTP per §19.9)
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Bebas+Neue&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0A0B0E;
+    --bg-tint-top: #12141A;
+    --surface: #14171D;
+    --surface-raised: #1B1E26;
+    --surface-hover: #23272F;
+    --border: #262A34;
+    --border-strong: #363B47;
+    --hairline: rgba(255, 255, 255, 0.06);
+    --text-primary: #F5F4EF;
+    --text-secondary: #9EA2AD;
+    --text-muted: #60646F;
+    --text-on-accent: #0A0B0E;
+    --accent: #FF6B1A;
+    --accent-hover: #FF8039;
+    --accent-muted: rgba(255, 107, 26, 0.14);
+    --accent-border: rgba(255, 107, 26, 0.32);
+    --accent-glow: rgba(255, 107, 26, 0.45);
+    --success: #2EE0A0;
+    --success-muted: rgba(46, 224, 160, 0.14);
+    --success-border: rgba(46, 224, 160, 0.32);
+    --warning: #FFB020;
+    --danger: #FF5757;
+    --font-display: 'Bebas Neue', sans-serif;
+    --font-body: 'Archivo', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; overflow-x: hidden; max-width: 100vw; }
+  body {
+    --desktop-scale: min(1, calc((100vh - 200px) / 900px), calc((100vw - 80px) / 1440px));
+    font-family: var(--font-body);
+    background: var(--bg);
+    color: var(--text-primary);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    background-image:
+      radial-gradient(ellipse 70% 50% at 50% 0%, rgba(255, 107, 26, 0.05) 0%, transparent 60%),
+      radial-gradient(ellipse 50% 30% at 90% 100%, rgba(46, 224, 160, 0.02) 0%, transparent 60%),
+      linear-gradient(180deg, var(--bg-tint-top) 0%, var(--bg) 30%);
+    background-attachment: fixed;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 40px 40px 60px;
+    gap: 24px;
+  }
+
+  .canvas-label {
+    width: 100%;
+    max-width: 1440px;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: baseline;
+    gap: 20px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  .film-strip { font-family: var(--font-display); font-size: 32px; letter-spacing: 3px; line-height: 1; }
+  .slug {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    border-left: 1px solid var(--border);
+    padding-left: 18px;
+  }
+  .canvas-meta {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-secondary);
+    letter-spacing: 1px;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .canvas-meta .pulse {
+    display: inline-block;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 0 4px var(--accent-muted);
+    animation: pulse 1800ms ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 4px var(--accent-muted); opacity: 1; }
+    50%      { box-shadow: 0 0 0 8px transparent; opacity: 0.6; }
+  }
+
+  /* Desktop frame */
+  .desktop-frame {
+    width: 1440px;
+    height: 900px;
+    background: var(--bg);
+    border-radius: 14px;
+    border: 1px solid #1C1E24;
+    box-shadow:
+      0 40px 120px rgba(0, 0, 0, 0.6),
+      0 20px 40px rgba(0, 0, 0, 0.4);
+    overflow: hidden;
+    position: relative;
+    flex-shrink: 0;
+    transform: scale(var(--desktop-scale));
+    transform-origin: top center;
+    margin-bottom: calc((var(--desktop-scale) - 1) * 900px);
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Browser chrome */
+  .browser-chrome {
+    height: 44px;
+    background: linear-gradient(180deg, #1A1D23, #14171D);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    gap: 16px;
+    flex-shrink: 0;
+  }
+  .traffic-lights { display: inline-flex; gap: 8px; }
+  .light { width: 12px; height: 12px; border-radius: 50%; }
+  .light.red { background: #FF5F57; }
+  .light.yellow { background: #FEBC2E; }
+  .light.green { background: #28C840; }
+
+  .browser-tabs { display: inline-flex; gap: 2px; }
+  .browser-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-bottom: none;
+    border-radius: 8px 8px 0 0;
+    font-size: 12px;
+    color: var(--text-primary);
+    position: relative;
+    top: 6px;
+  }
+  .browser-tab .favicon {
+    width: 14px; height: 14px;
+    border-radius: 3px;
+    background: var(--accent);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-display);
+    font-size: 9px;
+    color: var(--text-on-accent);
+    letter-spacing: 0.5px;
+  }
+
+  .browser-address {
+    flex: 1;
+    max-width: 480px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+  .browser-address .lock { color: var(--success); }
+  .browser-address .url { color: var(--text-primary); }
+  .browser-address .path { color: var(--text-secondary); }
+
+  /* ====== App root (no sidebar — pre-auth) ====== */
+  .app-root {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    background:
+      radial-gradient(ellipse 60% 40% at 50% 0%, rgba(255, 107, 26, 0.06) 0%, transparent 60%);
+  }
+
+  /* Top strip (no sidebar — just brand + login link) */
+  .top-strip {
+    height: 62px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 32px;
+    flex-shrink: 0;
+  }
+  .brand-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+  }
+  .brand-link .wordmark {
+    font-family: var(--font-display);
+    font-size: 28px;
+    letter-spacing: 3.5px;
+    line-height: 1;
+    color: var(--text-primary);
+    display: inline-flex;
+    align-items: baseline;
+    gap: 4px;
+  }
+  .brand-link .dot {
+    display: inline-block;
+    width: 6px; height: 6px;
+    background: var(--accent);
+    border-radius: 50%;
+    transform: translateY(-2px);
+    box-shadow: 0 0 10px var(--accent-glow);
+  }
+  .brand-link .panel-tag {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: var(--accent-muted);
+    border: 1px solid var(--accent-border);
+    color: var(--accent);
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    font-weight: 800;
+  }
+
+  .top-strip-spacer { flex: 1; }
+
+  .login-link {
+    font-size: 13px;
+    color: var(--text-secondary);
+  }
+  .login-link a {
+    color: var(--accent);
+    text-decoration: none;
+    font-weight: 800;
+    letter-spacing: 0.3px;
+    margin-left: 6px;
+    text-transform: uppercase;
+    font-size: 11px;
+    letter-spacing: 1.1px;
+    padding: 4px 8px;
+    border-radius: 6px;
+    border: 1px solid var(--accent-border);
+  }
+  .login-link a:hover { background: var(--accent-muted); }
+
+  /* Stepper */
+  .stepper-bar {
+    padding: 20px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    flex: 0 0 auto;
+  }
+  .step-num {
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    border: 1.5px solid var(--border-strong);
+    background: var(--bg);
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .step.active .step-num {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--text-on-accent);
+    box-shadow: 0 0 0 5px var(--accent-muted);
+  }
+  .step.done .step-num {
+    background: var(--accent-muted);
+    border-color: var(--accent-border);
+    color: var(--accent);
+  }
+  .step-label {
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+  .step.active .step-label { color: var(--accent); }
+  .step.done .step-label { color: var(--text-secondary); }
+  .step-line {
+    width: 70px;
+    height: 1.5px;
+    background: var(--border);
+    margin: 0 4px;
+    margin-top: -22px;
+    border-radius: 2px;
+  }
+  .step-line.done { background: var(--accent); }
+
+  /* Main content */
+  .form-scroll {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 32px 20px 40px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 28px;
+    scrollbar-width: thin;
+  }
+  .form-scroll::-webkit-scrollbar { width: 6px; }
+  .form-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  .form-inner {
+    width: 100%;
+    max-width: 720px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  /* Hero */
+  .hero {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    text-align: center;
+  }
+  .hero-title {
+    font-family: var(--font-display);
+    font-size: 48px;
+    letter-spacing: 2.5px;
+    line-height: 1;
+    color: var(--text-primary);
+  }
+  .hero-sub {
+    font-size: 14px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    max-width: 500px;
+  }
+  .hero-facts {
+    display: inline-flex;
+    gap: 10px;
+    margin-top: 6px;
+  }
+  .fact-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 10px;
+    border-radius: 5px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-secondary);
+    letter-spacing: 0.3px;
+  }
+  .fact-chip svg { color: var(--accent); }
+
+  /* Form section */
+  .section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .section-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+  }
+  .section-title {
+    font-family: var(--font-display);
+    font-size: 20px;
+    letter-spacing: 2px;
+    color: var(--text-primary);
+    line-height: 1;
+  }
+  .section-sub {
+    font-size: 11px;
+    color: var(--text-muted);
+    font-weight: 600;
+  }
+  .section-number {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--text-muted);
+    letter-spacing: 1px;
+  }
+  .section-number strong {
+    color: var(--accent);
+    font-weight: 700;
+  }
+
+  /* Consent list */
+  .consent-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .consent-row {
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px 14px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 160ms ease;
+  }
+  .consent-row:hover {
+    background: var(--surface-hover);
+    border-color: var(--border-strong);
+  }
+  .consent-row.required::before {
+    content: '';
+    position: absolute;
+    left: -1px; top: 12px; bottom: 12px;
+    width: 3px;
+    background: var(--accent);
+    border-radius: 2px;
+  }
+  .consent-row.checked {
+    background: rgba(255, 107, 26, 0.06);
+    border-color: var(--accent-border);
+  }
+  .check-box {
+    width: 20px; height: 20px;
+    border-radius: 5px;
+    border: 1.5px solid var(--border-strong);
+    background: var(--bg);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-top: 1px;
+    transition: all 180ms ease;
+  }
+  .check-box.checked {
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+  .check-box svg { color: var(--text-on-accent); opacity: 0; transition: opacity 180ms ease; }
+  .check-box.checked svg { opacity: 1; }
+
+  .consent-col { flex: 1; min-width: 0; }
+  .consent-title-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .consent-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-primary);
+  }
+  .consent-badge {
+    font-family: var(--font-body);
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    padding: 2px 6px;
+    border-radius: 3px;
+  }
+  .consent-badge.req {
+    background: var(--accent-muted);
+    border: 1px solid var(--accent-border);
+    color: var(--accent);
+  }
+  .consent-badge.opt {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+  }
+  .consent-desc {
+    font-size: 11px;
+    color: var(--text-secondary);
+    line-height: 1.4;
+    margin-top: 3px;
+  }
+  .consent-link {
+    color: var(--accent);
+    font-weight: 700;
+    text-decoration: none;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    font-size: 10px;
+    margin-top: 4px;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+  }
+
+  /* Form fields */
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .field-label {
+    font-family: var(--font-body);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 1.3px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+  .field-label .req-star { color: var(--accent); margin-left: 2px; }
+
+  .field-input {
+    display: flex;
+    align-items: stretch;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    transition: border-color 160ms ease, box-shadow 160ms ease;
+  }
+  .field-input:focus-within {
+    border-color: var(--accent-border);
+    box-shadow: 0 0 0 3px var(--accent-muted);
+  }
+  .field-input.success {
+    border-color: var(--success-border);
+  }
+  .field-input input {
+    flex: 1;
+    min-width: 0;
+    background: transparent;
+    border: none;
+    outline: none;
+    padding: 12px 14px;
+    color: var(--text-primary);
+    font-family: var(--font-body);
+    font-size: 14px;
+    font-weight: 500;
+  }
+  .field-input input.mono {
+    font-family: var(--font-mono);
+    font-weight: 600;
+    letter-spacing: 0.5px;
+  }
+  .field-input input::placeholder { color: var(--text-muted); }
+
+  .field-prefix {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 0 14px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--accent);
+  }
+  .field-suffix {
+    display: inline-flex;
+    align-items: center;
+    padding: 0 12px;
+    color: var(--success);
+    border-left: 1px solid var(--border);
+    background: var(--success-muted);
+  }
+
+  .field-hint {
+    font-size: 11px;
+    color: var(--text-muted);
+    line-height: 1.4;
+  }
+  .field-hint.error { color: var(--danger); }
+
+  /* GUS auto-fill result */
+  .gus-result {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px 14px;
+    background: var(--success-muted);
+    border: 1px solid var(--success-border);
+    border-radius: 10px;
+    margin-top: 4px;
+  }
+  .gus-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--font-body);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 1.3px;
+    text-transform: uppercase;
+    color: var(--success);
+  }
+  .gus-head .badge {
+    padding: 2px 6px;
+    border-radius: 3px;
+    background: var(--success);
+    color: var(--bg);
+    font-size: 9px;
+  }
+  .gus-fields {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    row-gap: 4px;
+    column-gap: 14px;
+    font-size: 12px;
+  }
+  .gus-label {
+    font-family: var(--font-body);
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 1.1px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    padding-top: 2px;
+  }
+  .gus-value {
+    font-weight: 600;
+    color: var(--text-primary);
+    font-family: var(--font-body);
+  }
+  .gus-value.mono {
+    font-family: var(--font-mono);
+    font-weight: 700;
+  }
+  .gus-pills {
+    display: inline-flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .gus-pill {
+    padding: 2px 7px;
+    background: rgba(46, 224, 160, 0.18);
+    border: 1px solid var(--success-border);
+    border-radius: 4px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--success);
+    font-weight: 700;
+    letter-spacing: 0.3px;
+  }
+
+  .field-grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+
+  /* IBAN input split */
+  .iban-cells {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex: 1;
+    padding: 12px 14px;
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--text-primary);
+    letter-spacing: 1px;
+  }
+  .iban-country {
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--accent);
+    padding-right: 8px;
+    border-right: 1px solid var(--border-strong);
+    margin-right: 4px;
+  }
+
+  /* CTA row */
+  .cta-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding-top: 8px;
+  }
+  .cta-note {
+    font-size: 11px;
+    color: var(--text-muted);
+    line-height: 1.4;
+    max-width: 380px;
+  }
+  .cta-btn {
+    padding: 14px 24px;
+    background: var(--accent);
+    color: var(--text-on-accent);
+    border: none;
+    border-radius: 12px;
+    font-family: var(--font-body);
+    font-weight: 800;
+    font-size: 14px;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    box-shadow: 0 8px 20px rgba(255, 107, 26, 0.35);
+    transition: all 120ms ease;
+    flex-shrink: 0;
+  }
+  .cta-btn:hover { background: var(--accent-hover); }
+  .cta-btn:active { transform: scale(0.98); }
+
+  /* Help foot */
+  .help-foot {
+    font-size: 11px;
+    color: var(--text-muted);
+    text-align: center;
+    line-height: 1.6;
+  }
+  .help-foot a {
+    color: var(--text-secondary);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    font-weight: 600;
+  }
+
+  /* footer caption */
+  .caption {
+    max-width: 1440px;
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 0.5px;
+  }
+  .caption strong {
+    color: var(--text-secondary);
+    font-weight: 500;
+    display: block;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    font-size: 10px;
+  }
+  .caption em { color: var(--accent); font-style: normal; }
+</style>
+</head>
+<body>
+
+  <header class="canvas-label">
+    <span class="film-strip">OPONY PANEL — B2B-02</span>
+    <span class="slug">onboarding 1/3 · firma</span>
+    <span class="canvas-meta"><span class="pulse"></span>W:12.15 · US-43 / 45</span>
+  </header>
+
+  <main class="desktop-frame" role="region" aria-label="Mockup — panel.opony.app onboarding krok 1">
+
+    <div class="browser-chrome" aria-hidden="true">
+      <span class="traffic-lights">
+        <span class="light red"></span>
+        <span class="light yellow"></span>
+        <span class="light green"></span>
+      </span>
+      <span class="browser-tabs">
+        <span class="browser-tab active">
+          <span class="favicon">O</span>
+          Opony Panel — Zarejestruj warsztat
+        </span>
+      </span>
+      <span class="browser-address">
+        <svg class="lock" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+        <span class="url">panel.opony.app</span><span class="path">/signup</span>
+      </span>
+    </div>
+
+    <div class="app-root">
+
+      <!-- TOP STRIP -->
+      <header class="top-strip">
+        <a class="brand-link" href="#">
+          <span class="wordmark">OPONY<span class="dot"></span></span>
+          <span class="panel-tag">PANEL</span>
+        </a>
+        <span class="top-strip-spacer"></span>
+        <span class="login-link">Masz już konto? <a href="#">Zaloguj się →</a></span>
+      </header>
+
+      <!-- STEPPER -->
+      <div class="stepper-bar" role="progressbar" aria-valuemin="1" aria-valuemax="3" aria-valuenow="1">
+        <div class="step active">
+          <span class="step-num">1</span>
+          <span class="step-label">Firma</span>
+        </div>
+        <span class="step-line"></span>
+        <div class="step">
+          <span class="step-num">2</span>
+          <span class="step-label">Zdjęcia</span>
+        </div>
+        <span class="step-line"></span>
+        <div class="step">
+          <span class="step-num">3</span>
+          <span class="step-label">Weryfikacja</span>
+        </div>
+      </div>
+
+      <!-- FORM -->
+      <div class="form-scroll">
+        <div class="form-inner">
+
+          <!-- HERO -->
+          <div class="hero">
+            <h1 class="hero-title">Zarejestruj warsztat</h1>
+            <p class="hero-sub">
+              3 kroki, około 5 minut. Weryfikacja do 24h — potem możesz zacząć przyjmować rezerwacje w Nowym Sączu.
+            </p>
+            <div class="hero-facts">
+              <span class="fact-chip">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                0% prowizji w pilocie · później 8%
+              </span>
+              <span class="fact-chip">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 17h14M7 12l1.5-4.5A2 2 0 0 1 10.4 6h3.2a2 2 0 0 1 1.9 1.5L17 12"/><path d="M5 12h14v5H5z"/></svg>
+                Rezerwacje online, klient płaci offline
+              </span>
+              <span class="fact-chip">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+                SMS OTP — bez hasła do zapamiętania
+              </span>
+            </div>
+          </div>
+
+          <!-- SECTION 1: ZGODY -->
+          <section class="section" aria-labelledby="sec-zgody">
+            <div class="section-head">
+              <h2 class="section-title" id="sec-zgody">Zgody</h2>
+              <span class="section-number"><strong>01</strong> / 03</span>
+            </div>
+            <div class="consent-list">
+              <div class="consent-row required checked">
+                <span class="check-box checked">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7"/></svg>
+                </span>
+                <div class="consent-col">
+                  <div class="consent-title-row">
+                    <span class="consent-title">Regulamin platformy Opony.app</span>
+                    <span class="consent-badge req">Wymagane</span>
+                  </div>
+                  <p class="consent-desc"><strong style="color: var(--accent);">0% prowizji w okresie pilotażowym</strong> (pierwsze 3 miesiące po uruchomieniu w NS). Później 8% od zrealizowanej rezerwacji. Reklamacje, polityka anulowań, SLA 2h na akceptację.</p>
+                  <a class="consent-link" href="#">
+                    Przeczytaj regulamin
+                    <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg>
+                  </a>
+                </div>
+              </div>
+
+              <div class="consent-row required checked">
+                <span class="check-box checked">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7"/></svg>
+                </span>
+                <div class="consent-col">
+                  <div class="consent-title-row">
+                    <span class="consent-title">Polityka prywatności (RODO)</span>
+                    <span class="consent-badge req">Wymagane</span>
+                  </div>
+                  <p class="consent-desc">Przetwarzanie danych klientów zgodnie z RODO, retencja, bezpieczeństwo, eksport/usunięcie.</p>
+                  <a class="consent-link" href="#">
+                    Przeczytaj politykę
+                    <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg>
+                  </a>
+                </div>
+              </div>
+
+              <div class="consent-row">
+                <span class="check-box">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7"/></svg>
+                </span>
+                <div class="consent-col">
+                  <div class="consent-title-row">
+                    <span class="consent-title">Komunikacja z zespołem Opony.app</span>
+                    <span class="consent-badge opt">Opcjonalne</span>
+                  </div>
+                  <p class="consent-desc">Tipsy onboardingowe, nowości platformy, wezwania do feedback. Max 1 email / miesiąc.</p>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- SECTION 2: FIRMA -->
+          <section class="section" aria-labelledby="sec-firma">
+            <div class="section-head">
+              <h2 class="section-title" id="sec-firma">Firma</h2>
+              <span class="section-number"><strong>02</strong> / 03</span>
+            </div>
+
+            <div class="field">
+              <label class="field-label" for="nip">NIP<span class="req-star">*</span></label>
+              <div class="field-input success">
+                <input id="nip" class="mono" type="text" inputmode="numeric" value="6310123456" aria-label="NIP" />
+                <span class="field-suffix">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7"/></svg>
+                </span>
+              </div>
+
+              <div class="gus-result">
+                <div class="gus-head">
+                  <span class="badge">GUS ✓</span>
+                  Dane pobrane z rejestru CEIDG
+                </div>
+                <div class="gus-fields">
+                  <span class="gus-label">Nazwa</span>
+                  <span class="gus-value">MobilOpony Katarzyna Nowak</span>
+                  <span class="gus-label">Adres</span>
+                  <span class="gus-value">ul. Jagiellońska 45, 33-300 Nowy Sącz</span>
+                  <span class="gus-label">Forma</span>
+                  <span class="gus-pills">
+                    <span class="gus-pill">JDG</span>
+                    <span class="gus-pill">PKD 45.20.Z</span>
+                    <span class="gus-pill">Aktywna</span>
+                  </span>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- SECTION 3: KONTAKT -->
+          <section class="section" aria-labelledby="sec-kontakt">
+            <div class="section-head">
+              <h2 class="section-title" id="sec-kontakt">Kontakt i wypłaty</h2>
+              <span class="section-number"><strong>03</strong> / 03</span>
+            </div>
+
+            <div class="field-grid-2">
+              <div class="field">
+                <label class="field-label" for="phone">Telefon<span class="req-star">*</span></label>
+                <div class="field-input">
+                  <span class="field-prefix">+48</span>
+                  <input id="phone" class="mono" type="tel" inputmode="numeric" value="501 234 789" aria-label="Numer telefonu" />
+                </div>
+                <span class="field-hint">Używany do logowania (SMS OTP) i powiadomień o rezerwacjach.</span>
+              </div>
+
+              <div class="field">
+                <label class="field-label" for="email">Email<span class="req-star">*</span></label>
+                <div class="field-input">
+                  <input id="email" type="email" value="kasia@mobilopony.pl" aria-label="Email" />
+                </div>
+                <span class="field-hint">Wyślemy link weryfikacyjny. Raport tygodniowy + faktury.</span>
+              </div>
+            </div>
+
+            <div class="field">
+              <label class="field-label" for="iban">Numer konta (IBAN) <span style="color: var(--text-muted); font-weight: 600; letter-spacing: 0.5px; font-size: 9px;">· OPCJONALNE</span></label>
+              <div class="field-input">
+                <div class="iban-cells" role="textbox" aria-label="IBAN">
+                  <span class="iban-country">PL</span>
+                  <span>12 3456 7890 1234 5678 9012 3456</span>
+                </div>
+              </div>
+              <span class="field-hint">W okresie pilotażowym apka jest darmowa (0% prowizji) — klient płaci Tobie offline po wizycie. IBAN wykorzystamy gdy uruchomimy rozliczenia online (planowane v0.5).</span>
+            </div>
+          </section>
+
+          <!-- CTA -->
+          <div class="cta-row">
+            <p class="cta-note">
+              Po kliknięciu „Dalej" zapiszemy dane. Na email kasia@mobilopony.pl wyślemy link weryfikacyjny, a na telefon +48 501 234 789 kod SMS do logowania.
+            </p>
+            <button class="cta-btn" type="button">
+              Dalej
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+              <span style="opacity: 0.6; font-weight: 600; font-size: 11px; letter-spacing: 1px; text-transform: uppercase; margin-left: 4px;">Zdjęcia</span>
+            </button>
+          </div>
+
+          <!-- HELP FOOT -->
+          <div class="help-foot">
+            Problem z NIP-em? GUS nie odpowiada? Napisz na <a href="mailto:pomoc@opony.app">pomoc@opony.app</a> — odpowiemy w 2 godziny.
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <footer class="caption">
+    <div>
+      <strong>Layout</strong>
+      Pre-auth (bez sidebar) · Top strip z brand „OPONY PANEL" + login link · Stepper 1/3 (Firma active, Zdjęcia/Weryfikacja pending) · Centered form 720px: Hero <em>ZAREJESTRUJ WARSZTAT</em> (Bebas 48px) + 3 fact chipy (8% prowizji, wypłaty pon., SMS OTP) · 3 sekcje (Zgody 01/03, Firma 02/03, Kontakt 03/03)
+    </div>
+    <div>
+      <strong>Detale</strong>
+      NIP: field z success border + amber ✓ suffix + <em>GUS result card</em> (green bg + 3 gus-fields: Nazwa / Adres / Forma z 3 pill'ami <em>JDG · PKD 45.20.Z · Aktywna</em>) · Phone field z +48 prefix w mono amber · IBAN: PL prefix separator + 26 cyfr w mono · Brak pola hasła (§19.9) — SMS OTP do logowania · CTA z podpisem „Zdjęcia" (następny krok)
+    </div>
+  </footer>
+
+</body>
+</html>

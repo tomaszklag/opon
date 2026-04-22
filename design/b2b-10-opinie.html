@@ -1,0 +1,1590 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Opony Panel — B2B-10 Opinie · Provider view</title>
+<!--
+  Screen: Panel providera — Opinie (moderacja, odpowiedzi, zgłoszenia)
+  Ref:    docs/plan-sprintow.md → W:12.17 (+provider actions; panel.opony.app — desktop-first)
+  US:     US-17 (odpowiedzi providera), US-48 (zgłaszanie nadużyć)
+  Tone:   industrial-dark · distribution chart + response stats + inline reply composer · nowe opinie z amber glow
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Bebas+Neue&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0A0B0E;
+    --bg-tint-top: #12141A;
+    --surface: #14171D;
+    --surface-raised: #1B1E26;
+    --surface-hover: #23272F;
+    --border: #262A34;
+    --border-strong: #363B47;
+    --hairline: rgba(255, 255, 255, 0.06);
+    --text-primary: #F5F4EF;
+    --text-secondary: #9EA2AD;
+    --text-muted: #60646F;
+    --text-on-accent: #0A0B0E;
+    --accent: #FF6B1A;
+    --accent-hover: #FF8039;
+    --accent-muted: rgba(255, 107, 26, 0.14);
+    --accent-border: rgba(255, 107, 26, 0.32);
+    --accent-glow: rgba(255, 107, 26, 0.45);
+    --success: #2EE0A0;
+    --success-muted: rgba(46, 224, 160, 0.14);
+    --success-border: rgba(46, 224, 160, 0.32);
+    --warning: #FFB020;
+    --warning-muted: rgba(255, 176, 32, 0.14);
+    --warning-border: rgba(255, 176, 32, 0.32);
+    --danger: #FF5757;
+    --danger-muted: rgba(255, 87, 87, 0.12);
+    --danger-border: rgba(255, 87, 87, 0.32);
+    --font-display: 'Bebas Neue', sans-serif;
+    --font-body: 'Archivo', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; overflow-x: hidden; max-width: 100vw; }
+  body {
+    --desktop-scale: min(1, calc((100vh - 200px) / 900px), calc((100vw - 80px) / 1440px));
+    font-family: var(--font-body);
+    background: var(--bg);
+    color: var(--text-primary);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    background-image:
+      radial-gradient(ellipse 70% 50% at 50% 0%, rgba(255, 107, 26, 0.05) 0%, transparent 60%),
+      radial-gradient(ellipse 50% 30% at 90% 100%, rgba(46, 224, 160, 0.02) 0%, transparent 60%),
+      linear-gradient(180deg, var(--bg-tint-top) 0%, var(--bg) 30%);
+    background-attachment: fixed;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 40px 40px 60px;
+    gap: 24px;
+  }
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 4px var(--accent-muted); opacity: 1; }
+    50%      { box-shadow: 0 0 0 8px transparent; opacity: 0.6; }
+  }
+  @keyframes fillIn {
+    from { transform: scaleX(0); }
+    to   { transform: scaleX(1); }
+  }
+
+  .canvas-label {
+    width: 100%;
+    max-width: 1440px;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: baseline;
+    gap: 20px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  .film-strip { font-family: var(--font-display); font-size: 32px; letter-spacing: 3px; line-height: 1; }
+  .slug {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    border-left: 1px solid var(--border);
+    padding-left: 18px;
+  }
+  .canvas-meta {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-secondary);
+    letter-spacing: 1px;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .canvas-meta .pulse {
+    display: inline-block;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 0 4px var(--accent-muted);
+    animation: pulse 1800ms ease-in-out infinite;
+  }
+
+  /* Desktop frame */
+  .desktop-frame {
+    width: 1440px;
+    height: 900px;
+    background: var(--bg);
+    border-radius: 14px;
+    border: 1px solid #1C1E24;
+    box-shadow: 0 40px 120px rgba(0, 0, 0, 0.6), 0 20px 40px rgba(0, 0, 0, 0.4);
+    overflow: hidden;
+    position: relative;
+    flex-shrink: 0;
+    transform: scale(var(--desktop-scale));
+    transform-origin: top center;
+    margin-bottom: calc((var(--desktop-scale) - 1) * 900px);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .browser-chrome {
+    height: 44px;
+    background: linear-gradient(180deg, #1A1D23, #14171D);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    gap: 16px;
+    flex-shrink: 0;
+  }
+  .traffic-lights { display: inline-flex; gap: 8px; }
+  .light { width: 12px; height: 12px; border-radius: 50%; }
+  .light.red { background: #FF5F57; }
+  .light.yellow { background: #FEBC2E; }
+  .light.green { background: #28C840; }
+  .browser-tabs { display: inline-flex; gap: 2px; }
+  .browser-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-bottom: none;
+    border-radius: 8px 8px 0 0;
+    font-size: 12px;
+    color: var(--text-primary);
+    position: relative;
+    top: 6px;
+  }
+  .browser-tab .favicon {
+    width: 14px; height: 14px;
+    border-radius: 3px;
+    background: var(--accent);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-display);
+    font-size: 9px;
+    color: var(--text-on-accent);
+    letter-spacing: 0.5px;
+  }
+  .browser-address {
+    flex: 1;
+    max-width: 480px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+  .browser-address .lock { color: var(--success); }
+  .browser-address .url { color: var(--text-primary); }
+  .browser-address .path { color: var(--text-secondary); }
+
+  /* App root */
+  .app-root {
+    flex: 1;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: 220px 1fr;
+  }
+  .sidebar {
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    padding: 20px 14px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .sb-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px 18px;
+  }
+  .sb-brand .wordmark {
+    font-family: var(--font-display);
+    font-size: 26px;
+    letter-spacing: 3px;
+    line-height: 1;
+    color: var(--text-primary);
+    display: inline-flex;
+    align-items: baseline;
+    gap: 3px;
+  }
+  .sb-brand .dot {
+    display: inline-block;
+    width: 6px; height: 6px;
+    background: var(--accent);
+    border-radius: 50%;
+    transform: translateY(-2px);
+    box-shadow: 0 0 10px var(--accent-glow);
+  }
+  .sb-brand .panel-tag {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    padding: 2px 5px;
+    border-radius: 4px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    font-weight: 700;
+    margin-left: auto;
+  }
+  .sb-section-label {
+    font-family: var(--font-body);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 1.3px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    padding: 8px 10px 4px;
+  }
+  .sb-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 10px;
+    border-radius: 8px;
+    background: transparent;
+    border: 1px solid transparent;
+    color: var(--text-secondary);
+    font-family: var(--font-body);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: left;
+    width: 100%;
+    transition: background 140ms ease, color 140ms ease;
+  }
+  .sb-item:hover { background: var(--surface-hover); color: var(--text-primary); }
+  .sb-item.active {
+    background: var(--accent-muted);
+    color: var(--accent);
+    border-color: var(--accent-border);
+  }
+  .sb-badge {
+    margin-left: auto;
+    min-width: 20px; height: 18px;
+    padding: 0 6px;
+    background: var(--accent);
+    color: var(--text-on-accent);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 700;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .sb-spacer { flex: 1; }
+  .sb-user {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    cursor: pointer;
+  }
+  .sb-avatar {
+    width: 34px; height: 34px;
+    border-radius: 9px;
+    background: linear-gradient(135deg, #FF8039 0%, #C73F0A 100%);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-display);
+    font-size: 15px;
+    color: var(--text-on-accent);
+    letter-spacing: 1.5px;
+    flex-shrink: 0;
+  }
+  .sb-user-col { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  .sb-user-name {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1.1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .sb-user-role {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    color: var(--accent);
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    font-weight: 700;
+  }
+
+  /* Main */
+  .main { display: flex; flex-direction: column; overflow: hidden; }
+  .topbar {
+    height: 58px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 28px;
+    gap: 16px;
+    flex-shrink: 0;
+  }
+  .tb-breadcrumb {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--text-muted);
+    font-weight: 600;
+  }
+  .tb-breadcrumb .sep { color: var(--border-strong); }
+  .tb-breadcrumb .current { color: var(--text-primary); font-weight: 700; }
+  .tb-spacer { flex: 1; }
+
+  .tb-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-family: var(--font-body);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-primary);
+  }
+  .tb-btn:hover { background: var(--surface); border-color: var(--border-strong); }
+
+  /* Content */
+  .content {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 22px 28px 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    scrollbar-width: thin;
+  }
+  .content::-webkit-scrollbar { width: 6px; }
+  .content::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  /* HERO — 3 col */
+  .hero-row {
+    display: grid;
+    grid-template-columns: 300px 1fr 300px;
+    gap: 14px;
+  }
+
+  .rating-big-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    position: relative;
+  }
+  .rating-big-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: var(--hairline);
+  }
+  .rating-head {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+  }
+  .rating-huge {
+    font-family: var(--font-display);
+    font-size: 72px;
+    letter-spacing: 2px;
+    line-height: 0.85;
+    color: var(--text-primary);
+  }
+  .rating-col {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding-top: 8px;
+  }
+  .rating-stars-row {
+    display: inline-flex;
+    gap: 2px;
+  }
+  .rating-stars-row svg { width: 15px; height: 15px; }
+  .rating-count {
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+  .rating-count strong {
+    font-family: var(--font-mono);
+    color: var(--text-primary);
+    font-weight: 700;
+  }
+
+  .rating-meta {
+    display: flex;
+    gap: 8px;
+    padding-top: 10px;
+    border-top: 1px dashed var(--border);
+  }
+  .rating-meta-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .rating-meta-val {
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--text-primary);
+    letter-spacing: 0.3px;
+  }
+  .rating-meta-val.pos { color: var(--success); }
+  .rating-meta-lbl {
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 1.1px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+
+  /* Distribution chart */
+  .dist-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 18px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    position: relative;
+  }
+  .dist-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: var(--hairline);
+  }
+  .dist-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 6px;
+  }
+  .dist-title {
+    font-family: var(--font-display);
+    font-size: 16px;
+    letter-spacing: 1.8px;
+    color: var(--text-primary);
+    line-height: 1;
+  }
+  .dist-sub {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--text-muted);
+    letter-spacing: 0.5px;
+  }
+
+  .dist-row {
+    display: grid;
+    grid-template-columns: 30px 1fr 50px 44px;
+    align-items: center;
+    gap: 10px;
+  }
+  .dist-label {
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: 11px;
+    color: var(--text-secondary);
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+  }
+  .dist-bar {
+    position: relative;
+    height: 7px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .dist-bar-fill {
+    position: absolute;
+    top: 0; left: 0; bottom: 0;
+    background: linear-gradient(90deg, var(--accent), var(--accent-hover));
+    border-radius: 3px;
+    box-shadow: 0 0 8px rgba(255, 107, 26, 0.3);
+    animation: fillIn 700ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+    transform-origin: left center;
+  }
+  .dist-bar-fill.low {
+    background: var(--border-strong);
+    box-shadow: none;
+  }
+  .dist-pct {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-align: right;
+    letter-spacing: 0.3px;
+  }
+  .dist-pct.strong { color: var(--text-primary); }
+  .dist-count {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--text-muted);
+    text-align: right;
+    letter-spacing: 0.3px;
+  }
+
+  /* Response stats card */
+  .resp-card {
+    background: linear-gradient(135deg, var(--accent-muted), transparent);
+    border: 1px solid var(--accent-border);
+    border-radius: 14px;
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .resp-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .resp-title {
+    font-family: var(--font-display);
+    font-size: 16px;
+    letter-spacing: 1.8px;
+    color: var(--accent);
+    line-height: 1;
+  }
+  .resp-chip {
+    padding: 3px 8px;
+    border-radius: 5px;
+    background: var(--accent);
+    color: var(--text-on-accent);
+    font-family: var(--font-body);
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 1.1px;
+    text-transform: uppercase;
+  }
+
+  .resp-stat-row {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+  }
+  .resp-big {
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: 34px;
+    color: var(--text-primary);
+    letter-spacing: 0.3px;
+    line-height: 0.9;
+  }
+  .resp-big .unit { font-size: 13px; color: var(--accent); margin-left: 2px; }
+  .resp-label {
+    font-family: var(--font-body);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 1.1px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+
+  .resp-mini-stats {
+    display: flex;
+    gap: 12px;
+    padding-top: 10px;
+    border-top: 1px dashed rgba(255, 107, 26, 0.2);
+  }
+  .resp-mini {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .resp-mini .val {
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: 16px;
+    color: var(--text-primary);
+    letter-spacing: 0.3px;
+  }
+  .resp-mini .lbl {
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 1.1px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+
+  .resp-cta {
+    padding: 10px 12px;
+    background: var(--accent);
+    color: var(--text-on-accent);
+    border: none;
+    border-radius: 8px;
+    font-family: var(--font-body);
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+  .resp-cta:hover { background: var(--accent-hover); }
+
+  /* Tabs */
+  .tabs {
+    display: flex;
+    gap: 0;
+    padding: 0 4px;
+    border-bottom: 1px solid var(--border);
+  }
+  .tab {
+    position: relative;
+    padding: 12px 2px 14px;
+    margin-right: 22px;
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    font-family: var(--font-body);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .tab:hover { color: var(--text-secondary); }
+  .tab.active { color: var(--text-primary); }
+  .tab.active::after {
+    content: '';
+    position: absolute;
+    left: 0; right: 0;
+    bottom: -1px;
+    height: 2px;
+    background: var(--accent);
+    border-radius: 2px;
+    box-shadow: 0 0 10px var(--accent-glow);
+  }
+  .tab-count {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+  }
+  .tab.active .tab-count {
+    background: var(--accent-muted);
+    border-color: var(--accent-border);
+    color: var(--accent);
+  }
+  .tab-count.warn {
+    background: var(--warning-muted);
+    border-color: var(--warning-border);
+    color: var(--warning);
+  }
+
+  /* Filter sort row */
+  .filter-sort {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 4px 0;
+  }
+  .chip {
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    font-family: var(--font-body);
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    letter-spacing: 0.3px;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .chip:hover { background: var(--surface-hover); color: var(--text-primary); }
+  .chip.active {
+    background: var(--accent-muted);
+    border-color: var(--accent-border);
+    color: var(--accent);
+  }
+  .chip svg { width: 10px; height: 10px; }
+  .sort-right {
+    margin-left: auto;
+    font-size: 11px;
+    color: var(--text-muted);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .sort-right strong { color: var(--text-primary); }
+
+  /* Review card */
+  .review {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    position: relative;
+    transition: all 180ms ease;
+  }
+  .review.new {
+    border-color: var(--accent-border);
+    background: linear-gradient(135deg, rgba(255, 107, 26, 0.04), transparent);
+    box-shadow: 0 0 0 1px var(--accent-muted), 0 8px 22px rgba(255, 107, 26, 0.1);
+  }
+  .review.critical {
+    border-color: var(--warning-border);
+    background: linear-gradient(135deg, rgba(255, 176, 32, 0.03), transparent);
+  }
+
+  .review-head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .review-avatar {
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-display);
+    font-size: 18px;
+    color: var(--text-secondary);
+    letter-spacing: 1px;
+    flex-shrink: 0;
+  }
+  .review-meta-col { flex: 1; min-width: 0; }
+  .review-name-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .review-name {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text-primary);
+  }
+  .verified {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: var(--success);
+  }
+  .new-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 2px 6px;
+    border-radius: 3px;
+    background: var(--accent);
+    color: var(--text-on-accent);
+    font-family: var(--font-body);
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 1.1px;
+    text-transform: uppercase;
+  }
+  .review-sub-meta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 4px;
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+  .review-stars {
+    display: inline-flex;
+    gap: 1px;
+  }
+  .review-stars svg { width: 12px; height: 12px; }
+  .dot-sep {
+    width: 3px; height: 3px;
+    border-radius: 50%;
+    background: var(--text-muted);
+  }
+  .review-code {
+    font-family: var(--font-mono);
+    font-weight: 700;
+    color: var(--text-secondary);
+    letter-spacing: 0.3px;
+  }
+  .review-code .hy { color: var(--accent); }
+
+  .review-actions {
+    display: inline-flex;
+    gap: 6px;
+  }
+  .review-action-btn {
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 140ms ease;
+  }
+  .review-action-btn:hover { background: var(--surface-hover); color: var(--text-primary); }
+  .review-action-btn.danger:hover { color: var(--danger); border-color: var(--danger-border); background: var(--danger-muted); }
+
+  .review-text {
+    font-size: 14px;
+    line-height: 1.55;
+    color: var(--text-primary);
+  }
+
+  /* Existing reply */
+  .existing-reply {
+    padding: 12px 14px;
+    background: var(--bg);
+    border-left: 3px solid var(--accent);
+    border-radius: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .reply-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .reply-label {
+    font-family: var(--font-body);
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  .reply-date {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--text-muted);
+    letter-spacing: 0.3px;
+  }
+  .reply-actions {
+    margin-left: auto;
+    display: inline-flex;
+    gap: 4px;
+  }
+  .reply-mini-btn {
+    padding: 3px 7px;
+    border-radius: 5px;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    font-family: var(--font-body);
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 1.1px;
+    text-transform: uppercase;
+    cursor: pointer;
+  }
+  .reply-mini-btn:hover { color: var(--text-primary); border-color: var(--border-strong); }
+  .reply-text {
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--text-secondary);
+  }
+
+  /* Reply composer (for new reviews) */
+  .reply-compose {
+    padding: 14px;
+    background: var(--bg);
+    border: 1px solid var(--accent-border);
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .compose-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .compose-avatar {
+    width: 24px; height: 24px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #FF8039 0%, #C73F0A 100%);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-display);
+    font-size: 11px;
+    color: var(--text-on-accent);
+    letter-spacing: 0.5px;
+  }
+  .compose-label {
+    font-family: var(--font-body);
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+  }
+  .compose-as {
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+  .compose-as strong { color: var(--accent); font-weight: 700; }
+
+  .compose-textarea {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-family: var(--font-body);
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--text-primary);
+    outline: none;
+    resize: vertical;
+    min-height: 70px;
+    transition: all 140ms ease;
+  }
+  .compose-textarea:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-muted);
+  }
+  .compose-textarea::placeholder { color: var(--text-muted); }
+
+  .compose-foot {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .quick-templates {
+    display: flex;
+    gap: 5px;
+    flex-wrap: wrap;
+    flex: 1;
+  }
+  .template-chip {
+    padding: 5px 9px;
+    border-radius: 999px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    font-family: var(--font-body);
+    font-size: 10px;
+    font-weight: 700;
+    cursor: pointer;
+    letter-spacing: 0.3px;
+  }
+  .template-chip:hover { background: var(--surface-hover); color: var(--text-primary); border-color: var(--border-strong); }
+  .compose-counter {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--text-muted);
+    letter-spacing: 0.3px;
+  }
+  .compose-counter strong { color: var(--text-primary); }
+  .compose-btn {
+    padding: 9px 14px;
+    background: var(--accent);
+    color: var(--text-on-accent);
+    border: none;
+    border-radius: 8px;
+    font-family: var(--font-body);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .compose-btn:hover { background: var(--accent-hover); }
+
+  /* footer caption */
+  .caption {
+    max-width: 1440px;
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 0.5px;
+  }
+  .caption strong {
+    color: var(--text-secondary);
+    font-weight: 500;
+    display: block;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    font-size: 10px;
+  }
+  .caption em { color: var(--accent); font-style: normal; }
+</style>
+</head>
+<body>
+
+  <header class="canvas-label">
+    <span class="film-strip">OPONY PANEL — B2B-10</span>
+    <span class="slug">opinie · provider view + replies</span>
+    <span class="canvas-meta"><span class="pulse"></span>W:12.17 · US-17 / 48</span>
+  </header>
+
+  <main class="desktop-frame" role="region" aria-label="Mockup — panel opinii providera">
+
+    <div class="browser-chrome" aria-hidden="true">
+      <span class="traffic-lights">
+        <span class="light red"></span>
+        <span class="light yellow"></span>
+        <span class="light green"></span>
+      </span>
+      <span class="browser-tabs">
+        <span class="browser-tab active">
+          <span class="favicon">O</span>
+          Opony Panel — Opinie
+        </span>
+      </span>
+      <span class="browser-address">
+        <svg class="lock" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+        <span class="url">panel.opony.app</span><span class="path">/reviews</span>
+      </span>
+    </div>
+
+    <div class="app-root">
+
+      <!-- SIDEBAR -->
+      <aside class="sidebar" aria-label="Nawigacja główna">
+        <div class="sb-brand">
+          <div class="wordmark">OPONY<span class="dot"></span></div>
+          <span class="panel-tag">PANEL</span>
+        </div>
+
+        <span class="sb-section-label">Dziś</span>
+        <button class="sb-item">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>
+          Dashboard
+        </button>
+        <button class="sb-item">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 10h18M8 2v4M16 2v4"/></svg>
+          Kalendarz
+        </button>
+        <button class="sb-item">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11H5a2 2 0 0 0-2 2v7h18v-7a2 2 0 0 0-2-2h-4M9 11V5a3 3 0 0 1 6 0v6M9 11h6"/></svg>
+          Rezerwacje
+          <span class="sb-badge">12</span>
+        </button>
+
+        <span class="sb-section-label">Warsztat</span>
+        <button class="sb-item">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          Cennik
+        </button>
+        <button class="sb-item">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+          Godziny pracy
+        </button>
+        <button class="sb-item">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+          Strefa obsługi
+        </button>
+        <button class="sb-item active">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15 9 22 9.5 17 14 18.5 21 12 17.5 5.5 21 7 14 2 9.5 9 9 12 2"/></svg>
+          Opinie
+          <span class="sb-badge">2</span>
+        </button>
+
+        <span class="sb-section-label">Konto</span>
+        <button class="sb-item">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+          Ustawienia
+        </button>
+
+        <div class="sb-spacer"></div>
+
+        <div class="sb-user" role="button">
+          <div class="sb-avatar">MK</div>
+          <div class="sb-user-col">
+            <span class="sb-user-name">MobilOpony Kasia</span>
+            <span class="sb-user-role">Provider · APPROVED</span>
+          </div>
+        </div>
+      </aside>
+
+      <!-- MAIN -->
+      <section class="main">
+
+        <!-- TOPBAR -->
+        <header class="topbar">
+          <nav class="tb-breadcrumb">
+            <span>Panel</span>
+            <span class="sep">/</span>
+            <span>Warsztat</span>
+            <span class="sep">/</span>
+            <span class="current">Opinie</span>
+          </nav>
+          <span class="tb-spacer"></span>
+          <button class="tb-btn">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+            Eksport CSV
+          </button>
+          <button class="tb-btn">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/></svg>
+            Udostępnij profil
+          </button>
+        </header>
+
+        <!-- CONTENT -->
+        <div class="content">
+
+          <!-- HERO 3-col -->
+          <div class="hero-row">
+
+            <!-- Rating big -->
+            <div class="rating-big-card">
+              <div class="rating-head">
+                <span class="rating-huge">4,8</span>
+                <div class="rating-col">
+                  <span class="rating-stars-row" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="var(--accent)"><polygon points="12 2 15 9 22 9.5 17 14 18.5 21 12 17.5 5.5 21 7 14 2 9.5 9 9 12 2"/></svg>
+                    <svg viewBox="0 0 24 24" fill="var(--accent)"><polygon points="12 2 15 9 22 9.5 17 14 18.5 21 12 17.5 5.5 21 7 14 2 9.5 9 9 12 2"/></svg>
+                    <svg viewBox="0 0 24 24" fill="var(--accent)"><polygon points="12 2 15 9 22 9.5 17 14 18.5 21 12 17.5 5.5 21 7 14 2 9.5 9 9 12 2"/></svg>
+                    <svg viewBox="0 0 24 24" fill="var(--accent)"><polygon points="12 2 15 9 22 9.5 17 14 18.5 21 12 17.5 5.5 21 7 14 2 9.5 9 9 12 2"/></svg>
+                    <svg viewBox="0 0 24 24" fill="var(--accent)" opacity="0.4"><polygon points="12 2 15 9 22 9.5 17 14 18.5 21 12 17.5 5.5 21 7 14 2 9.5 9 9 12 2"/></svg>
+                  </span>
+                  <span class="rating-count"><strong>127</strong> opinii · wszystkie zweryfikowane</span>
+                </div>
+              </div>
+              <div class="rating-meta">
+                <div class="rating-meta-item">
+                  <span class="rating-meta-val pos">+0,2</span>
+                  <span class="rating-meta-lbl">vs 30 dni</span>
+                </div>
+                <div class="rating-meta-item">
+                  <span class="rating-meta-val">#3</span>
+                  <span class="rating-meta-lbl">Ranking Nowy Sącz</span>
+                </div>
+                <div class="rating-meta-item">
+                  <span class="rating-meta-val">8</span>
+                  <span class="rating-meta-lbl">nowych opinii · 30 dni</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Distribution chart -->
+            <div class="dist-card">
+              <div class="dist-head">
+                <span class="dist-title">Rozkład ocen</span>
+                <span class="dist-sub">127 opinii · 90 dni</span>
+              </div>
+
+              <div class="dist-row">
+                <span class="dist-label">5 ★</span>
+                <div class="dist-bar"><div class="dist-bar-fill" style="width: 82%; animation-delay: 60ms;"></div></div>
+                <span class="dist-pct strong">82%</span>
+                <span class="dist-count">104</span>
+              </div>
+              <div class="dist-row">
+                <span class="dist-label">4 ★</span>
+                <div class="dist-bar"><div class="dist-bar-fill" style="width: 10%; animation-delay: 120ms;"></div></div>
+                <span class="dist-pct">10%</span>
+                <span class="dist-count">13</span>
+              </div>
+              <div class="dist-row">
+                <span class="dist-label">3 ★</span>
+                <div class="dist-bar"><div class="dist-bar-fill low" style="width: 4%; animation-delay: 180ms;"></div></div>
+                <span class="dist-pct">4%</span>
+                <span class="dist-count">5</span>
+              </div>
+              <div class="dist-row">
+                <span class="dist-label">2 ★</span>
+                <div class="dist-bar"><div class="dist-bar-fill low" style="width: 2%; animation-delay: 240ms;"></div></div>
+                <span class="dist-pct">2%</span>
+                <span class="dist-count">3</span>
+              </div>
+              <div class="dist-row">
+                <span class="dist-label">1 ★</span>
+                <div class="dist-bar"><div class="dist-bar-fill low" style="width: 2%; animation-delay: 300ms;"></div></div>
+                <span class="dist-pct">2%</span>
+                <span class="dist-count">2</span>
+              </div>
+            </div>
+
+            <!-- Response stats -->
+            <div class="resp-card">
+              <div class="resp-head">
+                <span class="resp-title">Odpowiedzi</span>
+                <span class="resp-chip">Top 5%</span>
+              </div>
+
+              <div class="resp-stat-row">
+                <span class="resp-big">95<span class="unit">%</span></span>
+                <span class="resp-label">rate</span>
+              </div>
+
+              <div class="resp-mini-stats">
+                <div class="resp-mini">
+                  <span class="val">~4 h</span>
+                  <span class="lbl">Avg czas odp.</span>
+                </div>
+                <div class="resp-mini">
+                  <span class="val" style="color: var(--warning);">2</span>
+                  <span class="lbl">Nowe do odp.</span>
+                </div>
+                <div class="resp-mini">
+                  <span class="val">121</span>
+                  <span class="lbl">Odpowiedzianych</span>
+                </div>
+              </div>
+
+              <button class="resp-cta" type="button">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h18v14H3z"/><path d="m3 5 9 8 9-8"/></svg>
+                Przejrzyj 2 nowe opinie
+              </button>
+            </div>
+          </div>
+
+          <!-- Tabs -->
+          <div class="tabs" role="tablist">
+            <button class="tab" role="tab">
+              Wszystkie
+              <span class="tab-count">127</span>
+            </button>
+            <button class="tab active" role="tab" aria-selected="true">
+              Do odpowiedzi
+              <span class="tab-count warn">2</span>
+            </button>
+            <button class="tab" role="tab">
+              Z odpowiedzią
+              <span class="tab-count">121</span>
+            </button>
+            <button class="tab" role="tab">
+              Zgłoszone
+              <span class="tab-count">0</span>
+            </button>
+          </div>
+
+          <!-- Filter sort -->
+          <div class="filter-sort">
+            <button class="chip active">Wszystkie gwiazdki</button>
+            <button class="chip">
+              5
+              <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15 9 22 9.5 17 14 18.5 21 12 17.5 5.5 21 7 14 2 9.5 9 9 12 2"/></svg>
+            </button>
+            <button class="chip">
+              4
+              <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15 9 22 9.5 17 14 18.5 21 12 17.5 5.5 21 7 14 2 9.5 9 9 12 2"/></svg>
+            </button>
+            <button class="chip">
+              ≤ 3
+              <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15 9 22 9.5 17 14 18.5 21 12 17.5 5.5 21 7 14 2 9.5 9 9 12 2"/></svg>
+            </button>
+            <span class="sort-right">
+              <strong>Najstarsze niezaodpowiedziane</strong>
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+            </span>
+          </div>
+
+          <!-- NEW review 1: 5 stars, pending reply (inline composer) -->
+          <article class="review new">
+            <header class="review-head">
+              <div class="review-avatar">MK</div>
+              <div class="review-meta-col">
+                <div class="review-name-row">
+                  <span class="review-name">Marek Kowalski</span>
+                  <span class="verified">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7"/></svg>
+                    Zweryfikowany
+                  </span>
+                  <span class="new-badge">NOWE</span>
+                </div>
+                <div class="review-sub-meta">
+                  <span class="review-stars" aria-label="5 z 5">
+                    <svg viewBox="0 0 24 24" fill="var(--accent)"><polygon points="12 2 15 9 22 9.5 17 14 18.5 21 12 17.5 5.5 21 7 14 2 9.5 9 9 12 2"/></svg>
+                    <svg viewBox="0 0 24 24" fill="var(--accent)"><polygon points="12 2 15 9 22 9.5 17 14 18.5 21 12 17.5 5.5 21 7 14 2 9.5 9 9 12 2"/></svg>
+                    <svg viewBox="0 0 24 24" fill="var(--accent)"><polygon points="12 2 15 9 22 9.5 17 14 18.5 21 12 17.5 5.5 21 7 14 2 9.5 9 9 12 2"/></svg>
+                    <svg viewBox="0 0 24 24" fill="var(--accent)"><polygon points="12 2 15 9 22 9.5 17 14 18.5 21 12 17.5 5.5 21 7 14 2 9.5 9 9 12 2"/></svg>
+                    <svg viewBox="0 0 24 24" fill="var(--accent)"><polygon points="12 2 15 9 22 9.5 17 14 18.5 21 12 17.5 5.5 21 7 14 2 9.5 9 9 12 2"/></svg>
+                  </span>
+                  <span class="dot-sep"></span>
+                  <span>2 dni temu · 14 kwi 2026</span>
+                  <span class="dot-sep"></span>
+                  <span class="review-code">OPN<span class="hy">-</span>4F2K</span>
+                </div>
+              </div>
+              <div class="review-actions">
+                <button class="review-action-btn" title="Szczegóły rezerwacji" aria-label="Szczegóły">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4-4"/></svg>
+                </button>
+                <button class="review-action-btn danger" title="Zgłoś nadużycie" aria-label="Zgłoś">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1Z"/><path d="M4 22V3"/></svg>
+                </button>
+              </div>
+            </header>
+
+            <p class="review-text">
+              Szybko, sprawnie, polecam! Przyjechał 5 min przed czasem, wymiana poszła w 40 minut pod moim blokiem. Cena dokładnie jak w apce, bez dopłat. Będę polecać znajomym.
+            </p>
+
+            <!-- Reply composer -->
+            <div class="reply-compose">
+              <div class="compose-head">
+                <div class="compose-avatar">MK</div>
+                <span class="compose-label">Twoja odpowiedź</span>
+                <span class="compose-as">Jako <strong>MobilOpony Kasia</strong> · widoczna publicznie</span>
+              </div>
+              <textarea class="compose-textarea" placeholder="Napisz szczerze, krótko, po imieniu. Odpowiedzi zwiększają zaufanie kolejnych klientów o ~30%." maxlength="500">Dziękujemy Marku! Cieszymy się, że wszystko poszło sprawnie — zapraszamy ponownie 🙂</textarea>
+              <div class="compose-foot">
+                <div class="quick-templates">
+                  <button class="template-chip" type="button">💛 Dziękuję za opinię</button>
+                  <button class="template-chip" type="button">Polecamy wymianę jesienną</button>
+                  <button class="template-chip" type="button">Do zobaczenia!</button>
+                </div>
+                <span class="compose-counter"><strong>68</strong> / 500</span>
+                <button class="compose-btn" type="button">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7"/></svg>
+                  Wyślij odpowiedź
+                </button>
+              </div>
+            </div>
+          </article>
+
+          <!-- NEW review 2: 4 stars, constructive -->
+          <article class="review new critical">
+            <header class="review-head">
+              <div class="review-avatar">AW</div>
+              <div class="review-meta-col">
+                <div class="review-name-row">
+                  <span class="review-name">Anna Wiśniewska</span>
+                  <span class="verified">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7"/></svg>
+                    Zweryfikowany
+                  </span>
+                  <span class="new-badge">NOWE</span>
+                </div>
+                <div class="review-sub-meta">
+                  <span class="review-stars" aria-label="4 z 5">
+                    <svg viewBox="0 0 24 24" fill="var(--accent)"><polygon points="12 2 15 9 22 9.5 17 14 18.5 21 12 17.5 5.5 21 7 14 2 9.5 9 9 12 2"/></svg>
+                    <svg viewBox="0 0 24 24" fill="var(--accent)"><polygon points="12 2 15 9 22 9.5 17 14 18.5 21 12 17.5 5.5 21 7 14 2 9.5 9 9 12 2"/></svg>
+                    <svg viewBox="0 0 24 24" fill="var(--accent)"><polygon points="12 2 15 9 22 9.5 17 14 18.5 21 12 17.5 5.5 21 7 14 2 9.5 9 9 12 2"/></svg>
+                    <svg viewBox="0 0 24 24" fill="var(--accent)"><polygon points="12 2 15 9 22 9.5 17 14 18.5 21 12 17.5 5.5 21 7 14 2 9.5 9 9 12 2"/></svg>
+                    <svg viewBox="0 0 24 24" fill="var(--accent)" opacity="0.3"><polygon points="12 2 15 9 22 9.5 17 14 18.5 21 12 17.5 5.5 21 7 14 2 9.5 9 9 12 2"/></svg>
+                  </span>
+                  <span class="dot-sep"></span>
+                  <span>tydzień temu · 7 kwi 2026</span>
+                  <span class="dot-sep"></span>
+                  <span class="review-code">OPN<span class="hy">-</span>8H1M</span>
+                </div>
+              </div>
+              <div class="review-actions">
+                <button class="review-action-btn" aria-label="Szczegóły">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4-4"/></svg>
+                </button>
+                <button class="review-action-btn danger" aria-label="Zgłoś">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1Z"/><path d="M4 22V3"/></svg>
+                </button>
+              </div>
+            </header>
+
+            <p class="review-text">
+              Dobrze, ale 10 minut spóźnienia bez uprzedzenia. Wymiana profesjonalna, sprzęt solidny — gdyby nie spóźnienie dałabym 5 gwiazdek.
+            </p>
+
+            <div class="reply-compose" style="border-color: var(--warning-border);">
+              <div class="compose-head">
+                <div class="compose-avatar">MK</div>
+                <span class="compose-label">Odpowiedź na konstruktywną krytykę</span>
+                <span class="compose-as">Krótka, konkretna, bez wymówek — buduje zaufanie</span>
+              </div>
+              <textarea class="compose-textarea" placeholder="Przeproś, wyjaśnij krótko powód i powiedz co robisz żeby się nie powtórzyło. Inni klienci to czytają." maxlength="500"></textarea>
+              <div class="compose-foot">
+                <div class="quick-templates">
+                  <button class="template-chip" type="button">Przepraszamy za spóźnienie</button>
+                  <button class="template-chip" type="button">Wdrożyliśmy bufory czasowe</button>
+                  <button class="template-chip" type="button">Zapraszamy z rabatem −10%</button>
+                </div>
+                <span class="compose-counter"><strong>0</strong> / 500</span>
+                <button class="compose-btn" type="button">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7"/></svg>
+                  Wyślij odpowiedź
+                </button>
+              </div>
+            </div>
+          </article>
+
+          <!-- Existing review with reply -->
+          <article class="review">
+            <header class="review-head">
+              <div class="review-avatar">PL</div>
+              <div class="review-meta-col">
+                <div class="review-name-row">
+                  <span class="review-name">Piotr Lewandowski</span>
+                  <span class="verified">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7"/></svg>
+                    Zweryfikowany
+                  </span>
+                </div>
+                <div class="review-sub-meta">
+                  <span class="review-stars">
+                    <svg viewBox="0 0 24 24" fill="var(--accent)"><polygon points="12 2 15 9 22 9.5 17 14 18.5 21 12 17.5 5.5 21 7 14 2 9.5 9 9 12 2"/></svg>
+                    <svg viewBox="0 0 24 24" fill="var(--accent)"><polygon points="12 2 15 9 22 9.5 17 14 18.5 21 12 17.5 5.5 21 7 14 2 9.5 9 9 12 2"/></svg>
+                    <svg viewBox="0 0 24 24" fill="var(--accent)"><polygon points="12 2 15 9 22 9.5 17 14 18.5 21 12 17.5 5.5 21 7 14 2 9.5 9 9 12 2"/></svg>
+                    <svg viewBox="0 0 24 24" fill="var(--accent)"><polygon points="12 2 15 9 22 9.5 17 14 18.5 21 12 17.5 5.5 21 7 14 2 9.5 9 9 12 2"/></svg>
+                    <svg viewBox="0 0 24 24" fill="var(--accent)"><polygon points="12 2 15 9 22 9.5 17 14 18.5 21 12 17.5 5.5 21 7 14 2 9.5 9 9 12 2"/></svg>
+                  </span>
+                  <span class="dot-sep"></span>
+                  <span>3 tyg. temu · 25 mar 2026</span>
+                  <span class="dot-sep"></span>
+                  <span class="review-code">OPN<span class="hy">-</span>2K9X</span>
+                </div>
+              </div>
+              <div class="review-actions">
+                <button class="review-action-btn" aria-label="Szczegóły">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4-4"/></svg>
+                </button>
+              </div>
+            </header>
+
+            <p class="review-text">
+              Korzystam drugi raz w tym sezonie — obsługa zawsze na wysokim poziomie, mocno polecam. Cena fair.
+            </p>
+
+            <div class="existing-reply">
+              <div class="reply-head">
+                <span class="reply-label">Twoja odpowiedź</span>
+                <span class="reply-date">25 mar 2026 · 16:48</span>
+                <div class="reply-actions">
+                  <button class="reply-mini-btn" type="button">Edytuj</button>
+                  <button class="reply-mini-btn" type="button">Usuń</button>
+                </div>
+              </div>
+              <p class="reply-text">
+                Dzięki Piotr! Do zobaczenia przy zmianie sezonowej 🙂
+              </p>
+            </div>
+          </article>
+
+          <!-- Another existing review with reply -->
+          <article class="review">
+            <header class="review-head">
+              <div class="review-avatar">TW</div>
+              <div class="review-meta-col">
+                <div class="review-name-row">
+                  <span class="review-name">Tomasz W.</span>
+                  <span class="verified">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7"/></svg>
+                    Zweryfikowany
+                  </span>
+                </div>
+                <div class="review-sub-meta">
+                  <span class="review-stars">
+                    <svg viewBox="0 0 24 24" fill="var(--accent)"><polygon points="12 2 15 9 22 9.5 17 14 18.5 21 12 17.5 5.5 21 7 14 2 9.5 9 9 12 2"/></svg>
+                    <svg viewBox="0 0 24 24" fill="var(--accent)"><polygon points="12 2 15 9 22 9.5 17 14 18.5 21 12 17.5 5.5 21 7 14 2 9.5 9 9 12 2"/></svg>
+                    <svg viewBox="0 0 24 24" fill="var(--accent)"><polygon points="12 2 15 9 22 9.5 17 14 18.5 21 12 17.5 5.5 21 7 14 2 9.5 9 9 12 2"/></svg>
+                    <svg viewBox="0 0 24 24" fill="var(--accent)"><polygon points="12 2 15 9 22 9.5 17 14 18.5 21 12 17.5 5.5 21 7 14 2 9.5 9 9 12 2"/></svg>
+                    <svg viewBox="0 0 24 24" fill="var(--accent)"><polygon points="12 2 15 9 22 9.5 17 14 18.5 21 12 17.5 5.5 21 7 14 2 9.5 9 9 12 2"/></svg>
+                  </span>
+                  <span class="dot-sep"></span>
+                  <span>miesiąc temu · 20 mar 2026</span>
+                  <span class="dot-sep"></span>
+                  <span class="review-code">OPN<span class="hy">-</span>J5RT</span>
+                </div>
+              </div>
+              <div class="review-actions">
+                <button class="review-action-btn" aria-label="Szczegóły">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4-4"/></svg>
+                </button>
+              </div>
+            </header>
+
+            <p class="review-text">
+              Bardzo sprawna wymiana — umówiłem się wieczorem, następnego dnia rano już było po sprawie. Elastyczność na 5+.
+            </p>
+
+            <div class="existing-reply">
+              <div class="reply-head">
+                <span class="reply-label">Twoja odpowiedź</span>
+                <span class="reply-date">20 mar 2026 · 19:12</span>
+                <div class="reply-actions">
+                  <button class="reply-mini-btn" type="button">Edytuj</button>
+                </div>
+              </div>
+              <p class="reply-text">
+                Dziękujemy! Rano zawsze mamy wolniejsze sloty — zapraszamy też kolejnym razem.
+              </p>
+            </div>
+          </article>
+
+        </div>
+
+      </section>
+    </div>
+
+  </main>
+
+  <footer class="caption">
+    <div>
+      <strong>Layout</strong>
+      Sidebar z <em>Opinie active (badge 2 nowe)</em> · Topbar: breadcrumb + Eksport CSV / Udostępnij profil · Hero 3-col: <em>Rating big</em> (4,8 Bebas 72px + stars + <em>+0,2 vs 30d</em> + <em>#3 ranking NS</em> + 8 nowych) + <em>Distribution chart</em> (5 pasków animated, 82/10/4/2/2% z count 104/13/5/3/2) + <em>Response stats card</em> (amber gradient + „Top 5%" chip + <em>95%</em> rate Bebas + 3 mini-stats + „Przejrzyj 2 nowe" CTA)
+    </div>
+    <div>
+      <strong>Review states</strong>
+      <em>Nowe</em>: amber border + amber glow shadow + „NOWE" badge · <em>Pending reply</em>: inline composer z compose-avatar MK + quick-template chips (dedykowane per sentiment — dla 5★ „💛 Dziękuję", dla krytyki „Przepraszamy za spóźnienie / Wdrożyliśmy bufory") + counter + „Wyślij odpowiedź" amber · <em>Existing reply</em>: amber left-border 3px + „TWOJA ODPOWIEDŹ" label + timestamp + Edytuj/Usuń mini-buttons · Actions per review: magnifier (szczegóły), flag (zgłoś nadużycie, danger hover) · Tabs „Do odpowiedzi (2 warn)" aktywny · Sort „Najstarsze niezaodpowiedziane"
+    </div>
+  </footer>
+
+</body>
+</html>

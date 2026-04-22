@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Opony.app — 08 Auth · numer telefonu · W:12.16 (1/3)</title>
+<!--
+  Screen: Logowanie — numer telefonu (krok 1/3 flow OTP)
+  Ref:    docs/plan-sprintow.md → W:12.16 ekran 1
+  US:     US-01 (login SMS OTP)
+  Tone:   industrial-dark · splash hero · tire-tread background detail
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Bebas+Neue&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0A0B0E;
+    --bg-tint-top: #12141A;
+    --surface: #14171D;
+    --surface-raised: #1B1E26;
+    --surface-hover: #23272F;
+    --border: #262A34;
+    --border-strong: #363B47;
+    --hairline: rgba(255, 255, 255, 0.06);
+    --text-primary: #F5F4EF;
+    --text-secondary: #9EA2AD;
+    --text-muted: #60646F;
+    --text-on-accent: #0A0B0E;
+    --accent: #FF6B1A;
+    --accent-hover: #FF8039;
+    --accent-muted: rgba(255, 107, 26, 0.14);
+    --accent-border: rgba(255, 107, 26, 0.32);
+    --accent-glow: rgba(255, 107, 26, 0.45);
+    --success: #2EE0A0;
+    --warning: #FFB020;
+    --danger: #FF5757;
+    --font-display: 'Bebas Neue', sans-serif;
+    --font-body: 'Archivo', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    --phone-scale: min(1, calc((100vh - 240px) / 852px), calc((100vw - 60px) / 393px));
+    font-family: var(--font-body);
+    background: var(--bg);
+    color: var(--text-primary);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    background-image:
+      radial-gradient(ellipse 70% 50% at 50% 0%, rgba(255, 107, 26, 0.07) 0%, transparent 60%),
+      radial-gradient(ellipse 50% 30% at 90% 100%, rgba(46, 224, 160, 0.03) 0%, transparent 60%),
+      linear-gradient(180deg, var(--bg-tint-top) 0%, var(--bg) 30%);
+    background-attachment: fixed;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 48px 24px 80px;
+    gap: 28px;
+  }
+
+
+  .canvas-label {
+    width: 100%;
+    max-width: 560px;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: baseline;
+    gap: 20px;
+    padding-bottom: 18px;
+    border-bottom: 1px solid var(--border);
+  }
+  .film-strip { font-family: var(--font-display); font-size: 34px; letter-spacing: 3px; line-height: 1; }
+  .slug {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    border-left: 1px solid var(--border);
+    padding-left: 18px;
+  }
+  .canvas-meta {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-secondary);
+    letter-spacing: 1px;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .canvas-meta .pulse {
+    display: inline-block;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 0 4px var(--accent-muted);
+    animation: pulse 1800ms ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 4px var(--accent-muted); opacity: 1; }
+    50%      { box-shadow: 0 0 0 8px transparent; opacity: 0.6; }
+  }
+
+  /* Phone */
+  .phone {
+    width: 393px;
+    height: 852px;
+    border-radius: 54px;
+    background: var(--bg);
+    border: 10px solid #0D0E12;
+    box-shadow:
+      0 0 0 1px #1C1E24,
+      0 40px 120px rgba(0, 0, 0, 0.7),
+      0 24px 48px rgba(0, 0, 0, 0.45),
+      inset 0 0 0 1px rgba(255, 255, 255, 0.03);
+    overflow: hidden;
+    position: relative;
+    isolation: isolate;
+    flex-shrink: 0;
+    transform: scale(var(--phone-scale));
+    transform-origin: top center;
+    margin-bottom: calc((var(--phone-scale) - 1) * 852px);
+  }
+  .phone::before {
+    content: '';
+    position: absolute;
+    top: 12px; left: 50%;
+    transform: translateX(-50%);
+    width: 124px; height: 36px;
+    border-radius: 24px;
+    background: #000;
+    z-index: 100;
+  }
+  .phone::after {
+    content: '';
+    position: absolute;
+    bottom: 8px; left: 50%;
+    transform: translateX(-50%);
+    width: 134px; height: 5px;
+    border-radius: 3px;
+    background: var(--text-primary);
+    opacity: 0.28;
+    z-index: 100;
+  }
+
+  .status-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 36px 0;
+    height: 54px;
+    font-weight: 700;
+    font-size: 15px;
+    position: relative;
+    z-index: 20;
+  }
+  .status-bar .right { display: inline-flex; gap: 6px; align-items: center; }
+
+  /* ===== Screen shell ===== */
+  .screen {
+    position: absolute;
+    top: 54px; left: 0; right: 0; bottom: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    /* Amber splash glow od góry */
+    background:
+      radial-gradient(ellipse 90% 50% at 50% 0%, rgba(255, 107, 26, 0.14) 0%, transparent 50%),
+      radial-gradient(ellipse 120% 30% at 50% 100%, rgba(255, 107, 26, 0.06) 0%, transparent 60%);
+  }
+
+  /* Subtelny tire-tread pattern jako industrial detail */
+  .tread-bg {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.35;
+    z-index: 1;
+  }
+
+  .inner {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 40px 28px 32px;
+    gap: 20px;
+    position: relative;
+    z-index: 10;
+  }
+
+  /* ===== Logo hero ===== */
+  .logo-block {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding-top: 40px;
+  }
+  .wordmark-big {
+    font-family: var(--font-display);
+    font-size: 68px;
+    letter-spacing: 6px;
+    line-height: 0.9;
+    color: var(--text-primary);
+    display: inline-flex;
+    align-items: baseline;
+    gap: 6px;
+    text-shadow: 0 4px 30px rgba(255, 107, 26, 0.25);
+  }
+  .wordmark-big .dot {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    background: var(--accent);
+    border-radius: 50%;
+    transform: translateY(-6px);
+    box-shadow: 0 0 22px var(--accent-glow);
+  }
+  .tagline {
+    font-family: var(--font-body);
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    line-height: 1.5;
+  }
+  .tagline em {
+    font-style: normal;
+    color: var(--accent);
+  }
+
+  /* ===== Form ===== */
+  .form-block {
+    margin-top: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  .input-label {
+    font-family: var(--font-body);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 1.4px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+  }
+
+  .phone-input {
+    display: flex;
+    align-items: stretch;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    transition: border-color 160ms ease, box-shadow 160ms ease;
+  }
+  .phone-input:focus-within {
+    border-color: var(--accent-border);
+    box-shadow: 0 0 0 3px var(--accent-muted);
+  }
+  .phone-prefix {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0 14px;
+    background: var(--bg);
+    border-right: 1px solid var(--border);
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: 16px;
+    color: var(--accent);
+    letter-spacing: 0.5px;
+  }
+  .flag-pl {
+    display: inline-flex;
+    flex-direction: column;
+    width: 18px;
+    height: 12px;
+    border-radius: 2px;
+    overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.12);
+  }
+  .flag-pl .top    { flex: 1; background: #fff; }
+  .flag-pl .bottom { flex: 1; background: #DC143C; }
+
+  .phone-input input {
+    flex: 1;
+    min-width: 0;
+    background: transparent;
+    border: none;
+    outline: none;
+    padding: 16px 14px;
+    color: var(--text-primary);
+    font-family: var(--font-mono);
+    font-weight: 600;
+    font-size: 18px;
+    letter-spacing: 2px;
+  }
+  .phone-input input::placeholder {
+    color: var(--text-muted);
+    letter-spacing: 4px;
+  }
+
+  .input-hint {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: -8px;
+  }
+  .input-hint svg { flex-shrink: 0; }
+
+  /* CTA */
+  .cta-btn {
+    padding: 16px 16px;
+    background: var(--accent);
+    color: var(--text-on-accent);
+    border: none;
+    border-radius: 12px;
+    font-family: var(--font-body);
+    font-weight: 800;
+    font-size: 15px;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    box-shadow: 0 8px 24px rgba(255, 107, 26, 0.45);
+    transition: background 120ms ease, transform 120ms ease;
+  }
+  .cta-btn:hover { background: var(--accent-hover); }
+  .cta-btn:active { transform: scale(0.98); }
+
+  /* Legal */
+  .legal {
+    font-size: 11px;
+    line-height: 1.6;
+    color: var(--text-muted);
+    text-align: center;
+    padding: 0 8px;
+  }
+  .legal a {
+    color: var(--text-secondary);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    font-weight: 600;
+  }
+
+  /* Help link footer */
+  .help-link {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 12px;
+    font-family: var(--font-body);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+  }
+  .help-link:hover { color: var(--text-secondary); }
+
+  /* footer caption */
+  .caption {
+    max-width: 560px;
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 0.5px;
+  }
+  .caption strong {
+    color: var(--text-secondary);
+    font-weight: 500;
+    display: block;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    font-size: 10px;
+  }
+  .caption em { color: var(--accent); font-style: normal; }
+</style>
+</head>
+<body>
+
+  <header class="canvas-label">
+    <span class="film-strip">OPONY — 08</span>
+    <span class="slug">auth (1/3) · numer telefonu</span>
+    <span class="canvas-meta"><span class="pulse"></span>W:12.16 · US-01</span>
+  </header>
+
+  <main class="phone" role="region" aria-label="Mockup — logowanie numerem telefonu">
+
+    <div class="status-bar" aria-hidden="true">
+      <span>9:41</span>
+      <span class="right">
+        <svg width="18" height="12" viewBox="0 0 18 12" fill="currentColor"><rect x="0" y="8" width="3" height="4" rx="0.5"/><rect x="5" y="5" width="3" height="7" rx="0.5"/><rect x="10" y="2" width="3" height="10" rx="0.5"/><rect x="15" y="0" width="3" height="12" rx="0.5" opacity="0.4"/></svg>
+        <svg width="16" height="12" viewBox="0 0 16 12" fill="currentColor"><path d="M8 11.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z"/><path d="M4 7.5a6 6 0 0 1 8 0l-1 1a4.6 4.6 0 0 0-6 0l-1-1Z"/><path d="M1.5 4.5a10 10 0 0 1 13 0l-1 1a8.5 8.5 0 0 0-11 0l-1-1Z" opacity="0.6"/></svg>
+        <svg width="26" height="12" viewBox="0 0 26 12" fill="none"><rect x="0.5" y="0.5" width="22" height="11" rx="3" stroke="currentColor" opacity="0.5"/><rect x="2" y="2" width="19" height="8" rx="1.5" fill="currentColor"/><rect x="23" y="4" width="2" height="4" rx="1" fill="currentColor" opacity="0.5"/></svg>
+      </span>
+    </div>
+
+    <div class="screen">
+
+      <!-- subtelny tire-tread pattern w tle -->
+      <svg class="tread-bg" viewBox="0 0 393 798" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <defs>
+          <pattern id="tread" x="0" y="0" width="56" height="90" patternUnits="userSpaceOnUse" patternTransform="rotate(18)">
+            <rect x="10" y="6"  width="14" height="22" rx="3" fill="#1A1E26"/>
+            <rect x="32" y="30" width="14" height="22" rx="3" fill="#1A1E26"/>
+            <rect x="10" y="54" width="14" height="22" rx="3" fill="#1A1E26"/>
+          </pattern>
+          <radialGradient id="fade" cx="50%" cy="60%" r="70%">
+            <stop offset="0%" stop-color="#000" stop-opacity="0"/>
+            <stop offset="60%" stop-color="#000" stop-opacity="0.5"/>
+            <stop offset="100%" stop-color="#000" stop-opacity="1"/>
+          </radialGradient>
+          <mask id="fadeMask">
+            <rect width="393" height="798" fill="url(#fade)"/>
+          </mask>
+        </defs>
+        <rect width="393" height="798" fill="url(#tread)" mask="url(#fadeMask)"/>
+      </svg>
+
+      <div class="inner">
+
+        <!-- Logo hero -->
+        <div class="logo-block">
+          <div class="wordmark-big">OPONY<span class="dot"></span></div>
+          <div class="tagline">Wymiana opon <em>bez dzwonienia</em></div>
+        </div>
+
+        <!-- Form block -->
+        <div class="form-block">
+
+          <div>
+            <div class="input-label">Numer telefonu</div>
+            <label class="phone-input">
+              <span class="phone-prefix">
+                <span class="flag-pl" aria-hidden="true"><span class="top"></span><span class="bottom"></span></span>
+                +48
+              </span>
+              <input type="tel" inputmode="numeric" placeholder="*** *** ***" value="501 234 789" aria-label="Numer telefonu" />
+            </label>
+          </div>
+
+          <div class="input-hint">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/></svg>
+            <span>Wyślemy 6-cyfrowy kod SMS. Kod ważny 5 minut.</span>
+          </div>
+
+          <button class="cta-btn" type="button">
+            Wyślij kod SMS
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+          </button>
+
+          <p class="legal">
+            Logując się akceptujesz
+            <a href="#">regulamin</a> i <a href="#">politykę prywatności</a>.
+            SMS może podlegać opłacie Twojego operatora.
+          </p>
+
+          <button class="help-link" type="button">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3"/><circle cx="12" cy="17" r="0.5" fill="currentColor"/></svg>
+            Potrzebujesz pomocy?
+          </button>
+
+        </div>
+
+      </div>
+
+    </div>
+  </main>
+
+  <footer class="caption">
+    <div>
+      <strong>Sekcje</strong>
+      Logo hero <em>OPONY•</em> w Bebas 68px z text-shadow amber · tagline „Wymiana opon <em>bez dzwonienia</em>" z amber emphasis · Form: phone input z prefixem PL flag + +48 w amber mono, placeholder „*** *** ***" · CTA „Wyślij kod SMS" (amber, ikona strzałki) · Legal (regulamin + RODO linkowane) · Help link footer
+    </div>
+    <div>
+      <strong>Detale</strong>
+      Tire-tread SVG pattern w tle z radial fade (subtelny, industrial) · Input focus = amber border + glow ring · Phone value w mono 18px letter-spacing 2px · Amber dot przy logo z soft glow · Brak bottom nav (pre-auth)
+    </div>
+  </footer>
+
+</body>
+</html>

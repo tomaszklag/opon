@@ -1,0 +1,1089 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Opony Panel — B2B-03 Onboarding 2/3 · Zdjęcia · W:12.15</title>
+<!--
+  Screen: Onboarding wizard krok 2/3 — upload zdjęć providera
+  Ref:    docs/plan-sprintow.md → W:12.15 krok 2 (panel.opony.app — desktop-first)
+  US:     US-43 (rejestracja firmy + materiały)
+  Tone:   industrial-dark · drag-drop tiles · 3 required + opcjonalne · animowany dashed border dla empty state
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Bebas+Neue&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0A0B0E;
+    --bg-tint-top: #12141A;
+    --surface: #14171D;
+    --surface-raised: #1B1E26;
+    --surface-hover: #23272F;
+    --border: #262A34;
+    --border-strong: #363B47;
+    --hairline: rgba(255, 255, 255, 0.06);
+    --text-primary: #F5F4EF;
+    --text-secondary: #9EA2AD;
+    --text-muted: #60646F;
+    --text-on-accent: #0A0B0E;
+    --accent: #FF6B1A;
+    --accent-hover: #FF8039;
+    --accent-muted: rgba(255, 107, 26, 0.14);
+    --accent-border: rgba(255, 107, 26, 0.32);
+    --accent-glow: rgba(255, 107, 26, 0.45);
+    --success: #2EE0A0;
+    --success-muted: rgba(46, 224, 160, 0.14);
+    --success-border: rgba(46, 224, 160, 0.32);
+    --warning: #FFB020;
+    --danger: #FF5757;
+    --font-display: 'Bebas Neue', sans-serif;
+    --font-body: 'Archivo', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; overflow-x: hidden; max-width: 100vw; }
+  body {
+    --desktop-scale: min(1, calc((100vh - 200px) / 900px), calc((100vw - 80px) / 1440px));
+    font-family: var(--font-body);
+    background: var(--bg);
+    color: var(--text-primary);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    background-image:
+      radial-gradient(ellipse 70% 50% at 50% 0%, rgba(255, 107, 26, 0.05) 0%, transparent 60%),
+      radial-gradient(ellipse 50% 30% at 90% 100%, rgba(46, 224, 160, 0.02) 0%, transparent 60%),
+      linear-gradient(180deg, var(--bg-tint-top) 0%, var(--bg) 30%);
+    background-attachment: fixed;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 40px 40px 60px;
+    gap: 24px;
+  }
+
+  .canvas-label {
+    width: 100%;
+    max-width: 1440px;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: baseline;
+    gap: 20px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  .film-strip { font-family: var(--font-display); font-size: 32px; letter-spacing: 3px; line-height: 1; }
+  .slug {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    border-left: 1px solid var(--border);
+    padding-left: 18px;
+  }
+  .canvas-meta {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-secondary);
+    letter-spacing: 1px;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .canvas-meta .pulse {
+    display: inline-block;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 0 4px var(--accent-muted);
+    animation: pulse 1800ms ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 4px var(--accent-muted); opacity: 1; }
+    50%      { box-shadow: 0 0 0 8px transparent; opacity: 0.6; }
+  }
+
+  /* Desktop frame */
+  .desktop-frame {
+    width: 1440px;
+    height: 900px;
+    background: var(--bg);
+    border-radius: 14px;
+    border: 1px solid #1C1E24;
+    box-shadow:
+      0 40px 120px rgba(0, 0, 0, 0.6),
+      0 20px 40px rgba(0, 0, 0, 0.4);
+    overflow: hidden;
+    position: relative;
+    flex-shrink: 0;
+    transform: scale(var(--desktop-scale));
+    transform-origin: top center;
+    margin-bottom: calc((var(--desktop-scale) - 1) * 900px);
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Browser chrome */
+  .browser-chrome {
+    height: 44px;
+    background: linear-gradient(180deg, #1A1D23, #14171D);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    gap: 16px;
+    flex-shrink: 0;
+  }
+  .traffic-lights { display: inline-flex; gap: 8px; }
+  .light { width: 12px; height: 12px; border-radius: 50%; }
+  .light.red { background: #FF5F57; }
+  .light.yellow { background: #FEBC2E; }
+  .light.green { background: #28C840; }
+
+  .browser-tabs { display: inline-flex; gap: 2px; }
+  .browser-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-bottom: none;
+    border-radius: 8px 8px 0 0;
+    font-size: 12px;
+    color: var(--text-primary);
+    position: relative;
+    top: 6px;
+  }
+  .browser-tab .favicon {
+    width: 14px; height: 14px;
+    border-radius: 3px;
+    background: var(--accent);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-display);
+    font-size: 9px;
+    color: var(--text-on-accent);
+    letter-spacing: 0.5px;
+  }
+  .browser-address {
+    flex: 1;
+    max-width: 480px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+  .browser-address .lock { color: var(--success); }
+  .browser-address .url { color: var(--text-primary); }
+  .browser-address .path { color: var(--text-secondary); }
+
+  /* App root */
+  .app-root {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    background:
+      radial-gradient(ellipse 60% 40% at 50% 0%, rgba(255, 107, 26, 0.06) 0%, transparent 60%);
+  }
+
+  /* Top strip */
+  .top-strip {
+    height: 62px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 32px;
+    flex-shrink: 0;
+  }
+  .brand-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+  }
+  .brand-link .wordmark {
+    font-family: var(--font-display);
+    font-size: 28px;
+    letter-spacing: 3.5px;
+    line-height: 1;
+    color: var(--text-primary);
+    display: inline-flex;
+    align-items: baseline;
+    gap: 4px;
+  }
+  .brand-link .dot {
+    display: inline-block;
+    width: 6px; height: 6px;
+    background: var(--accent);
+    border-radius: 50%;
+    transform: translateY(-2px);
+    box-shadow: 0 0 10px var(--accent-glow);
+  }
+  .brand-link .panel-tag {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: var(--accent-muted);
+    border: 1px solid var(--accent-border);
+    color: var(--accent);
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    font-weight: 800;
+  }
+  .top-strip-spacer { flex: 1; }
+  .save-draft {
+    font-size: 12px;
+    color: var(--text-muted);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .save-draft .dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--success);
+    box-shadow: 0 0 0 3px rgba(46, 224, 160, 0.15);
+    animation: pulse 1800ms ease-in-out infinite;
+  }
+
+  /* Stepper */
+  .stepper-bar {
+    padding: 20px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    flex: 0 0 auto;
+  }
+  .step-num {
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    border: 1.5px solid var(--border-strong);
+    background: var(--bg);
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .step.active .step-num {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--text-on-accent);
+    box-shadow: 0 0 0 5px var(--accent-muted);
+  }
+  .step.done .step-num {
+    background: var(--accent-muted);
+    border-color: var(--accent-border);
+    color: var(--accent);
+  }
+  .step-label {
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+  .step.active .step-label { color: var(--accent); }
+  .step.done .step-label { color: var(--text-secondary); }
+  .step-line {
+    width: 70px;
+    height: 1.5px;
+    background: var(--border);
+    margin: 0 4px;
+    margin-top: -22px;
+    border-radius: 2px;
+  }
+  .step-line.done { background: var(--accent); }
+
+  /* Main content */
+  .form-scroll {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 32px 20px 32px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 24px;
+    scrollbar-width: thin;
+  }
+  .form-scroll::-webkit-scrollbar { width: 6px; }
+  .form-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  .form-inner {
+    width: 100%;
+    max-width: 960px;
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+  }
+
+  /* Hero */
+  .hero {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    text-align: center;
+  }
+  .hero-title {
+    font-family: var(--font-display);
+    font-size: 48px;
+    letter-spacing: 2.5px;
+    line-height: 1;
+    color: var(--text-primary);
+  }
+  .hero-sub {
+    font-size: 14px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    max-width: 640px;
+  }
+  .hero-sub strong { color: var(--accent); font-weight: 700; }
+  .hero-tips {
+    display: inline-flex;
+    gap: 10px;
+    margin-top: 6px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .tip-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 10px;
+    border-radius: 5px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    letter-spacing: 0.3px;
+  }
+  .tip-chip svg { color: var(--accent); }
+
+  /* Progress indicator */
+  .progress-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+  .progress-bar {
+    flex: 1;
+    height: 6px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    overflow: hidden;
+    position: relative;
+  }
+  .progress-bar-fill {
+    position: absolute;
+    top: 0; left: 0; bottom: 0;
+    background: linear-gradient(90deg, var(--accent), var(--accent-hover));
+    border-radius: 3px;
+    box-shadow: 0 0 10px rgba(255, 107, 26, 0.35);
+    transition: width 300ms ease;
+  }
+  .progress-count {
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: 12px;
+    color: var(--text-primary);
+    letter-spacing: 0.5px;
+  }
+  .progress-count strong { color: var(--accent); }
+
+  /* Section label */
+  .section-label {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-top: 6px;
+  }
+  .section-title {
+    font-family: var(--font-display);
+    font-size: 22px;
+    letter-spacing: 2px;
+    color: var(--text-primary);
+    line-height: 1;
+  }
+  .section-sub {
+    font-size: 11px;
+    color: var(--text-muted);
+    font-weight: 600;
+    letter-spacing: 0.3px;
+  }
+  .section-sub strong { color: var(--accent); }
+
+  /* Required tiles grid */
+  .req-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+  }
+
+  .photo-tile {
+    position: relative;
+    aspect-ratio: 4 / 3;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    transition: all 180ms ease;
+  }
+  .photo-tile:hover {
+    border-color: var(--border-strong);
+    transform: translateY(-2px);
+  }
+  .photo-tile.empty {
+    border-style: dashed;
+    border-color: var(--accent-border);
+    background: linear-gradient(135deg, rgba(255, 107, 26, 0.04), transparent);
+    align-items: center;
+    justify-content: center;
+    animation: dashPulse 2400ms ease-in-out infinite;
+  }
+  @keyframes dashPulse {
+    0%, 100% { border-color: var(--accent-border); }
+    50% { border-color: var(--accent); }
+  }
+  .photo-tile.empty:hover {
+    background: var(--accent-muted);
+    border-color: var(--accent);
+    border-style: dashed;
+  }
+
+  .photo-tile.done {
+    border-color: var(--accent-border);
+  }
+
+  .photo-tile.primary {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-muted);
+  }
+
+  .photo-thumb {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .photo-tile.done::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, transparent 50%, rgba(10, 11, 14, 0.8));
+    z-index: 1;
+  }
+
+  .tile-index {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    padding: 3px 8px;
+    background: rgba(10, 11, 14, 0.85);
+    backdrop-filter: blur(6px);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    color: var(--text-secondary);
+    z-index: 2;
+  }
+  .tile-index.accent {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--text-on-accent);
+  }
+
+  .primary-badge {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 7px;
+    background: var(--accent);
+    color: var(--text-on-accent);
+    font-family: var(--font-body);
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 1.1px;
+    text-transform: uppercase;
+    border-radius: 4px;
+    z-index: 2;
+  }
+
+  .tile-overlay {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    padding: 12px 14px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 8px;
+    z-index: 2;
+  }
+  .tile-label-col {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+  .tile-type {
+    font-family: var(--font-body);
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.7);
+  }
+  .tile-name {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1.1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .tile-size {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: rgba(255, 255, 255, 0.5);
+    letter-spacing: 0.3px;
+    margin-top: 2px;
+  }
+  .tile-actions {
+    display: inline-flex;
+    gap: 4px;
+  }
+  .tile-btn {
+    width: 28px; height: 28px;
+    border-radius: 7px;
+    background: rgba(10, 11, 14, 0.7);
+    backdrop-filter: blur(6px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--text-primary);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 140ms ease;
+  }
+  .tile-btn:hover { background: rgba(10, 11, 14, 0.9); }
+  .tile-btn.danger:hover { color: var(--danger); border-color: rgba(255, 87, 87, 0.3); }
+
+  /* Empty tile state */
+  .empty-ico {
+    width: 48px; height: 48px;
+    border-radius: 12px;
+    background: var(--bg);
+    border: 1px solid var(--accent-border);
+    color: var(--accent);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 12px;
+  }
+  .empty-title {
+    font-family: var(--font-body);
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+  }
+  .empty-sub {
+    font-size: 11px;
+    color: var(--text-muted);
+    max-width: 200px;
+    text-align: center;
+    line-height: 1.4;
+  }
+  .empty-hint {
+    margin-top: 10px;
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: var(--accent);
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .empty-req-tag {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    padding: 3px 7px;
+    background: var(--accent-muted);
+    border: 1px solid var(--accent-border);
+    border-radius: 4px;
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 1.1px;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+
+  /* Additional photos grid */
+  .add-grid {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 10px;
+  }
+  .add-tile {
+    position: relative;
+    aspect-ratio: 1 / 1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: all 140ms ease;
+  }
+  .add-tile:hover { border-color: var(--border-strong); transform: translateY(-1px); }
+  .add-tile img { width: 100%; height: 100%; object-fit: cover; }
+  .add-tile .tile-overlay { padding: 6px; }
+  .add-tile .tile-btn { width: 22px; height: 22px; border-radius: 5px; }
+  .add-tile::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, transparent 60%, rgba(10, 11, 14, 0.7));
+  }
+
+  .add-more {
+    aspect-ratio: 1 / 1;
+    background: transparent;
+    border: 1.5px dashed var(--border-strong);
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    cursor: pointer;
+    color: var(--text-muted);
+    transition: all 140ms ease;
+  }
+  .add-more:hover {
+    border-color: var(--accent-border);
+    color: var(--accent);
+    background: var(--accent-muted);
+  }
+  .add-more .plus {
+    font-family: var(--font-display);
+    font-size: 28px;
+    line-height: 1;
+  }
+  .add-more .label {
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+  }
+
+  /* Info panel */
+  .info-panel {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    background: transparent;
+    border: 1px dashed var(--border);
+    border-radius: 10px;
+    font-size: 11px;
+    color: var(--text-muted);
+    line-height: 1.5;
+  }
+  .info-panel svg { color: var(--accent); flex-shrink: 0; }
+  .info-panel strong { color: var(--text-primary); font-weight: 700; }
+
+  /* CTA row */
+  .cta-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding-top: 10px;
+    margin-top: 4px;
+    border-top: 1px solid var(--border);
+  }
+  .cta-note {
+    font-size: 11px;
+    color: var(--text-muted);
+    line-height: 1.4;
+  }
+  .cta-group { display: inline-flex; gap: 12px; }
+  .btn-secondary {
+    padding: 12px 20px;
+    background: transparent;
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    font-family: var(--font-body);
+    font-weight: 700;
+    font-size: 13px;
+    letter-spacing: 0.3px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .btn-secondary:hover { background: var(--surface); border-color: var(--border-strong); }
+  .btn-primary {
+    padding: 14px 24px;
+    background: var(--accent);
+    color: var(--text-on-accent);
+    border: none;
+    border-radius: 10px;
+    font-family: var(--font-body);
+    font-weight: 800;
+    font-size: 14px;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 8px 20px rgba(255, 107, 26, 0.35);
+  }
+  .btn-primary:hover { background: var(--accent-hover); }
+
+  /* footer caption */
+  .caption {
+    max-width: 1440px;
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 0.5px;
+  }
+  .caption strong {
+    color: var(--text-secondary);
+    font-weight: 500;
+    display: block;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    font-size: 10px;
+  }
+  .caption em { color: var(--accent); font-style: normal; }
+</style>
+</head>
+<body>
+
+  <header class="canvas-label">
+    <span class="film-strip">OPONY PANEL — B2B-03</span>
+    <span class="slug">onboarding 2/3 · zdjęcia</span>
+    <span class="canvas-meta"><span class="pulse"></span>W:12.15 · US-43</span>
+  </header>
+
+  <main class="desktop-frame" role="region" aria-label="Mockup — onboarding krok 2 zdjęcia">
+
+    <div class="browser-chrome" aria-hidden="true">
+      <span class="traffic-lights">
+        <span class="light red"></span>
+        <span class="light yellow"></span>
+        <span class="light green"></span>
+      </span>
+      <span class="browser-tabs">
+        <span class="browser-tab active">
+          <span class="favicon">O</span>
+          Opony Panel — Zdjęcia (2/3)
+        </span>
+      </span>
+      <span class="browser-address">
+        <svg class="lock" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+        <span class="url">panel.opony.app</span><span class="path">/signup/photos</span>
+      </span>
+    </div>
+
+    <div class="app-root">
+
+      <!-- TOP STRIP -->
+      <header class="top-strip">
+        <a class="brand-link" href="#">
+          <span class="wordmark">OPONY<span class="dot"></span></span>
+          <span class="panel-tag">PANEL</span>
+        </a>
+        <span class="top-strip-spacer"></span>
+        <span class="save-draft">
+          <span class="dot"></span>
+          Szkic zapisany automatycznie
+        </span>
+      </header>
+
+      <!-- STEPPER -->
+      <div class="stepper-bar" role="progressbar" aria-valuemin="1" aria-valuemax="3" aria-valuenow="2">
+        <div class="step done">
+          <span class="step-num">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7"/></svg>
+          </span>
+          <span class="step-label">Firma</span>
+        </div>
+        <span class="step-line done"></span>
+        <div class="step active">
+          <span class="step-num">2</span>
+          <span class="step-label">Zdjęcia</span>
+        </div>
+        <span class="step-line"></span>
+        <div class="step">
+          <span class="step-num">3</span>
+          <span class="step-label">Weryfikacja</span>
+        </div>
+      </div>
+
+      <!-- FORM -->
+      <div class="form-scroll">
+        <div class="form-inner">
+
+          <!-- HERO -->
+          <div class="hero">
+            <h1 class="hero-title">Wgraj zdjęcia</h1>
+            <p class="hero-sub">
+              Warsztaty ze zdjęciami otrzymują <strong>do 3× więcej rezerwacji</strong> niż te bez. Potrzebujemy minimum 3 zdjęć — logo, pojazdu/warsztatu i stanowiska pracy.
+            </p>
+            <div class="hero-tips">
+              <span class="tip-chip">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-6 9 6v12H3V9Z"/><path d="M9 22V12h6v10"/></svg>
+                Dzienne światło
+              </span>
+              <span class="tip-chip">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h18v14H3z"/><circle cx="12" cy="12" r="4"/></svg>
+                Szeroki kadr
+              </span>
+              <span class="tip-chip">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7"/></svg>
+                Czysto i profesjonalnie
+              </span>
+              <span class="tip-chip">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M6 6l12 12"/></svg>
+                Bez osób w tle
+              </span>
+            </div>
+          </div>
+
+          <!-- PROGRESS -->
+          <div class="progress-row">
+            <span>Postęp uploadu</span>
+            <div class="progress-bar">
+              <div class="progress-bar-fill" style="width: 67%;"></div>
+            </div>
+            <span class="progress-count"><strong>2</strong> / 3 wymagane</span>
+          </div>
+
+          <!-- REQUIRED PHOTOS -->
+          <div class="section-label">
+            <h2 class="section-title">Wymagane zdjęcia</h2>
+            <span class="section-sub"><strong>3</strong> minimum · <strong>JPG / PNG</strong> · max 5&nbsp;MB / zdjęcie</span>
+          </div>
+
+          <div class="req-grid">
+
+            <!-- Tile 1: Logo — DONE + PRIMARY -->
+            <article class="photo-tile done primary">
+              <img class="photo-thumb" src="https://picsum.photos/seed/opony-kasia-logo/600/450" alt="Logo MobilOpony Kasia" />
+              <span class="tile-index accent">01 / 03</span>
+              <span class="primary-badge">
+                <svg width="8" height="8" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15 9 22 9.5 17 14 18.5 21 12 17.5 5.5 21 7 14 2 9.5 9 9 12 2"/></svg>
+                Główne
+              </span>
+              <div class="tile-overlay">
+                <div class="tile-label-col">
+                  <span class="tile-type">Logo / Awatar</span>
+                  <span class="tile-name">logo-mobilopony.jpg</span>
+                  <span class="tile-size">1.2 MB · 1024×1024</span>
+                </div>
+                <div class="tile-actions">
+                  <button class="tile-btn" aria-label="Zmień">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 4v5h-5"/></svg>
+                  </button>
+                  <button class="tile-btn danger" aria-label="Usuń">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+                  </button>
+                </div>
+              </div>
+            </article>
+
+            <!-- Tile 2: Van — DONE -->
+            <article class="photo-tile done">
+              <img class="photo-thumb" src="https://picsum.photos/seed/opony-kasia-van/600/450" alt="Van MobilOpony Kasia" />
+              <span class="tile-index accent">02 / 03</span>
+              <div class="tile-overlay">
+                <div class="tile-label-col">
+                  <span class="tile-type">Van / Pojazd</span>
+                  <span class="tile-name">van-przod-2026.jpg</span>
+                  <span class="tile-size">3.8 MB · 2400×1600</span>
+                </div>
+                <div class="tile-actions">
+                  <button class="tile-btn" aria-label="Ustaw jako główne">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15 9 22 9.5 17 14 18.5 21 12 17.5 5.5 21 7 14 2 9.5 9 9 12 2"/></svg>
+                  </button>
+                  <button class="tile-btn danger" aria-label="Usuń">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+                  </button>
+                </div>
+              </div>
+            </article>
+
+            <!-- Tile 3: Stanowisko — EMPTY (drag-drop) -->
+            <article class="photo-tile empty" role="button" aria-label="Dodaj zdjęcie stanowiska pracy">
+              <span class="empty-req-tag">Wymagane · 03 / 03</span>
+              <div class="empty-ico" aria-hidden="true">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-3.5l-1.5-2h-6l-1.5 2H5a2 2 0 0 0-2 2Z"/><circle cx="12" cy="13" r="4"/></svg>
+              </div>
+              <span class="empty-title">Stanowisko pracy</span>
+              <span class="empty-sub">Miejsce wymiany opon w vanie lub warsztacie. Pokaż sprzęt.</span>
+              <span class="empty-hint">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5-5 5 5M12 5v12"/></svg>
+                Upuść lub kliknij
+              </span>
+            </article>
+
+          </div>
+
+          <!-- ADDITIONAL -->
+          <div class="section-label">
+            <h2 class="section-title">Dodatkowe zdjęcia</h2>
+            <span class="section-sub">Opcjonalne · <strong>3</strong> / 10 — pokaż więcej, zwiększ zainteresowanie</span>
+          </div>
+
+          <div class="add-grid">
+            <article class="add-tile">
+              <img src="https://picsum.photos/seed/opony-balancer/300/300" alt="Maszyna wyważająca" />
+              <div class="tile-overlay">
+                <div class="tile-label-col"><span class="tile-type" style="color: rgba(255,255,255,0.85);">Wyważarka</span></div>
+                <div class="tile-actions">
+                  <button class="tile-btn danger" aria-label="Usuń">
+                    <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+                  </button>
+                </div>
+              </div>
+            </article>
+            <article class="add-tile">
+              <img src="https://picsum.photos/seed/opony-tools/300/300" alt="Narzędzia" />
+              <div class="tile-overlay">
+                <div class="tile-label-col"><span class="tile-type" style="color: rgba(255,255,255,0.85);">Narzędzia</span></div>
+                <div class="tile-actions">
+                  <button class="tile-btn danger" aria-label="Usuń">
+                    <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+                  </button>
+                </div>
+              </div>
+            </article>
+            <article class="add-tile">
+              <img src="https://picsum.photos/seed/opony-tire/300/300" alt="Opony" />
+              <div class="tile-overlay">
+                <div class="tile-label-col"><span class="tile-type" style="color: rgba(255,255,255,0.85);">Magazyn</span></div>
+                <div class="tile-actions">
+                  <button class="tile-btn danger" aria-label="Usuń">
+                    <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+                  </button>
+                </div>
+              </div>
+            </article>
+            <button class="add-more" type="button">
+              <span class="plus">+</span>
+              <span class="label">Dodaj zdjęcie</span>
+            </button>
+            <button class="add-more" type="button" style="opacity: 0.5;">
+              <span class="plus">+</span>
+              <span class="label">Dodaj zdjęcie</span>
+            </button>
+            <button class="add-more" type="button" style="opacity: 0.5;">
+              <span class="plus">+</span>
+              <span class="label">Dodaj zdjęcie</span>
+            </button>
+          </div>
+
+          <!-- INFO -->
+          <div class="info-panel">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v5"/><circle cx="12" cy="16" r="0.5" fill="currentColor"/></svg>
+            <div>
+              <strong>JPG / PNG / WEBP</strong> · max 5 MB per zdjęcie · rekomendowane min. 1200×800 px · <strong>10 zdjęć maksymalnie</strong>. Po zatwierdzeniu konta zdjęcia pojawią się publicznie w profilu warsztatu.
+            </div>
+          </div>
+
+          <!-- CTA -->
+          <div class="cta-row">
+            <p class="cta-note">
+              Zdjęcie „Stanowisko pracy" jest wymagane, żeby przejść dalej. Masz zapisany szkic — możesz wrócić później.
+            </p>
+            <div class="cta-group">
+              <button class="btn-secondary" type="button">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+                Wstecz
+                <span style="opacity: 0.6; font-size: 10px; letter-spacing: 1px; text-transform: uppercase; margin-left: 2px;">Firma</span>
+              </button>
+              <button class="btn-primary" type="button">
+                Dalej
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+                <span style="opacity: 0.6; font-weight: 600; font-size: 11px; letter-spacing: 1px; text-transform: uppercase; margin-left: 4px;">Weryfikacja</span>
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <footer class="caption">
+    <div>
+      <strong>Sekcje</strong>
+      Top strip z „Szkic zapisany automatycznie" (green pulse) · Stepper 2/3 (Firma ✓ amber muted, Zdjęcia ● amber active, Weryfikacja ○) · Hero „WGRAJ ZDJĘCIA" (Bebas 48px) + stat <em>3× więcej rezerwacji</em> + 4 tipy · Progress bar „2/3 wymagane" (67% fill) · Wymagane 3 tiles (3-kol grid) · Dodatkowe do 10 (6-kol) · Info panel · CTA row „Wstecz / Dalej → Weryfikacja"
+    </div>
+    <div>
+      <strong>Stany kafli</strong>
+      <em>done</em>: amber border + thumbnail + overlay z typ/nazwa/size + akcje (zmień, ustaw główne, usuń) · <em>primary</em>: amber full border + 3px glow + badge „⭐ Główne" · <em>empty</em>: dashed amber border z pulsującą animacją, ikona aparatu, tekst „Upuść lub kliknij", tag „WYMAGANE · 03/03" · Add-more: dashed tile z „+", hover → amber
+    </div>
+  </footer>
+
+</body>
+</html>

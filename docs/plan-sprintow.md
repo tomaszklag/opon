@@ -4,12 +4,16 @@
 
 ## 7. Plan rozwoju (fazy)
 
+> **Uwaga ADR-009 (2026-04-22):** MVP v0.1 został podzielony na dwie fazy (A: B2B-first, B: klient). Szczyt wiosennej wymiany już za nami — celujemy w jesień (październik), co daje bufor na staged rollout. Provider portal live **przed** rekrutacją 8 pilotów, nie równolegle.
+
 | Faza | Zakres | Cel |
 |---|---|---|
 | **0. Discovery** | Wywiady z 5 warsztatami + 5 mobilnymi + 20 kierowcami | Walidacja problemu, ceny prowizji |
-| **1. Prototyp** | Figma: 10 kluczowych ekranów (klient + B2B) | Test na 10 użytkownikach |
-| **2. MVP v0.1** | Klient + B2B, 1 miasto pilot (Nowy Sącz), płatności P24 | 20 usługodawców, 150 rezerwacji/mc |
-| **3. MVP v1.0** | RN apki, push, warsztaty stacjonarne, Stripe fallback | Komercyjny launch w 3 miastach |
+| **1. Prototyp** | Design: 38 ekranów HTML (patrz §12.Z) | Source of truth dla FE |
+| **2a. MVP v0.1-A — Provider portal** | `panel.opony.app` LIVE: auth OTP, onboarding, cennik/godziny/strefa/profil, dashboard/kalendarz/lista rezerwacji (z manual-booking), opinie, ustawienia. Retool admin LIVE. Landing provider-facing v1 | **Milestone A:** 8 pilotów onboarded z realnym cennikiem w DB (tyg. 4) |
+| **2b. MVP v0.1-B — Klient** | `app.opony.app` LIVE: auth OTP, profil+pojazd, search/map, booking flow, ratings. Polish (offline/PWA/error). Landing pivot client-facing + `/p/<slug>` + `/nowy-sacz` | **Milestone B:** full marketplace (tyg. 7), klient widzi 8 realnych warsztatów od dnia 1 |
+| **2c. Soft launch** | Beta z F&F, public launch przed szczytem październikowym | 150 rezerwacji/mc |
+| **3. MVP v1.0** | RN apki native published, push notifications, warsztaty stacjonarne, Stripe fallback | Komercyjny launch w 3 miastach |
 | **4. Skalowanie** | Kolejne miasta, optymalizacja tras, abonamenty | 5 miast, 500 usługodawców |
 | **5. Rozszerzenie** | Przechowywanie opon, geometria, integracja z Oponeo | Cross-sell |
 
@@ -18,7 +22,11 @@
 
 ## 12. Wireframe'y tekstowe (MVP v0)
 
+> **Status:** Design phase zamknięty (2026-04-22). 38 ekranów HTML w folderze `/design`, industrial-dark system (Bebas Neue + Archivo + JetBrains Mono, graphite #0A0B0E + amber #FF6B1A). Wireframe'y tekstowe poniżej to pierwotny scope — finalne implementacje w plikach `.html` podlinkowanych pod każdym punktem. **Pełny zakres w §12.Z**.
+
 ### 12.1. Klient: Ekran główny — lista punktów
+
+🎨 **Design:** [`01-home.html`](../design/01-home.html) · warianty empty-state: [`17-home-brak-pojazdu.html`](../design/17-home-brak-pojazdu.html) · [`18-home-brak-dostepnosci.html`](../design/18-home-brak-dostepnosci.html)
 
 ```
 ┌──────────────────────────────────┐
@@ -54,6 +62,8 @@
 
 ### 12.2. Klient: Karta punktu
 
+🎨 **Design:** [`02-provider-detail.html`](../design/02-provider-detail.html)
+
 ```
 ┌──────────────────────────────────┐
 │ ←  MobilOpony Kasia        ♡    │
@@ -87,10 +97,12 @@
 
 ### 12.3. Klient: Wybór slotu (kalendarz)
 
+🎨 **Design:** [`03-time-slot.html`](../design/03-time-slot.html)
+
 ```
 ┌──────────────────────────────────┐
 │ ←  Wybierz termin                │
-│    ● Adres  ● Termin  ○ Płatność │ ← step indicator (2/3)
+│    ● Adres  ● Termin  ● Potwierdź│ ← step indicator (2/2) — ADR-004: bez kroku płatności
 ├──────────────────────────────────┤
 │ 🚗 205/55 R16 • 180 zł          │
 │ 📍 ul. Lwowska 12, Nowy Sącz    │
@@ -116,7 +128,7 @@
 │   Razem: 180 zł                  │
 ├──────────────────────────────────┤
 │ ╔══════════════════════════════╗ │
-│ ║ 💳 Zapłać i zarezerwuj 180zł ║ │ ← redirect do P24
+│ ║  [📅 Zarezerwuj 180 zł]      ║ │ ← POST /bookings; płatność offline u providera (ADR-004)
 │ ╚══════════════════════════════╝ │
 └──────────────────────────────────┘
 ```
@@ -125,24 +137,26 @@
 
 ### 12.4. Klient: Rezerwacja potwierdzona
 
+🎨 **Design:** [`04-booking-confirmed.html`](../design/04-booking-confirmed.html)
+
 ```
 ┌──────────────────────────────────┐
 │          ✅                       │
 │   Rezerwacja potwierdzona!       │
-│    ● Adres  ● Termin  ● Płatność │ ← step indicator (3/3 done)
+│    ● Adres  ● Termin  ● Gotowe   │ ← step indicator (2/2 done)
 ├──────────────────────────────────┤
 │ Kod: OPN-4F2K                    │
 │                                  │
 │ 📅 Pon 14 kwi, 10:15 (~45 min)   │
 │ 🚐 MobilOpony Kasia              │
 │ 📍 ul. Lwowska 12, Nowy Sącz    │
-│ 💳 180 zł — BLIK ✅ opłacone     │
+│ 💰 180 zł — płatność u providera │ ← ADR-004: offline payment
 │                                  │
 │ SMS z potwierdzeniem wysłany     │
 │ na +48 *** *** 345               │
 │                                  │
 │ ℹ Anulowanie > 2h przed =        │
-│   pełny zwrot na konto           │
+│   bez konsekwencji               │ ← v0 bez refundów (ADR-004)
 │                                  │
 │ [📅 Dodaj do kalendarza]         │
 │ [✗ Anuluj rezerwację]            │
@@ -150,7 +164,9 @@
 └──────────────────────────────────┘
 ```
 
-### 12.5. B2B: Dashboard dnia
+### 12.5. B2B: Dashboard dnia *(panel.opony.app — desktop-first, min 1280px; mobile providera w v0 = responsive browser; v0.5/v1 — natywny w apce Expo)*
+
+🎨 **Design:** [`b2b-01-dashboard.html`](../design/b2b-01-dashboard.html) · kalendarz tygodniowy: [`b2b-09-kalendarz.html`](../design/b2b-09-kalendarz.html)
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -182,7 +198,9 @@
 └─────────────┴───────────────────────────────────────────────┘
 ```
 
-### 12.6. B2B: Szczegół rezerwacji
+### 12.6. B2B: Szczegół rezerwacji *(panel.opony.app — desktop-first)*
+
+🎨 **Design:** [`b2b-08-szczegol-rezerwacji.html`](../design/b2b-08-szczegol-rezerwacji.html) · lista wszystkich rezerwacji: [`b2b-13-rezerwacje.html`](../design/b2b-13-rezerwacje.html)
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -215,7 +233,9 @@
 └─────────────────────────────────────────────────────────────┘
 ```
 
-### 12.7. B2B: Edycja cennika i godzin
+### 12.7. B2B: Edycja cennika i godzin *(panel.opony.app — desktop-first; sekcje rozdzielone na 3 ekrany: Cennik / Godziny / Strefa)*
+
+🎨 **Design:** [`b2b-05-cennik.html`](../design/b2b-05-cennik.html) · [`b2b-06-godziny.html`](../design/b2b-06-godziny.html) · [`b2b-07-strefa.html`](../design/b2b-07-strefa.html) · profil firmy: [`b2b-11-profil.html`](../design/b2b-11-profil.html)
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -254,64 +274,15 @@
 ```
 
 
-### 12.8. Klient: Płatność (redirect P24 + powrót)
+### 12.8. ~~Klient: Płatność~~ — USUNIĘTE w POC v0
 
-```
-┌──────────────────────────────────┐
-│    ● Adres  ● Termin  ◉ Płatność │ ← step 3/3
-├──────────────────────────────────┤
-│                                  │
-│   ⏳ Przekierowuję do            │
-│      Przelewy24...               │
-│                                  │
-│   ┌────────────────────────────┐ │
-│   │  Wybierz metodę płatności: │ │
-│   │                            │ │
-│   │  [  BLIK  ]  (rekomend.)  │ │
-│   │  [ Karta Visa/MC ]        │ │
-│   │  [ Przelew ekspresowy ]   │ │
-│   └────────────────────────────┘ │
-│                                  │
-│   💰 Do zapłaty: 180,00 zł      │
-│   Za: Wymiana opon, MobilOpony K.│
-│                                  │
-│   🔒 Płatność obsługiwana przez  │
-│      Przelewy24. Twoje dane      │
-│      karty nie trafiają do nas.  │
-│                                  │
-│   [← Anuluj i wróć]             │
-└──────────────────────────────────┘
+**Sekcja usunięta na podstawie ADR-004** (aplikacja darmowa w pilocie, brak inline płatności). Klient po wyborze slotu (W:12.3) przechodzi bezpośrednio do potwierdzenia (W:12.4) ze statusem PENDING.
 
-── Po wybraniu BLIK ──
-
-┌──────────────────────────────────┐
-│        Wpisz kod BLIK            │
-│                                  │
-│       ┌─┬─┬─┬─┬─┬─┐             │
-│       │_│_│_│_│_│_│             │
-│       └─┴─┴─┴─┴─┴─┘             │
-│                                  │
-│   Potwierdź w aplikacji banku    │
-│   ⏱ Pozostało: 1:48              │
-│                                  │
-│   [Anuluj]                       │
-└──────────────────────────────────┘
-
-── Po sukcesie (redirect back) ──
-
-┌──────────────────────────────────┐
-│       ✅ Płatność przyjęta!       │
-│                                  │
-│   Przekierowuję do potwierdzenia │
-│   rezerwacji...                  │
-│                                  │
-│   [automatyczny redirect → 12.4] │
-└──────────────────────────────────┘
-```
-
-**Stany błędów:** timeout BLIK (120 s) → „Czas na BLIK minął. [Spróbuj ponownie]". Odrzucenie banku → „Płatność odrzucona. Spróbuj inną metodę." Błąd P24 → „Wystąpił błąd. Slot jest zarezerwowany przez 15 min — [Ponów płatność]."
+Wróci w v0.5+ gdy włączamy monetyzację (decyzja P24 marketplace vs invoicing).
 
 ### 12.9. Klient: Moje rezerwacje (lista)
+
+🎨 **Design:** [`05-my-bookings.html`](../design/05-my-bookings.html)
 
 ```
 ┌──────────────────────────────────┐
@@ -351,6 +322,8 @@
 
 ### 12.10. Klient: Szczegół rezerwacji
 
+🎨 **Design:** [`06-booking-detail.html`](../design/06-booking-detail.html)
+
 ```
 ┌──────────────────────────────────┐
 │ ←  Rezerwacja OPN-4F2K           │
@@ -389,6 +362,8 @@
 
 ### 12.11. Klient: Profil + pojazdy
 
+🎨 **Design:** [`07-profile.html`](../design/07-profile.html) · onboarding post-OTP: [`14-profil-setup.html`](../design/14-profil-setup.html) · [`15-dodaj-pojazd.html`](../design/15-dodaj-pojazd.html) *(3 metody: marka+model+rok / wymiar / skan OCR-soon)*
+
 ```
 ┌──────────────────────────────────┐
 │ ←  Mój profil                    │
@@ -426,6 +401,8 @@
 
 ### 12.12. Klient: Ocena wizyty
 
+🎨 **Design:** [`12-rate-visit.html`](../design/12-rate-visit.html)
+
 ```
 ┌──────────────────────────────────┐
 │ ←  Oceń wizytę                   │
@@ -457,6 +434,8 @@
 ```
 
 ### 12.13. Klient: Widok mapy
+
+🎨 **Design:** [`11-map.html`](../design/11-map.html)
 
 ```
 ┌──────────────────────────────────┐
@@ -490,37 +469,15 @@
 └──────────────────────────────────┘
 ```
 
-### 12.14. B2B: Finanse (wypłaty)
+### 12.14. ~~B2B: Finanse (wypłaty)~~ — USUNIĘTE w POC v0
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│ ←  Finanse                                                   │
-├─────────────────────────────────────────────────────────────┤
-│ 💰 SALDO                                                    │
-│   Do wypłaty (pon. 21 kwi): 2 340,60 zł                    │
-│   Konto: PL** **** **** **** **** 7890  [zmień]            │
-├─────────────────────────────────────────────────────────────┤
-│ 📊 TEN MIESIĄC (kwiecień 2026)                              │
-│   Rezerwacji:     32                                         │
-│   Brutto:         5 760 zł                                   │
-│   Prowizja (8%):   −460,80 zł                               │
-│   Netto:          5 299,20 zł                                │
-├─────────────────────────────────────────────────────────────┤
-│ 📋 HISTORIA WYPŁAT                                           │
-│ ┌─────────────────────────────────────────────────────────┐ │
-│ │ 14 kwi 2026 (pon)   +1 656,00 zł   12 rezerwacji      │ │
-│ │ [Szczegóły →]                                          │ │
-│ └─────────────────────────────────────────────────────────┘ │
-│ ┌─────────────────────────────────────────────────────────┐ │
-│ │  7 kwi 2026 (pon)   +1 324,80 zł    9 rezerwacji      │ │
-│ │ [Szczegóły →]                                          │ │
-│ └─────────────────────────────────────────────────────────┘ │
-│                                                             │
-│ [📧 Wyślij podsumowanie na email]                           │
-└─────────────────────────────────────────────────────────────┘
-```
+**Sekcja usunięta na podstawie ADR-004** (aplikacja darmowa, brak rozliczeń). Provider w v0 nie widzi wypłat/prowizji — menu „Finanse" w panelu ukryte.
 
-### 12.15. B2B: Onboarding wizard (3 kroki)
+Wróci w v0.5+ wraz z wyborem monetyzacji (P24 split lub miesięczne fakturowanie).
+
+### 12.15. B2B: Onboarding wizard (3 kroki) *(panel.opony.app — desktop-first; auth przez SMS OTP — pole „Hasło" w kroku 1 zostało usunięte, patrz §19.9)*
+
+🎨 **Design:** [`b2b-02-onboarding-firma.html`](../design/b2b-02-onboarding-firma.html) · [`b2b-03-onboarding-zdjecia.html`](../design/b2b-03-onboarding-zdjecia.html) · [`b2b-04-onboarding-weryfikacja.html`](../design/b2b-04-onboarding-weryfikacja.html) · logowanie: [`b2b-12-login.html`](../design/b2b-12-login.html)
 
 ```
 ── Krok 1/3: Firma ──
@@ -539,7 +496,6 @@
 ├─────────────────────────────────────────────────────────────┤
 │ Telefon: [ +48 *** *** 789 ]                                │
 │ Email:   [ kasia@mobilopony.pl ] ← link verify wyślemy     │
-│ Hasło:   [ ●●●●●●●●●● ]  (min. 10 znaków)                 │
 │ Nr konta: [ PL __ ____ ____ ____ ____ ____ ] (do wypłat)    │
 ├─────────────────────────────────────────────────────────────┤
 │ ╔═════════════════════════════════════════════════════════╗ │
@@ -593,6 +549,8 @@
 ```
 
 ### 12.16. Klient: OTP + regulamin (first-time)
+
+🎨 **Design:** [`08-auth-phone.html`](../design/08-auth-phone.html) · [`09-auth-otp.html`](../design/09-auth-otp.html) · [`10-auth-consent.html`](../design/10-auth-consent.html)
 
 ```
 ── Ekran logowania ──
@@ -658,6 +616,8 @@
 
 ### 12.17. Klient: Lista opinii (pełna z rozkładem)
 
+🎨 **Design:** [`13-reviews.html`](../design/13-reviews.html) · widok providera (moderacja + odpowiedzi): [`b2b-10-opinie.html`](../design/b2b-10-opinie.html)
+
 ```
 ┌──────────────────────────────────┐
 │ ←  Opinie: MobilOpony Kasia      │
@@ -694,6 +654,67 @@
 │ [Załaduj więcej]                 │
 └──────────────────────────────────┘
 ```
+
+### 12.Z. Pełny zakres design phase — 38 ekranów
+
+> Design phase zamknięty **2026-04-22**. Industrial-dark system (graphite `#0A0B0E` + amber `#FF6B1A`), Bebas Neue / Archivo / JetBrains Mono. Trzy artefakty per ADR-001:
+
+**A. Klient mobile — `app.opony.app` (Expo RNW)** · 21 ekranów (w tym 3 polish), phone 393×852:
+
+| # | Plik | Ekran | Ref US |
+|---|---|---|---|
+| 01 | [`01-home.html`](../design/01-home.html) | Lista warsztatów (W:12.1) | US-04a/b, US-06 |
+| 02 | [`02-provider-detail.html`](../design/02-provider-detail.html) | Karta punktu (W:12.2) | US-07 |
+| 03 | [`03-time-slot.html`](../design/03-time-slot.html) | Wybór slotu (W:12.3) | US-08a/b/c |
+| 04 | [`04-booking-confirmed.html`](../design/04-booking-confirmed.html) | Rezerwacja potwierdzona (W:12.4) | US-10 |
+| 05 | [`05-my-bookings.html`](../design/05-my-bookings.html) | Moje rezerwacje (W:12.9) | US-18 |
+| 06 | [`06-booking-detail.html`](../design/06-booking-detail.html) | Szczegół rezerwacji (W:12.10) | US-19 |
+| 07 | [`07-profile.html`](../design/07-profile.html) | Profil + pojazdy (W:12.11) | US-02, US-03 |
+| 08 | [`08-auth-phone.html`](../design/08-auth-phone.html) | Login — telefon (W:12.16 1/3) | US-01 |
+| 09 | [`09-auth-otp.html`](../design/09-auth-otp.html) | Login — OTP (W:12.16 2/3) | US-01 |
+| 10 | [`10-auth-consent.html`](../design/10-auth-consent.html) | Zgody RODO (W:12.16 3/3) | US-45 |
+| 11 | [`11-map.html`](../design/11-map.html) | Widok mapy (W:12.13) | US-05 |
+| 12 | [`12-rate-visit.html`](../design/12-rate-visit.html) | Ocena wizyty (W:12.12) | US-16 |
+| 13 | [`13-reviews.html`](../design/13-reviews.html) | Lista opinii (W:12.17) | US-17 |
+| 14 | [`14-profil-setup.html`](../design/14-profil-setup.html) | Onboarding post-OTP 1/2 — profil | US-02 |
+| 15 | [`15-dodaj-pojazd.html`](../design/15-dodaj-pojazd.html) | Onboarding post-OTP 2/2 — pojazd (3 metody: marka+model+rok / wymiar / skan OCR-soon) | US-03 |
+| 16 | [`16-empty-waitlist.html`](../design/16-empty-waitlist.html) | Empty: brak warsztatów w mieście → waitlist | US-40 |
+| 17 | [`17-home-brak-pojazdu.html`](../design/17-home-brak-pojazdu.html) | Empty: brak pojazdu → widełki cen + CTA | US-40 |
+| 18 | [`18-home-brak-dostepnosci.html`](../design/18-home-brak-dostepnosci.html) | Empty: wszyscy zajęci 7+ dni → baner | US-40 |
+| 19 | [`19-offline-state.html`](../design/19-offline-state.html) | Offline — lista z cache, booking zablokowane | polish |
+| 20 | [`20-pwa-install.html`](../design/20-pwa-install.html) | PWA install prompt (iOS tutorial + Android native) | polish |
+| 21 | [`21-error-boundary.html`](../design/21-error-boundary.html) | Crash UI — React ErrorBoundary + Sentry | polish |
+
+*(numer 14-payment.html usunięty per ADR-004; slot wykorzystany ponownie dla profil-setup)*
+
+**B. Panel B2B — `panel.opony.app` (Next.js)** · 14 ekranów, desktop 1440×900:
+
+| # | Plik | Ekran | Ref |
+|---|---|---|---|
+| 01 | [`b2b-01-dashboard.html`](../design/b2b-01-dashboard.html) | Pulpit dnia (KPI + bookings + PENDING + reviews) | W:12.5 |
+| 02 | [`b2b-02-onboarding-firma.html`](../design/b2b-02-onboarding-firma.html) | Onboarding 1/3: NIP/GUS/IBAN | W:12.15, US-30 |
+| 03 | [`b2b-03-onboarding-zdjecia.html`](../design/b2b-03-onboarding-zdjecia.html) | Onboarding 2/3: galeria | W:12.15 |
+| 04 | [`b2b-04-onboarding-weryfikacja.html`](../design/b2b-04-onboarding-weryfikacja.html) | Onboarding 3/3: PENDING_APPROVAL | W:12.15, US-31 |
+| 05 | [`b2b-05-cennik.html`](../design/b2b-05-cennik.html) | Cennik (3 tiery + preview) | W:12.7, US-33 |
+| 06 | [`b2b-06-godziny.html`](../design/b2b-06-godziny.html) | Godziny otwarcia (slot per dzień) | W:12.7, US-32 |
+| 07 | [`b2b-07-strefa.html`](../design/b2b-07-strefa.html) | Strefa dojazdu (mapa + radius) | W:12.7, US-34 |
+| 08 | [`b2b-08-szczegol-rezerwacji.html`](../design/b2b-08-szczegol-rezerwacji.html) | Szczegół rezerwacji | W:12.6 |
+| 09 | [`b2b-09-kalendarz.html`](../design/b2b-09-kalendarz.html) | Kalendarz tygodniowy | US-27 |
+| 10 | [`b2b-10-opinie.html`](../design/b2b-10-opinie.html) | Opinie — moderacja + odpowiedzi | US-17 (provider side), US-48 |
+| 11 | [`b2b-11-profil.html`](../design/b2b-11-profil.html) | Profil warsztatu (edycja + live preview) | US-12, US-13 |
+| 12 | [`b2b-12-login.html`](../design/b2b-12-login.html) | Logowanie SMS OTP (split hero) | US-46 (provider) |
+| 13 | [`b2b-13-rezerwacje.html`](../design/b2b-13-rezerwacje.html) | Lista rezerwacji (filtry + bulk actions + CSV) | US-20, US-21 |
+| 14 | [`b2b-14-ustawienia.html`](../design/b2b-14-ustawienia.html) | Ustawienia konta (telefon, notyfikacje, pauza, sesje, RODO, danger) | US-46, US-47 |
+
+**C. Landing — `opony.app` (Next.js Static Export)** · 3 ekrany, desktop 1440×900 + responsive:
+
+| # | Plik | Ekran | Ref |
+|---|---|---|---|
+| 01 | [`landing-01-home.html`](../design/landing-01-home.html) | Landing główna (hero + how-it-works + provider CTA + cities waitlist + FAQ) | SEO main |
+| 02 | [`landing-02-profil-publiczny.html`](../design/landing-02-profil-publiczny.html) | Publiczny profil warsztatu `/p/<slug>` (SSR + OG + share) | US-42 |
+| 03 | [`landing-03-miasto.html`](../design/landing-03-miasto.html) | Miasto `/nowy-sacz` — lista warsztatów dla SEO long-tail | SEO city |
+
+**Reguła architekturalna (zapisana 2026-04-22):** landing i panel **nie mają booking flow** — żadnych kalendarzy, slot-pickerów, formularzy rezerwacji w przeglądarce. Wszystkie rezerwacje odbywają się wyłącznie w `app.opony.app` (Expo RNW). Landing zawiera CTA „Otwórz w aplikacji" (Universal Links + QR code dla desktop), panel B2B ma jedynie „Rezerwacja ręczna" (b2b-13) dla wizyt zgłaszanych telefonicznie — to jedyny wyjątek.
 
 ---
 
@@ -1083,38 +1104,17 @@ Format: **[ID] Jako X chcę Y aby Z** → Kryteria akceptacji → Priorytet (MoS
 - KA: Link „Pobierz CSV" — v0: email z linkiem wysyłany przez admina na żądanie; v1: direct download.
 - SHOULD · 3 SP
 
-### 15.7a. Epic: Płatności online
+### 15.7a. ~~Epic: Płatności online~~ — USUNIĘTE w POC v0 (ADR-004)
 
-**[US-50]** Jako klient chcę zapłacić online (BLIK/kartą) przy rezerwacji aby mieć gwarancję terminu.
-- KA: Płatność pełnej kwoty w momencie rezerwacji (ekran finalizacji US-08c → redirect do Przelewy24).
-- KA: Metody: BLIK (primary), karta (Visa/MC), przelew ekspresowy.
-- KA: Przelewy24 hosted payment page (redirect → success → powrót do app → US-10 ekran potwierdzenia).
-- KA: Timeout płatności: 15 min (BLIK: 120 s). Po timeout → booking auto-cancelled, slot zwolniony.
-- KA: W przypadku błędu → komunikat + retry.
-- KA: Pieniądze trafiają na subkonto platformy (escrow / P24 marketplace split).
-- MUST · 5 SP
+User stories **US-50, US-51, US-52, US-53** usunięte z zakresu v0. Aplikacja darmowa w pilocie:
+- Klient nie płaci online, płaci providerowi po wizycie offline (gotówka/przelew).
+- Platforma nie rozlicza prowizji (0% w pilocie).
+- Brak refundu — anulowanie do 2h przed wizytą = zero kosztów dla klienta.
+- Brak panelu „Finanse" dla providera.
 
-**[US-51]** Jako platforma chcę automatycznie rozliczać prowizję i wypłacać providerowi po realizacji.
-- KA: Po `Booking.status = COMPLETED` → settlement: kwota − 8% prowizji → do wypłaty providerowi.
-- KA: Cykl wypłat: **tygodniowy** (każdy poniedziałek za poprzedni tydzień) — batch payout na konto bankowe providera.
-- KA: Provider widzi w panelu B2B sekcję „Finanse": saldo pending, historia wypłat.
-- KA: Platforma generuje miesięczne podsumowanie prowizji (faktura wewnętrzna) per provider.
-- MUST · 3 SP
+**Wróci w v0.5** po pilocie, na bazie wyników walidacji (decyzja P24 marketplace split vs miesięczne fakturowanie).
 
-**[US-52]** Jako klient chcę automatyczny refund przy anulowaniu aby nie tracić pieniędzy.
-- KA: Anulowanie przez klienta > 2h przed → **pełny refund** automatycznie (P24 refund API).
-- KA: Anulowanie przez klienta < 2h → **brak refundu**; provider otrzymuje kwotę − prowizja.
-- KA: Anulowanie przez providera (dowolny czas) → **pełny refund** klientowi automatycznie.
-- KA: NO_SHOW → **brak refundu**; provider otrzymuje kwotę − prowizja.
-- KA: Refund w ciągu 1–3 dni roboczych (zależne od banku klienta).
-- KA: Status refundu widoczny w szczegółach rezerwacji.
-- MUST · 3 SP
-
-**[US-53]** Jako provider chcę widzieć saldo i historię wypłat aby kontrolować finanse.
-- KA: W panelu B2B sekcja „Finanse": saldo (pending), data następnej wypłaty, historia.
-- KA: Każda wypłata: data, kwota, lista rezerwacji z rozbiciem (cena klienta, prowizja, netto).
-- KA: Export PDF (v0: email z podsumowaniem; v1: direct download).
-- SHOULD · 3 SP
+Oszczędność: **−11 SP MUST** (+3 SP SHOULD) w Sprint 3 + Sprint 5.
 
 ### 15.7b. Epic: Systemowe
 
@@ -1127,15 +1127,12 @@ Format: **[ID] Jako X chcę Y aby Z** → Kryteria akceptacji → Priorytet (MoS
 - KA: Cron 1h: przeliczenie `avgRating` i `reviewCount`.
 - MUST · 2 SP
 
-**[US-54]** Jako system chcę anulować nieopłacone rezerwacje po 15 min aby nie blokować slotów.
-- KA: Cron co 1 min: `Payment.status = INITIATED` + `createdAt < NOW()-15min` → Payment = FAILED, Booking = CANCELLED_BY_CLIENT, slot zwolniony.
+**[US-54]** Jako system chcę anulować PENDING rezerwacje po 2h bez akceptacji providera aby nie blokować slotów.
+- KA: Cron `bookingExpiryCron` co 10 min: `Booking.status = PENDING` + `createdAt < NOW()-2h` → Booking = CANCELLED_BY_SYSTEM, SMS do klienta („Provider nie odpowiedział — wybierz inny"), slot zwolniony.
+- KA: Dla providera: `pendingNoAnswerCount++` (do statystyk jakości — jeśli > 5 w miesiącu → email ostrzegawczy).
 - MUST · 1 SP
 
-**[US-55]** Jako system chcę realizować tygodniowe wypłaty providerom aby automatyzować rozliczenia.
-- KA: Cron w poniedziałek 6:00: zbierz wszystkie `Payment.payoutStatus = PENDING` + `Booking.status = COMPLETED` → batch payout via P24 API / przelew bankowy.
-- KA: Ustaw `Payment.payoutStatus = PAID`, `paidOutAt = NOW()`.
-- KA: Email do providera z podsumowaniem wypłaty.
-- MUST · 2 SP
+**[US-55]** ~~Tygodniowe wypłaty providerom~~ — USUNIĘTE w POC v0 (ADR-004, aplikacja darmowa, brak rozliczeń). Wróci w v0.5.
 
 ### 15.8. Podsumowanie zakresu MVP v0
 
@@ -1147,11 +1144,11 @@ Format: **[ID] Jako X chcę Y aby Z** → Kryteria akceptacji → Priorytet (MoS
 | Oceny | 4 | 3 | 11 |
 | Onboarding | 5 | 5 | 18 |
 | Panel B2B | 15 | 8 | 29 |
-| Płatności online | 4 | 3 | 11 |
-| Systemowe | 4 | 4 | 7 |
-| **RAZEM** | **58** | **43** | **138 SP (MUST)** |
+| ~~Płatności online~~ | ~~4~~ **0** | ~~3~~ **0** | ~~11~~ **0** (ADR-004) |
+| Systemowe | 4 | 3 | 5 (−2 SP po US-55) |
+| **RAZEM v0** | **54** | **39** | **125 SP (MUST)** |
 
-Przy zespole 4 os. i velocity ~20 SP/tydzień → **~7 tygodni** na MUST. Mieści się w oknie 6–8 tyg. Opcje dalszej optymalizacji:
+Przy zespole 4 os. i velocity ~20 SP/tydzień → **~5–6 tygodni** na MUST (było 7 tyg przed ADR-004). Mieści się w oknie 5–7 tyg. Oszczędność ~13 SP z usunięcia Płatności + 2 SP z US-55 = **−15 SP**. Opcje dalszej optymalizacji:
 - powiększyć zespół do 4 os. (7 → 8,1 tyg. schodzi do ~6 tyg.),
 - wydłużyć okno MVP v0 do 9 tygodni,
 - zdegradować część MUST do SHOULD (kandydaci: US-35 statystyki providera, US-27 kalendarz tygodniowy — ale są już SHOULD; realniej — odłożyć US-46 eksport RODO, zostawić tylko „usuń konto").
@@ -1166,7 +1163,7 @@ Spisane, żeby uciąć dyskusję „a może jeszcze to" na etapie developmentu:
 |---|---|---|
 | Rezerwacja „dla kogoś innego" (pojazd znajomego) | Komplikuje model danych (czyj to pojazd?) i UX | v1+ |
 | Rezerwacja gościnna (bez konta) | Zwiększa no-show, trudniej prowadzić SMS-y potwierdzające | v1+ |
-| ~~Płatność online~~ | ~~Przeniesione do MUST v0 — patrz epic 15.7a Płatności~~ | **v0** ✅ |
+| Płatność online | POC v0 bez płatności — aplikacja darmowa w pilocie (ADR-004). Klient płaci offline providerowi po wizycie. Decyzję P24 marketplace vs invoicing odkładamy na podstawie danych z pilota | v0.5 |
 | Grupowanie usług (wymiana + wyważanie w jednym slocie) | Wymaga macierzy cennika i logiki czasu trwania per usługa | v1 |
 | Zmiana adresu po potwierdzeniu | Provider już rozplanował trasę; w v0 klient anuluje + rezerwuje | v1+ |
 | Przełożenie na innego providera | Każdy provider ma własny kalendarz; w v0 anuluj + nowa rezerwacja | v2+ |
@@ -1196,8 +1193,8 @@ Plan ewolucji po walidacji MVP v0 w Nowym Sączu (kryteria w sekcji 11.5).
 
 | Obszar | MVP v0 (Nowy Sącz) | MVP v1 | Ryzyko migracji |
 |---|---|---|---|
-| Klient | PWA (Next.js) | + RN/Expo apki iOS/Android | Niskie — to osobna apka, PWA nadal działa |
-| B2B | Web (Next.js) | + RN/Expo apka mobile | Niskie — web nadal główny, apka to dodatek |
+| Klient | Expo + RNW (mobile + web) — codebase gotowy, web export na `app.opony.app` | Natywne apki iOS/Android publikowane do App Store / Google Play z tego samego codebase'u (EAS build) | Niskie — ten sam kod, zmienia się tylko target buildu |
+| Provider features | Panel web (`panel.opony.app`) — ciężki admin only | + feature'y providera w mobile Expo apce (dashboard dnia, accept PENDING, GPS tracking) — ekrany za guard `role=PROVIDER` w istniejącej apce | Niskie — panel web nadal jedyne miejsce na ciężki admin, mobile dodaje daily ops |
 | Typ providerów | Tylko MOBILE | + STATIONARY | Średnie — nowe przepływy UX |
 | Zasięg | 1 miasto (Nowy Sącz) | 3–4 miasta (Tarnów, Rzeszów, Kraków) | Średnie — replikacja GTM playbooka |
 | Strefa obsługi | Promień km | Polygon (PostGIS) | Średnie — migracja danych |
@@ -1211,10 +1208,15 @@ Plan ewolucji po walidacji MVP v0 w Nowym Sączu (kryteria w sekcji 11.5).
 
 ### 19.2. Kolejność (fazowanie v1)
 
-**Faza 1 — „mobile-ready" (2 mc po walidacji v0):**
+**Faza 0.5 — „provider in van" (1 mc po walidacji v0, opcjonalne):**
+- **Feature'y providera w mobile Expo apce** — dashboard dnia (W:12.5), accept PENDING, szczegół rezerwacji z nawigacją. Ekrany za guard `role=PROVIDER && status=APPROVED`.
+- **Expo Push Notifications** — dla PENDING rezerwacji (zamiast SMS).
+- **Uruchomienie natywnych buildów** — EAS build → TestFlight (iOS) + internal track (Google Play) dla pilota providerów.
+
+**Faza 1 — „store release" (2 mc po walidacji v0):**
 - **SMSAPI.pl** — migracja z Twilio (1 dzień, −60% koszt SMS).
-- **RN apki klienta** (priorytet: lepsze UX map + push → mniej no-show).
-- **Push notifications** (zastąpienie części SMS → dalsze oszczędności).
+- **Publishing apek** — App Store + Google Play (ten sam codebase Expo). Review Apple 1–2 dni, Google kilka godzin.
+- **Push dla klientów** — przypomnienia wizyt, statusy rezerwacji (zastąpienie części SMS → dalsze oszczędności).
 - **Płatności online BLIK** (depozyt 20 zł antyno-show) — Przelewy24 primary, Stripe fallback.
 
 **Faza 2 — „expand types" (1 mc):**
@@ -1306,11 +1308,49 @@ Katowice / Wrocław / Poznań (faza skalowania, rok 2–3)
 - Warsztaty stacjonarne + mobilne działają równocześnie.
 - \> 60 aktywnych providerów (łącznie 3 miasta).
 - \> 2 000 rezerwacji/mc w szczycie (łącznie).
-- RN apki na App Store + Google Play (rating > 4.3).
+- Mobile apka (Expo) na App Store + Google Play (rating > 4.3).
 - Płatności online > 40% rezerwacji.
 - SMSAPI.pl jako primary SMS provider.
 - Powtarzalny playbook replikacji (19.7) przetestowany na 2 miastach.
 - MRR z abonamentów providerów > 5k PLN.
+
+### 19.9. Decyzje auth & role (v0)
+
+**Auth providera = SMS OTP (jak klient), bez hasła.** Usunięte pole „Hasło" w wireframe 12.15 krok 1.
+
+Powody:
+- Spójność z auth klienta — jeden przepływ, mniej kodu.
+- Brak password reset flow (40+ SP oszczędności).
+- Bezpieczniej — hasła nie są hash'owane u nas, tokeny OTP wygasają w 5 min.
+- Panel web obsługuje SMS OTP — provider na desktopie dostaje kod na telefon i go przepisuje (standard pattern dla adminów B2B w Polsce: mBank Business, inFakt, itp.).
+
+**Jeden numer telefonu = jedna rola w v0.**
+- User rejestruje się jako klient → `role=CLIENT` na zawsze w v0.
+- User rejestruje się jako provider (przez `panel.opony.app/signup`) → `role=PROVIDER`.
+- Jeśli pracownik warsztatu chce mieć też konto klienta → drugi numer (np. służbowy vs prywatny).
+- **v1+:** tabela `UserRoleBinding[]` — jeden `User` → wiele ról, switcher roli w apce.
+
+**JWT claims (v0):**
+```json
+{
+  "sub": "user_abc123",
+  "phone": "+48501234789",
+  "role": "PROVIDER",
+  "status": "APPROVED",  // tylko dla PROVIDER
+  "providerId": "prov_xyz",  // tylko dla PROVIDER
+  "iat": 1729500000,
+  "exp": 1729500900  // 15 min
+}
+```
+
+**Guardy endpointów:**
+- `@RequireRole('CLIENT')` — endpointy klienckie (booking, review)
+- `@RequireRole('PROVIDER')` + `@RequireProviderStatus('APPROVED')` — endpointy provider-panel
+- `@RequireAdmin()` — Retool endpoints
+
+**403 responses:**
+- `role=CLIENT` próbuje provider endpoint → `403 { detail: "Ten endpoint jest tylko dla providerów. Zarejestruj warsztat na panel.opony.app." }`
+- `role=PROVIDER`, `status=PENDING_APPROVAL` → `403 { detail: "Konto w weryfikacji", providerStatus: "PENDING_APPROVAL" }` (FE pokazuje blokadę)
 
 ---
 
@@ -1322,9 +1362,11 @@ Zespół 4 agentów AI pracujących równolegle. Velocity ~20 SP/tydzień. 139 S
 
 **Stack i narzędzia:**
 - Backend: NestJS, Prisma ORM, PostgreSQL, class-validator + Zod dla walidacji DTO
-- Frontend: Next.js 14+ (App Router), React Context (stan auth), React Hook Form + Zod (formularze), MSW (mocki API)
+- Frontend mobile (`apps/mobile`): **Expo SDK 50+ + React Native Web**, expo-router (file-based routing), Zustand (stan auth) + React Hook Form + Zod (formularze), MSW (mocki API)
+- Frontend panel (`apps/panel`): **Next.js 14+ (App Router) desktop-first**, React Context (stan auth), React Hook Form + Zod, MSW
+- Frontend landing (`apps/landing`): Next.js 14+ (Static Export), SEO-first
 - Wspólne: TypeScript strict, ESLint, Prettier, pnpm workspaces, Turborepo
-- Testy BE: Jest + supertest. Testy FE: Vitest + Testing Library. E2E: Playwright.
+- Testy BE: Jest + supertest. Testy FE: Vitest + Testing Library. E2E: Playwright (web) + Detox lub Maestro (mobile E2E — v0.5+).
 
 **Konwencje API (BE agenty):**
 - Wszystkie endpointy pod prefixem `/v1` (np. `POST /v1/auth/otp/request`)
@@ -1442,7 +1484,13 @@ DoD: `pnpm storybook` → 10 komponentów widocznych. Każdy responsywny, access
 
 ---
 
-### Sprint 1 (tydzień 1) — Auth + Profil + Rejestracja providera
+> **Reorder per ADR-009 (2026-04-22):** Sprint 1-6 ułożone w fazach A+B. **Faza A (Sprint 1-3)** — provider portal LIVE przed klientem. **Faza B (Sprint 4-6)** — klient z realnymi danymi 8 pilotów. Szczegóły rationale → [architektura.md ADR-009](architektura.md#adr-009-b2b-first-implementation-sequencing-2026-04-22).
+
+---
+
+## FAZA A — B2B-FIRST (Sprint 1-3)
+
+### Sprint 1 (tydzień 1) — Provider auth + onboarding wizard + Retool admin
 
 **Agent BE-1a — Schema + Seed + Shared types** — **SCHEMA OWNER (cały Sprint 1)** `(0,5 dnia)`
 
@@ -1464,98 +1512,84 @@ Output:
 Referencje: S:13.1 (ALL tables), S:13.5 (constraints).
 DoD: `npx prisma migrate deploy` → 14 tabel w DB. `pnpm seed` → dane testowe. Shared-types eksportowalne. **Commit + push jako PIERWSZY (inni agenty rebase'ują).**
 
-**Agent BE-1b — Auth logic + User + Vehicle** `(US-01, US-45, US-02, US-03)` — starts after BE-1a
+**Agent BE-1b — Shared auth (SMS OTP) + Provider onboarding + GUS** `(US-46 provider, US-30 provider, US-31)` — starts after BE-1a
 
 Prompt:
-> Na gotowym schemacie Prisma (z BE-1a) zbuduj moduł autentykacji SMS OTP w NestJS. NIE twórz migracji — schemat istnieje.
+> Na gotowym schemacie Prisma (z BE-1a) zbuduj moduł autentykacji SMS OTP **w wariancie shared** (ten sam flow dla CLIENT i PROVIDER_OWNER — sprawdzany po `User.role` z JWT). NIE twórz migracji — schemat istnieje.
 >
-> Endpointy: POST /v1/auth/otp/request, /verify, /refresh, /logout (A:14.2). Profil: GET/PATCH /v1/me, CRUD /v1/me/vehicles (A:14.3). JWT: access 15 min + refresh 30 dni (Passport JWT strategy). Rate limit OTP: 3/15min/phone (NestJS Throttler). Twilio SDK — SMS z 6-cyfrowym kodem (bcrypt hash w OtpToken). ConsentLog check: jeśli nowy user bez zgód → `requiresConsent: true` w auth response. POST /v1/me/consent — zapisz zgody.
+> Endpointy: POST /v1/auth/otp/request, /verify, /refresh, /logout (A:14.2). JWT: access 15 min + refresh 30 dni (Passport JWT strategy). Rate limit OTP: 3/15min/phone (NestJS Throttler). Twilio SDK — SMS z 6-cyfrowym kodem (bcrypt hash w OtpToken). ConsentLog check: jeśli nowy user bez zgód → `requiresConsent: true` w auth response.
 >
-> Guardy: `@RequireRole(...roles)`, `@Public()` (skip auth). Walidacja DTO: class-validator. Dodaj nowe zmienne do `.env.example`: JWT_SECRET, TWILIO_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE.
+> **Provider onboarding (głowny scope tego sprintu):** POST /v1/provider/signup (tworzy User PROVIDER_OWNER + Provider PENDING_NIP + wysyła OTP na numer providera), POST /v1/provider/me/verify-nip (call GUS BIR API → walidacja NIP + PKD 45.20.Z; fallback CEIDG dla JDG — patrz architektura.md §18.1), GET/PATCH /v1/provider/me (A:14.6, A:14.7), GET/POST/DELETE /v1/provider/me/photos (z S3 presigned URL dla onboarding step 2). Status flow: PENDING_NIP → PENDING_DOCS → PENDING_APPROVAL → APPROVED (waliduj przejścia). Guard `@RequireProviderOwner()` — sprawdza role + providerId z JWT.
+>
+> Client-side endpointy (GET/PATCH /v1/me, /v1/me/vehicles, /v1/me/consent) — **pominięte w tym sprincie, wracają w Sprint 4**. Jedyne ich śledzenie: `@RequireRole('CLIENT')` guard dekorator przygotowany do użycia.
+>
+> Dodaj zmienne do `.env.example`: JWT_SECRET, TWILIO_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE, AWS_S3_BUCKET, AWS_ACCESS_KEY, AWS_SECRET_KEY, AWS_REGION, GUS_API_KEY.
 
 Output:
 ```
-/apps/api/src/auth/     — module, controller, service, jwt.strategy, otp.strategy, guards, decorators
-/apps/api/src/user/     — module, controller, service
-/apps/api/src/vehicle/  — module, controller, service
-/apps/api/src/sms/      — TwilioSmsService (implements SmsService interface)
-```
-
-Referencje: S:13.1 (User, Vehicle, OtpToken, ConsentLog), A:14.2, A:14.3, architektura.md 18.2 (SMS), US-01, US-45, US-02, US-03.
-DEPENDS ON: BE-1a (schemat musi istnieć).
-DoD: Swagger `/v1/docs`, pełny OTP flow (request → verify → JWT → refresh → logout), CRUD vehicles z walidacją, consent flow. Testy ≥ 5.
-
-**Agent BE-2 — Provider onboarding + GUS** `(US-43, US-18)` — **STARTS AFTER BE-1 MIGRATIONS**
-
-Prompt:
-> Zbuduj moduł onboarding providera w NestJS. WAŻNE: schemat Prisma już istnieje (stworzony przez BE-1) — NIE twórz migracji, tylko buduj logikę biznesową na istniejących tabelach.
->
-> Endpointy: POST /v1/provider/signup (tworzy User PROVIDER_OWNER + Provider PENDING_NIP), POST /v1/provider/me/verify-nip (call GUS BIR API → walidacja NIP + PKD 45.20.Z; fallback CEIDG dla JDG — patrz architektura.md sekcja 18.1), GET/PATCH /v1/provider/me (A:14.6, A:14.7). Przy signup: utwórz User z `role=PROVIDER_OWNER` + Provider z `PENDING_NIP`. Nie ma hasła. Email służy do komunikacji (Resend), nie do auth. Guard `@RequireProviderOwner()` — sprawdź role + providerId z JWT. Status flow: PENDING_NIP → PENDING_DOCS → PENDING_APPROVAL → APPROVED (waliduj przejścia).
->
-> Provider loguje się tym samym SMS OTP co klient. Przy rejestracji (POST /v1/provider/signup) utwórz User z `role=PROVIDER_OWNER` + Provider z `PENDING_NIP`. Nie ma hasła. Email służy do komunikacji (Resend), nie do auth.
-
-Output:
-```
-/apps/api/src/provider/       — module, controller, service
+/apps/api/src/auth/           — module, controller, service, jwt.strategy, otp.strategy, guards
+/apps/api/src/sms/            — TwilioSmsService
+/apps/api/src/provider/       — signup, GUS lookup, profil CRUD
 /apps/api/src/provider/gus/   — GUS BIR + CEIDG service (z mockiem do testów)
-/apps/api/src/email/          — Resend service (notifications)
+/apps/api/src/upload/         — S3 UploadService (presigned URLs) — REUŻYWALNY przez Sprint 2
+/apps/api/src/email/          — Resend service (provider notifications)
 ```
 
-Referencje: S:13.1 (Provider + related), A:14.6, A:14.7, architektura.md 18.1, US-43, US-18.
-DEPENDS ON: BE-1 (migracje muszą istnieć).
-DoD: Provider signup → NIP verify (mock GUS) → status flow. Auth przez wspólny OTP (brak hasła). Testy ≥ 3.
+Referencje: S:13.1 (User, Provider, OtpToken, ConsentLog), A:14.2, A:14.6, A:14.7, architektura.md §18.1 + §18.2, US-46 provider, US-30, US-31. ADR-009.
+DEPENDS ON: BE-1a.
+DoD: OTP flow działa dla obu role; provider signup → NIP verify (mock GUS) → upload 3 zdjęć S3 → status PENDING_APPROVAL. Admin może approve z DB/Retool → APPROVED. Testy ≥ 5.
 
-**Agent FE-1 — Klient: OTP + Regulamin + Profil + Pojazdy** `(US-01, US-45, US-02, US-03)`
+**Agent FE-panel-1 — Provider login + onboarding wizard (3 kroki)** `(US-46 provider, US-30, US-31)` — **startuje z MSW**
 
 Prompt:
-> Zbuduj flow logowania klienta w Next.js PWA. **Startuj od dnia 1 z MSW mockami** (handlers z Sprint 0) — integracja z realnym API gdy BE-1 skończy.
+> Zbuduj pełny flow provider-facing w Next.js App Router `apps/panel` (hosted `panel.opony.app`, desktop-first). **Dzień 1–2 z MSW mockami** (handlers: /v1/auth/*, /v1/provider/signup, /v1/provider/me/verify-nip, /v1/provider/me, /v1/provider/me/photos).
 >
-> 4 ekrany: (1) Login — numer telefonu (W:12.16 ekran 1), (2) OTP — 6-cyfrowy kod, countdown 60s, 3 próby (W:12.16 ekran 2), (3) Zgody RODO — only first-time, 2 obowiązkowe + 1 opcjonalna (W:12.16 ekran 3), (4) Profil — imię, nazwisko, email, adres domowy z geocoding (W:12.11 górna część). CRUD pojazdów (W:12.11 sekcja „Moje pojazdy") — lista, dodaj (React Hook Form + Zod: regex `^\d{3}/\d{2}\s?R\d{2}$`), edytuj, usuń.
+> **Ekrany (pixel-match z `/design`):**
+> 1. Login SMS OTP → [`b2b-12-login.html`](../design/b2b-12-login.html) — split hero (phone input + social proof), flow: phone → OTP → redirect (APPROVED → /dashboard, PENDING_APPROVAL → /onboarding/weryfikacja, brak → /signup).
+> 2. Onboarding step 1: firma → [`b2b-02-onboarding-firma.html`](../design/b2b-02-onboarding-firma.html) — NIP mask input + auto-fill z GUS, telefon, email, IBAN, zgody RODO/marketing. CTA „Dalej → Zdjęcia".
+> 3. Onboarding step 2: galeria → [`b2b-03-onboarding-zdjecia.html`](../design/b2b-03-onboarding-zdjecia.html) — drag-and-drop `react-dropzone`, 3 required tiles + up to 10 additional, S3 presigned PUT z progress, thumbnails preview. CTA „Dalej → Weryfikacja".
+> 4. Onboarding step 3: PENDING → [`b2b-04-onboarding-weryfikacja.html`](../design/b2b-04-onboarding-weryfikacja.html) — animowany hourglass, timeline, recap, „Dostaniesz SMS + email gdy konto będzie aktywne".
 >
-> Użyj komponentów z `@opony/design-system` (Button, Input, BottomTabBar, Card, Toast). Auth state: React Context `AuthProvider` z JWT w httpOnly cookie. API calls przez typed client z `@opony/api-client`.
+> Auth state: React Context + JWT w `httpOnly` cookie (Next middleware). API calls przez typed client z `@opony/api-client`. Użyj `@opony/design-system-web` (Button, Input, Card, FileDropzone, StatusBadge).
 
 Output:
 ```
-/apps/client/app/(auth)/login/page.tsx
-/apps/client/app/(auth)/otp/page.tsx
-/apps/client/app/(auth)/consent/page.tsx
-/apps/client/app/(main)/profile/page.tsx
-/apps/client/app/(main)/profile/vehicles/page.tsx
-/apps/client/lib/auth-context.tsx
-/apps/client/mocks/ — MSW handlers (rozszerzenie)
+/apps/panel/app/(auth)/login/page.tsx            — b2b-12 impl
+/apps/panel/app/(onboarding)/signup/page.tsx     — b2b-02 impl
+/apps/panel/app/(onboarding)/photos/page.tsx     — b2b-03 impl
+/apps/panel/app/(onboarding)/pending/page.tsx    — b2b-04 impl
+/apps/panel/app/(onboarding)/layout.tsx          — progress bar
+/apps/panel/components/NipAutoFill.tsx
+/apps/panel/components/PhotoDropzone.tsx
+/apps/panel/mocks/handlers/provider-auth.ts
 ```
 
-Referencje: W:12.16, W:12.11, US-01, US-45, US-02, US-03, `@opony/design-system`.
-DoD: Flow login → OTP → consent → profil (z MSW, potem z real API). Pojazdy CRUD. Responsive mobile-first. Zod walidacja.
+Referencje: `design/b2b-12-login.html`, `b2b-02-onboarding-firma.html`, `b2b-03-onboarding-zdjecia.html`, `b2b-04-onboarding-weryfikacja.html`, US-46 (provider), US-30, US-31, `@opony/design-system-web`.
+DoD: Signup → NIP auto-fill (MSW → real) → upload 3 zdjęć → pending screen. Login OTP działa. Pixel-match z mockupami. Zod walidacja NIP + IBAN.
 
-**Agent FE-2 — B2B: Onboarding wizard krok 1** `(US-43, US-18)`
+**Agent Retool-1 — Admin approve queue** `(admin ops)` — HUMAN TASK (orkiestrator)
 
-Prompt:
-> Zbuduj krok 1/3 wizardu rejestracji providera w Next.js (provider panel). **Startuj z MSW mockami**.
+Prompt (do orkiestratora, nie do agenta AI):
+> Skonfiguruj Retool Cloud zgodnie z architektura.md §11 ADR-007 + TASK-013. Połączenie: Postgres (read-only) + REST API (write actions z admin JWT).
 >
-> Ekran W:12.15 krok 1: checkboxy regulamin/RODO/marketing (React Hook Form, Zod — 2 required), pole NIP (10 cyfr, mask input) z auto-fill z GUS (call `/v1/provider/me/verify-nip` → wypełnij nazwę, adres), pola: telefon, email, IBAN (walidacja PL format). Brak pola hasła — auth przez SMS OTP. Progress bar ● ○ ○. CTA „Dalej → Zdjęcia" disabled bez required fields.
+> **Pierwsza tabela Retool:** Provider approval queue.
+> - Query: `SELECT p.id, p.companyName, p.nip, p.status, p.createdAt, u.phone, u.email FROM Provider p JOIN User u ON p.userId = u.id WHERE p.status = 'PENDING_APPROVAL' ORDER BY p.createdAt ASC`
+> - Kolumny: ID, Nazwa, NIP, Telefon, Email, Zgłoszono (relatywny timestamp), Status
+> - Akcje per wiersz: [✓ Approve] → POST /v1/admin/providers/:id/approve (trigger SMS + email „konto aktywne") | [✗ Reject] → modal z polem „Powód" → POST /v1/admin/providers/:id/reject | [Szczegóły] → drawer z pełnymi danymi + zdjęciami z S3.
 >
-> Użyj `@opony/design-system` (Button, Input, Card). `@opony/api-client` dla API calls.
+> **BE endpoints wymagane (dodaj do scope BE-1b jeśli brak):** POST /v1/admin/providers/:id/approve, POST /v1/admin/providers/:id/reject (body: reason). Auth przez admin JWT z osobnej rolą ADMIN (seed w BE-1a seed.ts — 1 user z role=ADMIN).
 
-Output:
-```
-/apps/provider/app/(onboarding)/signup/page.tsx
-/apps/provider/app/(onboarding)/layout.tsx  — progress bar
-/apps/provider/components/NipAutoFill.tsx
-/apps/provider/mocks/ — MSW handlers
-```
-
-Referencje: W:12.15 krok 1, US-43, US-18, `@opony/design-system`.
-DoD: Formularz zgodny z wireframe, NIP auto-fill (MSW → real API), walidacje Zod, przejście do kroku 2.
+DoD: Retool queue pokazuje PENDING providerów, approve/reject działa, provider dostaje SMS, status w DB się zmienia. Milestone gating: Sprint 2 nie zaczyna się dopóki Retool approve nie jest testowany end-to-end.
 
 ---
 
 **Checklista integracyjna Sprint 1:**
 - [ ] `pnpm build` — zero errors
-- [ ] OTP login klienta → JWT → GET /v1/me → profil
-- [ ] Provider signup → NIP verify → status PENDING_DOCS
-- [ ] Swagger `/v1/docs` — endpointy auth + provider widoczne
-- [ ] Seed data rozszerzony (klienci + providerzy)
+- [ ] Provider signup → OTP z Twilio (sandbox) → verify-nip (mock GUS) → upload 3 zdjęć S3 → PENDING_APPROVAL w DB
+- [ ] Admin w Retool widzi queue, klika Approve → status APPROVED, provider dostaje SMS „konto aktywne"
+- [ ] Provider login OTP → JWT → redirect na /dashboard (w Sprint 1 placeholder, pełny w Sprint 3)
+- [ ] Swagger `/v1/docs` — endpointy /auth/*, /provider/*, /admin/providers/* widoczne
+- [ ] Seed data: 1 admin + 2 provider PENDING_APPROVAL (do ręcznego testowania approve flow)
 
 ---
 
@@ -1607,65 +1641,59 @@ DoD: Lista i mapa z danymi (MSW, potem real API). Filtry + sort. Geolokalizacja 
 
 ---
 
-### Sprint 3 (tydzień 3) — Rezerwacja + Płatności
+### Sprint 3 (tydzień 3) — Rezerwacja (bez płatności — ADR-004)
 
-**Agent BE-4 — Booking + Payment P24** `(US-08a–c, US-09, US-50, US-10)` — **SCHEMA OWNER**
+**Agent BE-4 — Booking + bookingExpiry** `(US-08a–c, US-09, US-10, US-54)` — **SCHEMA OWNER**
 
 Prompt:
-> Zbuduj moduł rezerwacji + płatności w NestJS. Tabele Booking + Payment (migracja Prisma — jeśli nie istnieją z Sprint 0 seed).
+> Zbuduj moduł rezerwacji w NestJS. Tabela Booking (migracja Prisma — jeśli nie istnieje z Sprint 0 seed). **POC v0 bez płatności — nie tworzymy modułu Payment ani integracji Przelewy24** (ADR-004).
 >
-> POST /v1/bookings — waliduj: slot wolny (`SELECT ... FOR UPDATE` w transakcji Prisma `$transaction`), adres w strefie (haversine ≤ serviceRadiusKm), pojazd należy do klienta (vehicleId z JWT userId), klient nie zbanowany. Utwórz Booking (PENDING) + Payment (INITIATED). Wygeneruj `paymentUrl` z **Przelewy24 REST API v2** (sandbox: `sandbox.przelewy24.pl`, env vars: `P24_MERCHANT_ID`, `P24_API_KEY`, `P24_CRC`). Redirect flow: client → P24 → bank → callback → return URL. Zwróć `{booking, paymentUrl}`. Webhook POST /v1/webhooks/p24 (weryfikacja podpisu CRC) → Payment COMPLETED → wyślij SMS potwierdzenie (Twilio). Nagłówek `Idempotency-Key` → sprawdź w tabeli / Redis.
+> POST /v1/bookings — waliduj: slot wolny (`SELECT ... FOR UPDATE` w transakcji Prisma `$transaction`), adres w strefie (haversine ≤ serviceRadiusKm), pojazd należy do klienta (vehicleId z JWT userId), klient nie zbanowany. Utwórz Booking (PENDING). Zwróć `{booking}`. Nagłówek `Idempotency-Key` → sprawdź w tabeli. **Wyślij SMS do providera** („Nowa rezerwacja od [imię] — akceptuj w ciągu 2h: [link do panelu]") — Twilio.
 >
 > Race condition: unique partial index `(providerId, startAt) WHERE status IN (PENDING, CONFIRMED, IN_PROGRESS)` — catch unique violation → 409 + `GET /v1/providers/:slug/availability` → 3 alternatywne sloty w response.
 >
-> GET /v1/me/bookings?status=upcoming|past|all&page= (lista klienta). GET /v1/bookings/:id (szczegóły + ownership check). GET /v1/bookings/:id/payment (status płatności). POST /v1/bookings/:id/cancel (US-14 prep — logika refundu: >2h → P24 refund API, <2h → brak).
+> GET /v1/me/bookings?status=upcoming|past|all&page= (lista klienta). GET /v1/bookings/:id (szczegóły + ownership check). POST /v1/bookings/:id/cancel (US-14 — w v0 bez refundu, po prostu status=CANCELLED_BY_CLIENT).
 >
-> Kluczowe P24 API calls: `POST /api/v1/transaction/register` (rejestracja), `PUT /api/v1/transaction/verify` (weryfikacja), `POST /api/v1/refund` (zwrot). Sandbox: `sandbox.przelewy24.pl`. Szczegóły: architektura.md sekcja 18.6.
->
-> **WAŻNE: Dodaj cron `paymentTimeout`** — co 1 min: `Payment.status = INITIATED AND createdAt < NOW()-15min` → Payment FAILED, Booking CANCELLED_BY_CLIENT, slot zwolniony. Bez tego nieopłacone rezerwacje blokują sloty permanentnie.
->
-> Mock P24 w testach unit (interceptor HTTP). Dodaj env vars do `.env.example`: P24_MERCHANT_ID, P24_API_KEY, P24_CRC, P24_CALLBACK_URL.
+> **WAŻNE: Dodaj cron `bookingExpiryCron`** — co 10 min: `Booking.status = PENDING AND createdAt < NOW()-2h` → Booking = CANCELLED_BY_SYSTEM, SMS do klienta („Provider nie odpowiedział — wybierz inny"), slot zwolniony. To zastępuje usunięty paymentTimeout (ADR-004).
 
 Output:
 ```
-/apps/api/src/booking/        — module, controller, service, dto
-/apps/api/src/payment/        — module, P24 service, webhook controller
-/apps/api/src/sms/            — Twilio service (send confirmation)
-/apps/api/prisma/migrations/  — Booking, Payment (jeśli jeszcze nie istnieją)
+/apps/api/src/booking/        — module, controller, service, dto, bookingExpiryCron
+/apps/api/src/sms/            — Twilio service (send provider notify + client confirmation)
+/apps/api/prisma/migrations/  — Booking (bez Payment)
 ```
 
-Referencje: S:13.1 (Booking, Payment), A:14.5 (flow + endpointy płatności), architektura.md 18.6 (P24 config), US-08a–c, US-50, US-10.
-DoD: Flow: create → P24 redirect → webhook → SMS. 409 race condition. Testy ≥ 5 (happy path, 409, address out of zone, payment timeout, cancel+refund).
+Referencje: S:13.1 (Booking), A:14.5 (flow rezerwacji), US-08a–c, US-10, US-54 (ADR-004).
+DoD: Flow: create → PENDING → provider SMS → accept/reject/expiry cron. 409 race condition. Testy ≥ 5 (happy path, 409, address out of zone, PENDING expiry, cancel).
 
-**Agent FE-4 — Klient: Booking flow + Payment** `(US-08a–c, US-09, US-50, US-10)` — **startuje z MSW**
+**Agent FE-4 — Klient: Booking flow** `(US-08a–c, US-09, US-10)` — **startuje z MSW**
 
 Prompt:
-> Zbuduj flow rezerwacji klienta. **Dzień 1–2 z MSW mockami** (POST /v1/bookings → return fake paymentUrl → redirect → return with success). **Dzień 3–5 swap na real API.**
+> Zbuduj flow rezerwacji klienta. **Dzień 1–2 z MSW mockami** (POST /v1/bookings → return booking PENDING). **Dzień 3–5 swap na real API.** **Bez płatności online** (ADR-004).
 >
-> 4 ekrany: (1) **Minimal provider view** (W:12.2 — uproszczony: nazwa, cennik, godziny, CTA „Zarezerwuj termin"; pełny profil z recenzjami/carousel zbuduje FE-6a w sprincie 5). (2) Wybór slotu (W:12.3) — kalendarz 7 dni, sloty pogrupowane rano/popołudnie/wieczór, adres z `@googlemaps/places` autouzupełnianiem, pole notatki (React Hook Form, Zod max 500 zn.), step indicator ● ● ○, CTA „💳 Zapłać i zarezerwuj [cena] zł". (3) Payment redirect (W:12.8) — ekran „Przekierowuję do Przelewy24…", obsłuż return URL: `?status=success` → ekran 4; `?status=error` → toast + retry. (4) Potwierdzenie (W:12.4) — kod, data, provider, adres, BLIK ✅, info refund, .ics download.
+> 3 ekrany: (1) **Minimal provider view** (W:12.2 — uproszczony: nazwa, cennik, godziny, CTA „Zarezerwuj termin"; pełny profil z recenzjami/carousel zbuduje FE-6a w sprincie 5). (2) Wybór slotu (W:12.3) — kalendarz 7 dni, sloty pogrupowane rano/popołudnie/wieczór, adres z `@googlemaps/places` autouzupełnianiem, pole notatki (React Hook Form, Zod max 500 zn.), step indicator ● ● ○, CTA „Zarezerwuj termin" (bez kwoty — płatność offline). (3) Potwierdzenie (W:12.4) — kod, data, provider, adres, status PENDING („Oczekuje akceptacji providera"), info o płatności offline („Zapłacisz providerowi po wizycie — gotówka lub przelew"), .ics download.
 >
 > Error handling: 409 → modal „Slot zajęty" + 3 alternatywy (klik = retry). 422 → highlight pola. Toast na 5xx.
 
 Output:
 ```
-/apps/client/app/(main)/provider/[slug]/page.tsx  — MINIMAL view (rozszerzane w sprint 5)
-/apps/client/app/(main)/booking/new/page.tsx
-/apps/client/app/(main)/booking/payment/page.tsx
-/apps/client/app/(main)/booking/confirmed/page.tsx
-/apps/client/components/SlotPicker.tsx
-/apps/client/components/AddressInput.tsx
-/apps/client/components/PaymentStatus.tsx
+/apps/mobile/app/(client)/provider/[slug].tsx       — MINIMAL view
+/apps/mobile/app/(client)/booking/new.tsx
+/apps/mobile/app/(client)/booking/confirmed/[id].tsx
+/apps/mobile/components/SlotPicker.tsx
+/apps/mobile/components/AddressInput.tsx
 /apps/client/components/StepIndicator.tsx
 ```
 
-Referencje: W:12.2 (minimal), W:12.3, W:12.8, W:12.4, US-08a–c, US-09, US-50, US-10, `@opony/design-system`.
-DoD: Kompletny flow z MSW, potem real API. P24 redirect + return. Error states. .ics download.
+Referencje: W:12.2 (minimal), W:12.3, W:12.4, US-08a–c, US-09, US-10, `@opony/design-system-native`.
+DoD: Kompletny flow z MSW, potem real API. Status PENDING po rezerwacji (bez P24). Error states. .ics download.
 
 **Checklista integracyjna Sprint 3:**
-- [ ] Klient: szukaj → provider → slot → zapłać (P24 sandbox) → potwierdzenie + SMS
+- [ ] Klient: szukaj → provider → slot → rezerwuj → potwierdzenie (PENDING) + SMS do providera
 - [ ] Double-booking: 2 okna rezerwują ten sam slot → 1 sukces, 1 × 409 z alternatywami
 - [ ] Adres poza strefą → inline error
 - [ ] `/v1/me/bookings` → lista rezerwacji klienta
+- [ ] `bookingExpiryCron` — rezerwacja PENDING > 2h → CANCELLED_BY_SYSTEM + SMS
 
 ---
 
@@ -1701,7 +1729,7 @@ DoD: Provider auth (SMS OTP → JWT z providerId). CRUD pricing/hours/exceptions
 Prompt:
 > Zbuduj core panelu providera. **Dzień 1–2 z MSW** (napisz handlery: GET /v1/provider/me → mock provider, GET /v1/provider/me/bookings → mock 5 rezerwacji z różnymi statusami).
 >
-> Ekrany: (1) Login SMS OTP (ten sam flow co klient — phone + code, React Hook Form + Zod). Ekran blokady (403 z `providerStatus`). (2) Layout z `@opony/design-system SideMenu`: Dzień, Kalendarz, Cennik, Godziny, Strefa, Opinie 🔴N, Finanse, Ustawienia. (3) Dashboard dnia (W:12.5) — lista chronologiczna z `BookingCard` (imię, adres, dystans, cena, `StatusBadge`, 💳), akcje inline (Akceptuj/Odrzuć/Rozpocznij/Zakończ → call API → optimistic update), obrót brutto/netto, pending payout.
+> Ekrany: (1) Login SMS OTP (ten sam flow co klient — phone + code, React Hook Form + Zod). Ekran blokady (403 z `providerStatus`). (2) Layout z `@opony/design-system-web Sidebar`: Dzień, Kalendarz, Cennik, Godziny, Strefa, Opinie 🔴N, Ustawienia. **Menu „Finanse" ukryte w v0 (ADR-004).** (3) Dashboard dnia (W:12.5) — lista chronologiczna z `BookingCard` (imię, adres, dystans, cena cennikowa — *estymata*, `StatusBadge`), akcje inline (Akceptuj/Odrzuć/Rozpocznij/Zakończ → call API → optimistic update). **Bez wskaźników brutto/netto/pending payout** (ADR-004).
 
 Output:
 ```
@@ -1747,21 +1775,21 @@ DoD: 4 ekrany CRUD z formularzami. Upload zdjęć do S3. Mapa ze strefą. Zod wa
 
 ### Sprint 5 (tydzień 5) — Oceny + Rozliczenia
 
-**Agent BE-6 — Reviews + Settlement + Refund** `(US-16, US-17, US-48, US-51, US-52, US-07)`
+**Agent BE-6 — Reviews + Provider profile** `(US-16, US-17, US-48, US-07)` — **settlement/refund USUNIĘTE w v0 (ADR-004)**
 
 Prompt:
-> Rozbuduj moduły: (1) Review — POST /bookings/:id/review (tylko COMPLETED, max 90 dni, 1000 znaków, filtr wulgaryzmów — lista słów PL), GET /providers/:slug/reviews (paginacja + rozkład %, sortowanie, filtrowanie po gwiazdkach). Pole seenByProvider. (2) Settlement — po Booking COMPLETED: oblicz commissionPln (8%), providerPayoutPln. Cron weeklyPayouts (pon 6:00): zbierz PENDING payouts → batch (v0: zmień status na PAID, wyślij email summary). (3) Refund — POST /bookings/:id/cancel: jeśli client > 2h → P24 refund API → Payment.status REFUNDED. Jeśli < 2h → brak refundu. Jeśli provider cancel → zawsze refund. (4) Rozbuduj GET /providers/:slug — dodaj avgRating, reviewCount, pełny cennik, godziny.
+> Rozbuduj moduły: (1) Review — POST /bookings/:id/review (tylko COMPLETED, max 90 dni, 1000 znaków, filtr wulgaryzmów — lista słów PL), GET /providers/:slug/reviews (paginacja + rozkład %, sortowanie, filtrowanie po gwiazdkach). Pole seenByProvider. (2) Rozbuduj GET /providers/:slug — dodaj avgRating, reviewCount, pełny cennik, godziny.
+>
+> **USUNIĘTE w v0 (ADR-004):** Settlement (brak prowizji bo aplikacja darmowa), Refund (brak płatności → anulowanie = zero kosztów). POST /bookings/:id/cancel w v0 tylko zmienia status, bez logiki refundu. Wróci w v0.5 gdy włączamy monetyzację.
 
 Output:
 ```
 /apps/api/src/review/         — pełny CRUD + filtr wulgaryzmów
-/apps/api/src/settlement/     — cron service + payout logic
-/apps/api/src/payment/        — refund logic (rozszerzenie)
 /apps/api/src/catalog/        — rozszerzenie: pełny profil providera
 ```
 
-Referencje: S:13.1 (Review, Payment), A:14.5, US-16, US-17, US-48, US-51, US-52.
-DoD: Review CRUD + filtr. Settlement cron z logami. Refund flow P24. Profil providera kompletny.
+Referencje: S:13.1 (Review), A:14.5, US-16, US-17, US-48, US-07.
+DoD: Review CRUD + filtr. Profil providera kompletny. **Zero settlement/refund logic** (ADR-004).
 
 **Agent FE-6a — Klient: PEŁNY profil providera + Oceny** `(US-07, US-16, US-17)` — **startuje z MSW**
 
@@ -1787,7 +1815,7 @@ DoD: Profil providera kompletny (carousel, opis, opinie, ulubione, share). Ratin
 **Agent FE-6b — B2B: Opinie + Finanse** `(US-48, US-51, US-53)` — **startuje z MSW**
 
 Prompt:
-> Rozbuduj panel providera: (1) Sekcja „Opinie" — lista opinii z przyciskami „Odpowiedz" (tekst, 1 odpowiedź/opinię, edit 24h) + „Zgłoś" (kategoria + komentarz). Badge new reviews. (2) Sekcja „Finanse" (W:12.14) — saldo, pending payout z datą, brutto/prowizja/netto, historia wypłat, email export.
+> Rozbuduj panel providera: (1) Sekcja „Opinie" — lista opinii z przyciskami „Odpowiedz" (tekst, 1 odpowiedź/opinię, edit 24h) + „Zgłoś" (kategoria + komentarz). Badge new reviews. (2) **Sekcja „Finanse" USUNIĘTA w v0 (ADR-004)** — aplikacja darmowa, brak wypłat. Wróci w v0.5.
 
 Output:
 ```
@@ -1899,18 +1927,20 @@ Output:
 Referencje: A:14.6, US-28, US-29, US-30.
 DoD: Booking detail z payment info + timeline. Manual booking działa. Eskalacja SMS co 2h. Testy ≥ 3.
 
-**Agent BE-8b — Crony systemowe** `(US-37, US-55)`
+**Agent BE-8b — Crony systemowe** `(US-37)` — **weeklyPayouts USUNIĘTE w v0 (ADR-004)**
 
 Prompt:
-> Zbuduj/dokończ crony NestJS `@Cron`: (1) `updateRatingCache` — co 1h: `UPDATE Provider SET avgRating = (SELECT AVG(rating) FROM Review WHERE providerId = Provider.id AND isHidden = false), reviewCount = (SELECT COUNT(*) ...)`. (2) `weeklyPayouts` — pon 6:00: zbierz `Payment WHERE payoutStatus = 'PENDING' AND Booking.status = 'COMPLETED'` → batch: ustaw payoutStatus = PAID, paidOutAt = NOW(), wyślij email do providera z podsumowaniem (Resend). (3) `adminPendingAlert` — codziennie 9:00: email do admina z listą PENDING_APPROVAL. (4) UWAGA: cron `paymentTimeout` już istnieje z Sprint 3 (BE-4) — sprawdź czy działa, nie duplikuj.
+> Zbuduj/dokończ crony NestJS `@Cron`: (1) `updateRatingCache` — co 1h: `UPDATE Provider SET avgRating = (SELECT AVG(rating) FROM Review WHERE providerId = Provider.id AND isHidden = false), reviewCount = (SELECT COUNT(*) ...)`. (2) `adminPendingAlert` — codziennie 9:00: email do admina z listą PENDING_APPROVAL. (3) UWAGA: cron `bookingExpiryCron` już istnieje z Sprint 3 (BE-4) — sprawdź czy działa, nie duplikuj.
+>
+> **USUNIĘTE w v0 (ADR-004):** `weeklyPayouts` — brak rozliczeń w pilocie. `paymentTimeout` — zastąpione przez `bookingExpiryCron` (2h zamiast 15 min).
 
 Output:
 ```
-/apps/api/src/cron/ — rating.cron.ts, payout.cron.ts, admin-alert.cron.ts
+/apps/api/src/cron/ — rating.cron.ts, admin-alert.cron.ts
 ```
 
-Referencje: A:14.9, US-37, US-55.
-DoD: 3 crony zarejestrowane + testowane (manual trigger + assert DB state). Testy ≥ 3.
+Referencje: A:14.9, US-37.
+DoD: 2 crony zarejestrowane + testowane (manual trigger + assert DB state). Testy ≥ 2.
 
 **Agent FE-8 — B2B: Szczegół + Manual** `(US-28, US-30)` — **startuje z MSW**
 

@@ -1,0 +1,1892 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Wulkanizacja Nowy Sącz · ul. Lwowska 45 — Opony.app</title>
+<!--
+  Screen: Landing opony.app — publiczny profil warsztatu (/p/<slug>)
+  Ref:    docs/plan-sprintow.md → US-42 (publiczny URL + SEO + OpenGraph), ADR-001 (landing jako 3-ci artefakt)
+  Tone:   industrial-dark · SSR · hero gallery + sticky booking sidebar · shareable URL · deep-link do app
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Bebas+Neue&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0A0B0E;
+    --bg-tint-top: #12141A;
+    --surface: #14171D;
+    --surface-raised: #1B1E26;
+    --surface-hover: #23272F;
+    --border: #262A34;
+    --border-strong: #363B47;
+    --hairline: rgba(255, 255, 255, 0.06);
+    --text-primary: #F5F4EF;
+    --text-secondary: #9EA2AD;
+    --text-muted: #60646F;
+    --text-on-accent: #0A0B0E;
+    --accent: #FF6B1A;
+    --accent-hover: #FF8039;
+    --accent-muted: rgba(255, 107, 26, 0.14);
+    --accent-border: rgba(255, 107, 26, 0.32);
+    --accent-glow: rgba(255, 107, 26, 0.45);
+    --success: #2EE0A0;
+    --success-muted: rgba(46, 224, 160, 0.14);
+    --success-border: rgba(46, 224, 160, 0.32);
+    --warning: #FFB020;
+    --warning-muted: rgba(255, 176, 32, 0.14);
+    --warning-border: rgba(255, 176, 32, 0.32);
+    --danger: #FF5757;
+    --font-display: 'Bebas Neue', sans-serif;
+    --font-body: 'Archivo', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; overflow-x: hidden; max-width: 100vw; }
+  body {
+    --desktop-scale: min(1, calc((100vh - 200px) / 900px), calc((100vw - 80px) / 1440px));
+    font-family: var(--font-body);
+    background: var(--bg);
+    color: var(--text-primary);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    background-image:
+      radial-gradient(ellipse 70% 50% at 50% 0%, rgba(255, 107, 26, 0.05) 0%, transparent 60%),
+      linear-gradient(180deg, var(--bg-tint-top) 0%, var(--bg) 30%);
+    background-attachment: fixed;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 40px 40px 60px;
+    gap: 24px;
+  }
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 4px var(--accent-muted); opacity: 1; }
+    50%      { box-shadow: 0 0 0 8px transparent; opacity: 0.6; }
+  }
+  @keyframes barFill {
+    from { transform: scaleX(0); }
+    to   { transform: scaleX(1); }
+  }
+
+  .canvas-label {
+    width: 100%;
+    max-width: 1440px;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: baseline;
+    gap: 20px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  .film-strip .frame { display: block; font-family: var(--font-display); font-size: 36px; letter-spacing: 4px; line-height: 1; color: var(--text-primary); }
+  .film-strip .frame-num { font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); letter-spacing: 1.5px; display: block; margin-top: 4px; font-weight: 700; }
+  .slug {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    border-left: 1px solid var(--border);
+    padding-left: 18px;
+  }
+  .canvas-meta {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-secondary);
+    letter-spacing: 1px;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .canvas-meta .pulse {
+    display: inline-block;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 0 4px var(--accent-muted);
+    animation: pulse 1800ms ease-in-out infinite;
+  }
+
+  .desktop-frame {
+    width: 1440px;
+    height: 900px;
+    background: var(--bg);
+    border-radius: 14px;
+    border: 1px solid #1C1E24;
+    box-shadow: 0 40px 120px rgba(0, 0, 0, 0.6), 0 20px 40px rgba(0, 0, 0, 0.4);
+    overflow: hidden;
+    position: relative;
+    flex-shrink: 0;
+    transform: scale(var(--desktop-scale));
+    transform-origin: top center;
+    margin-bottom: calc((var(--desktop-scale) - 1) * 900px);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .browser-chrome {
+    height: 44px;
+    background: linear-gradient(180deg, #1A1D23, #14171D);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    gap: 16px;
+    flex-shrink: 0;
+  }
+  .traffic-lights { display: inline-flex; gap: 8px; }
+  .light { width: 12px; height: 12px; border-radius: 50%; }
+  .light.red { background: #FF5F57; }
+  .light.yellow { background: #FEBC2E; }
+  .light.green { background: #28C840; }
+  .browser-tabs { display: inline-flex; gap: 2px; }
+  .browser-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-bottom: none;
+    border-radius: 8px 8px 0 0;
+    font-size: 12px;
+    color: var(--text-primary);
+    position: relative;
+    top: 6px;
+  }
+  .browser-tab .favicon {
+    width: 14px; height: 14px;
+    border-radius: 3px;
+    background: var(--accent);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-display);
+    font-size: 9px;
+    color: var(--text-on-accent);
+    letter-spacing: 0.5px;
+  }
+  .browser-address {
+    flex: 1;
+    max-width: 620px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+  .browser-address .lock { color: var(--success); }
+  .browser-address .url { color: var(--text-primary); }
+  .browser-address .path { color: var(--text-secondary); }
+  .browser-share {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--text-muted);
+    border-radius: 5px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+  }
+
+  /* Page */
+  .page {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    scroll-behavior: smooth;
+    scrollbar-width: thin;
+  }
+  .page::-webkit-scrollbar { width: 8px; }
+  .page::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+  /* Top nav */
+  .topnav {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    padding: 14px 40px;
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    background: rgba(10, 11, 14, 0.8);
+    backdrop-filter: blur(18px);
+    border-bottom: 1px solid var(--hairline);
+  }
+  .brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+  }
+  .wordmark {
+    font-family: var(--font-display);
+    font-size: 24px;
+    letter-spacing: 3px;
+    line-height: 1;
+    color: var(--text-primary);
+    display: inline-flex;
+    align-items: baseline;
+    gap: 3px;
+  }
+  .wordmark .dot {
+    display: inline-block;
+    width: 6px; height: 6px;
+    background: var(--accent);
+    border-radius: 50%;
+    transform: translateY(-2px);
+    box-shadow: 0 0 10px var(--accent-glow);
+  }
+  .breadcrumb {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--text-muted);
+    font-weight: 600;
+  }
+  .breadcrumb a { color: var(--text-muted); text-decoration: none; }
+  .breadcrumb a:hover { color: var(--text-secondary); }
+  .breadcrumb .sep { color: var(--border-strong); }
+  .breadcrumb .current { color: var(--text-primary); font-weight: 700; }
+  .nav-spacer { flex: 1; }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 9px 14px;
+    border-radius: 8px;
+    font-family: var(--font-body);
+    font-size: 12.5px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    cursor: pointer;
+    text-decoration: none;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-primary);
+    transition: all 140ms;
+  }
+  .btn:hover { background: var(--surface-hover); border-color: var(--border-strong); }
+  .btn.primary {
+    background: var(--accent);
+    color: var(--text-on-accent);
+    border-color: transparent;
+  }
+  .btn.primary:hover { background: var(--accent-hover); }
+  .btn svg { width: 13px; height: 13px; }
+
+  /* === HERO GALLERY === */
+  .hero-gallery {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr;
+    grid-template-rows: 180px 180px;
+    gap: 6px;
+    padding: 20px 40px 0;
+  }
+  .gal-tile {
+    border-radius: 12px;
+    position: relative;
+    overflow: hidden;
+  }
+  .gal-tile.main {
+    grid-row: span 2;
+    background:
+      radial-gradient(ellipse 60% 50% at 30% 40%, rgba(255, 107, 26, 0.25) 0%, transparent 60%),
+      linear-gradient(135deg, #2C2118 0%, #14171D 55%, #1B1316 100%);
+  }
+  .gal-tile.a { background: linear-gradient(135deg, #1A1D24 0%, #23272F 60%, #14171D 100%); }
+  .gal-tile.b { background: linear-gradient(160deg, #382817 0%, #1E1A14 60%, #14171D 100%); }
+  .gal-tile.c { background: linear-gradient(135deg, #1B2620 0%, #14171D 60%, #1A1614 100%); }
+  .gal-tile.d { background: linear-gradient(135deg, #23272F 0%, #14171D 65%, #2C2118 100%); }
+
+  .gal-count {
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+    padding: 6px 10px;
+    background: rgba(10, 11, 14, 0.75);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    font-weight: 800;
+    color: var(--text-primary);
+    letter-spacing: 0.5px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+  }
+  .gal-count:hover { border-color: var(--accent-border); color: var(--accent); }
+  .gal-count svg { width: 11px; height: 11px; }
+  .gal-tile.main .hero-decor {
+    position: absolute;
+    top: 16px; left: 16px;
+    display: inline-flex;
+    gap: 6px;
+  }
+  .hero-decor-chip {
+    font-family: var(--font-mono);
+    font-size: 9.5px;
+    font-weight: 800;
+    letter-spacing: 1.1px;
+    text-transform: uppercase;
+    padding: 4px 8px;
+    border-radius: 5px;
+    background: rgba(10, 11, 14, 0.7);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+  }
+  .hero-decor-chip.pro {
+    background: var(--accent-muted);
+    border-color: var(--accent-border);
+    color: var(--accent);
+  }
+
+  /* === Body split === */
+  .body-split {
+    display: grid;
+    grid-template-columns: 1fr 380px;
+    gap: 32px;
+    padding: 28px 40px 40px;
+  }
+
+  /* Left col */
+  .main-col { display: flex; flex-direction: column; gap: 24px; min-width: 0; }
+
+  .title-block { display: flex; flex-direction: column; gap: 10px; padding-bottom: 20px; border-bottom: 1px solid var(--border); }
+  .title-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .h1-name {
+    font-family: var(--font-display);
+    font-size: 56px;
+    letter-spacing: 2.5px;
+    line-height: 0.95;
+    color: var(--text-primary);
+  }
+  .verified-big {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 10px;
+    background: var(--success-muted);
+    border: 1px solid var(--success-border);
+    border-radius: 6px;
+    color: var(--success);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .verified-big svg { width: 10px; height: 10px; }
+  .pro-big {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    padding: 5px 10px;
+    background: var(--accent-muted);
+    border: 1px solid var(--accent-border);
+    color: var(--accent);
+    border-radius: 6px;
+  }
+
+  .meta-line {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+    font-size: 13px;
+    color: var(--text-secondary);
+  }
+  .meta-rating {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .meta-rating svg { width: 14px; height: 14px; color: var(--warning); }
+  .meta-rating strong {
+    font-family: var(--font-mono);
+    color: var(--text-primary);
+    font-weight: 800;
+    font-size: 14px;
+  }
+  .meta-rating .count { color: var(--text-muted); }
+  .meta-dot-sep {
+    width: 3px; height: 3px;
+    border-radius: 50%;
+    background: var(--border-strong);
+  }
+  .meta-line a { color: var(--text-secondary); text-decoration: underline; text-decoration-color: var(--border-strong); text-underline-offset: 3px; }
+  .meta-line a:hover { color: var(--text-primary); text-decoration-color: var(--accent); }
+
+  .tag-row {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 6px;
+  }
+  .tag {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    padding: 4px 8px;
+    border-radius: 5px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    text-transform: uppercase;
+  }
+
+  /* Section */
+  .section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 22px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .sec-head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding-bottom: 14px;
+    border-bottom: 1px dashed var(--border);
+  }
+  .sec-title {
+    font-family: var(--font-display);
+    font-size: 22px;
+    letter-spacing: 2px;
+    line-height: 1;
+    color: var(--text-primary);
+  }
+  .sec-kicker {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 1.3px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    padding: 3px 7px;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+  }
+  .sec-spacer { flex: 1; }
+  .sec-link {
+    font-size: 11.5px;
+    color: var(--accent);
+    font-weight: 700;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .sec-link:hover { text-decoration: underline; }
+  .sec-link svg { width: 11px; height: 11px; }
+
+  .about-text {
+    font-size: 14px;
+    line-height: 1.65;
+    color: var(--text-secondary);
+  }
+  .about-text strong { color: var(--text-primary); font-weight: 700; }
+
+  .about-chips {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 7px;
+    padding-top: 12px;
+    border-top: 1px dashed var(--border);
+  }
+  .about-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 11px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    font-size: 11.5px;
+    color: var(--text-secondary);
+    font-weight: 600;
+  }
+  .about-chip svg { width: 12px; height: 12px; color: var(--success); }
+
+  /* Pricing tiers */
+  .price-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+  }
+  .price-card {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px 16px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    position: relative;
+  }
+  .price-card.popular {
+    border-color: var(--accent-border);
+    background: linear-gradient(135deg, var(--accent-muted) 0%, var(--bg) 60%);
+  }
+  .price-badge {
+    position: absolute;
+    top: -10px;
+    right: 14px;
+    font-family: var(--font-mono);
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    padding: 3px 7px;
+    border-radius: 4px;
+    background: var(--accent);
+    color: var(--text-on-accent);
+  }
+  .price-tier-lbl {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 1.3px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+  .price-tier-name {
+    font-family: var(--font-display);
+    font-size: 22px;
+    letter-spacing: 1.5px;
+    color: var(--text-primary);
+    line-height: 1;
+  }
+  .price-tier-name .sub { font-size: 14px; color: var(--text-secondary); letter-spacing: 0.5px; }
+  .price-val {
+    font-family: var(--font-mono);
+    font-size: 26px;
+    font-weight: 800;
+    color: var(--text-primary);
+    letter-spacing: 0.3px;
+    line-height: 1;
+  }
+  .price-val .unit { font-size: 13px; color: var(--text-secondary); font-weight: 700; }
+  .price-desc {
+    font-size: 11.5px;
+    color: var(--text-muted);
+    line-height: 1.45;
+    padding-top: 10px;
+    border-top: 1px dashed var(--border);
+    margin-top: auto;
+  }
+
+  .price-footer-note {
+    font-size: 11.5px;
+    color: var(--text-muted);
+    padding: 12px 14px;
+    background: var(--bg);
+    border: 1px dashed var(--border);
+    border-radius: 10px;
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+  }
+  .price-footer-note svg { width: 14px; height: 14px; color: var(--text-secondary); flex-shrink: 0; margin-top: 2px; }
+
+  /* Reviews list */
+  .review-row {
+    display: grid;
+    grid-template-columns: 180px 1fr;
+    gap: 24px;
+    align-items: flex-start;
+  }
+  .rev-summary {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 16px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+  }
+  .rev-sum-big {
+    font-family: var(--font-display);
+    font-size: 56px;
+    letter-spacing: 2px;
+    line-height: 1;
+    color: var(--text-primary);
+  }
+  .rev-sum-stars {
+    display: inline-flex;
+    gap: 2px;
+  }
+  .rev-sum-stars svg { width: 14px; height: 14px; color: var(--warning); }
+  .rev-sum-count {
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+  .rev-sum-count strong {
+    font-family: var(--font-mono);
+    color: var(--text-secondary);
+    font-weight: 700;
+  }
+
+  .rev-distribution { display: flex; flex-direction: column; gap: 5px; }
+  .rev-bar-row {
+    display: grid;
+    grid-template-columns: 18px 1fr 34px;
+    align-items: center;
+    gap: 8px;
+    font-size: 10.5px;
+    font-family: var(--font-mono);
+  }
+  .rev-bar-row .star-lbl { color: var(--text-secondary); }
+  .rev-bar {
+    height: 5px;
+    background: var(--border);
+    border-radius: 3px;
+    overflow: hidden;
+    position: relative;
+  }
+  .rev-bar-fill {
+    height: 100%;
+    background: var(--warning);
+    border-radius: 3px;
+    transform-origin: left;
+    animation: barFill 900ms cubic-bezier(0.5, 1.2, 0.35, 1) forwards;
+  }
+  .rev-bar-row .pct { color: var(--text-primary); font-weight: 700; text-align: right; }
+
+  .rev-list { display: flex; flex-direction: column; gap: 12px; }
+  .rev-card {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .rev-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .rev-avatar {
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-display);
+    font-size: 13px;
+    color: var(--text-on-accent);
+    letter-spacing: 0.5px;
+    flex-shrink: 0;
+  }
+  .rev-avatar.a { background: linear-gradient(135deg, #FF8039 0%, #C73F0A 100%); }
+  .rev-avatar.b { background: linear-gradient(135deg, #64B5F6 0%, #1976D2 100%); }
+  .rev-avatar.c { background: linear-gradient(135deg, #AED581 0%, #558B2F 100%); }
+  .rev-meta-col { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+  .rev-author {
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--text-primary);
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+  }
+  .rev-verified {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    font-weight: 700;
+    color: var(--success);
+    letter-spacing: 0.5px;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+  }
+  .rev-verified svg { width: 10px; height: 10px; }
+  .rev-date {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--text-muted);
+    letter-spacing: 0.3px;
+  }
+  .rev-stars {
+    display: inline-flex;
+    gap: 2px;
+  }
+  .rev-stars svg { width: 11px; height: 11px; color: var(--warning); }
+  .rev-body {
+    font-size: 13px;
+    line-height: 1.55;
+    color: var(--text-secondary);
+  }
+  .rev-reply {
+    padding: 10px 12px;
+    background: var(--accent-muted);
+    border-left: 2px solid var(--accent);
+    border-radius: 0 8px 8px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+  .rev-reply-head {
+    font-family: var(--font-mono);
+    font-size: 9.5px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  .rev-reply-body {
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--text-primary);
+  }
+
+  /* Hours */
+  .hours-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .hours-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 9px 14px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 12.5px;
+  }
+  .hours-row.today {
+    border-color: var(--accent-border);
+    background: var(--accent-muted);
+  }
+  .hours-day {
+    font-weight: 700;
+    color: var(--text-primary);
+  }
+  .hours-row.today .hours-day { color: var(--accent); }
+  .hours-val {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--text-secondary);
+    font-weight: 600;
+  }
+  .hours-row.today .hours-val { color: var(--accent); font-weight: 800; }
+  .hours-val.closed { color: var(--text-muted); }
+
+  /* Map block */
+  .map-block {
+    height: 240px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background:
+      radial-gradient(ellipse 50% 50% at 50% 50%, rgba(255, 107, 26, 0.14) 0%, transparent 60%),
+      linear-gradient(135deg, #1A1D24 0%, #14171D 60%, #1B1316 100%);
+    position: relative;
+    overflow: hidden;
+  }
+  .map-block::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+    background-size: 50px 50px;
+  }
+  .map-pin {
+    position: absolute;
+    top: 42%; left: 45%;
+    width: 36px; height: 36px;
+    border-radius: 50% 50% 50% 0;
+    background: var(--accent);
+    transform: rotate(-45deg);
+    box-shadow: 0 10px 30px rgba(255, 107, 26, 0.5), 0 0 0 4px rgba(255, 107, 26, 0.15);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .map-pin::after {
+    content: '';
+    width: 12px; height: 12px;
+    background: var(--bg);
+    border-radius: 50%;
+  }
+  .map-overlay {
+    position: absolute;
+    bottom: 14px; left: 14px; right: 14px;
+    padding: 12px 14px;
+    background: rgba(10, 11, 14, 0.85);
+    backdrop-filter: blur(14px);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .map-address {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .map-street {
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--text-primary);
+  }
+  .map-city {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    color: var(--text-muted);
+    letter-spacing: 0.3px;
+  }
+  .map-btn {
+    padding: 7px 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    color: var(--text-primary);
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    text-decoration: none;
+  }
+  .map-btn:hover { border-color: var(--accent-border); color: var(--accent); }
+  .map-btn svg { width: 12px; height: 12px; }
+
+  /* === Right sidebar (sticky booking) === */
+  .side-col {
+    position: sticky;
+    top: 76px;
+    align-self: flex-start;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    min-width: 0;
+  }
+  .book-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px 20px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+  }
+  .book-head {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding-bottom: 14px;
+    border-bottom: 1px dashed var(--border);
+  }
+  .book-kicker {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 1.3px;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  .book-title {
+    font-family: var(--font-display);
+    font-size: 24px;
+    letter-spacing: 1.5px;
+    line-height: 1;
+    color: var(--text-primary);
+  }
+
+  /* App-open block */
+  .app-open-row {
+    display: grid;
+    grid-template-columns: 120px 1fr;
+    gap: 12px;
+    align-items: center;
+  }
+  .qr-block {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 10px;
+    background: #F5F4EF;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
+  }
+  .qr-svg {
+    width: 100px; height: 100px;
+    display: block;
+    border-radius: 4px;
+  }
+  .qr-label {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--bg);
+    text-align: center;
+    line-height: 1.2;
+  }
+
+  .mini-phone {
+    width: 110px;
+    height: 180px;
+    background: #070809;
+    border-radius: 18px;
+    border: 2px solid #1A1D24;
+    padding: 5px;
+    box-shadow: 0 14px 28px rgba(0, 0, 0, 0.45);
+    position: relative;
+    margin-left: auto;
+  }
+  .mini-phone-notch {
+    position: absolute;
+    top: 9px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 36px; height: 8px;
+    background: #070809;
+    border-radius: 6px;
+    z-index: 2;
+  }
+  .mini-phone-screen {
+    width: 100%; height: 100%;
+    background: var(--bg);
+    border-radius: 13px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  .mp-hero-img {
+    height: 54px;
+    background:
+      radial-gradient(ellipse 60% 50% at 30% 40%, rgba(255, 107, 26, 0.35) 0%, transparent 60%),
+      linear-gradient(135deg, #2C2118 0%, #14171D 55%, #1B1316 100%);
+    flex-shrink: 0;
+  }
+  .mp-content {
+    padding: 7px 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    flex: 1;
+  }
+  .mp-name {
+    font-family: var(--font-display);
+    font-size: 10px;
+    letter-spacing: 0.5px;
+    line-height: 1;
+    color: var(--text-primary);
+  }
+  .mp-rating {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-family: var(--font-mono);
+    font-size: 8px;
+    color: var(--text-secondary);
+    font-weight: 700;
+  }
+  .mp-rating svg { width: 8px; height: 8px; color: var(--warning); }
+  .mp-slot-btn {
+    margin-top: auto;
+    padding: 6px 4px;
+    background: var(--accent);
+    color: var(--text-on-accent);
+    border-radius: 5px;
+    font-family: var(--font-display);
+    font-size: 9px;
+    letter-spacing: 1px;
+    text-align: center;
+    line-height: 1;
+  }
+  .mp-slot-ghost {
+    padding: 4px 4px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font-family: var(--font-mono);
+    font-size: 7.5px;
+    font-weight: 700;
+    color: var(--text-secondary);
+    text-align: center;
+    letter-spacing: 0.3px;
+  }
+
+  .book-cta {
+    padding: 14px 16px;
+    background: var(--accent);
+    color: var(--text-on-accent);
+    border: none;
+    border-radius: 11px;
+    font-family: var(--font-display);
+    font-size: 16px;
+    letter-spacing: 2.5px;
+    line-height: 1;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    box-shadow: 0 8px 24px rgba(255, 107, 26, 0.3);
+    text-decoration: none;
+  }
+  .book-cta:hover { background: var(--accent-hover); }
+  .book-cta svg { width: 14px; height: 14px; }
+
+  .store-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+  .store-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 7px 10px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text-primary);
+    text-decoration: none;
+    transition: all 120ms;
+  }
+  .store-badge:hover { border-color: var(--accent-border); background: var(--accent-muted); }
+  .store-badge svg { width: 18px; height: 18px; flex-shrink: 0; color: var(--text-primary); }
+  .store-text { display: flex; flex-direction: column; line-height: 1; gap: 1px; }
+  .store-tiny {
+    font-family: var(--font-mono);
+    font-size: 7.5px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+  .store-name {
+    font-family: var(--font-display);
+    font-size: 12px;
+    letter-spacing: 1.2px;
+    color: var(--text-primary);
+  }
+
+  .cta-hint {
+    font-size: 11px;
+    color: var(--text-muted);
+    text-align: center;
+    line-height: 1.4;
+  }
+  .cta-hint strong { color: var(--text-secondary); font-weight: 700; }
+
+  /* Share card */
+  .share-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .share-title {
+    font-family: var(--font-display);
+    font-size: 14px;
+    letter-spacing: 1.5px;
+    color: var(--text-primary);
+    line-height: 1;
+  }
+  .share-row {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 6px;
+  }
+  .share-btn {
+    padding: 10px 0;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 120ms;
+  }
+  .share-btn:hover { color: var(--accent); border-color: var(--accent-border); background: var(--accent-muted); }
+  .share-btn svg { width: 15px; height: 15px; }
+  .copy-link {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    background: var(--bg);
+    border: 1px dashed var(--border);
+    border-radius: 8px;
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    color: var(--text-secondary);
+    letter-spacing: 0.3px;
+  }
+  .copy-link svg { width: 12px; height: 12px; color: var(--text-muted); flex-shrink: 0; }
+  .copy-link .url-part { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .copy-btn {
+    padding: 3px 8px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    font-family: var(--font-mono);
+    font-size: 9px;
+    font-weight: 800;
+    color: var(--text-primary);
+    cursor: pointer;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+  .copy-btn:hover { border-color: var(--accent-border); color: var(--accent); }
+
+  /* OG preview (decorative) */
+  .og-preview {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  .og-label {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 1.3px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    padding: 10px 14px 4px;
+  }
+  .og-image {
+    height: 120px;
+    background:
+      radial-gradient(ellipse 60% 50% at 30% 40%, rgba(255, 107, 26, 0.35) 0%, transparent 60%),
+      linear-gradient(135deg, #2C2118 0%, #14171D 55%, #1B1316 100%);
+    position: relative;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+  }
+  .og-logo {
+    position: absolute;
+    top: 12px; left: 14px;
+    font-family: var(--font-display);
+    font-size: 18px;
+    letter-spacing: 2.5px;
+    color: var(--text-primary);
+    display: inline-flex;
+    align-items: baseline;
+    gap: 3px;
+  }
+  .og-logo .dot { width: 5px; height: 5px; background: var(--accent); border-radius: 50%; transform: translateY(-1px); }
+  .og-overlay-title {
+    position: absolute;
+    bottom: 14px; left: 14px;
+    font-family: var(--font-display);
+    font-size: 18px;
+    letter-spacing: 1.5px;
+    line-height: 0.95;
+    color: var(--text-primary);
+  }
+  .og-rating-overlay {
+    position: absolute;
+    top: 14px; right: 14px;
+    padding: 4px 8px;
+    background: rgba(10, 11, 14, 0.7);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 800;
+    color: var(--text-primary);
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .og-rating-overlay svg { width: 10px; height: 10px; color: var(--warning); }
+  .og-body { padding: 10px 14px 12px; display: flex; flex-direction: column; gap: 3px; }
+  .og-domain {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--text-muted);
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+  }
+  .og-title {
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1.3;
+  }
+  .og-desc {
+    font-size: 10.5px;
+    color: var(--text-muted);
+    line-height: 1.4;
+  }
+
+  /* States caption */
+  .states-caption {
+    width: 100%;
+    max-width: 1440px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 40px;
+    padding: 14px 0 0;
+    border-top: 1px solid var(--border);
+  }
+  .state-col { display: flex; flex-direction: column; gap: 6px; }
+  .state-col h4 {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 4px;
+  }
+  .state-col ul { list-style: none; display: flex; flex-direction: column; gap: 4px; }
+  .state-col li {
+    font-size: 11px;
+    color: var(--text-secondary);
+    line-height: 1.55;
+    padding-left: 14px;
+    position: relative;
+  }
+  .state-col li::before {
+    content: '—';
+    position: absolute;
+    left: 0;
+    color: var(--text-muted);
+  }
+  .state-col li strong { color: var(--text-primary); font-weight: 700; }
+  .state-col code {
+    font-family: var(--font-mono);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 1px 5px;
+    border-radius: 3px;
+    color: var(--accent);
+    font-size: 10px;
+  }
+</style>
+</head>
+<body>
+
+  <div class="canvas-label">
+    <div class="film-strip">
+      <span class="frame">LANDING · PROFIL PUBLICZNY</span>
+      <span class="frame-num">FRAME · opony.app/p/wulkanizacja-nowy-sacz · SSR · US-42</span>
+    </div>
+    <div class="slug">HERO GALLERY · STICKY BOOKING · SSR SEO · OG META · SHARE · DEEP-LINK APP</div>
+    <div class="canvas-meta">
+      <span class="pulse" aria-hidden="true"></span>
+      DRAFT · DESKTOP 1440 × 900 · SCROLL ↓
+    </div>
+  </div>
+
+  <div class="desktop-frame">
+
+    <div class="browser-chrome">
+      <div class="traffic-lights"><span class="light red"></span><span class="light yellow"></span><span class="light green"></span></div>
+      <div class="browser-tabs">
+        <div class="browser-tab"><span class="favicon">O</span>Wulkanizacja N. Sącz · Opony</div>
+      </div>
+      <div class="browser-address">
+        <svg class="lock" viewBox="0 0 16 16" width="12" height="12" fill="currentColor" aria-hidden="true"><path d="M4.5 7V5.5a3.5 3.5 0 0 1 7 0V7h.5a1 1 0 0 1 1 1v5.5a1 1 0 0 1-1 1h-8a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1h.5Zm1.5 0h4V5.5a2 2 0 0 0-4 0V7Z"/></svg>
+        <span class="url">opony.app</span><span class="path">/p/wulkanizacja-nowy-sacz</span>
+      </div>
+      <span class="browser-share">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+        SHARE
+      </span>
+    </div>
+
+    <div class="page">
+
+      <!-- Top nav -->
+      <header class="topnav" role="banner">
+        <a href="/" class="brand">
+          <span class="wordmark">OPONY<span class="dot" aria-hidden="true"></span></span>
+        </a>
+        <nav class="breadcrumb" aria-label="Ścieżka">
+          <a href="/">Opony</a>
+          <span class="sep">›</span>
+          <a href="/nowy-sacz">Nowy Sącz</a>
+          <span class="sep">›</span>
+          <span class="current">Wulkanizacja N. Sącz</span>
+        </nav>
+        <span class="nav-spacer"></span>
+        <button class="btn" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+          Udostępnij
+        </button>
+        <button class="btn" type="button" aria-label="Dodaj do ulubionych">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+          Ulubione
+        </button>
+        <a class="btn primary" href="#book">
+          Otwórz w aplikacji
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="12 5 19 12 12 19"/></svg>
+        </a>
+      </header>
+
+      <!-- Hero gallery -->
+      <section class="hero-gallery" aria-label="Zdjęcia warsztatu">
+        <div class="gal-tile main">
+          <div class="hero-decor">
+            <span class="hero-decor-chip pro">PRO · Zweryfikowany</span>
+            <span class="hero-decor-chip">#3 w N. Sączu</span>
+          </div>
+        </div>
+        <div class="gal-tile a"></div>
+        <div class="gal-tile b"></div>
+        <div class="gal-tile c"></div>
+        <div class="gal-tile d">
+          <button class="gal-count" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            +5 zdjęć
+          </button>
+        </div>
+      </section>
+
+      <!-- Body split -->
+      <div class="body-split">
+
+        <!-- MAIN COL -->
+        <div class="main-col">
+
+          <!-- Title block -->
+          <div class="title-block">
+            <div class="title-row">
+              <h1 class="h1-name">WULKANIZACJA<br>NOWY SĄCZ</h1>
+              <div style="display:flex; flex-direction:column; gap:6px; margin-left:auto; align-self:flex-end">
+                <span class="verified-big">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><polyline points="20 6 9 17 4 12"/></svg>
+                  Zweryfikowany GUS
+                </span>
+                <span class="pro-big">PRO · Pilot N. Sącz</span>
+              </div>
+            </div>
+            <div class="meta-line">
+              <span class="meta-rating">
+                <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15 9 22 10 17 15 18 22 12 19 6 22 7 15 2 10 9 9"/></svg>
+                <strong>4,8</strong> <span class="count">· 127 opinii</span>
+              </span>
+              <span class="meta-dot-sep" aria-hidden="true"></span>
+              <span>Stacjonarny warsztat</span>
+              <span class="meta-dot-sep" aria-hidden="true"></span>
+              <span>Działa od <strong style="color:var(--text-primary)">2019</strong></span>
+              <span class="meta-dot-sep" aria-hidden="true"></span>
+              <a href="#map">ul. Lwowska 45, 33-300 Nowy Sącz</a>
+              <span class="meta-dot-sep" aria-hidden="true"></span>
+              <a href="tel:+48600123456">+48 600 123 456</a>
+            </div>
+            <div class="tag-row">
+              <span class="tag">Osobowe</span>
+              <span class="tag">Dostawcze ≤ 3,5t</span>
+              <span class="tag">≤ 15"</span>
+              <span class="tag">16–17"</span>
+              <span class="tag">≥ 18"</span>
+              <span class="tag">Wyważanie</span>
+              <span class="tag">Sezonowa wymiana</span>
+            </div>
+          </div>
+
+          <!-- O warsztacie -->
+          <section class="section" id="about" aria-labelledby="t-about">
+            <header class="sec-head">
+              <h2 class="sec-title" id="t-about">O warsztacie</h2>
+              <span class="sec-kicker">Opis od właściciela</span>
+            </header>
+            <p class="about-text">Rodzinny warsztat wulkanizacyjny działający w Nowym Sączu od <strong>2019 roku</strong>. Specjalizujemy się w wymianie opon osobowych i dostawczych oraz wyważaniu kół. Klienci cenią nas za szybkość i czysty warsztat — <strong>większość wizyt kończymy w 30 minut</strong>. Pracujemy z oryginalnym sprzętem Hunter i używamy ciężarków samoprzylepnych (bez rys na feldze).</p>
+            <div class="about-chips">
+              <span class="about-chip">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+                Kawa gratis
+              </span>
+              <span class="about-chip">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+                Parking na 8 aut
+              </span>
+              <span class="about-chip">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+                Płatność kartą / BLIK
+              </span>
+              <span class="about-chip">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+                Poczekalnia z WiFi
+              </span>
+              <span class="about-chip">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+                Faktury na firmę
+              </span>
+            </div>
+          </section>
+
+          <!-- Cennik -->
+          <section class="section" aria-labelledby="t-pricing">
+            <header class="sec-head">
+              <h2 class="sec-title" id="t-pricing">Cennik</h2>
+              <span class="sec-kicker">Wymiana 4 opon · z wyważaniem</span>
+              <span class="sec-spacer"></span>
+              <span class="price-tier-lbl">Ostatnia aktualizacja: dziś</span>
+            </header>
+
+            <div class="price-grid">
+              <article class="price-card">
+                <span class="price-tier-lbl">Tier 1</span>
+                <h3 class="price-tier-name">≤ 15"<br><span class="sub">małe felgi</span></h3>
+                <span class="price-val">140<span class="unit"> zł</span></span>
+                <p class="price-desc">Typowo Fiat 500, Toyota Aygo, Škoda Citigo. Czas: ~30 min.</p>
+              </article>
+              <article class="price-card popular">
+                <span class="price-badge">Popularny</span>
+                <span class="price-tier-lbl">Tier 2</span>
+                <h3 class="price-tier-name">16"–17"<br><span class="sub">standard</span></h3>
+                <span class="price-val">180<span class="unit"> zł</span></span>
+                <p class="price-desc">Większość aut osobowych (Astra, Focus, Octavia). Czas: ~45 min.</p>
+              </article>
+              <article class="price-card">
+                <span class="price-tier-lbl">Tier 3</span>
+                <h3 class="price-tier-name">≥ 18"<br><span class="sub">duże felgi</span></h3>
+                <span class="price-val">240<span class="unit"> zł</span></span>
+                <p class="price-desc">SUV-y, premium sedany (BMW, Audi, X5). Czas: ~60 min.</p>
+              </article>
+            </div>
+
+            <div class="price-footer-note">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              <span><strong style="color:var(--text-secondary)">Opony.app nie pobiera prowizji</strong> — cena widoczna na stronie to cena, którą płacisz warsztatowi na miejscu. Dopłata za dostawcze (do 3,5 t): <strong style="color:var(--text-secondary)">+40 zł</strong>.</span>
+            </div>
+          </section>
+
+          <!-- Opinie -->
+          <section class="section" aria-labelledby="t-reviews">
+            <header class="sec-head">
+              <h2 class="sec-title" id="t-reviews">Opinie klientów</h2>
+              <span class="sec-kicker">Tylko zweryfikowane</span>
+              <span class="sec-spacer"></span>
+              <a class="sec-link" href="#">
+                Zobacz wszystkie (127)
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+              </a>
+            </header>
+
+            <div class="review-row">
+              <div class="rev-summary">
+                <span class="rev-sum-big">4,8</span>
+                <div class="rev-sum-stars" aria-label="4.8 na 5">
+                  <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15 9 22 10 17 15 18 22 12 19 6 22 7 15 2 10 9 9"/></svg>
+                  <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15 9 22 10 17 15 18 22 12 19 6 22 7 15 2 10 9 9"/></svg>
+                  <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15 9 22 10 17 15 18 22 12 19 6 22 7 15 2 10 9 9"/></svg>
+                  <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15 9 22 10 17 15 18 22 12 19 6 22 7 15 2 10 9 9"/></svg>
+                  <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15 9 22 10 17 15 18 22 12 19 6 22 7 15 2 10 9 9"/></svg>
+                </div>
+                <span class="rev-sum-count"><strong>127</strong> opinii</span>
+
+                <div class="rev-distribution">
+                  <div class="rev-bar-row">
+                    <span class="star-lbl">5★</span>
+                    <div class="rev-bar"><div class="rev-bar-fill" style="width: 82%"></div></div>
+                    <span class="pct">82%</span>
+                  </div>
+                  <div class="rev-bar-row">
+                    <span class="star-lbl">4★</span>
+                    <div class="rev-bar"><div class="rev-bar-fill" style="width: 10%"></div></div>
+                    <span class="pct">10%</span>
+                  </div>
+                  <div class="rev-bar-row">
+                    <span class="star-lbl">3★</span>
+                    <div class="rev-bar"><div class="rev-bar-fill" style="width: 4%"></div></div>
+                    <span class="pct">4%</span>
+                  </div>
+                  <div class="rev-bar-row">
+                    <span class="star-lbl">2★</span>
+                    <div class="rev-bar"><div class="rev-bar-fill" style="width: 2%"></div></div>
+                    <span class="pct">2%</span>
+                  </div>
+                  <div class="rev-bar-row">
+                    <span class="star-lbl">1★</span>
+                    <div class="rev-bar"><div class="rev-bar-fill" style="width: 2%"></div></div>
+                    <span class="pct">2%</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="rev-list">
+                <article class="rev-card" itemscope itemtype="https://schema.org/Review">
+                  <header class="rev-head">
+                    <div class="rev-avatar a">MK</div>
+                    <div class="rev-meta-col">
+                      <span class="rev-author" itemprop="author">Marek Kowalski
+                        <span class="rev-verified">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><polyline points="20 6 9 17 4 12"/></svg>
+                          Zweryfikowany klient
+                        </span>
+                      </span>
+                      <span class="rev-date">2 dni temu · Opel Astra · 17"</span>
+                    </div>
+                    <div class="rev-stars" aria-label="5 na 5">
+                      <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15 9 22 10 17 15 18 22 12 19 6 22 7 15 2 10 9 9"/></svg>
+                      <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15 9 22 10 17 15 18 22 12 19 6 22 7 15 2 10 9 9"/></svg>
+                      <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15 9 22 10 17 15 18 22 12 19 6 22 7 15 2 10 9 9"/></svg>
+                      <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15 9 22 10 17 15 18 22 12 19 6 22 7 15 2 10 9 9"/></svg>
+                      <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15 9 22 10 17 15 18 22 12 19 6 22 7 15 2 10 9 9"/></svg>
+                    </div>
+                  </header>
+                  <p class="rev-body" itemprop="reviewBody">Szybko, sprawnie, polecam. Przyjechałem 5 minut po terminie, a i tak zdążyli wszystko w 25 minut. Poczekalnia z kawą, płatność BLIK-iem — wszystko działa.</p>
+                  <div class="rev-reply">
+                    <span class="rev-reply-head">Odpowiedź właściciela · 1 dzień temu</span>
+                    <p class="rev-reply-body">Dziękujemy Panie Marku! Do zobaczenia jesienią — pamiętamy o rozmiarze.</p>
+                  </div>
+                </article>
+
+                <article class="rev-card">
+                  <header class="rev-head">
+                    <div class="rev-avatar b">AW</div>
+                    <div class="rev-meta-col">
+                      <span class="rev-author">Anna Wiśniewska
+                        <span class="rev-verified">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><polyline points="20 6 9 17 4 12"/></svg>
+                          Zweryfikowany klient
+                        </span>
+                      </span>
+                      <span class="rev-date">5 dni temu · VW Golf · 16"</span>
+                    </div>
+                    <div class="rev-stars" aria-label="5 na 5">
+                      <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15 9 22 10 17 15 18 22 12 19 6 22 7 15 2 10 9 9"/></svg>
+                      <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15 9 22 10 17 15 18 22 12 19 6 22 7 15 2 10 9 9"/></svg>
+                      <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15 9 22 10 17 15 18 22 12 19 6 22 7 15 2 10 9 9"/></svg>
+                      <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15 9 22 10 17 15 18 22 12 19 6 22 7 15 2 10 9 9"/></svg>
+                      <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15 9 22 10 17 15 18 22 12 19 6 22 7 15 2 10 9 9"/></svg>
+                    </div>
+                  </header>
+                  <p class="rev-body">Rezerwacja przez app w minutę, SMS-a potwierdzającego dostałam od razu. Zero telefonów, zero kolejek. Wcześniej robiliśmy wymianę u Waldemara, ale tutaj wyszło taniej i nie musiałam z nikim rozmawiać. Polecam.</p>
+                </article>
+
+                <article class="rev-card">
+                  <header class="rev-head">
+                    <div class="rev-avatar c">PL</div>
+                    <div class="rev-meta-col">
+                      <span class="rev-author">Piotr Lewandowski
+                        <span class="rev-verified">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><polyline points="20 6 9 17 4 12"/></svg>
+                          Zweryfikowany klient
+                        </span>
+                      </span>
+                      <span class="rev-date">1 tydz temu · VW Passat · 17"</span>
+                    </div>
+                    <div class="rev-stars" aria-label="4 na 5">
+                      <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15 9 22 10 17 15 18 22 12 19 6 22 7 15 2 10 9 9"/></svg>
+                      <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15 9 22 10 17 15 18 22 12 19 6 22 7 15 2 10 9 9"/></svg>
+                      <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15 9 22 10 17 15 18 22 12 19 6 22 7 15 2 10 9 9"/></svg>
+                      <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15 9 22 10 17 15 18 22 12 19 6 22 7 15 2 10 9 9"/></svg>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="color:var(--border-strong)"><polygon points="12 2 15 9 22 10 17 15 18 22 12 19 6 22 7 15 2 10 9 9"/></svg>
+                    </div>
+                  </header>
+                  <p class="rev-body">Szybko, bez ceregieli. Minus — 10 min spóźnienia, bo była kolejka; minus — parking przed warsztatem ciasny. Plus — cena zgodna z aplikacją, wyważanie gratis, dostałem paragon elektroniczny.</p>
+                </article>
+              </div>
+            </div>
+          </section>
+
+          <!-- Godziny + lokalizacja -->
+          <section class="section" id="map" aria-labelledby="t-location">
+            <header class="sec-head">
+              <h2 class="sec-title" id="t-location">Godziny &amp; lokalizacja</h2>
+              <span class="sec-kicker">Czasy lokalne — CET</span>
+            </header>
+
+            <div class="hours-grid">
+              <div class="hours-row"><span class="hours-day">Poniedziałek</span><span class="hours-val">08:00 — 18:00</span></div>
+              <div class="hours-row today"><span class="hours-day">Wtorek · dziś</span><span class="hours-val">08:00 — 18:00</span></div>
+              <div class="hours-row"><span class="hours-day">Środa</span><span class="hours-val">08:00 — 18:00</span></div>
+              <div class="hours-row"><span class="hours-day">Czwartek</span><span class="hours-val">08:00 — 18:00</span></div>
+              <div class="hours-row"><span class="hours-day">Piątek</span><span class="hours-val">08:00 — 18:00</span></div>
+              <div class="hours-row"><span class="hours-day">Sobota</span><span class="hours-val">09:00 — 14:00</span></div>
+              <div class="hours-row" style="grid-column: span 2"><span class="hours-day">Niedziela</span><span class="hours-val closed">Zamknięte</span></div>
+            </div>
+
+            <div class="map-block" role="img" aria-label="Mapa — ul. Lwowska 45, Nowy Sącz">
+              <div class="map-pin" aria-hidden="true"></div>
+              <div class="map-overlay">
+                <div class="map-address">
+                  <span class="map-street">ul. Lwowska 45</span>
+                  <span class="map-city">33-300 Nowy Sącz · dzielnica Śródmieście</span>
+                </div>
+                <a class="map-btn" href="https://maps.google.com" target="_blank" rel="noopener">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+                  Google Maps
+                </a>
+                <a class="map-btn" href="#">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="5 12 12 5 19 12"/><polyline points="12 5 12 19"/></svg>
+                  Jak dojechać
+                </a>
+              </div>
+            </div>
+          </section>
+
+        </div>
+
+        <!-- SIDEBAR -->
+        <aside class="side-col" aria-label="Rezerwacja">
+          <div class="book-card" id="book">
+            <header class="book-head">
+              <span class="book-kicker">REZERWACJA W APLIKACJI</span>
+              <h2 class="book-title">OTWÓRZ<br>APLIKACJĘ</h2>
+            </header>
+
+            <p class="cta-hint" style="text-align:left; color:var(--text-secondary); font-size:12.5px; margin-top:-4px">
+              Wszystkie rezerwacje odbywają się w aplikacji <strong style="color:var(--text-primary)">Opony</strong> — potwierdzenie SMS, zero telefonów, zero formularzy w przeglądarce.
+            </p>
+
+            <!-- QR + preview row -->
+            <div class="app-open-row">
+              <div class="qr-block" aria-label="QR do app">
+                <svg viewBox="0 0 80 80" class="qr-svg" aria-hidden="true">
+                  <rect width="80" height="80" fill="#F5F4EF"/>
+                  <!-- corner finders -->
+                  <rect x="4" y="4" width="20" height="20" fill="#0A0B0E"/>
+                  <rect x="8" y="8" width="12" height="12" fill="#F5F4EF"/>
+                  <rect x="11" y="11" width="6" height="6" fill="#0A0B0E"/>
+                  <rect x="56" y="4" width="20" height="20" fill="#0A0B0E"/>
+                  <rect x="60" y="8" width="12" height="12" fill="#F5F4EF"/>
+                  <rect x="63" y="11" width="6" height="6" fill="#0A0B0E"/>
+                  <rect x="4" y="56" width="20" height="20" fill="#0A0B0E"/>
+                  <rect x="8" y="60" width="12" height="12" fill="#F5F4EF"/>
+                  <rect x="11" y="63" width="6" height="6" fill="#0A0B0E"/>
+                  <!-- noise -->
+                  <g fill="#0A0B0E">
+                    <rect x="28" y="4" width="4" height="4"/>
+                    <rect x="36" y="4" width="4" height="4"/>
+                    <rect x="44" y="8" width="4" height="4"/>
+                    <rect x="28" y="12" width="4" height="4"/>
+                    <rect x="40" y="12" width="4" height="4"/>
+                    <rect x="32" y="16" width="4" height="4"/>
+                    <rect x="48" y="16" width="4" height="4"/>
+                    <rect x="28" y="20" width="4" height="4"/>
+                    <rect x="44" y="20" width="4" height="4"/>
+                    <rect x="4" y="28" width="4" height="4"/>
+                    <rect x="12" y="28" width="4" height="4"/>
+                    <rect x="20" y="28" width="4" height="4"/>
+                    <rect x="28" y="28" width="4" height="4"/>
+                    <rect x="40" y="28" width="4" height="4"/>
+                    <rect x="52" y="28" width="4" height="4"/>
+                    <rect x="64" y="28" width="4" height="4"/>
+                    <rect x="72" y="28" width="4" height="4"/>
+                    <rect x="8" y="32" width="4" height="4"/>
+                    <rect x="24" y="32" width="4" height="4"/>
+                    <rect x="36" y="32" width="4" height="4"/>
+                    <rect x="48" y="32" width="4" height="4"/>
+                    <rect x="60" y="32" width="4" height="4"/>
+                    <rect x="68" y="32" width="4" height="4"/>
+                    <rect x="4" y="36" width="4" height="4"/>
+                    <rect x="16" y="36" width="4" height="4"/>
+                    <rect x="32" y="36" width="4" height="4"/>
+                    <rect x="44" y="36" width="4" height="4"/>
+                    <rect x="56" y="36" width="4" height="4"/>
+                    <rect x="72" y="36" width="4" height="4"/>
+                    <!-- center amber logo -->
+                    <rect x="32" y="40" width="16" height="16" fill="#FF6B1A"/>
+                    <rect x="36" y="44" width="8" height="8" fill="#F5F4EF"/>
+                    <rect x="38" y="46" width="4" height="4" fill="#FF6B1A"/>
+                    <rect x="4" y="40" width="4" height="4"/>
+                    <rect x="12" y="40" width="4" height="4"/>
+                    <rect x="20" y="40" width="4" height="4"/>
+                    <rect x="52" y="40" width="4" height="4"/>
+                    <rect x="64" y="40" width="4" height="4"/>
+                    <rect x="8" y="44" width="4" height="4"/>
+                    <rect x="24" y="44" width="4" height="4"/>
+                    <rect x="56" y="44" width="4" height="4"/>
+                    <rect x="68" y="44" width="4" height="4"/>
+                    <rect x="4" y="48" width="4" height="4"/>
+                    <rect x="16" y="48" width="4" height="4"/>
+                    <rect x="60" y="48" width="4" height="4"/>
+                    <rect x="72" y="48" width="4" height="4"/>
+                    <rect x="8" y="52" width="4" height="4"/>
+                    <rect x="20" y="52" width="4" height="4"/>
+                    <rect x="24" y="52" width="4" height="4"/>
+                    <rect x="52" y="52" width="4" height="4"/>
+                    <rect x="64" y="52" width="4" height="4"/>
+                    <rect x="28" y="56" width="4" height="4"/>
+                    <rect x="36" y="60" width="4" height="4"/>
+                    <rect x="44" y="60" width="4" height="4"/>
+                    <rect x="52" y="60" width="4" height="4"/>
+                    <rect x="28" y="64" width="4" height="4"/>
+                    <rect x="40" y="64" width="4" height="4"/>
+                    <rect x="56" y="64" width="4" height="4"/>
+                    <rect x="68" y="64" width="4" height="4"/>
+                    <rect x="32" y="68" width="4" height="4"/>
+                    <rect x="44" y="68" width="4" height="4"/>
+                    <rect x="60" y="68" width="4" height="4"/>
+                    <rect x="28" y="72" width="4" height="4"/>
+                    <rect x="40" y="72" width="4" height="4"/>
+                    <rect x="52" y="72" width="4" height="4"/>
+                    <rect x="64" y="72" width="4" height="4"/>
+                    <rect x="72" y="72" width="4" height="4"/>
+                  </g>
+                </svg>
+                <span class="qr-label">Zeskanuj<br>telefonem</span>
+              </div>
+
+              <div class="mini-phone" aria-hidden="true">
+                <div class="mini-phone-notch"></div>
+                <div class="mini-phone-screen">
+                  <div class="mp-hero-img"></div>
+                  <div class="mp-content">
+                    <div class="mp-name">WULKANIZACJA<br>N. SĄCZ</div>
+                    <div class="mp-rating">
+                      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><polygon points="12 2 15 9 22 10 17 15 18 22 12 19 6 22 7 15 2 10 9 9"/></svg>
+                      <span>4,8 · 127</span>
+                    </div>
+                    <div class="mp-slot-btn">WYBIERZ TERMIN</div>
+                    <div class="mp-slot-ghost">WT 14:30 · 180 zł</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <a class="book-cta" href="opony://p/wulkanizacja-nowy-sacz">
+              OTWÓRZ W APLIKACJI
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="12 5 19 12 12 19"/></svg>
+            </a>
+
+            <div class="store-row">
+              <a class="store-badge" href="#" aria-label="App Store">
+                <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09zM12 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/></svg>
+                <span class="store-text">
+                  <span class="store-tiny">Pobierz z</span>
+                  <span class="store-name">App Store</span>
+                </span>
+              </a>
+              <a class="store-badge" href="#" aria-label="Google Play">
+                <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 20.5V3.5c0-.7.4-1.2 1-1.4l10.5 10-10.5 10c-.6-.3-1-.8-1-1.6zm13.8-8.3L5.8 22.6l11-6.4 3-1.7-3-1.7zm0-.4l3-1.7-3-1.7-11-6.4L16.8 11.8z"/></svg>
+                <span class="store-text">
+                  <span class="store-tiny">Dostępne w</span>
+                  <span class="store-name">Google Play</span>
+                </span>
+              </a>
+            </div>
+
+            <p class="cta-hint" style="margin-top:4px">Nie chcesz instalować? <a href="#" style="color:var(--accent); font-weight:700; text-decoration:none">Otwórz web-app</a> — działa w przeglądarce telefonu.</p>
+          </div>
+
+          <div class="share-card" aria-label="Udostępnij">
+            <h3 class="share-title">PODZIEL SIĘ</h3>
+            <div class="share-row">
+              <button class="share-btn" type="button" aria-label="Messenger">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+              </button>
+              <button class="share-btn" type="button" aria-label="WhatsApp">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+              </button>
+              <button class="share-btn" type="button" aria-label="Email">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+              </button>
+              <button class="share-btn" type="button" aria-label="Native share">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+              </button>
+            </div>
+            <div class="copy-link">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+              <span class="url-part">opony.app/p/wulkanizacja-nowy-sacz</span>
+              <button class="copy-btn" type="button">Kopiuj</button>
+            </div>
+          </div>
+
+          <!-- OG preview (decorative for designer) -->
+          <div class="og-preview" aria-label="Podgląd meta tagów Open Graph">
+            <span class="og-label">Preview · OG meta</span>
+            <div class="og-image">
+              <div class="og-logo">OPONY<span class="dot"></span></div>
+              <div class="og-overlay-title">WULKANIZACJA<br>NOWY SĄCZ</div>
+              <span class="og-rating-overlay">
+                <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15 9 22 10 17 15 18 22 12 19 6 22 7 15 2 10 9 9"/></svg>
+                4,8 · 127
+              </span>
+            </div>
+            <div class="og-body">
+              <span class="og-domain">opony.app</span>
+              <span class="og-title">Wulkanizacja Nowy Sącz · ul. Lwowska 45</span>
+              <span class="og-desc">Rodzinny warsztat działający od 2019. 4,8★ (127 opinii). Rezerwuj online — 0% prowizji.</span>
+            </div>
+          </div>
+        </aside>
+
+      </div>
+
+    </div>
+  </div>
+
+  <!-- States caption -->
+  <div class="states-caption">
+    <div class="state-col">
+      <h4>SSR, SEO &amp; share</h4>
+      <ul>
+        <li><strong>SSR</strong> — strona generowana przy publish/edit providera (ISR), cache 5 min; fallback do on-demand rendering gdy nowy warsztat.</li>
+        <li><strong>OG tags</strong> (pokazane jako preview) — <code>og:title</code>, <code>og:description</code>, <code>og:image</code> (1200×630, dynamic z nazwą + 4,8★), <code>twitter:card=summary_large_image</code>.</li>
+        <li><strong>JSON-LD</strong> — <code>LocalBusiness</code> + <code>AggregateRating</code> + <code>Review</code> schema (pokazane <code>itemscope</code> na opinii Marka) → rich snippets w Google.</li>
+        <li><strong>Canonical URL</strong> — <code>opony.app/p/&lt;slug&gt;</code>; redirect z <code>app.opony.app/p/&lt;slug&gt;</code> aby share-URL nie rozsynchronizował SEO.</li>
+        <li><strong>Native share</strong> (US-42) — Web Share API z fallbackiem na copy-link; PostHog event <code>share_provider</code> z atrybucją (Messenger / WhatsApp / Email / native).</li>
+        <li><strong>Breadcrumb</strong> — Opony › Nowy Sącz › Wulkanizacja; każdy poziom to osobny kanoniczny URL (<code>/nowy-sacz</code> listuje warsztaty w mieście dla SEO long-tail).</li>
+      </ul>
+    </div>
+    <div class="state-col">
+      <h4>Stany &amp; deep-link do aplikacji</h4>
+      <ul>
+        <li><strong>Zero booking w przeglądarce</strong> — landing nie ma kalendarza, slot-pickera ani formularza rezerwacji. Cały flow odbywa się w <code>app.opony.app</code> (Expo RNW) — landing tylko „wystawia" profil dla SEO i share.</li>
+        <li><strong>CTA „Otwórz w aplikacji"</strong> w topbarze i sidebarze — Universal Link <code>opony://p/&lt;slug&gt;</code>; fallback na web-app (<code>app.opony.app/p/&lt;slug&gt;</code>) gdy natywka nie zainstalowana.</li>
+        <li><strong>QR code</strong> — dla desktop-userów (głównie share z laptopa); redirect przez <code>link.opony.app</code> z trackingiem atrybucji (<code>utm_source=landing_qr</code>).</li>
+        <li><strong>Mini-phone preview</strong> — decorative, pokazuje jak wygląda profil w aplikacji (hero + rating + CTA „Wybierz termin") — uczy usera czego się spodziewać po kliknięciu.</li>
+        <li><strong>App Store / Google Play badges</strong> — v0 Expo ma web-app (<code>app.opony.app</code>) + EAS build do natywki (TASK-007b); w v0 linki pokazują web-app fallback jeśli store-build niegotowy.</li>
+        <li><strong>Sticky sidebar</strong> — <code>position: sticky; top: 76px</code>; CTA widoczne przez cały scroll — primary action nigdy nie znika.</li>
+        <li><strong>Gallery +5 zdjęć</strong> — lightbox (esc, strzałki, swipe); preload thumbnails, lazy main image.</li>
+        <li><strong>Reviews</strong> — 3 top + „Zobacz wszystkie (127)" → <code>/p/&lt;slug&gt;/opinie</code> (sub-path dla SEO long-tail „opinie wulkanizacji nowy sącz").</li>
+        <li><strong>PENDING_APPROVAL</strong> — strona zwraca 404 (nie indexed); po approvalu od razu live.</li>
+        <li><strong>A11y</strong> — <code>h1</code> tylko raz (nazwa warsztatu); reviews mają <code>itemscope</code> Schema.org dla rich snippets.</li>
+      </ul>
+    </div>
+  </div>
+
+</body>
+</html>

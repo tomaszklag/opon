@@ -1,0 +1,1341 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Opony Panel — B2B-01 Dashboard · W:12.5</title>
+<!--
+  Screen: Dashboard providera (hero — dzień Kasi)
+  Ref:    docs/plan-sprintow.md → W:12.5 (panel.opony.app — desktop-first, min 1280px)
+  US:     US-19 (dashboard), US-20 (accept PENDING), US-21 (start/complete wizyty)
+  Tone:   industrial-dark · sidebar 220px + topbar + main grid · spójność z mobile
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Bebas+Neue&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0A0B0E;
+    --bg-tint-top: #12141A;
+    --surface: #14171D;
+    --surface-raised: #1B1E26;
+    --surface-hover: #23272F;
+    --border: #262A34;
+    --border-strong: #363B47;
+    --hairline: rgba(255, 255, 255, 0.06);
+    --text-primary: #F5F4EF;
+    --text-secondary: #9EA2AD;
+    --text-muted: #60646F;
+    --text-on-accent: #0A0B0E;
+    --accent: #FF6B1A;
+    --accent-hover: #FF8039;
+    --accent-muted: rgba(255, 107, 26, 0.14);
+    --accent-border: rgba(255, 107, 26, 0.32);
+    --accent-glow: rgba(255, 107, 26, 0.45);
+    --success: #2EE0A0;
+    --success-muted: rgba(46, 224, 160, 0.14);
+    --success-border: rgba(46, 224, 160, 0.32);
+    --warning: #FFB020;
+    --warning-muted: rgba(255, 176, 32, 0.14);
+    --warning-border: rgba(255, 176, 32, 0.32);
+    --danger: #FF5757;
+    --font-display: 'Bebas Neue', sans-serif;
+    --font-body: 'Archivo', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; overflow-x: hidden; max-width: 100vw; }
+  body {
+    /* scale dla desktop 1440×900 — tak samo jak phone, ale z innym base */
+    --desktop-scale: min(1, calc((100vh - 200px) / 900px), calc((100vw - 80px) / 1440px));
+    font-family: var(--font-body);
+    background: var(--bg);
+    color: var(--text-primary);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    background-image:
+      radial-gradient(ellipse 70% 50% at 50% 0%, rgba(255, 107, 26, 0.05) 0%, transparent 60%),
+      radial-gradient(ellipse 50% 30% at 90% 100%, rgba(46, 224, 160, 0.02) 0%, transparent 60%),
+      linear-gradient(180deg, var(--bg-tint-top) 0%, var(--bg) 30%);
+    background-attachment: fixed;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 40px 40px 60px;
+    gap: 24px;
+  }
+
+  .canvas-label {
+    width: 100%;
+    max-width: 1440px;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: baseline;
+    gap: 20px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  .film-strip { font-family: var(--font-display); font-size: 32px; letter-spacing: 3px; line-height: 1; }
+  .slug {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    border-left: 1px solid var(--border);
+    padding-left: 18px;
+  }
+  .canvas-meta {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-secondary);
+    letter-spacing: 1px;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .canvas-meta .pulse {
+    display: inline-block;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 0 4px var(--accent-muted);
+    animation: pulse 1800ms ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 4px var(--accent-muted); opacity: 1; }
+    50%      { box-shadow: 0 0 0 8px transparent; opacity: 0.6; }
+  }
+
+  /* ====== Desktop frame (browser window) ====== */
+  .desktop-frame {
+    width: 1440px;
+    height: 900px;
+    background: var(--bg);
+    border-radius: 14px;
+    border: 1px solid #1C1E24;
+    box-shadow:
+      0 40px 120px rgba(0, 0, 0, 0.6),
+      0 20px 40px rgba(0, 0, 0, 0.4);
+    overflow: hidden;
+    position: relative;
+    flex-shrink: 0;
+    transform: scale(var(--desktop-scale));
+    transform-origin: top center;
+    margin-bottom: calc((var(--desktop-scale) - 1) * 900px);
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Browser chrome (Chrome-like) */
+  .browser-chrome {
+    height: 44px;
+    background: linear-gradient(180deg, #1A1D23, #14171D);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    gap: 16px;
+    flex-shrink: 0;
+  }
+  .traffic-lights {
+    display: inline-flex;
+    gap: 8px;
+  }
+  .light {
+    width: 12px; height: 12px;
+    border-radius: 50%;
+  }
+  .light.red    { background: #FF5F57; }
+  .light.yellow { background: #FEBC2E; }
+  .light.green  { background: #28C840; }
+
+  .browser-tabs {
+    display: inline-flex;
+    gap: 2px;
+  }
+  .browser-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-bottom: none;
+    border-radius: 8px 8px 0 0;
+    font-size: 12px;
+    color: var(--text-secondary);
+    position: relative;
+    top: 6px;
+  }
+  .browser-tab.active {
+    background: var(--surface);
+    color: var(--text-primary);
+  }
+  .browser-tab .favicon {
+    width: 14px; height: 14px;
+    border-radius: 3px;
+    background: var(--accent);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-display);
+    font-size: 9px;
+    color: var(--text-on-accent);
+    letter-spacing: 0.5px;
+  }
+
+  .browser-address {
+    flex: 1;
+    max-width: 480px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+  .browser-address .lock {
+    color: var(--success);
+  }
+  .browser-address .url { color: var(--text-primary); }
+  .browser-address .path { color: var(--text-secondary); }
+
+  /* ====== App root (inside frame) ====== */
+  .app-root {
+    flex: 1;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: 220px 1fr;
+  }
+
+  /* ====== Sidebar ====== */
+  .sidebar {
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    padding: 20px 14px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .sb-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px 18px;
+  }
+  .sb-brand .wordmark {
+    font-family: var(--font-display);
+    font-size: 26px;
+    letter-spacing: 3px;
+    line-height: 1;
+    color: var(--text-primary);
+    display: inline-flex;
+    align-items: baseline;
+    gap: 3px;
+  }
+  .sb-brand .dot {
+    display: inline-block;
+    width: 6px; height: 6px;
+    background: var(--accent);
+    border-radius: 50%;
+    transform: translateY(-2px);
+    box-shadow: 0 0 10px var(--accent-glow);
+  }
+  .sb-brand .panel-tag {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    padding: 2px 5px;
+    border-radius: 4px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    font-weight: 700;
+    margin-left: auto;
+  }
+
+  .sb-section-label {
+    font-family: var(--font-body);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 1.3px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    padding: 8px 10px 4px;
+  }
+
+  .sb-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 10px;
+    border-radius: 8px;
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    font-family: var(--font-body);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: left;
+    width: 100%;
+    transition: background 140ms ease, color 140ms ease;
+  }
+  .sb-item:hover { background: var(--surface-hover); color: var(--text-primary); }
+  .sb-item.active {
+    background: var(--accent-muted);
+    color: var(--accent);
+    border: 1px solid var(--accent-border);
+  }
+  .sb-item svg { flex-shrink: 0; }
+  .sb-badge {
+    margin-left: auto;
+    min-width: 20px;
+    height: 18px;
+    padding: 0 6px;
+    background: var(--accent);
+    color: var(--text-on-accent);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 700;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .sb-spacer { flex: 1; }
+
+  .sb-user {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 140ms ease;
+  }
+  .sb-user:hover { border-color: var(--border-strong); background: var(--surface-hover); }
+  .sb-avatar {
+    width: 34px; height: 34px;
+    border-radius: 9px;
+    background: linear-gradient(135deg, #FF8039 0%, #C73F0A 100%);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-display);
+    font-size: 15px;
+    color: var(--text-on-accent);
+    letter-spacing: 1.5px;
+    flex-shrink: 0;
+  }
+  .sb-user-col { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  .sb-user-name {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1.1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .sb-user-role {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    color: var(--accent);
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    font-weight: 700;
+  }
+  .sb-user-arrow { color: var(--text-muted); flex-shrink: 0; }
+
+  /* ====== Main area ====== */
+  .main {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* Topbar */
+  .topbar {
+    height: 58px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 28px;
+    gap: 16px;
+    flex-shrink: 0;
+  }
+  .tb-breadcrumb {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--text-muted);
+    font-weight: 600;
+  }
+  .tb-breadcrumb .sep { color: var(--border-strong); }
+  .tb-breadcrumb .current { color: var(--text-primary); font-weight: 700; }
+
+  .tb-spacer { flex: 1; }
+
+  .tb-search {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 12px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text-muted);
+    font-size: 12px;
+    min-width: 240px;
+  }
+  .tb-search .kbd {
+    margin-left: auto;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+    padding: 1px 5px;
+    border-radius: 3px;
+  }
+
+  .tb-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-family: var(--font-body);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-primary);
+    transition: all 140ms ease;
+  }
+  .tb-btn:hover { background: var(--surface); border-color: var(--border-strong); }
+  .tb-btn.primary {
+    background: var(--accent);
+    color: var(--text-on-accent);
+    border-color: var(--accent);
+    font-weight: 800;
+    box-shadow: 0 4px 12px rgba(255, 107, 26, 0.3);
+  }
+  .tb-btn.primary:hover { background: var(--accent-hover); }
+
+  .tb-notif {
+    width: 34px; height: 34px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-primary);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    position: relative;
+  }
+  .tb-notif:hover { background: var(--surface); }
+  .tb-notif::after {
+    content: '';
+    position: absolute;
+    top: 6px; right: 6px;
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--accent);
+    border: 2px solid var(--surface);
+  }
+
+  /* ====== Content ====== */
+  .content {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 24px 28px 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    scrollbar-width: thin;
+  }
+  .content::-webkit-scrollbar { width: 6px; }
+  .content::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  /* Greeting */
+  .greeting-row {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 20px;
+  }
+  .greeting {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .greeting-hello {
+    font-family: var(--font-display);
+    font-size: 38px;
+    letter-spacing: 2px;
+    line-height: 1;
+    color: var(--text-primary);
+  }
+  .greeting-hello .wave {
+    display: inline-block;
+    color: var(--accent);
+  }
+  .greeting-sub {
+    font-size: 13px;
+    color: var(--text-secondary);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .date-pill {
+    padding: 3px 8px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-primary);
+    letter-spacing: 0.5px;
+  }
+
+  .greeting-actions {
+    display: inline-flex;
+    gap: 10px;
+  }
+
+  /* KPI cards row */
+  .kpi-row {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px;
+  }
+  .kpi-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    position: relative;
+    overflow: hidden;
+  }
+  .kpi-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: var(--hairline);
+  }
+  .kpi-card.accent {
+    border-color: var(--accent-border);
+    background: linear-gradient(135deg, rgba(255,107,26,0.06), transparent);
+  }
+  .kpi-label {
+    font-family: var(--font-body);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 1.3px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    line-height: 1;
+    margin-bottom: 8px;
+  }
+  .kpi-value {
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: 28px;
+    color: var(--text-primary);
+    line-height: 1;
+    letter-spacing: 0.3px;
+  }
+  .kpi-value .unit {
+    font-size: 13px;
+    color: var(--accent);
+    margin-left: 2px;
+  }
+  .kpi-meta {
+    margin-top: 6px;
+    font-size: 11px;
+    color: var(--text-secondary);
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .kpi-meta.pos { color: var(--success); }
+  .kpi-meta.warn { color: var(--warning); }
+
+  /* Main grid */
+  .main-grid {
+    display: grid;
+    grid-template-columns: 1fr 360px;
+    gap: 20px;
+    flex: 1;
+    min-height: 0;
+  }
+
+  /* Panel card (shared) */
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .panel-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+  }
+  .panel-title {
+    font-family: var(--font-display);
+    font-size: 22px;
+    letter-spacing: 2.2px;
+    color: var(--text-primary);
+    line-height: 1;
+  }
+  .panel-sub {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 0.5px;
+  }
+  .panel-link {
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 1.1px;
+    text-transform: uppercase;
+    color: var(--accent);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  /* Today's booking row */
+  .bookings-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .booking-row {
+    display: grid;
+    grid-template-columns: 80px 1fr auto;
+    gap: 14px;
+    align-items: center;
+    padding: 12px 14px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 140ms ease;
+    position: relative;
+  }
+  .booking-row:hover {
+    border-color: var(--border-strong);
+    background: var(--surface-hover);
+  }
+  .booking-row.urgent {
+    border-color: var(--accent-border);
+    background: linear-gradient(90deg, var(--accent-muted), var(--bg));
+  }
+  .booking-row.upcoming {
+    border-left: 3px solid var(--accent);
+    padding-left: 11px;
+  }
+
+  .booking-time-col {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .booking-time {
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: 15px;
+    color: var(--text-primary);
+    letter-spacing: 0.3px;
+  }
+  .booking-duration {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--text-muted);
+    letter-spacing: 0.3px;
+  }
+
+  .booking-main {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+  }
+  .booking-name-row {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .booking-name {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text-primary);
+  }
+  .status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .status-pill::before {
+    content: '';
+    width: 5px; height: 5px;
+    border-radius: 50%;
+  }
+  .status-confirmed {
+    background: var(--accent-muted);
+    border: 1px solid var(--accent-border);
+    color: var(--accent);
+  }
+  .status-confirmed::before { background: var(--accent); }
+  .status-pending {
+    background: var(--warning-muted);
+    border: 1px solid var(--warning-border);
+    color: var(--warning);
+  }
+  .status-pending::before { background: var(--warning); }
+  .status-progress {
+    background: rgba(93, 168, 255, 0.14);
+    border: 1px solid rgba(93, 168, 255, 0.32);
+    color: #5DA8FF;
+  }
+  .status-progress::before { background: #5DA8FF; }
+
+  .booking-meta {
+    font-size: 12px;
+    color: var(--text-secondary);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .tire-tag {
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: 10px;
+    padding: 1px 5px;
+    border-radius: 3px;
+    background: var(--accent-muted);
+    border: 1px solid var(--accent-border);
+    color: var(--accent);
+  }
+  .dot-sep {
+    width: 3px; height: 3px;
+    border-radius: 50%;
+    background: var(--text-muted);
+  }
+
+  .booking-actions {
+    display: inline-flex;
+    gap: 6px;
+  }
+  .act-btn {
+    padding: 7px 10px;
+    border-radius: 7px;
+    font-family: var(--font-body);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-primary);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .act-btn:hover { background: var(--surface); border-color: var(--border-strong); }
+  .act-btn.primary {
+    background: var(--accent);
+    color: var(--text-on-accent);
+    border-color: var(--accent);
+    font-weight: 800;
+  }
+  .act-btn.success {
+    background: var(--success-muted);
+    color: var(--success);
+    border-color: var(--success-border);
+    font-weight: 800;
+  }
+  .act-btn.success:hover { background: rgba(46, 224, 160, 0.25); }
+  .act-btn.danger {
+    color: var(--danger);
+  }
+  .act-btn.danger:hover { background: rgba(255, 87, 87, 0.12); border-color: rgba(255, 87, 87, 0.32); }
+  .act-btn .ico-price {
+    font-family: var(--font-mono);
+    font-weight: 700;
+    padding-left: 6px;
+    border-left: 1px solid var(--border-strong);
+    margin-left: 4px;
+    color: var(--text-secondary);
+  }
+
+  /* Right column */
+  .side-col {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .pending-inbox {
+    background: linear-gradient(135deg, rgba(255, 176, 32, 0.06), transparent);
+    border: 1px solid var(--warning-border);
+  }
+  .pending-inbox .panel-title { color: var(--warning); }
+
+  .review-item {
+    padding: 12px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .review-item.new {
+    border-color: var(--accent-border);
+    background: linear-gradient(135deg, var(--accent-muted), transparent);
+  }
+  .review-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .review-avatar {
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-display);
+    font-size: 12px;
+    color: var(--text-secondary);
+    letter-spacing: 0.5px;
+    flex-shrink: 0;
+  }
+  .review-name {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-primary);
+  }
+  .review-date {
+    margin-left: auto;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--text-muted);
+    letter-spacing: 0.3px;
+  }
+  .review-stars {
+    display: inline-flex;
+    gap: 1px;
+    margin-top: 2px;
+  }
+  .review-stars svg { width: 10px; height: 10px; }
+  .review-text {
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--text-secondary);
+  }
+  .review-new-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 1px 5px;
+    border-radius: 3px;
+    background: var(--accent);
+    color: var(--text-on-accent);
+    font-size: 8px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  /* footer caption */
+  .caption {
+    max-width: 1440px;
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 0.5px;
+  }
+  .caption strong {
+    color: var(--text-secondary);
+    font-weight: 500;
+    display: block;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    font-size: 10px;
+  }
+  .caption em { color: var(--accent); font-style: normal; }
+</style>
+</head>
+<body>
+
+  <header class="canvas-label">
+    <span class="film-strip">OPONY PANEL — B2B-01</span>
+    <span class="slug">dashboard providera · hero</span>
+    <span class="canvas-meta"><span class="pulse"></span>W:12.5 · US-19 / 20 / 21</span>
+  </header>
+
+  <main class="desktop-frame" role="region" aria-label="Mockup — panel.opony.app dashboard">
+
+    <!-- Browser chrome -->
+    <div class="browser-chrome" aria-hidden="true">
+      <span class="traffic-lights">
+        <span class="light red"></span>
+        <span class="light yellow"></span>
+        <span class="light green"></span>
+      </span>
+      <span class="browser-tabs">
+        <span class="browser-tab active">
+          <span class="favicon">O</span>
+          Opony Panel — Dashboard
+        </span>
+      </span>
+      <span class="browser-address">
+        <svg class="lock" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+        <span class="url">panel.opony.app</span><span class="path">/dashboard</span>
+      </span>
+    </div>
+
+    <!-- App root -->
+    <div class="app-root">
+
+      <!-- SIDEBAR -->
+      <aside class="sidebar" aria-label="Nawigacja główna">
+        <div class="sb-brand">
+          <div class="wordmark">OPONY<span class="dot"></span></div>
+          <span class="panel-tag">PANEL</span>
+        </div>
+
+        <span class="sb-section-label">Dziś</span>
+        <button class="sb-item active">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>
+          Dashboard
+        </button>
+        <button class="sb-item">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 10h18M8 2v4M16 2v4"/></svg>
+          Kalendarz
+        </button>
+        <button class="sb-item">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11H5a2 2 0 0 0-2 2v7h18v-7a2 2 0 0 0-2-2h-4M9 11V5a3 3 0 0 1 6 0v6M9 11h6"/></svg>
+          Rezerwacje
+          <span class="sb-badge">12</span>
+        </button>
+
+        <span class="sb-section-label">Warsztat</span>
+        <button class="sb-item">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          Cennik
+        </button>
+        <button class="sb-item">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+          Godziny pracy
+        </button>
+        <button class="sb-item">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+          Strefa obsługi
+        </button>
+        <button class="sb-item">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15 9 22 9.5 17 14 18.5 21 12 17.5 5.5 21 7 14 2 9.5 9 9 12 2"/></svg>
+          Opinie
+          <span class="sb-badge">2</span>
+        </button>
+
+        <span class="sb-section-label">Konto</span>
+        <!-- Finanse USUNIĘTE w POC v0 (ADR-004) — aplikacja darmowa, brak wypłat. Wróci w v0.5. -->
+        <button class="sb-item">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+          Ustawienia
+        </button>
+
+        <div class="sb-spacer"></div>
+
+        <div class="sb-user" role="button" aria-label="Menu konta">
+          <div class="sb-avatar">MK</div>
+          <div class="sb-user-col">
+            <span class="sb-user-name">MobilOpony Kasia</span>
+            <span class="sb-user-role">Provider · APPROVED</span>
+          </div>
+          <span class="sb-user-arrow">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+          </span>
+        </div>
+      </aside>
+
+      <!-- MAIN -->
+      <section class="main">
+
+        <!-- TOPBAR -->
+        <header class="topbar">
+          <nav class="tb-breadcrumb">
+            <span>Panel</span>
+            <span class="sep">/</span>
+            <span class="current">Dashboard</span>
+          </nav>
+
+          <span class="tb-spacer"></span>
+
+          <div class="tb-search">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4-4"/></svg>
+            Szukaj rezerwacji lub klienta...
+            <span class="kbd">⌘K</span>
+          </div>
+
+          <button class="tb-btn">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+            Wizyta ręczna
+          </button>
+
+          <button class="tb-btn primary">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+            Rozpocznij dzień
+          </button>
+
+          <button class="tb-notif" aria-label="Powiadomienia">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+          </button>
+        </header>
+
+        <!-- CONTENT -->
+        <div class="content">
+
+          <!-- GREETING -->
+          <div class="greeting-row">
+            <div class="greeting">
+              <h1 class="greeting-hello">Dzień dobry, Kasia <span class="wave">👋</span></h1>
+              <div class="greeting-sub">
+                Dzisiaj masz <strong style="color: var(--text-primary);">5 wizyt</strong>
+                <span class="dot-sep" style="background: var(--text-muted);"></span>
+                <span class="date-pill">PON · 14 kwietnia 2026</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- KPI CARDS -->
+          <div class="kpi-row">
+            <div class="kpi-card accent">
+              <div class="kpi-label">Wizyt dziś</div>
+              <div class="kpi-value">5</div>
+              <div class="kpi-meta pos">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 7-7 7 7M12 5v14"/></svg>
+                +2 vs wczoraj
+              </div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-label">Ten tydzień</div>
+              <div class="kpi-value">18<span class="unit" style="color: var(--text-muted); font-size: 11px;">wizyt</span></div>
+              <div class="kpi-meta">· 12 zakończonych</div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-label">Ocena</div>
+              <div class="kpi-value">4,8<span class="unit" style="font-size: 11px; color: var(--text-muted);">/5</span></div>
+              <div class="kpi-meta">· 127 opinii</div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-label">Oczekuje akceptacji</div>
+              <div class="kpi-value" style="color: var(--warning);">1</div>
+              <div class="kpi-meta warn">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v5"/><circle cx="12" cy="16" r="0.5" fill="currentColor"/></svg>
+                SLA 2h
+              </div>
+            </div>
+          </div>
+
+          <!-- MAIN GRID -->
+          <div class="main-grid">
+
+            <!-- LEFT: Today's bookings -->
+            <section class="panel">
+              <div class="panel-head">
+                <h2 class="panel-title">Dzisiejsze wizyty</h2>
+                <a class="panel-link" href="#">
+                  Widok kalendarza
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg>
+                </a>
+              </div>
+
+              <div class="bookings-list">
+
+                <!-- Booking: IN PROGRESS -->
+                <article class="booking-row">
+                  <div class="booking-time-col">
+                    <span class="booking-time">08:00</span>
+                    <span class="booking-duration">→ 08:45</span>
+                  </div>
+                  <div class="booking-main">
+                    <div class="booking-name-row">
+                      <span class="booking-name">Jan Nowak</span>
+                      <span class="status-pill status-progress">W trakcie</span>
+                    </div>
+                    <div class="booking-meta">
+                      <span>ul. Jagiellońska 12 · 1,2 km</span>
+                      <span class="dot-sep"></span>
+                      <span class="tire-tag">205/55 R16</span>
+                      <span class="dot-sep"></span>
+                      <span style="color: var(--text-primary); font-family: var(--font-mono); font-weight: 700;">180 zł</span>
+                    </div>
+                  </div>
+                  <div class="booking-actions">
+                    <button class="act-btn">
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l18-9-9 18-2-7-7-2z"/></svg>
+                      Nawiguj
+                    </button>
+                    <button class="act-btn success">
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7"/></svg>
+                      Zakończ
+                    </button>
+                  </div>
+                </article>
+
+                <!-- Booking: UPCOMING -->
+                <article class="booking-row upcoming">
+                  <div class="booking-time-col">
+                    <span class="booking-time">09:30</span>
+                    <span class="booking-duration">→ 10:15</span>
+                  </div>
+                  <div class="booking-main">
+                    <div class="booking-name-row">
+                      <span class="booking-name">Marek Kowalski</span>
+                      <span class="status-pill status-confirmed">Potwierdzona</span>
+                    </div>
+                    <div class="booking-meta">
+                      <span>ul. Lwowska 5 · 2,4 km</span>
+                      <span class="dot-sep"></span>
+                      <span class="tire-tag">205/55 R16</span>
+                      <span class="dot-sep"></span>
+                      <span style="color: var(--text-primary); font-family: var(--font-mono); font-weight: 700;">180 zł</span>
+                      <span style="color: var(--text-muted); font-size: 10px; margin-left: 4px;">szacunek</span>
+                    </div>
+                  </div>
+                  <div class="booking-actions">
+                    <button class="act-btn">Szczegóły</button>
+                    <button class="act-btn primary">
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                      Rozpocznij
+                    </button>
+                  </div>
+                </article>
+
+                <!-- Booking: PENDING (urgent) -->
+                <article class="booking-row urgent">
+                  <div class="booking-time-col">
+                    <span class="booking-time">11:00</span>
+                    <span class="booking-duration">→ 11:45</span>
+                  </div>
+                  <div class="booking-main">
+                    <div class="booking-name-row">
+                      <span class="booking-name">Anna Wiśniewska</span>
+                      <span class="status-pill status-pending">Oczekuje</span>
+                    </div>
+                    <div class="booking-meta">
+                      <span>ul. Długosza 88 · 3,8 km</span>
+                      <span class="dot-sep"></span>
+                      <span class="tire-tag">195/65 R15</span>
+                      <span class="dot-sep"></span>
+                      <span style="color: var(--text-primary); font-family: var(--font-mono); font-weight: 700;">140 zł</span>
+                      <span class="dot-sep"></span>
+                      <span style="color: var(--warning); font-weight: 700; font-size: 11px; letter-spacing: 0.5px;">⚠ SLA 1h 42 min</span>
+                    </div>
+                  </div>
+                  <div class="booking-actions">
+                    <button class="act-btn danger">
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+                      Odrzuć
+                    </button>
+                    <button class="act-btn success">
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7"/></svg>
+                      Akceptuj
+                    </button>
+                  </div>
+                </article>
+
+                <!-- Booking: LATER -->
+                <article class="booking-row">
+                  <div class="booking-time-col">
+                    <span class="booking-time">13:45</span>
+                    <span class="booking-duration">→ 14:30</span>
+                  </div>
+                  <div class="booking-main">
+                    <div class="booking-name-row">
+                      <span class="booking-name">Piotr Lewandowski</span>
+                      <span class="status-pill status-confirmed">Potwierdzona</span>
+                    </div>
+                    <div class="booking-meta">
+                      <span>ul. Kościuszki 22 · 4,1 km</span>
+                      <span class="dot-sep"></span>
+                      <span class="tire-tag">225/45 R17</span>
+                      <span class="dot-sep"></span>
+                      <span style="color: var(--text-primary); font-family: var(--font-mono); font-weight: 700;">240 zł</span>
+                      <span style="color: var(--text-muted); font-size: 10px; margin-left: 4px;">szacunek</span>
+                    </div>
+                  </div>
+                  <div class="booking-actions">
+                    <button class="act-btn">Szczegóły</button>
+                  </div>
+                </article>
+
+                <!-- Booking: LATER -->
+                <article class="booking-row">
+                  <div class="booking-time-col">
+                    <span class="booking-time">16:30</span>
+                    <span class="booking-duration">→ 17:15</span>
+                  </div>
+                  <div class="booking-main">
+                    <div class="booking-name-row">
+                      <span class="booking-name">Katarzyna Zając</span>
+                      <span class="status-pill status-confirmed">Potwierdzona</span>
+                    </div>
+                    <div class="booking-meta">
+                      <span>ul. Tarnowska 8 · 5,2 km</span>
+                      <span class="dot-sep"></span>
+                      <span class="tire-tag">215/55 R17</span>
+                      <span class="dot-sep"></span>
+                      <span style="color: var(--text-primary); font-family: var(--font-mono); font-weight: 700;">200 zł</span>
+                    </div>
+                  </div>
+                  <div class="booking-actions">
+                    <button class="act-btn">Szczegóły</button>
+                  </div>
+                </article>
+
+              </div>
+            </section>
+
+            <!-- RIGHT: Side column -->
+            <aside class="side-col" aria-label="Inbox i opinie">
+
+              <!-- PENDING INBOX -->
+              <section class="panel pending-inbox">
+                <div class="panel-head">
+                  <h2 class="panel-title">Do akceptacji</h2>
+                  <span class="panel-sub">1 × SLA 2h</span>
+                </div>
+                <div style="font-size: 13px; color: var(--text-secondary); line-height: 1.5;">
+                  <strong style="color: var(--text-primary);">Anna Wiśniewska</strong> czeka na decyzję od <strong style="color: var(--warning); font-family: var(--font-mono);">18 min</strong>. Jeśli nie odpowiesz w <strong style="color: var(--warning); font-family: var(--font-mono);">1h 42 min</strong>, rezerwacja zostanie automatycznie anulowana.
+                </div>
+                <button class="act-btn success" style="width: 100%; justify-content: center; padding: 10px; font-size: 12px;">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7"/></svg>
+                  Przejdź do rezerwacji →
+                </button>
+              </section>
+
+              <!-- NEW REVIEWS -->
+              <section class="panel">
+                <div class="panel-head">
+                  <h2 class="panel-title">Nowe opinie</h2>
+                  <a class="panel-link" href="#">
+                    Wszystkie
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg>
+                  </a>
+                </div>
+
+                <div class="review-item new">
+                  <div class="review-head">
+                    <div class="review-avatar">MK</div>
+                    <span class="review-name">Marek K.</span>
+                    <span class="review-new-chip">NOWE</span>
+                    <span class="review-date">2 dni</span>
+                  </div>
+                  <span class="review-stars">
+                    <svg viewBox="0 0 24 24" fill="var(--accent)"><polygon points="12 2 15 9 22 9.5 17 14 18.5 21 12 17.5 5.5 21 7 14 2 9.5 9 9 12 2"/></svg>
+                    <svg viewBox="0 0 24 24" fill="var(--accent)"><polygon points="12 2 15 9 22 9.5 17 14 18.5 21 12 17.5 5.5 21 7 14 2 9.5 9 9 12 2"/></svg>
+                    <svg viewBox="0 0 24 24" fill="var(--accent)"><polygon points="12 2 15 9 22 9.5 17 14 18.5 21 12 17.5 5.5 21 7 14 2 9.5 9 9 12 2"/></svg>
+                    <svg viewBox="0 0 24 24" fill="var(--accent)"><polygon points="12 2 15 9 22 9.5 17 14 18.5 21 12 17.5 5.5 21 7 14 2 9.5 9 9 12 2"/></svg>
+                    <svg viewBox="0 0 24 24" fill="var(--accent)"><polygon points="12 2 15 9 22 9.5 17 14 18.5 21 12 17.5 5.5 21 7 14 2 9.5 9 9 12 2"/></svg>
+                  </span>
+                  <p class="review-text">
+                    „Szybko, sprawnie, polecam! Przyjechał 5 min przed czasem..."
+                  </p>
+                  <button class="act-btn primary" style="align-self: flex-start; padding: 6px 10px; font-size: 10px;">
+                    Odpowiedz
+                  </button>
+                </div>
+
+                <div class="review-item new">
+                  <div class="review-head">
+                    <div class="review-avatar">AW</div>
+                    <span class="review-name">Anna W.</span>
+                    <span class="review-new-chip">NOWE</span>
+                    <span class="review-date">1 tydz.</span>
+                  </div>
+                  <span class="review-stars">
+                    <svg viewBox="0 0 24 24" fill="var(--accent)"><polygon points="12 2 15 9 22 9.5 17 14 18.5 21 12 17.5 5.5 21 7 14 2 9.5 9 9 12 2"/></svg>
+                    <svg viewBox="0 0 24 24" fill="var(--accent)"><polygon points="12 2 15 9 22 9.5 17 14 18.5 21 12 17.5 5.5 21 7 14 2 9.5 9 9 12 2"/></svg>
+                    <svg viewBox="0 0 24 24" fill="var(--accent)"><polygon points="12 2 15 9 22 9.5 17 14 18.5 21 12 17.5 5.5 21 7 14 2 9.5 9 9 12 2"/></svg>
+                    <svg viewBox="0 0 24 24" fill="var(--accent)"><polygon points="12 2 15 9 22 9.5 17 14 18.5 21 12 17.5 5.5 21 7 14 2 9.5 9 9 12 2"/></svg>
+                    <svg viewBox="0 0 24 24" fill="var(--accent)" opacity="0.3"><polygon points="12 2 15 9 22 9.5 17 14 18.5 21 12 17.5 5.5 21 7 14 2 9.5 9 9 12 2"/></svg>
+                  </span>
+                  <p class="review-text">
+                    „Dobrze, ale 10 min spóźnienia bez uprzedzenia."
+                  </p>
+                  <button class="act-btn primary" style="align-self: flex-start; padding: 6px 10px; font-size: 10px;">
+                    Odpowiedz
+                  </button>
+                </div>
+              </section>
+
+            </aside>
+
+          </div>
+
+        </div>
+
+      </section>
+    </div>
+
+  </main>
+
+  <footer class="caption">
+    <div>
+      <strong>Layout desktop</strong>
+      Browser chrome (traffic lights + tab + URL `panel.opony.app/dashboard`) · Sidebar 220px (brand „OPONY PANEL" + 3 grupy sekcji + user card z <em>APPROVED</em> status) · Topbar z breadcrumb, search <em>⌘K</em>, quick actions, notif bell · Content: greeting + 4 KPI + main grid 2-kol (wizyty dnia + side column z PENDING + opinie)
+    </div>
+    <div>
+      <strong>Hero moments</strong>
+      Greeting Bebas 38px z pomarańczowym wave emoji · KPI „Wizyt dziś" z amber accent border i tintem · Urgent booking (PENDING) z amber lewym stripe i gradient bg · „⚠ SLA 1h 42 min" jako warning alarm · PENDING inbox (yellow-tinted panel) z countdown · Nowe opinie z <em>NOWE</em> amber badge
+    </div>
+  </footer>
+
+</body>
+</html>

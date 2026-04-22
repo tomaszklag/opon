@@ -1,0 +1,1542 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Opony Panel — B2B-07 Strefa obsługi · W:12.7</title>
+<!--
+  Screen: Panel providera — Strefa obsługi (mapa + promień dla mobilnych)
+  Ref:    docs/plan-sprintow.md → W:12.7 bottom (panel.opony.app — desktop-first)
+  US:     US-25 (strefa obsługi)
+  Tone:   industrial-dark · big SVG map + amber radius · stats dzielnic + historii
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Bebas+Neue&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0A0B0E;
+    --bg-tint-top: #12141A;
+    --surface: #14171D;
+    --surface-raised: #1B1E26;
+    --surface-hover: #23272F;
+    --border: #262A34;
+    --border-strong: #363B47;
+    --hairline: rgba(255, 255, 255, 0.06);
+    --text-primary: #F5F4EF;
+    --text-secondary: #9EA2AD;
+    --text-muted: #60646F;
+    --text-on-accent: #0A0B0E;
+    --accent: #FF6B1A;
+    --accent-hover: #FF8039;
+    --accent-muted: rgba(255, 107, 26, 0.14);
+    --accent-border: rgba(255, 107, 26, 0.32);
+    --accent-glow: rgba(255, 107, 26, 0.45);
+    --success: #2EE0A0;
+    --success-muted: rgba(46, 224, 160, 0.14);
+    --success-border: rgba(46, 224, 160, 0.32);
+    --warning: #FFB020;
+    --warning-muted: rgba(255, 176, 32, 0.14);
+    --warning-border: rgba(255, 176, 32, 0.32);
+    --danger: #FF5757;
+    --map-bg: #0F1218;
+    --map-street: #2C323F;
+    --map-street-minor: #252A36;
+    --map-water: #1E3340;
+    --map-block: #171B23;
+    --map-park: #1A2419;
+    --font-display: 'Bebas Neue', sans-serif;
+    --font-body: 'Archivo', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; overflow-x: hidden; max-width: 100vw; }
+  body {
+    --desktop-scale: min(1, calc((100vh - 200px) / 900px), calc((100vw - 80px) / 1440px));
+    font-family: var(--font-body);
+    background: var(--bg);
+    color: var(--text-primary);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    background-image:
+      radial-gradient(ellipse 70% 50% at 50% 0%, rgba(255, 107, 26, 0.05) 0%, transparent 60%),
+      radial-gradient(ellipse 50% 30% at 90% 100%, rgba(46, 224, 160, 0.02) 0%, transparent 60%),
+      linear-gradient(180deg, var(--bg-tint-top) 0%, var(--bg) 30%);
+    background-attachment: fixed;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 40px 40px 60px;
+    gap: 24px;
+  }
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 4px var(--accent-muted); opacity: 1; }
+    50%      { box-shadow: 0 0 0 8px transparent; opacity: 0.6; }
+  }
+  @keyframes softPulse {
+    0%, 100% { box-shadow: 0 0 0 3px var(--accent-muted); opacity: 1; }
+    50%      { box-shadow: 0 0 0 7px transparent; opacity: 0.85; }
+  }
+
+  .canvas-label {
+    width: 100%;
+    max-width: 1440px;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: baseline;
+    gap: 20px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  .film-strip { font-family: var(--font-display); font-size: 32px; letter-spacing: 3px; line-height: 1; }
+  .slug {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    border-left: 1px solid var(--border);
+    padding-left: 18px;
+  }
+  .canvas-meta {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-secondary);
+    letter-spacing: 1px;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .canvas-meta .pulse {
+    display: inline-block;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 0 4px var(--accent-muted);
+    animation: pulse 1800ms ease-in-out infinite;
+  }
+
+  /* Desktop frame */
+  .desktop-frame {
+    width: 1440px;
+    height: 900px;
+    background: var(--bg);
+    border-radius: 14px;
+    border: 1px solid #1C1E24;
+    box-shadow: 0 40px 120px rgba(0, 0, 0, 0.6), 0 20px 40px rgba(0, 0, 0, 0.4);
+    overflow: hidden;
+    position: relative;
+    flex-shrink: 0;
+    transform: scale(var(--desktop-scale));
+    transform-origin: top center;
+    margin-bottom: calc((var(--desktop-scale) - 1) * 900px);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .browser-chrome {
+    height: 44px;
+    background: linear-gradient(180deg, #1A1D23, #14171D);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    gap: 16px;
+    flex-shrink: 0;
+  }
+  .traffic-lights { display: inline-flex; gap: 8px; }
+  .light { width: 12px; height: 12px; border-radius: 50%; }
+  .light.red { background: #FF5F57; }
+  .light.yellow { background: #FEBC2E; }
+  .light.green { background: #28C840; }
+  .browser-tabs { display: inline-flex; gap: 2px; }
+  .browser-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-bottom: none;
+    border-radius: 8px 8px 0 0;
+    font-size: 12px;
+    color: var(--text-primary);
+    position: relative;
+    top: 6px;
+  }
+  .browser-tab .favicon {
+    width: 14px; height: 14px;
+    border-radius: 3px;
+    background: var(--accent);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-display);
+    font-size: 9px;
+    color: var(--text-on-accent);
+    letter-spacing: 0.5px;
+  }
+  .browser-address {
+    flex: 1;
+    max-width: 480px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+  .browser-address .lock { color: var(--success); }
+  .browser-address .url { color: var(--text-primary); }
+  .browser-address .path { color: var(--text-secondary); }
+
+  /* Sidebar */
+  .app-root {
+    flex: 1;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: 220px 1fr;
+  }
+  .sidebar {
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    padding: 20px 14px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .sb-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px 18px;
+  }
+  .sb-brand .wordmark {
+    font-family: var(--font-display);
+    font-size: 26px;
+    letter-spacing: 3px;
+    line-height: 1;
+    color: var(--text-primary);
+    display: inline-flex;
+    align-items: baseline;
+    gap: 3px;
+  }
+  .sb-brand .dot {
+    display: inline-block;
+    width: 6px; height: 6px;
+    background: var(--accent);
+    border-radius: 50%;
+    transform: translateY(-2px);
+    box-shadow: 0 0 10px var(--accent-glow);
+  }
+  .sb-brand .panel-tag {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    padding: 2px 5px;
+    border-radius: 4px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    font-weight: 700;
+    margin-left: auto;
+  }
+  .sb-section-label {
+    font-family: var(--font-body);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 1.3px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    padding: 8px 10px 4px;
+  }
+  .sb-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 10px;
+    border-radius: 8px;
+    background: transparent;
+    border: 1px solid transparent;
+    color: var(--text-secondary);
+    font-family: var(--font-body);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: left;
+    width: 100%;
+    transition: background 140ms ease, color 140ms ease;
+  }
+  .sb-item:hover { background: var(--surface-hover); color: var(--text-primary); }
+  .sb-item.active {
+    background: var(--accent-muted);
+    color: var(--accent);
+    border-color: var(--accent-border);
+  }
+  .sb-badge {
+    margin-left: auto;
+    min-width: 20px; height: 18px;
+    padding: 0 6px;
+    background: var(--accent);
+    color: var(--text-on-accent);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 700;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .sb-spacer { flex: 1; }
+  .sb-user {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    cursor: pointer;
+  }
+  .sb-avatar {
+    width: 34px; height: 34px;
+    border-radius: 9px;
+    background: linear-gradient(135deg, #FF8039 0%, #C73F0A 100%);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-display);
+    font-size: 15px;
+    color: var(--text-on-accent);
+    letter-spacing: 1.5px;
+    flex-shrink: 0;
+  }
+  .sb-user-col { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  .sb-user-name {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1.1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .sb-user-role {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    color: var(--accent);
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    font-weight: 700;
+  }
+
+  /* Main */
+  .main { display: flex; flex-direction: column; overflow: hidden; }
+  .topbar {
+    height: 58px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 28px;
+    gap: 16px;
+    flex-shrink: 0;
+  }
+  .tb-breadcrumb {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--text-muted);
+    font-weight: 600;
+  }
+  .tb-breadcrumb .sep { color: var(--border-strong); }
+  .tb-breadcrumb .current { color: var(--text-primary); font-weight: 700; }
+  .tb-spacer { flex: 1; }
+
+  .unsaved-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 10px;
+    border-radius: 5px;
+    background: var(--warning-muted);
+    border: 1px solid var(--warning-border);
+    color: var(--warning);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+  }
+  .unsaved-chip::before {
+    content: '';
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--warning);
+    box-shadow: 0 0 8px rgba(255, 176, 32, 0.5);
+  }
+
+  .tb-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-family: var(--font-body);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-primary);
+  }
+  .tb-btn:hover { background: var(--surface); border-color: var(--border-strong); }
+  .tb-btn.primary {
+    background: var(--accent);
+    color: var(--text-on-accent);
+    border-color: var(--accent);
+    font-weight: 800;
+    box-shadow: 0 4px 12px rgba(255, 107, 26, 0.3);
+  }
+  .tb-btn.primary:hover { background: var(--accent-hover); }
+
+  /* CONTENT split */
+  .content {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+    display: grid;
+    grid-template-columns: 380px 1fr;
+  }
+
+  /* LEFT — controls */
+  .col-controls {
+    border-right: 1px solid var(--border);
+    padding: 22px 20px 22px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    scrollbar-width: thin;
+  }
+  .col-controls::-webkit-scrollbar { width: 5px; }
+  .col-controls::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  /* Page hero */
+  .page-hero {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .page-title {
+    font-family: var(--font-display);
+    font-size: 34px;
+    letter-spacing: 2px;
+    line-height: 1;
+    color: var(--text-primary);
+  }
+  .page-sub {
+    font-size: 12px;
+    color: var(--text-secondary);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .page-sub strong { color: var(--accent); font-weight: 700; font-family: var(--font-mono); }
+
+  /* Section */
+  .ctrl-section {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .ctrl-label {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+  }
+  .ctrl-title {
+    font-family: var(--font-body);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 1.3px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+  .ctrl-sub {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--text-muted);
+    letter-spacing: 0.3px;
+  }
+
+  /* Type switcher */
+  .type-switcher {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .type-option {
+    padding: 12px;
+    background: var(--bg);
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    cursor: pointer;
+    transition: all 140ms ease;
+    position: relative;
+  }
+  .type-option.active {
+    background: linear-gradient(135deg, var(--accent-muted), transparent);
+    border-color: var(--accent);
+    box-shadow: 0 4px 14px rgba(255, 107, 26, 0.25);
+  }
+  .type-option .ico {
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .type-option.active .ico {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--text-on-accent);
+  }
+  .type-option .name {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1;
+  }
+  .type-option.active .name { color: var(--accent); }
+  .type-option .desc {
+    font-size: 10px;
+    color: var(--text-muted);
+    line-height: 1.3;
+  }
+  .type-radio {
+    position: absolute;
+    top: 10px; right: 10px;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    border: 1.5px solid var(--border-strong);
+    background: var(--bg);
+  }
+  .type-option.active .type-radio {
+    background: var(--accent);
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px var(--bg), 0 0 0 3px var(--accent);
+  }
+
+  /* Center input */
+  .center-input {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    transition: all 140ms ease;
+  }
+  .center-input:focus-within {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-muted);
+  }
+  .center-input svg { color: var(--accent); flex-shrink: 0; }
+  .center-input input {
+    flex: 1;
+    background: none;
+    border: none;
+    outline: none;
+    color: var(--text-primary);
+    font-family: var(--font-body);
+    font-size: 13px;
+    font-weight: 500;
+  }
+  .center-input input::placeholder { color: var(--text-muted); }
+  .center-input .coords {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--text-muted);
+    letter-spacing: 0.3px;
+  }
+  .center-presets {
+    display: flex;
+    gap: 6px;
+    margin-top: 4px;
+    flex-wrap: wrap;
+  }
+  .preset-chip {
+    padding: 4px 8px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    color: var(--text-secondary);
+    font-family: var(--font-body);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    cursor: pointer;
+  }
+  .preset-chip:hover { background: var(--surface-hover); color: var(--text-primary); }
+  .preset-chip.active {
+    background: var(--accent-muted);
+    border-color: var(--accent-border);
+    color: var(--accent);
+  }
+
+  /* Radius */
+  .radius-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .radius-input {
+    display: flex;
+    align-items: center;
+    background: var(--surface-raised);
+    border: 1px solid var(--border-strong);
+    border-radius: 8px;
+    padding: 8px 10px;
+    gap: 4px;
+  }
+  .radius-input input {
+    width: 40px;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--text-primary);
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: 16px;
+    text-align: right;
+    letter-spacing: 0.3px;
+  }
+  .radius-input .unit {
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: 12px;
+    color: var(--accent);
+  }
+  .radius-slider {
+    flex: 1;
+    -webkit-appearance: none;
+    appearance: none;
+    height: 6px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    outline: none;
+  }
+  .radius-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+    box-shadow: 0 0 0 3px var(--bg), 0 0 0 4px var(--accent-border), 0 4px 10px rgba(255, 107, 26, 0.4);
+  }
+  .radius-slider::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+    border: none;
+    box-shadow: 0 0 0 3px var(--bg), 0 0 0 4px var(--accent-border), 0 4px 10px rgba(255, 107, 26, 0.4);
+  }
+
+  .radius-chips {
+    display: flex;
+    gap: 4px;
+    margin-top: 4px;
+    padding: 3px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+  .radius-chip {
+    flex: 1;
+    padding: 6px 0;
+    text-align: center;
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    cursor: pointer;
+    border-radius: 5px;
+  }
+  .radius-chip:hover { color: var(--text-primary); }
+  .radius-chip.active {
+    background: var(--accent);
+    color: var(--text-on-accent);
+    box-shadow: 0 2px 6px rgba(255, 107, 26, 0.4);
+  }
+
+  /* Stats cards */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .stat-card {
+    padding: 10px 12px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+  }
+  .stat-value {
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: 20px;
+    color: var(--text-primary);
+    letter-spacing: 0.3px;
+    line-height: 1.1;
+  }
+  .stat-value .unit {
+    font-size: 10px;
+    color: var(--accent);
+    margin-left: 2px;
+    font-weight: 700;
+  }
+  .stat-value.accent { color: var(--accent); }
+  .stat-label {
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 1.1px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-top: 4px;
+  }
+
+  /* District list */
+  .district-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    max-height: 180px;
+    overflow-y: auto;
+    padding-right: 4px;
+    scrollbar-width: thin;
+  }
+  .district-list::-webkit-scrollbar { width: 3px; }
+  .district-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  .district-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 10px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    font-size: 11px;
+  }
+  .district-item.in {
+    border-color: var(--success-border);
+    background: var(--success-muted);
+  }
+  .district-item.edge {
+    border-color: var(--warning-border);
+    background: var(--warning-muted);
+  }
+  .district-item.out {
+    opacity: 0.4;
+  }
+  .district-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .district-item.in .district-dot { background: var(--success); }
+  .district-item.edge .district-dot { background: var(--warning); }
+  .district-item.out .district-dot { background: var(--text-muted); }
+  .district-name {
+    flex: 1;
+    color: var(--text-primary);
+    font-weight: 600;
+  }
+  .district-item.in .district-name { color: var(--success); }
+  .district-item.edge .district-name { color: var(--warning); }
+  .district-item.out .district-name { color: var(--text-muted); font-weight: 500; }
+  .district-dist {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--text-muted);
+    letter-spacing: 0.3px;
+  }
+  .district-item.in .district-dist { color: var(--success); font-weight: 700; }
+  .district-item.edge .district-dist { color: var(--warning); font-weight: 700; }
+
+  /* Fees info */
+  .fees-info {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 10px 12px;
+    background: transparent;
+    border: 1px dashed var(--border);
+    border-radius: 10px;
+  }
+  .fee-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 11px;
+    color: var(--text-secondary);
+  }
+  .fee-val {
+    font-family: var(--font-mono);
+    font-weight: 700;
+    color: var(--text-primary);
+  }
+  .fee-val.success { color: var(--success); }
+  .fees-link {
+    font-size: 10px;
+    color: var(--accent);
+    font-weight: 800;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    margin-top: 4px;
+  }
+
+  /* RIGHT — map */
+  .col-map {
+    position: relative;
+    background: var(--map-bg);
+    overflow: hidden;
+  }
+  .map-svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  /* Map controls overlay */
+  .map-overlay-top {
+    position: absolute;
+    top: 18px;
+    left: 18px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    z-index: 20;
+  }
+  .map-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 8px 12px;
+    background: rgba(10, 11, 14, 0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-family: var(--font-body);
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-primary);
+    letter-spacing: 0.3px;
+  }
+  .map-pill .label {
+    font-family: var(--font-body);
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 1.1px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+  .map-pill .value {
+    font-family: var(--font-mono);
+    font-weight: 700;
+    color: var(--accent);
+    letter-spacing: 0.5px;
+  }
+  .map-pill .dot-green {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--success);
+    box-shadow: 0 0 6px rgba(46, 224, 160, 0.5);
+  }
+
+  .map-controls {
+    position: absolute;
+    top: 18px;
+    right: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    z-index: 20;
+  }
+  .map-ctrl-group {
+    display: flex;
+    flex-direction: column;
+    background: rgba(10, 11, 14, 0.88);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .map-ctrl-btn {
+    width: 40px; height: 40px;
+    background: transparent;
+    border: none;
+    color: var(--text-primary);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
+  .map-ctrl-btn:hover { background: var(--surface-hover); }
+  .map-ctrl-divider { height: 1px; background: var(--border); }
+  .map-ctrl-btn.locate {
+    background: rgba(10, 11, 14, 0.88);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--accent-border);
+    border-radius: 10px;
+    color: var(--accent);
+  }
+
+  /* Labels on map */
+  .map-label {
+    position: absolute;
+    padding: 3px 8px;
+    background: rgba(10, 11, 14, 0.9);
+    backdrop-filter: blur(6px);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    font-family: var(--font-body);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    color: var(--text-primary);
+    white-space: nowrap;
+    z-index: 15;
+    pointer-events: none;
+  }
+  .map-label.accent {
+    color: var(--accent);
+    border-color: var(--accent-border);
+  }
+  .map-label.muted {
+    color: var(--text-muted);
+    font-weight: 600;
+  }
+
+  /* Radius label on circle edge */
+  .radius-label-overlay {
+    position: absolute;
+    padding: 4px 10px;
+    background: rgba(10, 11, 14, 0.92);
+    border: 1px solid var(--accent);
+    border-radius: 6px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    color: var(--accent);
+    z-index: 15;
+    transform: translate(-50%, -50%);
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .radius-label-overlay::before {
+    content: 'PROMIEŃ';
+    font-size: 8px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    color: var(--text-muted);
+  }
+
+  /* Bottom info bar */
+  .map-bottom {
+    position: absolute;
+    bottom: 16px;
+    left: 16px;
+    right: 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    background: rgba(10, 11, 14, 0.88);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    z-index: 20;
+  }
+  .map-bottom-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .map-bottom-stat .label {
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 1.1px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+  .map-bottom-stat .value {
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--text-primary);
+    letter-spacing: 0.3px;
+  }
+  .map-bottom-stat .value.accent { color: var(--accent); }
+  .map-bottom-sep {
+    width: 1px;
+    align-self: stretch;
+    background: var(--border);
+  }
+
+  /* footer caption */
+  .caption {
+    max-width: 1440px;
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 0.5px;
+  }
+  .caption strong {
+    color: var(--text-secondary);
+    font-weight: 500;
+    display: block;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    font-size: 10px;
+  }
+  .caption em { color: var(--accent); font-style: normal; }
+</style>
+</head>
+<body>
+
+  <header class="canvas-label">
+    <span class="film-strip">OPONY PANEL — B2B-07</span>
+    <span class="slug">strefa obsługi · mapa + promień</span>
+    <span class="canvas-meta"><span class="pulse"></span>W:12.7 · US-25</span>
+  </header>
+
+  <main class="desktop-frame" role="region" aria-label="Mockup — panel strefy obsługi">
+
+    <div class="browser-chrome" aria-hidden="true">
+      <span class="traffic-lights">
+        <span class="light red"></span>
+        <span class="light yellow"></span>
+        <span class="light green"></span>
+      </span>
+      <span class="browser-tabs">
+        <span class="browser-tab active">
+          <span class="favicon">O</span>
+          Opony Panel — Strefa obsługi
+        </span>
+      </span>
+      <span class="browser-address">
+        <svg class="lock" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+        <span class="url">panel.opony.app</span><span class="path">/settings/zone</span>
+      </span>
+    </div>
+
+    <div class="app-root">
+
+      <!-- SIDEBAR -->
+      <aside class="sidebar" aria-label="Nawigacja główna">
+        <div class="sb-brand">
+          <div class="wordmark">OPONY<span class="dot"></span></div>
+          <span class="panel-tag">PANEL</span>
+        </div>
+
+        <span class="sb-section-label">Dziś</span>
+        <button class="sb-item">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>
+          Dashboard
+        </button>
+        <button class="sb-item">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 10h18M8 2v4M16 2v4"/></svg>
+          Kalendarz
+        </button>
+        <button class="sb-item">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11H5a2 2 0 0 0-2 2v7h18v-7a2 2 0 0 0-2-2h-4M9 11V5a3 3 0 0 1 6 0v6M9 11h6"/></svg>
+          Rezerwacje
+          <span class="sb-badge">12</span>
+        </button>
+
+        <span class="sb-section-label">Warsztat</span>
+        <button class="sb-item">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          Cennik
+        </button>
+        <button class="sb-item">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+          Godziny pracy
+        </button>
+        <button class="sb-item active">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+          Strefa obsługi
+        </button>
+        <button class="sb-item">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15 9 22 9.5 17 14 18.5 21 12 17.5 5.5 21 7 14 2 9.5 9 9 12 2"/></svg>
+          Opinie
+          <span class="sb-badge">2</span>
+        </button>
+
+        <span class="sb-section-label">Konto</span>
+        <button class="sb-item">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+          Ustawienia
+        </button>
+
+        <div class="sb-spacer"></div>
+
+        <div class="sb-user" role="button">
+          <div class="sb-avatar">MK</div>
+          <div class="sb-user-col">
+            <span class="sb-user-name">MobilOpony Kasia</span>
+            <span class="sb-user-role">Provider · APPROVED</span>
+          </div>
+        </div>
+      </aside>
+
+      <!-- MAIN -->
+      <section class="main">
+
+        <!-- TOPBAR -->
+        <header class="topbar">
+          <nav class="tb-breadcrumb">
+            <span>Panel</span>
+            <span class="sep">/</span>
+            <span>Warsztat</span>
+            <span class="sep">/</span>
+            <span class="current">Strefa obsługi</span>
+          </nav>
+          <span class="tb-spacer"></span>
+          <span class="unsaved-chip">Niezapisane zmiany</span>
+          <button class="tb-btn">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 1 9 9M3 12l3-3M3 12l3 3"/></svg>
+            Cofnij
+          </button>
+          <button class="tb-btn primary">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/></svg>
+            Zapisz strefę
+          </button>
+        </header>
+
+        <!-- CONTENT -->
+        <div class="content">
+
+          <!-- LEFT: CONTROLS -->
+          <aside class="col-controls">
+
+            <header class="page-hero">
+              <h1 class="page-title">Strefa obsługi</h1>
+              <div class="page-sub">
+                Obecnie <strong>12 dzielnic</strong> · <strong>47%</strong> powierzchni miasta · <strong>~22 000</strong> mieszkańców
+              </div>
+            </header>
+
+            <!-- Typ punktu -->
+            <section class="ctrl-section">
+              <div class="ctrl-label">
+                <span class="ctrl-title">Typ punktu</span>
+              </div>
+              <div class="type-switcher" role="radiogroup">
+                <button class="type-option active" role="radio" aria-checked="true">
+                  <span class="type-radio"></span>
+                  <span class="ico">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 17h14M7 12l1.5-4.5A2 2 0 0 1 10.4 6h3.2a2 2 0 0 1 1.9 1.5L17 12"/><path d="M5 12h14v5H5z"/><circle cx="7.5" cy="17" r="1.5" fill="currentColor"/><circle cx="16.5" cy="17" r="1.5" fill="currentColor"/></svg>
+                  </span>
+                  <span class="name">Mobilny</span>
+                  <span class="desc">Dojeżdżasz do klienta — strefa promieniowa</span>
+                </button>
+                <button class="type-option" role="radio" aria-checked="false">
+                  <span class="type-radio"></span>
+                  <span class="ico">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10 12 3l9 7"/><path d="M5 10v9h14v-9"/><path d="M9 19v-5h6v5"/></svg>
+                  </span>
+                  <span class="name">Stacjonarny</span>
+                  <span class="desc">Klient przyjeżdża — tylko adres warsztatu</span>
+                </button>
+              </div>
+            </section>
+
+            <!-- Centrum -->
+            <section class="ctrl-section">
+              <div class="ctrl-label">
+                <span class="ctrl-title">Centrum strefy</span>
+                <span class="ctrl-sub">z geocodingu</span>
+              </div>
+              <label class="center-input">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                <input type="text" value="ul. Jagiellońska 45, Nowy Sącz" aria-label="Adres centrum strefy" />
+                <span class="coords">49.6216, 20.6956</span>
+              </label>
+              <div class="center-presets">
+                <button class="preset-chip active">Adres firmy</button>
+                <button class="preset-chip">Rynek (Nowy Sącz)</button>
+                <button class="preset-chip">Inna lokalizacja…</button>
+              </div>
+            </section>
+
+            <!-- Promień -->
+            <section class="ctrl-section">
+              <div class="ctrl-label">
+                <span class="ctrl-title">Promień obsługi</span>
+                <span class="ctrl-sub">max 30 km</span>
+              </div>
+              <div class="radius-row">
+                <label class="radius-input">
+                  <input type="number" value="15" min="1" max="30" aria-label="Promień w kilometrach" />
+                  <span class="unit">km</span>
+                </label>
+                <input class="radius-slider" type="range" min="5" max="30" value="15" aria-label="Slider promień" />
+              </div>
+              <div class="radius-chips" role="tablist">
+                <button class="radius-chip">5 km</button>
+                <button class="radius-chip">10 km</button>
+                <button class="radius-chip active">15 km</button>
+                <button class="radius-chip">20 km</button>
+                <button class="radius-chip">25 km</button>
+              </div>
+            </section>
+
+            <!-- Stats -->
+            <section class="ctrl-section">
+              <div class="ctrl-label">
+                <span class="ctrl-title">Zasięg</span>
+              </div>
+              <div class="stats-grid">
+                <div class="stat-card">
+                  <div class="stat-value accent">12<span class="unit">dzielnic</span></div>
+                  <div class="stat-label">w strefie</div>
+                </div>
+                <div class="stat-card">
+                  <div class="stat-value">706<span class="unit">km²</span></div>
+                  <div class="stat-label">powierzchni</div>
+                </div>
+                <div class="stat-card">
+                  <div class="stat-value">~22k</div>
+                  <div class="stat-label">mieszkańców</div>
+                </div>
+                <div class="stat-card">
+                  <div class="stat-value accent">78<span class="unit">%</span></div>
+                  <div class="stat-label">hist. rezerwacji &le; 10 km</div>
+                </div>
+              </div>
+            </section>
+
+            <!-- Dzielnice -->
+            <section class="ctrl-section">
+              <div class="ctrl-label">
+                <span class="ctrl-title">Dzielnice w zasięgu</span>
+                <span class="ctrl-sub">12 / 14</span>
+              </div>
+              <div class="district-list">
+                <div class="district-item in">
+                  <span class="district-dot"></span>
+                  <span class="district-name">Centrum</span>
+                  <span class="district-dist">0,4 km</span>
+                </div>
+                <div class="district-item in">
+                  <span class="district-dot"></span>
+                  <span class="district-name">Helena</span>
+                  <span class="district-dist">2,8 km</span>
+                </div>
+                <div class="district-item in">
+                  <span class="district-dot"></span>
+                  <span class="district-name">Gołąbkowice</span>
+                  <span class="district-dist">3,1 km</span>
+                </div>
+                <div class="district-item in">
+                  <span class="district-dot"></span>
+                  <span class="district-name">Zawada</span>
+                  <span class="district-dist">4,6 km</span>
+                </div>
+                <div class="district-item in">
+                  <span class="district-dot"></span>
+                  <span class="district-name">Wólki</span>
+                  <span class="district-dist">5,2 km</span>
+                </div>
+                <div class="district-item in">
+                  <span class="district-dot"></span>
+                  <span class="district-name">Biegonice</span>
+                  <span class="district-dist">6,8 km</span>
+                </div>
+                <div class="district-item in">
+                  <span class="district-dot"></span>
+                  <span class="district-name">Falkowa</span>
+                  <span class="district-dist">8,3 km</span>
+                </div>
+                <div class="district-item edge">
+                  <span class="district-dot"></span>
+                  <span class="district-name">Chełmiec</span>
+                  <span class="district-dist">12,1 km · dopłata 30 zł</span>
+                </div>
+                <div class="district-item edge">
+                  <span class="district-dot"></span>
+                  <span class="district-name">Stary Sącz</span>
+                  <span class="district-dist">13,4 km · dopłata 30 zł</span>
+                </div>
+                <div class="district-item edge">
+                  <span class="district-dot"></span>
+                  <span class="district-name">Barcice</span>
+                  <span class="district-dist">14,8 km · dopłata 30 zł</span>
+                </div>
+                <div class="district-item out">
+                  <span class="district-dot"></span>
+                  <span class="district-name">Łącko</span>
+                  <span class="district-dist">17,2 km · poza strefą</span>
+                </div>
+                <div class="district-item out">
+                  <span class="district-dot"></span>
+                  <span class="district-name">Krynica-Zdrój</span>
+                  <span class="district-dist">28,6 km · poza strefą</span>
+                </div>
+              </div>
+            </section>
+
+            <!-- Fees info (z Cennika) -->
+            <section class="ctrl-section">
+              <div class="ctrl-label">
+                <span class="ctrl-title">Dopłaty za dojazd</span>
+                <span class="ctrl-sub">z Cennika</span>
+              </div>
+              <div class="fees-info">
+                <div class="fee-row">
+                  <span>0 – 10 km</span>
+                  <span class="fee-val success">w cenie</span>
+                </div>
+                <div class="fee-row">
+                  <span>10 – 15 km</span>
+                  <span class="fee-val">+ 30 zł</span>
+                </div>
+                <div class="fee-row">
+                  <span>poza strefą</span>
+                  <span class="fee-val" style="color: var(--text-muted);">niewidoczne dla klienta</span>
+                </div>
+                <a class="fees-link" href="#">
+                  Edytuj w cenniku
+                  <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg>
+                </a>
+              </div>
+            </section>
+
+          </aside>
+
+          <!-- RIGHT: MAP -->
+          <div class="col-map" aria-label="Mapa strefy obsługi">
+
+            <!-- MAP SVG -->
+            <svg class="map-svg" viewBox="0 0 820 760" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <defs>
+                <pattern id="dots" x="0" y="0" width="28" height="28" patternUnits="userSpaceOnUse">
+                  <circle cx="14" cy="14" r="0.9" fill="#1F2430"/>
+                </pattern>
+                <radialGradient id="areaGlow" cx="50%" cy="50%" r="50%">
+                  <stop offset="0%" stop-color="#FF6B1A" stop-opacity="0.14"/>
+                  <stop offset="60%" stop-color="#FF6B1A" stop-opacity="0.05"/>
+                  <stop offset="100%" stop-color="#FF6B1A" stop-opacity="0"/>
+                </radialGradient>
+              </defs>
+
+              <!-- base + dots -->
+              <rect width="820" height="760" fill="var(--map-bg)"/>
+              <rect width="820" height="760" fill="url(#dots)"/>
+
+              <!-- parks (green-ish) -->
+              <g fill="var(--map-park)" opacity="0.8">
+                <path d="M 60 80 Q 140 60 200 90 Q 220 130 180 170 Q 120 160 60 140 Z"/>
+                <path d="M 620 180 Q 690 160 740 190 Q 760 230 720 270 Q 660 260 620 230 Z"/>
+                <path d="M 550 580 Q 610 560 680 590 Q 700 630 660 670 Q 590 660 550 630 Z"/>
+              </g>
+
+              <!-- bloki/budynki -->
+              <g fill="var(--map-block)">
+                <rect x="220" y="220" width="90" height="60" rx="3"/>
+                <rect x="320" y="210" width="70" height="55" rx="3"/>
+                <rect x="400" y="200" width="80" height="70" rx="3"/>
+                <rect x="490" y="230" width="95" height="60" rx="3"/>
+                <rect x="240" y="310" width="75" height="50" rx="3"/>
+                <rect x="325" y="300" width="85" height="65" rx="3"/>
+                <rect x="420" y="295" width="70" height="55" rx="3"/>
+                <rect x="500" y="305" width="90" height="60" rx="3"/>
+                <rect x="260" y="400" width="80" height="55" rx="3"/>
+                <rect x="350" y="395" width="90" height="65" rx="3"/>
+                <rect x="450" y="405" width="75" height="50" rx="3"/>
+                <rect x="535" y="400" width="85" height="60" rx="3"/>
+                <rect x="240" y="490" width="95" height="60" rx="3"/>
+                <rect x="345" y="480" width="80" height="65" rx="3"/>
+                <rect x="435" y="495" width="85" height="55" rx="3"/>
+                <rect x="530" y="485" width="90" height="65" rx="3"/>
+                <rect x="130" y="350" width="70" height="60" rx="3"/>
+                <rect x="135" y="430" width="65" height="55" rx="3"/>
+                <rect x="650" y="360" width="75" height="60" rx="3"/>
+                <rect x="655" y="440" width="70" height="65" rx="3"/>
+              </g>
+
+              <!-- główne ulice / drogi -->
+              <g fill="none" stroke-linecap="round">
+                <path d="M -10 380 C 120 360, 250 390, 400 380 C 550 370, 680 390, 830 380" stroke="var(--map-street)" stroke-width="3.5"/>
+                <path d="M -10 200 C 120 180, 250 210, 400 200 C 550 190, 680 210, 830 200" stroke="var(--map-street)" stroke-width="2.5"/>
+                <path d="M -10 560 C 120 540, 250 570, 400 560 C 550 550, 680 570, 830 560" stroke="var(--map-street)" stroke-width="2.5"/>
+                <path d="M 220 -10 C 230 150, 240 300, 250 450 C 258 580, 260 700, 260 780" stroke="var(--map-street)" stroke-width="2.8"/>
+                <path d="M 410 -10 C 420 150, 430 300, 420 450 C 412 580, 408 700, 406 780" stroke="var(--map-street)" stroke-width="3.2"/>
+                <path d="M 600 -10 C 610 150, 620 300, 610 450 C 602 580, 598 700, 596 780" stroke="var(--map-street)" stroke-width="2.8"/>
+              </g>
+              <!-- minor streets -->
+              <g fill="none" stroke="var(--map-street-minor)" stroke-width="1.3" stroke-linecap="round" opacity="0.7">
+                <path d="M -10 100 L 830 100"/>
+                <path d="M -10 280 L 830 280"/>
+                <path d="M -10 470 L 830 470"/>
+                <path d="M -10 660 L 830 660"/>
+                <path d="M 100 -10 L 100 780"/>
+                <path d="M 310 -10 L 310 780"/>
+                <path d="M 500 -10 L 500 780"/>
+                <path d="M 700 -10 L 700 780"/>
+              </g>
+
+              <!-- rzeka Dunajec -->
+              <path d="M -10 600 Q 150 580, 260 620 T 510 640 T 830 600" fill="none" stroke="var(--map-water)" stroke-width="14" stroke-linecap="round" opacity="0.9"/>
+              <path d="M -10 600 Q 150 580, 260 620 T 510 640 T 830 600" fill="none" stroke="#2A4A5A" stroke-width="1" stroke-linecap="round" opacity="0.5"/>
+
+              <!-- Service area glow + dashed circle -->
+              <circle cx="410" cy="380" r="260" fill="url(#areaGlow)"/>
+              <circle cx="410" cy="380" r="260" fill="none" stroke="#FF6B1A" stroke-width="1.8" stroke-dasharray="8 6" opacity="0.85"/>
+              <!-- 10 km inner circle dashed lighter -->
+              <circle cx="410" cy="380" r="175" fill="none" stroke="#FF6B1A" stroke-width="1" stroke-dasharray="4 5" opacity="0.35"/>
+
+              <!-- Center pin — baza Kasi -->
+              <g transform="translate(410, 380)">
+                <circle r="28" fill="#FF6B1A" opacity="0.22"/>
+                <circle r="15" fill="#FF6B1A"/>
+                <circle r="6" fill="#0A0B0E"/>
+              </g>
+            </svg>
+
+            <!-- Map labels for districts -->
+            <span class="map-label accent" style="top: 44%; left: 52%;">Jagiellońska 45 · baza</span>
+            <span class="map-label" style="top: 38%; left: 36%;">Centrum</span>
+            <span class="map-label" style="top: 52%; left: 32%;">Helena</span>
+            <span class="map-label" style="top: 34%; left: 62%;">Gołąbkowice</span>
+            <span class="map-label" style="top: 60%; left: 60%;">Biegonice</span>
+            <span class="map-label muted" style="top: 22%; left: 20%;">Chełmiec (edge)</span>
+            <span class="map-label muted" style="top: 72%; left: 82%;">Stary Sącz (edge)</span>
+
+            <!-- Radius labels -->
+            <span class="radius-label-overlay" style="top: 18%; left: 50%;">15&nbsp;km</span>
+
+            <!-- Overlay top -->
+            <div class="map-overlay-top">
+              <span class="map-pill">
+                <span class="label">Centrum</span>
+                <span>Jagiellońska 45</span>
+              </span>
+              <span class="map-pill">
+                <span class="label">Promień</span>
+                <span class="value">15 km</span>
+              </span>
+              <span class="map-pill">
+                <span class="dot-green"></span>
+                Zmiany zapisz, żeby wpłynęły na listę
+              </span>
+            </div>
+
+            <!-- Controls -->
+            <div class="map-controls">
+              <div class="map-ctrl-group">
+                <button class="map-ctrl-btn" aria-label="Powiększ">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+                </button>
+                <span class="map-ctrl-divider"></span>
+                <button class="map-ctrl-btn" aria-label="Pomniejsz">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/></svg>
+                </button>
+              </div>
+              <button class="map-ctrl-btn locate" aria-label="Wyśrodkuj na bazie">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
+              </button>
+              <button class="map-ctrl-btn locate" aria-label="Przeciągnij pin">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+              </button>
+            </div>
+
+            <!-- Bottom info bar -->
+            <div class="map-bottom">
+              <div class="map-bottom-stat">
+                <span class="label">Historyczne rezerwacje</span>
+                <span class="value"><span class="accent">78%</span> · 0–10 km</span>
+              </div>
+              <div class="map-bottom-sep"></div>
+              <div class="map-bottom-stat">
+                <span class="label">18% · 10–15 km</span>
+                <span class="value">w strefie edge (+30 zł dopłata)</span>
+              </div>
+              <div class="map-bottom-sep"></div>
+              <div class="map-bottom-stat">
+                <span class="label">4% · próby poza strefą</span>
+                <span class="value" style="color: var(--text-muted);">zablokowane</span>
+              </div>
+              <div style="margin-left: auto; display: inline-flex; gap: 8px;">
+                <button class="tb-btn" type="button">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M7 11V7a5 5 0 0 1 10 0v4M5 11h14v10H5z"/></svg>
+                  Ukryj mapę publicznie
+                </button>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+
+      </section>
+    </div>
+
+  </main>
+
+  <footer class="caption">
+    <div>
+      <strong>Layout</strong>
+      Sidebar z <em>Strefa obsługi active</em> · Topbar: breadcrumb + „Niezapisane zmiany" warning + Cofnij / Zapisz strefę · Split content: lewa kolumna <em>380px</em> z kontrolkami (scrollowa) + prawa kolumna <em>flex</em> z dużą mapą SVG
+    </div>
+    <div>
+      <strong>Sekcje kontrolne</strong>
+      Hero „STREFA OBSŁUGI" + stat 12 dzielnic · <em>Type switcher</em> (Mobilny active amber + Stacjonarny) · Centrum: geocoded input z coords mono + presety (Adres firmy active) · Promień: input + slider + chips 5/10/15/20/25 · Stats 4-box · Lista 12 dzielnic z kolorami (zielone in / amber edge z dopłatą 30 zł / szare out) · Fees info z Cennika
+    </div>
+  </footer>
+
+</body>
+</html>

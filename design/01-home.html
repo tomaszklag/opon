@@ -53,7 +53,7 @@
   body {
     /* scale phone so it always fits in viewport without zooming.
        subtracts label + caption + paddings; never scales above 1 (desktop) */
-    --phone-scale: min(1, calc((100vh - 240px) / 852), calc((100vw - 60px) / 393));
+    --phone-scale: min(1, calc((100vh - 240px) / 852px), calc((100vw - 60px) / 393px));
     font-family: var(--font-body);
     background: var(--bg);
     color: var(--text-primary);
@@ -73,12 +73,6 @@
   }
 
   /* wrapper z policzonym rozmiarem — pochłania transform:scale phona w layoucie */
-  .phone-holder {
-    width: calc(393px * var(--phone-scale));
-    height: calc(852px * var(--phone-scale));
-    position: relative;
-    flex-shrink: 0;
-  }
 
   /* ====== Canvas label (outside phone) ====== */
   .canvas-label {
@@ -145,12 +139,12 @@
       0 24px 48px rgba(0, 0, 0, 0.45),
       inset 0 0 0 1px rgba(255, 255, 255, 0.03);
     overflow: hidden;
-    position: absolute;
-    top: 0;
-    left: 0;
+    position: relative;
     isolation: isolate;
+    flex-shrink: 0;
     transform: scale(var(--phone-scale));
-    transform-origin: top left;
+    transform-origin: top center;
+    margin-bottom: calc((var(--phone-scale) - 1) * 852px);
   }
   /* Dynamic Island */
   .phone::before {
@@ -728,7 +722,7 @@
     max-width: 560px;
     width: 100%;
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 16px;
     padding-top: 12px;
     border-top: 1px solid var(--border);
@@ -761,7 +755,6 @@
     <span class="canvas-meta"><span class="pulse"></span>W:12.1 · US-04a / 04b / 06 / 38</span>
   </header>
 
-  <div class="phone-holder">
   <main class="phone" role="region" aria-label="Mockup iPhone — ekran Home">
     <div class="status-bar">
       <span>9:41</span>
@@ -1025,8 +1018,6 @@
       </nav>
     </div>
   </main>
-
-  </div>
 
   <footer class="caption">
     <div>

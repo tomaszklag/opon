@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Opony.app — 21 Error boundary · polish</title>
+<!--
+  Screen: Error boundary — React crash / unhandled exception
+  Ref:    ADR-001 (Expo RNW), production-readiness polish
+  Flow:   Top-level ErrorBoundary catches crash; logs do Sentry; pokazuje ten ekran + retry
+  Tone:   industrial-dark · mobile · warning ≠ danger (user nie zrobił nic złego) · spokojny, nie alarmujący
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Bebas+Neue&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0A0B0E;
+    --bg-tint-top: #12141A;
+    --surface: #14171D;
+    --surface-raised: #1B1E26;
+    --surface-hover: #23272F;
+    --border: #262A34;
+    --border-strong: #363B47;
+    --hairline: rgba(255, 255, 255, 0.06);
+    --text-primary: #F5F4EF;
+    --text-secondary: #9EA2AD;
+    --text-muted: #60646F;
+    --text-on-accent: #0A0B0E;
+    --accent: #FF6B1A;
+    --accent-hover: #FF8039;
+    --accent-muted: rgba(255, 107, 26, 0.14);
+    --accent-border: rgba(255, 107, 26, 0.32);
+    --accent-glow: rgba(255, 107, 26, 0.45);
+    --success: #2EE0A0;
+    --warning: #FFB020;
+    --warning-muted: rgba(255, 176, 32, 0.14);
+    --warning-border: rgba(255, 176, 32, 0.32);
+    --warning-glow: rgba(255, 176, 32, 0.4);
+    --danger: #FF5757;
+    --font-display: 'Bebas Neue', sans-serif;
+    --font-body: 'Archivo', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; overflow-x: hidden; max-width: 100vw; }
+  body {
+    --phone-scale: min(1, calc((100vh - 240px) / 852px), calc((100vw - 60px) / 393px));
+    font-family: var(--font-body);
+    background: var(--bg);
+    color: var(--text-primary);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    background-image:
+      radial-gradient(ellipse 70% 50% at 50% 0%, rgba(255, 176, 32, 0.05) 0%, transparent 60%),
+      linear-gradient(180deg, var(--bg-tint-top) 0%, var(--bg) 30%);
+    background-attachment: fixed;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 48px 24px 80px;
+    gap: 28px;
+  }
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 4px var(--warning-muted); opacity: 1; }
+    50%      { box-shadow: 0 0 0 8px transparent; opacity: 0.6; }
+  }
+  @keyframes gentleSway {
+    0%, 100% { transform: rotate(-3deg); }
+    50%      { transform: rotate(3deg); }
+  }
+  @keyframes glyphBlink {
+    0%, 90%, 100% { opacity: 1; }
+    92%, 96%      { opacity: 0.4; }
+  }
+
+  .canvas-label {
+    width: 100%;
+    max-width: 560px;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: baseline;
+    gap: 20px;
+    padding-bottom: 18px;
+    border-bottom: 1px solid var(--border);
+  }
+  .film-strip { font-family: var(--font-display); font-size: 34px; letter-spacing: 3px; line-height: 1; }
+  .slug {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    border-left: 1px solid var(--border);
+    padding-left: 18px;
+  }
+  .canvas-meta {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-secondary);
+    letter-spacing: 1px;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .canvas-meta .pulse {
+    display: inline-block;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--warning);
+    box-shadow: 0 0 0 4px var(--warning-muted);
+    animation: pulse 1800ms ease-in-out infinite;
+  }
+
+  /* Phone */
+  .phone {
+    width: 393px;
+    height: 852px;
+    border-radius: 54px;
+    background: var(--bg);
+    border: 10px solid #0D0E12;
+    box-shadow:
+      0 0 0 1px #1C1E24,
+      0 40px 120px rgba(0, 0, 0, 0.7),
+      0 24px 48px rgba(0, 0, 0, 0.45),
+      inset 0 0 0 1px rgba(255, 255, 255, 0.03);
+    overflow: hidden;
+    position: relative;
+    isolation: isolate;
+    flex-shrink: 0;
+    transform: scale(var(--phone-scale));
+    transform-origin: top center;
+    margin-bottom: calc((var(--phone-scale) - 1) * 852px);
+  }
+  .phone::before {
+    content: '';
+    position: absolute;
+    top: 12px; left: 50%;
+    transform: translateX(-50%);
+    width: 124px; height: 36px;
+    border-radius: 24px;
+    background: #000;
+    z-index: 100;
+  }
+  .phone::after {
+    content: '';
+    position: absolute;
+    bottom: 8px; left: 50%;
+    transform: translateX(-50%);
+    width: 134px; height: 5px;
+    border-radius: 3px;
+    background: var(--text-primary);
+    opacity: 0.28;
+    z-index: 100;
+  }
+
+  .status-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 36px 0;
+    height: 54px;
+    font-weight: 700;
+    font-size: 15px;
+    position: relative;
+    z-index: 20;
+  }
+  .status-bar .right { display: inline-flex; gap: 6px; align-items: center; }
+
+  .screen {
+    position: absolute;
+    top: 54px; left: 0; right: 0; bottom: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: radial-gradient(ellipse 90% 50% at 50% 20%, rgba(255, 176, 32, 0.06) 0%, transparent 55%);
+  }
+  .screen::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
+    background-size: 48px 48px;
+    mask-image: radial-gradient(ellipse 70% 50% at 50% 40%, #000 30%, transparent 90%);
+    pointer-events: none;
+  }
+
+  /* Top bar — minimal */
+  .top-bar {
+    padding: 12px 16px 6px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 2;
+  }
+  .brand-mini {
+    font-family: var(--font-display);
+    font-size: 20px;
+    letter-spacing: 2.5px;
+    line-height: 1;
+    color: var(--text-primary);
+    display: inline-flex;
+    align-items: baseline;
+    gap: 3px;
+    opacity: 0.7;
+  }
+  .brand-mini .dot {
+    display: inline-block;
+    width: 5px; height: 5px;
+    background: var(--warning);
+    border-radius: 50%;
+    transform: translateY(-1px);
+    box-shadow: 0 0 8px var(--warning-glow);
+    animation: glyphBlink 3200ms ease-in-out infinite;
+  }
+  .status-pill {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 9px;
+    background: var(--warning-muted);
+    border: 1px solid var(--warning-border);
+    border-radius: 999px;
+    font-family: var(--font-mono);
+    font-size: 9.5px;
+    font-weight: 800;
+    color: var(--warning);
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+  }
+  .status-pill::before {
+    content: '';
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: var(--warning);
+    animation: glyphBlink 2000ms ease-in-out infinite;
+  }
+
+  /* Content */
+  .content {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 20px 24px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+    scrollbar-width: thin;
+    position: relative;
+    z-index: 2;
+  }
+  .content::-webkit-scrollbar { width: 3px; }
+  .content::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  /* === Illustration === */
+  .illo-wrap {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px 0 4px;
+    position: relative;
+  }
+  .illo-bg {
+    position: absolute;
+    width: 200px; height: 200px;
+    border-radius: 50%;
+    background: radial-gradient(circle, var(--warning-muted) 0%, transparent 60%);
+    filter: blur(10px);
+  }
+  .illo-icon {
+    width: 130px;
+    height: 130px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .illo-icon .warning-tri {
+    width: 100%;
+    height: 100%;
+    color: var(--warning);
+    filter: drop-shadow(0 8px 20px var(--warning-glow));
+  }
+  .illo-icon .warning-tri svg { width: 100%; height: 100%; display: block; }
+
+  /* === Hero === */
+  .hero {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    text-align: center;
+    align-items: center;
+  }
+  .hero-kicker {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--warning);
+  }
+  .hero-title {
+    font-family: var(--font-display);
+    font-size: 44px;
+    letter-spacing: 2px;
+    line-height: 0.95;
+    color: var(--text-primary);
+  }
+  .hero-title .em { color: var(--warning); }
+  .hero-sub {
+    font-size: 13.5px;
+    line-height: 1.55;
+    color: var(--text-secondary);
+    max-width: 290px;
+  }
+  .hero-sub strong { color: var(--text-primary); font-weight: 700; }
+
+  /* === Error ID pill === */
+  .error-id {
+    align-self: center;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 12px;
+    background: var(--bg);
+    border: 1px dashed var(--border);
+    border-radius: 999px;
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    color: var(--text-muted);
+    letter-spacing: 0.5px;
+  }
+  .error-id .id-label {
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1.1px;
+    font-size: 9px;
+    color: var(--text-muted);
+  }
+  .error-id .id-val {
+    color: var(--text-primary);
+    font-weight: 800;
+    letter-spacing: 0.8px;
+  }
+  .error-id .copy-ico {
+    width: 11px; height: 11px;
+    color: var(--text-muted);
+    cursor: pointer;
+  }
+  .error-id .copy-ico:hover { color: var(--accent); }
+
+  /* === CTA buttons === */
+  .cta-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .cta-btn {
+    padding: 15px 16px;
+    background: var(--accent);
+    color: var(--text-on-accent);
+    border: none;
+    border-radius: 12px;
+    font-family: var(--font-display);
+    font-size: 17px;
+    letter-spacing: 2.5px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    box-shadow: 0 8px 24px rgba(255, 107, 26, 0.4);
+    line-height: 1;
+  }
+  .cta-btn:hover { background: var(--accent-hover); }
+  .cta-btn svg { width: 15px; height: 15px; }
+
+  .ghost-btn {
+    padding: 13px 16px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    color: var(--text-primary);
+    font-family: var(--font-body);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+  .ghost-btn:hover { background: var(--surface); border-color: var(--border-strong); }
+  .ghost-btn svg { width: 13px; height: 13px; color: var(--text-muted); }
+
+  /* === Tech details (collapsible) === */
+  .tech-details {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .tech-details[open] { background: var(--surface-raised); }
+  .tech-summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    list-style: none;
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    font-weight: 800;
+    letter-spacing: 1.1px;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+  }
+  .tech-summary::-webkit-details-marker { display: none; }
+  .tech-summary .lbl {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+  }
+  .tech-summary .lbl svg { width: 12px; height: 12px; color: var(--text-muted); }
+  .tech-summary .chev svg {
+    width: 12px; height: 12px;
+    color: var(--text-muted);
+    transition: transform 140ms;
+  }
+  .tech-details[open] .tech-summary .chev svg { transform: rotate(180deg); }
+
+  .tech-body {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    padding-top: 8px;
+    border-top: 1px dashed var(--border);
+  }
+  .tech-row {
+    display: grid;
+    grid-template-columns: 74px 1fr;
+    gap: 8px;
+    align-items: baseline;
+  }
+  .tech-key {
+    color: var(--text-muted);
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    font-size: 9px;
+    font-weight: 700;
+  }
+  .tech-val {
+    color: var(--text-primary);
+    word-break: break-all;
+  }
+  .tech-val.err { color: var(--warning); }
+  .tech-stack {
+    margin-top: 4px;
+    padding: 8px 10px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 9.5px;
+    line-height: 1.55;
+    color: var(--text-muted);
+    white-space: pre-wrap;
+    overflow-x: auto;
+  }
+  .tech-stack .highlight { color: var(--warning); }
+
+  /* === Support footer === */
+  .support-strip {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+  }
+  .support-ico {
+    width: 28px; height: 28px;
+    border-radius: 7px;
+    background: var(--accent-muted);
+    color: var(--accent);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .support-ico svg { width: 13px; height: 13px; }
+  .support-col { flex: 1; display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+  .support-title {
+    font-size: 11.5px;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1.2;
+  }
+  .support-sub {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--text-muted);
+    letter-spacing: 0.3px;
+  }
+  .support-sub a { color: var(--accent); text-decoration: none; font-weight: 700; }
+
+  /* Footer caption */
+  .caption {
+    max-width: 560px;
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 0.5px;
+  }
+  .caption strong {
+    color: var(--text-secondary);
+    font-weight: 500;
+    display: block;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    font-size: 10px;
+  }
+  .caption em { color: var(--warning); font-style: normal; }
+  .caption code {
+    font-family: var(--font-mono);
+    color: var(--accent);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 1px 4px;
+    border-radius: 3px;
+    font-size: 10px;
+  }
+</style>
+</head>
+<body>
+
+  <header class="canvas-label">
+    <span class="film-strip">OPONY — 21</span>
+    <span class="slug">error boundary · crash UI · polish · production</span>
+    <span class="canvas-meta"><span class="pulse"></span>ERR · BOUNDARY</span>
+  </header>
+
+  <main class="phone" role="region" aria-label="Mockup — error boundary crash UI">
+
+    <div class="status-bar" aria-hidden="true">
+      <span>9:41</span>
+      <span class="right">
+        <svg width="18" height="12" viewBox="0 0 18 12" fill="currentColor"><rect x="0" y="8" width="3" height="4" rx="0.5"/><rect x="5" y="5" width="3" height="7" rx="0.5"/><rect x="10" y="2" width="3" height="10" rx="0.5"/><rect x="15" y="0" width="3" height="12" rx="0.5" opacity="0.4"/></svg>
+        <svg width="16" height="12" viewBox="0 0 16 12" fill="currentColor"><path d="M8 11.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z"/><path d="M4 7.5a6 6 0 0 1 8 0l-1 1a4.6 4.6 0 0 0-6 0l-1-1Z"/><path d="M1.5 4.5a10 10 0 0 1 13 0l-1 1a8.5 8.5 0 0 0-11 0l-1-1Z" opacity="0.6"/></svg>
+        <svg width="26" height="12" viewBox="0 0 26 12" fill="none"><rect x="0.5" y="0.5" width="22" height="11" rx="3" stroke="currentColor" opacity="0.5"/><rect x="2" y="2" width="19" height="8" rx="1.5" fill="currentColor"/><rect x="23" y="4" width="2" height="4" rx="1" fill="currentColor" opacity="0.5"/></svg>
+      </span>
+    </div>
+
+    <div class="screen">
+
+      <!-- Top bar -->
+      <div class="top-bar">
+        <span class="brand-mini">OPONY<span class="dot" aria-hidden="true"></span></span>
+        <span class="status-pill">Awaria chwilowa</span>
+      </div>
+
+      <!-- Content -->
+      <div class="content">
+
+        <!-- Illustration — warning triangle -->
+        <div class="illo-wrap" aria-hidden="true">
+          <span class="illo-bg"></span>
+          <div class="illo-icon">
+            <span class="warning-tri">
+              <svg viewBox="0 0 120 110" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <!-- outer triangle (rounded) -->
+                <path d="M54.6 8.2 L5.4 93.4 a6 6 0 0 0 5.2 9 h98.8 a6 6 0 0 0 5.2-9 L65.4 8.2 a6 6 0 0 0-10.8 0 z"
+                      fill="rgba(255, 176, 32, 0.14)"
+                      stroke="currentColor"
+                      stroke-width="3.5"
+                      stroke-linejoin="round"/>
+                <!-- exclamation line -->
+                <rect x="55" y="36" width="10" height="34" rx="5" fill="currentColor"/>
+                <!-- exclamation dot -->
+                <circle cx="60" cy="82" r="5.5" fill="currentColor"/>
+              </svg>
+            </span>
+          </div>
+        </div>
+
+        <!-- Hero -->
+        <section class="hero">
+          <span class="hero-kicker">Awaria u nas, nie u Ciebie</span>
+          <h1 class="hero-title">UPS — COŚ<br><span class="em">PÓKŁO</span> SIĘ<br>NAM.</h1>
+          <p class="hero-sub">Aplikacja natrafiła na <strong>nieoczekiwany błąd</strong>. Już wiemy — logi trafiły do zespołu. Spróbuj ponownie albo wróć do głównej.</p>
+        </section>
+
+        <!-- Error ID -->
+        <div class="error-id" aria-label="Identyfikator błędu">
+          <span class="id-label">Error ID</span>
+          <span class="id-val">ERR_A7F2K9</span>
+          <svg class="copy-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        </div>
+
+        <!-- CTAs -->
+        <div class="cta-wrap">
+          <button class="cta-btn" type="button">
+            Spróbuj ponownie
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+          </button>
+          <button class="ghost-btn" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+            Wróć do głównej
+          </button>
+        </div>
+
+        <!-- Tech details (collapsible) -->
+        <details class="tech-details">
+          <summary class="tech-summary">
+            <span class="lbl">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+              Szczegóły techniczne
+            </span>
+            <span class="chev" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="6 9 12 15 18 9"/></svg>
+            </span>
+          </summary>
+          <div class="tech-body">
+            <div class="tech-row">
+              <span class="tech-key">Component</span>
+              <span class="tech-val"><BookingSlotPicker></span>
+            </div>
+            <div class="tech-row">
+              <span class="tech-key">Type</span>
+              <span class="tech-val err">TypeError</span>
+            </div>
+            <div class="tech-row">
+              <span class="tech-key">Message</span>
+              <span class="tech-val">Cannot read properties of undefined (reading 'slot')</span>
+            </div>
+            <div class="tech-row">
+              <span class="tech-key">App</span>
+              <span class="tech-val">v0.4.2 · Expo 52 · iOS 17.4</span>
+            </div>
+            <div class="tech-row">
+              <span class="tech-key">Timestamp</span>
+              <span class="tech-val">2026-04-22 09:41:18 CET</span>
+            </div>
+            <pre class="tech-stack">at BookingSlotPicker (slot-picker.tsx:84:12)
+at renderWithHooks (react-dom.js:16305:18)
+at <span class="highlight">mountIndeterminateComponent</span>
+at beginWork (react-dom.js:19876:16)
+...</pre>
+          </div>
+        </details>
+
+        <!-- Support strip -->
+        <div class="support-strip">
+          <span class="support-ico" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+          </span>
+          <div class="support-col">
+            <span class="support-title">Wciąż się powtarza?</span>
+            <span class="support-sub">Napisz z ID: <a href="mailto:pomoc@opony.app?subject=ERR_A7F2K9">pomoc@opony.app</a></span>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- Footer caption -->
+  <footer class="caption">
+    <div>
+      <strong>Trigger &amp; obsługa</strong>
+      — React top-level <code>ErrorBoundary</code> w <code>app/_layout.tsx</code> (<code>componentDidCatch</code> + <code>getDerivedStateFromError</code>).<br>
+      — Każdy crash → <code>Sentry.captureException</code> z <code>errorId</code> (short-hash z timestamp + user + stack), widoczny użytkownikowi.<br>
+      — „Spróbuj ponownie" = <code>setState(hasError: false)</code> + reset-key na subtree; jeśli ten sam błąd &gt; 2× w 60s → force reload page.<br>
+      — „Wróć do głównej" = <code>navigation.reset</code> do <code>/</code> z flush'em stanu (<em>safe fallback</em>).
+    </div>
+    <div>
+      <strong>Ton &amp; decyzje</strong>
+      — Kolor <em>warning</em> (żółty), nie <em>danger</em> (czerwony) — to nie katastrofa, user może retry; unikamy wywołania paniki.<br>
+      — Illustration: opona z pęknięciem (on-brand „oponowa" metafora awarii) + „!" glyph w środku.<br>
+      — <em>„Awaria u nas, nie u Ciebie"</em> kicker — psychologia: user się nie obwinia, odpowiedzialność na zespole.<br>
+      — Tech details collapsible — default zamknięte (normal user), open dla power users / debug; w prod Sentry i tak ma pełny stack.<br>
+      — Error ID kopiowalny jednym tapnięciem — support może odszukać konkretny crash w Sentry (<code>/issues/&lt;errorId&gt;</code>).<br>
+      — A11y: <code>role="alert"</code> na herologu, <code>aria-label</code> na illustration, support link jest <code>mailto:</code> z prefill tematu.
+    </div>
+  </footer>
+
+</body>
+</html>

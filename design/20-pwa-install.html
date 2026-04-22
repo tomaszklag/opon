@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Opony.app — 20 PWA install prompt · polish</title>
+<!--
+  Screen: PWA install prompt (bottom-sheet nad home)
+  Ref:    ADR-001 (Expo RNW PWA), engagement polish
+  Flow:   Trigger: returning user po 2 wizytach lub po 1 rezerwacji; dismiss → cooldown 7 dni
+  Tone:   industrial-dark · mobile · bottom-sheet z app-icon + 3 benefity + iOS share-tutorial
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Bebas+Neue&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0A0B0E;
+    --bg-tint-top: #12141A;
+    --surface: #14171D;
+    --surface-raised: #1B1E26;
+    --surface-hover: #23272F;
+    --border: #262A34;
+    --border-strong: #363B47;
+    --hairline: rgba(255, 255, 255, 0.06);
+    --text-primary: #F5F4EF;
+    --text-secondary: #9EA2AD;
+    --text-muted: #60646F;
+    --text-on-accent: #0A0B0E;
+    --accent: #FF6B1A;
+    --accent-hover: #FF8039;
+    --accent-muted: rgba(255, 107, 26, 0.14);
+    --accent-border: rgba(255, 107, 26, 0.32);
+    --accent-glow: rgba(255, 107, 26, 0.45);
+    --success: #2EE0A0;
+    --success-muted: rgba(46, 224, 160, 0.14);
+    --success-border: rgba(46, 224, 160, 0.32);
+    --warning: #FFB020;
+    --danger: #FF5757;
+    --font-display: 'Bebas Neue', sans-serif;
+    --font-body: 'Archivo', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; overflow-x: hidden; max-width: 100vw; }
+  body {
+    --phone-scale: min(1, calc((100vh - 240px) / 852px), calc((100vw - 60px) / 393px));
+    font-family: var(--font-body);
+    background: var(--bg);
+    color: var(--text-primary);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    background-image:
+      radial-gradient(ellipse 70% 50% at 50% 0%, rgba(255, 107, 26, 0.07) 0%, transparent 60%),
+      linear-gradient(180deg, var(--bg-tint-top) 0%, var(--bg) 30%);
+    background-attachment: fixed;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 48px 24px 80px;
+    gap: 28px;
+  }
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 4px var(--accent-muted); opacity: 1; }
+    50%      { box-shadow: 0 0 0 8px transparent; opacity: 0.6; }
+  }
+  @keyframes sheetUp {
+    from { transform: translateY(100%); }
+    to   { transform: translateY(0); }
+  }
+  @keyframes arrowBob {
+    0%, 100% { transform: translateY(0); opacity: 0.8; }
+    50%      { transform: translateY(-3px); opacity: 1; }
+  }
+
+  .canvas-label {
+    width: 100%;
+    max-width: 560px;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: baseline;
+    gap: 20px;
+    padding-bottom: 18px;
+    border-bottom: 1px solid var(--border);
+  }
+  .film-strip { font-family: var(--font-display); font-size: 34px; letter-spacing: 3px; line-height: 1; }
+  .slug {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    border-left: 1px solid var(--border);
+    padding-left: 18px;
+  }
+  .canvas-meta {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-secondary);
+    letter-spacing: 1px;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .canvas-meta .pulse {
+    display: inline-block;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 0 4px var(--accent-muted);
+    animation: pulse 1800ms ease-in-out infinite;
+  }
+
+  /* Phone */
+  .phone {
+    width: 393px;
+    height: 852px;
+    border-radius: 54px;
+    background: var(--bg);
+    border: 10px solid #0D0E12;
+    box-shadow:
+      0 0 0 1px #1C1E24,
+      0 40px 120px rgba(0, 0, 0, 0.7),
+      0 24px 48px rgba(0, 0, 0, 0.45),
+      inset 0 0 0 1px rgba(255, 255, 255, 0.03);
+    overflow: hidden;
+    position: relative;
+    isolation: isolate;
+    flex-shrink: 0;
+    transform: scale(var(--phone-scale));
+    transform-origin: top center;
+    margin-bottom: calc((var(--phone-scale) - 1) * 852px);
+  }
+  .phone::before {
+    content: '';
+    position: absolute;
+    top: 12px; left: 50%;
+    transform: translateX(-50%);
+    width: 124px; height: 36px;
+    border-radius: 24px;
+    background: #000;
+    z-index: 100;
+  }
+  .phone::after {
+    content: '';
+    position: absolute;
+    bottom: 8px; left: 50%;
+    transform: translateX(-50%);
+    width: 134px; height: 5px;
+    border-radius: 3px;
+    background: var(--text-primary);
+    opacity: 0.28;
+    z-index: 100;
+  }
+
+  .status-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 36px 0;
+    height: 54px;
+    font-weight: 700;
+    font-size: 15px;
+    position: relative;
+    z-index: 20;
+  }
+  .status-bar .right { display: inline-flex; gap: 6px; align-items: center; }
+
+  .screen {
+    position: absolute;
+    top: 54px; left: 0; right: 0; bottom: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* === BACKGROUND: dimmed home preview === */
+  .bg-home {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    filter: blur(2px);
+    opacity: 0.45;
+    pointer-events: none;
+  }
+  .bg-top {
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .bg-wordmark {
+    font-family: var(--font-display);
+    font-size: 22px;
+    letter-spacing: 2.5px;
+    color: var(--text-primary);
+  }
+  .bg-chip {
+    margin-left: auto;
+    padding: 6px 10px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    font-family: var(--font-body);
+    font-size: 11px;
+    color: var(--text-secondary);
+  }
+  .bg-list { padding: 10px 16px; display: flex; flex-direction: column; gap: 10px; }
+  .bg-card {
+    height: 120px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+  }
+
+  /* Dim overlay */
+  .overlay {
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 80% 60% at 50% 80%, rgba(255, 107, 26, 0.08) 0%, transparent 60%),
+      linear-gradient(180deg, rgba(10, 11, 14, 0.5) 0%, rgba(10, 11, 14, 0.85) 60%, rgba(10, 11, 14, 0.95) 100%);
+    backdrop-filter: blur(3px);
+    z-index: 1;
+  }
+
+  /* === BOTTOM SHEET === */
+  .sheet {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    border-radius: 22px 22px 0 0;
+    padding: 14px 20px 26px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    z-index: 10;
+    box-shadow: 0 -30px 60px rgba(0, 0, 0, 0.65);
+    animation: sheetUp 420ms cubic-bezier(0.2, 0.9, 0.3, 1.15);
+  }
+  .sheet::before {
+    content: '';
+    position: absolute;
+    top: -40px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 40px; height: 4px;
+    border-radius: 2px;
+    background: rgba(255, 255, 255, 0.25);
+  }
+  .sheet-handle {
+    width: 40px; height: 4px;
+    border-radius: 2px;
+    background: var(--border-strong);
+    align-self: center;
+    margin-bottom: 2px;
+  }
+  .sheet-close {
+    position: absolute;
+    top: 14px; right: 14px;
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
+  .sheet-close svg { width: 14px; height: 14px; }
+
+  /* App icon preview */
+  .app-icon {
+    align-self: center;
+    width: 88px; height: 88px;
+    border-radius: 20px;
+    background: linear-gradient(135deg, #FF8039 0%, #C73F0A 70%, #1B1316 100%);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    box-shadow: 0 16px 40px rgba(255, 107, 26, 0.4), 0 0 0 1px rgba(255, 107, 26, 0.2);
+    overflow: hidden;
+  }
+  .app-icon::before {
+    content: '';
+    position: absolute;
+    top: -10%; left: -10%;
+    width: 60%; height: 60%;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.25) 0%, transparent 70%);
+    filter: blur(8px);
+  }
+  .app-icon .wordmark {
+    font-family: var(--font-display);
+    font-size: 30px;
+    letter-spacing: 2px;
+    color: var(--bg);
+    line-height: 1;
+    position: relative;
+    z-index: 1;
+  }
+  .app-icon .icon-dot {
+    position: absolute;
+    bottom: 20px;
+    width: 6px; height: 6px;
+    background: var(--bg);
+    border-radius: 50%;
+    box-shadow: 0 0 0 2px rgba(10, 11, 14, 0.3);
+  }
+
+  /* Hero copy */
+  .hero {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    text-align: center;
+    align-items: center;
+  }
+  .hero-kicker {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  .hero-title {
+    font-family: var(--font-display);
+    font-size: 32px;
+    letter-spacing: 2px;
+    line-height: 0.95;
+    color: var(--text-primary);
+  }
+  .hero-title .em { color: var(--accent); }
+  .hero-sub {
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--text-secondary);
+    max-width: 280px;
+  }
+  .hero-sub strong { color: var(--text-primary); font-weight: 700; }
+
+  /* Benefits */
+  .benefits {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 6px;
+  }
+  .benefit {
+    padding: 10px 8px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    text-align: center;
+  }
+  .benefit-ico {
+    width: 30px; height: 30px;
+    border-radius: 8px;
+    background: var(--accent-muted);
+    color: var(--accent);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .benefit-ico svg { width: 15px; height: 15px; }
+  .benefit-text {
+    font-size: 10.5px;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1.25;
+    letter-spacing: 0.1px;
+  }
+  .benefit-sub {
+    font-family: var(--font-mono);
+    font-size: 8.5px;
+    color: var(--text-muted);
+    letter-spacing: 0.3px;
+  }
+
+  /* iOS tutorial strip */
+  .ios-tutorial {
+    padding: 12px 14px;
+    background: var(--bg);
+    border: 1px dashed var(--border);
+    border-radius: 12px;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 12px;
+    align-items: center;
+  }
+  .ios-label {
+    grid-column: 1 / -1;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--font-mono);
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    padding-bottom: 6px;
+    border-bottom: 1px dashed var(--border);
+  }
+  .ios-label svg { width: 11px; height: 11px; color: var(--text-secondary); }
+  .ios-share-btn {
+    width: 42px; height: 42px;
+    border-radius: 10px;
+    background: var(--surface-raised);
+    border: 1px solid var(--border);
+    color: var(--accent);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    position: relative;
+  }
+  .ios-share-btn svg { width: 20px; height: 20px; }
+  .ios-share-btn::after {
+    content: '';
+    position: absolute;
+    top: -4px; right: -4px;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 0 3px var(--surface);
+    animation: pulse 1800ms ease-in-out infinite;
+  }
+  .ios-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+  .ios-step {
+    font-size: 11.5px;
+    color: var(--text-primary);
+    font-weight: 700;
+    line-height: 1.3;
+  }
+  .ios-step strong {
+    font-family: var(--font-mono);
+    color: var(--accent);
+    font-weight: 800;
+  }
+  .ios-substep {
+    font-size: 10px;
+    color: var(--text-muted);
+    line-height: 1.35;
+  }
+
+  /* CTA */
+  .cta-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .cta-btn {
+    padding: 15px 16px;
+    background: var(--accent);
+    color: var(--text-on-accent);
+    border: none;
+    border-radius: 12px;
+    font-family: var(--font-display);
+    font-weight: 400;
+    font-size: 17px;
+    letter-spacing: 2.5px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    box-shadow: 0 8px 24px rgba(255, 107, 26, 0.45);
+    line-height: 1;
+  }
+  .cta-btn svg { width: 15px; height: 15px; }
+
+  .dismiss-link {
+    text-align: center;
+    font-family: var(--font-body);
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-muted);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 6px 0;
+  }
+  .dismiss-link:hover { color: var(--text-secondary); }
+
+  /* === Arrow pointer (animated) hint near share button === */
+  .arrow-hint {
+    position: absolute;
+    bottom: 52px; right: 26px;
+    width: 22px;
+    animation: arrowBob 1600ms ease-in-out infinite;
+    pointer-events: none;
+    opacity: 0.9;
+    z-index: 11;
+  }
+  .arrow-hint svg { width: 100%; height: auto; color: var(--accent); filter: drop-shadow(0 0 8px var(--accent-glow)); }
+
+  /* Footer caption */
+  .caption {
+    max-width: 560px;
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 0.5px;
+  }
+  .caption strong {
+    color: var(--text-secondary);
+    font-weight: 500;
+    display: block;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    font-size: 10px;
+  }
+  .caption em { color: var(--accent); font-style: normal; }
+  .caption code {
+    font-family: var(--font-mono);
+    color: var(--accent);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 1px 4px;
+    border-radius: 3px;
+    font-size: 10px;
+  }
+</style>
+</head>
+<body>
+
+  <header class="canvas-label">
+    <span class="film-strip">OPONY — 20</span>
+    <span class="slug">pwa install prompt · dodaj na ekran · polish</span>
+    <span class="canvas-meta"><span class="pulse"></span>PWA · INSTALL</span>
+  </header>
+
+  <main class="phone" role="region" aria-label="Mockup — zachęta do instalacji PWA">
+
+    <div class="status-bar" aria-hidden="true">
+      <span>9:41</span>
+      <span class="right">
+        <svg width="18" height="12" viewBox="0 0 18 12" fill="currentColor"><rect x="0" y="8" width="3" height="4" rx="0.5"/><rect x="5" y="5" width="3" height="7" rx="0.5"/><rect x="10" y="2" width="3" height="10" rx="0.5"/><rect x="15" y="0" width="3" height="12" rx="0.5" opacity="0.4"/></svg>
+        <svg width="16" height="12" viewBox="0 0 16 12" fill="currentColor"><path d="M8 11.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z"/><path d="M4 7.5a6 6 0 0 1 8 0l-1 1a4.6 4.6 0 0 0-6 0l-1-1Z"/><path d="M1.5 4.5a10 10 0 0 1 13 0l-1 1a8.5 8.5 0 0 0-11 0l-1-1Z" opacity="0.6"/></svg>
+        <svg width="26" height="12" viewBox="0 0 26 12" fill="none"><rect x="0.5" y="0.5" width="22" height="11" rx="3" stroke="currentColor" opacity="0.5"/><rect x="2" y="2" width="19" height="8" rx="1.5" fill="currentColor"/><rect x="23" y="4" width="2" height="4" rx="1" fill="currentColor" opacity="0.5"/></svg>
+      </span>
+    </div>
+
+    <div class="screen">
+
+      <!-- Dimmed home background -->
+      <div class="bg-home" aria-hidden="true">
+        <div class="bg-top">
+          <span class="bg-wordmark">OPONY</span>
+          <span class="bg-chip">Nowy Sącz</span>
+        </div>
+        <div class="bg-list">
+          <div class="bg-card"></div>
+          <div class="bg-card"></div>
+          <div class="bg-card"></div>
+        </div>
+      </div>
+
+      <!-- Overlay -->
+      <div class="overlay" aria-hidden="true"></div>
+
+      <!-- Bottom sheet -->
+      <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-t">
+        <span class="sheet-handle" aria-hidden="true"></span>
+        <button class="sheet-close" type="button" aria-label="Zamknij">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+
+        <!-- App icon preview -->
+        <div class="app-icon" aria-hidden="true">
+          <span class="wordmark">O</span>
+          <span class="icon-dot"></span>
+        </div>
+
+        <!-- Hero -->
+        <section class="hero">
+          <span class="hero-kicker">Zero instalacji</span>
+          <h2 class="hero-title" id="sheet-t">DODAJ OPONY<br>NA <span class="em">EKRAN</span></h2>
+          <p class="hero-sub">Otwieraj <strong>jedno tapnięcie</strong> bez przeglądarki. Działa offline, pamięta pojazd, wysyła przypomnienia.</p>
+        </section>
+
+        <!-- Benefits -->
+        <div class="benefits">
+          <div class="benefit">
+            <span class="benefit-ico" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="13 2 3 14 12 14 11 22 21 10 12 10"/></svg>
+            </span>
+            <span class="benefit-text">Szybsze<br>otwieranie</span>
+            <span class="benefit-sub">~2s</span>
+          </div>
+          <div class="benefit">
+            <span class="benefit-ico" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            </span>
+            <span class="benefit-text">Działa<br>offline</span>
+            <span class="benefit-sub">cache 24h</span>
+          </div>
+          <div class="benefit">
+            <span class="benefit-ico" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+            </span>
+            <span class="benefit-text">Przypo-<br>mnienia</span>
+            <span class="benefit-sub">30 min przed</span>
+          </div>
+        </div>
+
+        <!-- iOS tutorial -->
+        <div class="ios-tutorial" aria-label="Instrukcja dla iOS">
+          <span class="ios-label">
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09zM12 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/></svg>
+            Na Safari / iPhone
+          </span>
+          <span class="ios-share-btn" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+          </span>
+          <div class="ios-copy">
+            <span class="ios-step">Tap <strong>Udostępnij</strong> → <strong>Dodaj do ekranu głównego</strong></span>
+            <span class="ios-substep">Ikona Opony znajdzie się obok Twoich aplikacji.</span>
+          </div>
+        </div>
+
+        <!-- CTA -->
+        <div class="cta-wrap">
+          <button class="cta-btn" type="button">
+            Zainstaluj
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="12 5 12 19"/><polyline points="5 12 12 19 19 12"/></svg>
+          </button>
+          <button class="dismiss-link" type="button">
+            Nie teraz — zapytaj za tydzień
+          </button>
+        </div>
+      </div>
+
+      <!-- Animated arrow hint (pointing to Safari share) -->
+      <div class="arrow-hint" aria-hidden="true">
+        <svg viewBox="0 0 40 60" fill="none">
+          <path d="M20 4 L20 48 M8 34 L20 52 L32 34" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- Footer caption -->
+  <footer class="caption">
+    <div>
+      <strong>Trigger &amp; engagement</strong>
+      — Heurystyka: pokazuj po <em>2 wizycie</em> na app.opony.app (localStorage counter) lub po pierwszej udanej rezerwacji.<br>
+      — Dismiss → cooldown <em>7 dni</em>; po 3 dismiss w sumie → nigdy więcej (respect the no).<br>
+      — Android: <code>beforeinstallprompt</code> event przechwytywany i odpalany po kliknięciu „Zainstaluj".<br>
+      — iOS: brak native API → pokazujemy tutorial strip z ikoną share + arrow hint wskazującą na Safari toolbar.
+    </div>
+    <div>
+      <strong>UX &amp; warianty</strong>
+      — Animated arrow hint (dolny prawy) — pulsuje ku Safari share button; na Android ukryte (bo native prompt).<br>
+      — App-icon preview (88px rounded gradient amber) — pokazuje jak będzie wyglądać na home screen.<br>
+      — 3 benefity w grid: <em>szybsze otwieranie</em>, <em>działa offline</em>, <em>push przypomnienia</em>.<br>
+      — PWA manifest: <code>display: standalone</code>, <code>theme-color: #0A0B0E</code>, ikony 192/512, <code>apple-touch-icon</code> dla iOS.<br>
+      — Service Worker: precache core JS/CSS (Workbox), runtime cache API listing 1h.<br>
+      — A11y: <code>role="dialog"</code> z <code>aria-modal="true"</code>; close-btn ma <code>aria-label</code>, sheet pokazuje focus-trap.
+    </div>
+  </footer>
+
+</body>
+</html>

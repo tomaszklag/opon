@@ -1,0 +1,1549 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Opony Panel — B2B-11 Profil warsztatu · Edycja</title>
+<!--
+  Screen: Panel providera — Profil publiczny (dane firmowe, galeria, usługi, opis)
+  Ref:    docs/plan-sprintow.md → W:12.11 (edycja profilu providera — post-onboarding)
+  US:     US-12 (provider edytuje swój profil), US-13 (publiczna strona warsztatu)
+  Tone:   industrial-dark · form + live preview sidecar (mobile client view) · autosave pill
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Bebas+Neue&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0A0B0E;
+    --bg-tint-top: #12141A;
+    --surface: #14171D;
+    --surface-raised: #1B1E26;
+    --surface-hover: #23272F;
+    --border: #262A34;
+    --border-strong: #363B47;
+    --hairline: rgba(255, 255, 255, 0.06);
+    --text-primary: #F5F4EF;
+    --text-secondary: #9EA2AD;
+    --text-muted: #60646F;
+    --text-on-accent: #0A0B0E;
+    --accent: #FF6B1A;
+    --accent-hover: #FF8039;
+    --accent-muted: rgba(255, 107, 26, 0.14);
+    --accent-border: rgba(255, 107, 26, 0.32);
+    --accent-glow: rgba(255, 107, 26, 0.45);
+    --success: #2EE0A0;
+    --success-muted: rgba(46, 224, 160, 0.14);
+    --success-border: rgba(46, 224, 160, 0.32);
+    --warning: #FFB020;
+    --warning-muted: rgba(255, 176, 32, 0.14);
+    --warning-border: rgba(255, 176, 32, 0.32);
+    --danger: #FF5757;
+    --danger-muted: rgba(255, 87, 87, 0.12);
+    --danger-border: rgba(255, 87, 87, 0.32);
+    --font-display: 'Bebas Neue', sans-serif;
+    --font-body: 'Archivo', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; overflow-x: hidden; max-width: 100vw; }
+  body {
+    --desktop-scale: min(1, calc((100vh - 200px) / 900px), calc((100vw - 80px) / 1440px));
+    font-family: var(--font-body);
+    background: var(--bg);
+    color: var(--text-primary);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    background-image:
+      radial-gradient(ellipse 70% 50% at 50% 0%, rgba(255, 107, 26, 0.05) 0%, transparent 60%),
+      radial-gradient(ellipse 50% 30% at 90% 100%, rgba(46, 224, 160, 0.02) 0%, transparent 60%),
+      linear-gradient(180deg, var(--bg-tint-top) 0%, var(--bg) 30%);
+    background-attachment: fixed;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 40px 40px 60px;
+    gap: 24px;
+  }
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 4px var(--accent-muted); opacity: 1; }
+    50%      { box-shadow: 0 0 0 8px transparent; opacity: 0.6; }
+  }
+  @keyframes saveBlink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  .canvas-label {
+    width: 100%;
+    max-width: 1440px;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: baseline;
+    gap: 20px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  .film-strip { font-family: var(--font-display); font-size: 32px; letter-spacing: 3px; line-height: 1; }
+  .slug {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    border-left: 1px solid var(--border);
+    padding-left: 18px;
+  }
+  .canvas-meta {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-secondary);
+    letter-spacing: 1px;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .canvas-meta .pulse {
+    display: inline-block;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 0 4px var(--accent-muted);
+    animation: pulse 1800ms ease-in-out infinite;
+  }
+
+  /* Desktop frame */
+  .desktop-frame {
+    width: 1440px;
+    height: 900px;
+    background: var(--bg);
+    border-radius: 14px;
+    border: 1px solid #1C1E24;
+    box-shadow: 0 40px 120px rgba(0, 0, 0, 0.6), 0 20px 40px rgba(0, 0, 0, 0.4);
+    overflow: hidden;
+    position: relative;
+    flex-shrink: 0;
+    transform: scale(var(--desktop-scale));
+    transform-origin: top center;
+    margin-bottom: calc((var(--desktop-scale) - 1) * 900px);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .browser-chrome {
+    height: 44px;
+    background: linear-gradient(180deg, #1A1D23, #14171D);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    gap: 16px;
+    flex-shrink: 0;
+  }
+  .traffic-lights { display: inline-flex; gap: 8px; }
+  .light { width: 12px; height: 12px; border-radius: 50%; }
+  .light.red { background: #FF5F57; }
+  .light.yellow { background: #FEBC2E; }
+  .light.green { background: #28C840; }
+  .browser-tabs { display: inline-flex; gap: 2px; }
+  .browser-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-bottom: none;
+    border-radius: 8px 8px 0 0;
+    font-size: 12px;
+    color: var(--text-primary);
+    position: relative;
+    top: 6px;
+  }
+  .browser-tab .favicon {
+    width: 14px; height: 14px;
+    border-radius: 3px;
+    background: var(--accent);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-display);
+    font-size: 9px;
+    color: var(--text-on-accent);
+    letter-spacing: 0.5px;
+  }
+  .browser-address {
+    flex: 1;
+    max-width: 480px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+  .browser-address .lock { color: var(--success); }
+  .browser-address .url { color: var(--text-primary); }
+  .browser-address .path { color: var(--text-secondary); }
+
+  /* App root */
+  .app-root {
+    flex: 1;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: 220px 1fr;
+  }
+  .sidebar {
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    padding: 20px 14px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .sb-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px 18px;
+  }
+  .sb-brand .wordmark {
+    font-family: var(--font-display);
+    font-size: 26px;
+    letter-spacing: 3px;
+    line-height: 1;
+    color: var(--text-primary);
+    display: inline-flex;
+    align-items: baseline;
+    gap: 3px;
+  }
+  .sb-brand .dot {
+    display: inline-block;
+    width: 6px; height: 6px;
+    background: var(--accent);
+    border-radius: 50%;
+    transform: translateY(-2px);
+    box-shadow: 0 0 10px var(--accent-glow);
+  }
+  .sb-brand .panel-tag {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    padding: 2px 5px;
+    border-radius: 4px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    font-weight: 700;
+    margin-left: auto;
+  }
+  .sb-section-label {
+    font-family: var(--font-body);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 1.3px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    padding: 8px 10px 4px;
+  }
+  .sb-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 10px;
+    border-radius: 8px;
+    background: transparent;
+    border: 1px solid transparent;
+    color: var(--text-secondary);
+    font-family: var(--font-body);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: left;
+    width: 100%;
+    transition: background 140ms ease, color 140ms ease;
+  }
+  .sb-item:hover { background: var(--surface-hover); color: var(--text-primary); }
+  .sb-item.active {
+    background: var(--accent-muted);
+    color: var(--accent);
+    border-color: var(--accent-border);
+  }
+  .sb-badge {
+    margin-left: auto;
+    min-width: 20px; height: 18px;
+    padding: 0 6px;
+    background: var(--accent);
+    color: var(--text-on-accent);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 700;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .sb-spacer { flex: 1; }
+  .sb-user {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    cursor: pointer;
+  }
+  .sb-avatar {
+    width: 34px; height: 34px;
+    border-radius: 9px;
+    background: linear-gradient(135deg, #FF8039 0%, #C73F0A 100%);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-display);
+    font-size: 15px;
+    color: var(--text-on-accent);
+    letter-spacing: 1.5px;
+    flex-shrink: 0;
+  }
+  .sb-user-col { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  .sb-user-name {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1.1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .sb-user-role {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    color: var(--accent);
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    font-weight: 700;
+  }
+
+  /* Main */
+  .main { display: flex; flex-direction: column; overflow: hidden; }
+  .topbar {
+    height: 58px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 28px;
+    gap: 16px;
+    flex-shrink: 0;
+  }
+  .tb-breadcrumb {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--text-muted);
+    font-weight: 600;
+  }
+  .tb-breadcrumb .sep { color: var(--border-strong); }
+  .tb-breadcrumb .current { color: var(--text-primary); font-weight: 700; }
+  .tb-spacer { flex: 1; }
+  .autosave-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 6px 11px;
+    border-radius: 999px;
+    background: var(--success-muted);
+    border: 1px solid var(--success-border);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+    color: var(--success);
+    font-weight: 700;
+  }
+  .autosave-pill .dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--success);
+    animation: saveBlink 1800ms ease-in-out infinite;
+  }
+  .tb-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-family: var(--font-body);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-primary);
+  }
+  .tb-btn:hover { background: var(--surface); border-color: var(--border-strong); }
+  .tb-btn.primary {
+    background: var(--accent);
+    color: var(--text-on-accent);
+    border-color: transparent;
+  }
+  .tb-btn.primary:hover { background: var(--accent-hover); }
+
+  /* Content split */
+  .content-split {
+    flex: 1;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: 1fr 384px;
+  }
+  .form-col {
+    overflow-y: auto;
+    padding: 22px 28px 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    scrollbar-width: thin;
+  }
+  .form-col::-webkit-scrollbar { width: 6px; }
+  .form-col::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  .preview-col {
+    border-left: 1px solid var(--border);
+    background: linear-gradient(180deg, var(--bg-tint-top) 0%, var(--bg) 100%);
+    padding: 18px 22px 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    overflow: hidden;
+  }
+
+  /* Section cards */
+  .section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 18px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .sec-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding-bottom: 12px;
+    border-bottom: 1px dashed var(--border);
+  }
+  .sec-title {
+    font-family: var(--font-display);
+    font-size: 17px;
+    letter-spacing: 2px;
+    line-height: 1;
+    color: var(--text-primary);
+  }
+  .sec-kicker {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 1.4px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    padding: 3px 7px;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+  }
+  .sec-hint {
+    margin-left: auto;
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+  .sec-hint .counter {
+    font-family: var(--font-mono);
+    color: var(--text-secondary);
+    font-weight: 700;
+  }
+
+  /* Form fields */
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  .field-row { display: grid; gap: 14px; }
+  .field-row.two { grid-template-columns: 1fr 1fr; }
+  .field-row.three { grid-template-columns: 1.4fr 1fr 1fr; }
+  .label {
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+  .label .req { color: var(--accent); margin-left: 2px; }
+  .input, .textarea, .select {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-family: var(--font-body);
+    font-size: 13px;
+    color: var(--text-primary);
+    outline: none;
+    transition: border-color 120ms ease, background 120ms ease;
+  }
+  .input:focus, .textarea:focus, .select:focus {
+    border-color: var(--accent-border);
+    background: var(--surface-raised);
+  }
+  .textarea {
+    resize: none;
+    line-height: 1.5;
+    min-height: 88px;
+    font-family: var(--font-body);
+  }
+  .char-counter {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--text-muted);
+    text-align: right;
+    letter-spacing: 0.3px;
+  }
+  .char-counter strong { color: var(--text-secondary); font-weight: 700; }
+  .field-hint { font-size: 11px; color: var(--text-muted); line-height: 1.4; }
+  .locked-input {
+    width: 100%;
+    background: rgba(96, 100, 111, 0.08);
+    border: 1px dashed var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+  .locked-input .lock-ico {
+    width: 14px; height: 14px;
+    color: var(--text-muted);
+    flex-shrink: 0;
+  }
+  .locked-input .locked-val { color: var(--text-primary); font-weight: 700; letter-spacing: 0.5px; }
+  .locked-input .locked-tag {
+    margin-left: auto;
+    font-family: var(--font-mono);
+    font-size: 9px;
+    padding: 2px 6px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text-muted);
+    letter-spacing: 1px;
+  }
+
+  /* Service type toggle */
+  .type-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+  }
+  .type-card {
+    border: 1px solid var(--border);
+    background: var(--bg);
+    border-radius: 10px;
+    padding: 12px 12px 12px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    cursor: pointer;
+    text-align: left;
+    transition: border-color 120ms, background 120ms;
+  }
+  .type-card:hover { border-color: var(--border-strong); }
+  .type-card.selected {
+    background: var(--accent-muted);
+    border-color: var(--accent-border);
+    box-shadow: inset 0 0 0 1px var(--accent-border);
+  }
+  .type-card .type-ico {
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-secondary);
+  }
+  .type-card.selected .type-ico {
+    background: var(--accent);
+    color: var(--text-on-accent);
+    border-color: transparent;
+  }
+  .type-card .type-title {
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.4px;
+    color: var(--text-primary);
+  }
+  .type-card .type-sub {
+    font-size: 11px;
+    color: var(--text-muted);
+    line-height: 1.35;
+  }
+  .type-card.selected .type-sub { color: var(--text-secondary); }
+  .type-card .check {
+    position: absolute;
+  }
+
+  /* Chips */
+  .chip-row { display: flex; flex-wrap: wrap; gap: 7px; }
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 11px;
+    border-radius: 999px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 120ms;
+  }
+  .chip:hover { border-color: var(--border-strong); color: var(--text-primary); }
+  .chip.selected {
+    background: var(--accent-muted);
+    border-color: var(--accent-border);
+    color: var(--accent);
+  }
+  .chip .chip-ico { width: 12px; height: 12px; }
+
+  /* Gallery */
+  .gallery-grid {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 10px;
+  }
+  .gallery-tile {
+    aspect-ratio: 4/3;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    position: relative;
+    overflow: hidden;
+    background: var(--bg);
+  }
+  .gallery-tile.photo-a { background: linear-gradient(135deg, #2C2118 0%, #14171D 55%, #1B1316 100%); }
+  .gallery-tile.photo-b { background: linear-gradient(135deg, #1A1D24 0%, #23272F 60%, #14171D 100%); }
+  .gallery-tile.photo-c { background: linear-gradient(160deg, #382817 0%, #1E1A14 60%, #14171D 100%); }
+  .gallery-tile.photo-d { background: linear-gradient(135deg, #1B2620 0%, #14171D 60%, #1A1614 100%); }
+  .gallery-tile.photo-e { background: linear-gradient(135deg, #23272F 0%, #14171D 65%, #2C2118 100%); }
+  .gallery-tile.photo-f { background: linear-gradient(180deg, #14171D 0%, #1A1D24 100%); }
+
+  .gallery-tile .cover-badge {
+    position: absolute;
+    top: 8px; left: 8px;
+    font-family: var(--font-mono);
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 3px 7px;
+    background: var(--accent);
+    color: var(--text-on-accent);
+    border-radius: 4px;
+  }
+  .gallery-tile .idx-badge {
+    position: absolute;
+    top: 8px; left: 8px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--text-primary);
+    padding: 2px 6px;
+    background: rgba(10, 11, 14, 0.7);
+    backdrop-filter: blur(6px);
+    border-radius: 4px;
+    border: 1px solid var(--border);
+  }
+  .gallery-tile .tile-actions {
+    position: absolute;
+    bottom: 8px; right: 8px;
+    display: inline-flex;
+    gap: 4px;
+  }
+  .tile-mini-btn {
+    width: 24px; height: 24px;
+    border-radius: 6px;
+    background: rgba(10, 11, 14, 0.8);
+    backdrop-filter: blur(6px);
+    border: 1px solid var(--border);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: var(--text-primary);
+  }
+  .tile-mini-btn:hover { background: var(--surface-raised); }
+  .tile-mini-btn.danger:hover { background: var(--danger-muted); color: var(--danger); border-color: var(--danger-border); }
+
+  .gallery-tile.empty {
+    background: transparent;
+    border: 1.5px dashed var(--border-strong);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 140ms;
+  }
+  .gallery-tile.empty:hover {
+    border-color: var(--accent-border);
+    color: var(--accent);
+    background: var(--accent-muted);
+  }
+  .gallery-tile.empty .plus-ico { width: 24px; height: 24px; }
+  .gallery-tile.empty .empty-lbl {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+  }
+
+  /* Contact / hours inline row */
+  .meta-row {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+  }
+  .meta-pill {
+    padding: 10px 12px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+  .meta-pill-lbl {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+  .meta-pill-val {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-primary);
+    letter-spacing: 0.3px;
+  }
+  .meta-pill .link-mini {
+    font-size: 10px;
+    color: var(--accent);
+    font-weight: 700;
+    margin-top: 2px;
+  }
+
+  /* Toggle */
+  .toggle-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+  }
+  .toggle-text { flex: 1; }
+  .toggle-title { font-size: 13px; font-weight: 700; color: var(--text-primary); }
+  .toggle-sub { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+  .switch {
+    width: 38px; height: 22px;
+    border-radius: 999px;
+    background: var(--accent);
+    position: relative;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 140ms;
+  }
+  .switch::after {
+    content: '';
+    position: absolute;
+    width: 18px; height: 18px;
+    top: 2px;
+    left: 18px;
+    border-radius: 50%;
+    background: var(--text-on-accent);
+    transition: left 140ms;
+  }
+  .switch.off { background: var(--border-strong); }
+  .switch.off::after { left: 2px; }
+
+  /* === PREVIEW COLUMN === */
+  .preview-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .preview-title {
+    font-family: var(--font-display);
+    font-size: 15px;
+    letter-spacing: 2px;
+    color: var(--text-primary);
+    line-height: 1;
+  }
+  .preview-kicker {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 1.4px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    padding: 3px 7px;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+  }
+  .preview-toolbar {
+    display: inline-flex;
+    gap: 4px;
+    margin-left: auto;
+    padding: 3px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+  }
+  .preview-tab {
+    padding: 5px 10px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    color: var(--text-muted);
+    border-radius: 5px;
+    cursor: pointer;
+    border: none;
+    background: transparent;
+  }
+  .preview-tab.active {
+    background: var(--surface);
+    color: var(--text-primary);
+    box-shadow: 0 0 0 1px var(--border);
+  }
+
+  .phone-preview {
+    width: 280px;
+    align-self: center;
+    background: #070809;
+    border-radius: 28px;
+    border: 2px solid #1A1D24;
+    padding: 8px;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.55);
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .phone-screen {
+    background: var(--bg);
+    border-radius: 22px;
+    overflow: hidden;
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .phone-status {
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 14px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--text-primary);
+    flex-shrink: 0;
+  }
+  .phone-status .cluster {
+    display: inline-flex;
+    gap: 4px;
+    align-items: center;
+  }
+
+  .phone-hero {
+    height: 108px;
+    background: linear-gradient(135deg, #2C2118 0%, #14171D 55%, #1B1316 100%);
+    position: relative;
+    flex-shrink: 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .phone-hero::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, transparent 40%, rgba(10, 11, 14, 0.8) 100%);
+  }
+  .phone-back {
+    position: absolute;
+    top: 10px; left: 10px;
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    background: rgba(10, 11, 14, 0.6);
+    backdrop-filter: blur(6px);
+    border: 1px solid var(--border);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-primary);
+    z-index: 1;
+  }
+  .phone-dots {
+    position: absolute;
+    bottom: 10px; right: 10px;
+    display: inline-flex;
+    gap: 4px;
+    z-index: 1;
+  }
+  .phone-dots .d {
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.25);
+  }
+  .phone-dots .d.active { background: var(--accent); width: 14px; border-radius: 3px; }
+
+  .phone-body {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 12px 14px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    scrollbar-width: none;
+  }
+  .phone-body::-webkit-scrollbar { display: none; }
+
+  .pp-name-row {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .pp-name {
+    font-family: var(--font-display);
+    font-size: 21px;
+    letter-spacing: 1.5px;
+    line-height: 1;
+    color: var(--text-primary);
+  }
+  .pp-badge {
+    font-family: var(--font-mono);
+    font-size: 8px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 2px 5px;
+    background: var(--accent-muted);
+    color: var(--accent);
+    border-radius: 3px;
+    border: 1px solid var(--accent-border);
+  }
+  .pp-meta-row {
+    display: inline-flex;
+    gap: 8px;
+    align-items: center;
+    font-size: 10px;
+    color: var(--text-secondary);
+  }
+  .pp-meta-row .pp-rating {
+    display: inline-flex;
+    gap: 3px;
+    align-items: center;
+  }
+  .pp-meta-row .pp-rating svg { width: 10px; height: 10px; }
+  .pp-meta-row strong {
+    font-family: var(--font-mono);
+    color: var(--text-primary);
+    font-weight: 700;
+  }
+  .pp-meta-row .dot-sep {
+    display: inline-block;
+    width: 3px; height: 3px;
+    border-radius: 50%;
+    background: var(--border-strong);
+  }
+
+  .pp-tag-row { display: inline-flex; gap: 5px; flex-wrap: wrap; }
+  .pp-tag {
+    font-family: var(--font-mono);
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 0.6px;
+    padding: 3px 6px;
+    border-radius: 4px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+  }
+
+  .pp-desc {
+    font-size: 10.5px;
+    line-height: 1.5;
+    color: var(--text-secondary);
+  }
+  .pp-desc-fade {
+    display: inline;
+    color: var(--text-muted);
+  }
+
+  .pp-cta-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 6px;
+    padding: 8px 0 2px;
+    border-top: 1px dashed var(--border);
+  }
+  .pp-cta-primary {
+    padding: 9px 10px;
+    background: var(--accent);
+    color: var(--text-on-accent);
+    border-radius: 8px;
+    font-family: var(--font-display);
+    font-size: 13px;
+    letter-spacing: 2px;
+    text-align: center;
+    line-height: 1;
+  }
+  .pp-cta-ghost {
+    width: 34px; height: 34px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-primary);
+  }
+
+  .preview-caption {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.5px;
+    color: var(--text-muted);
+    text-align: center;
+    padding: 4px 8px;
+    border-top: 1px dashed var(--border);
+    margin-top: auto;
+  }
+  .preview-caption strong { color: var(--accent); font-weight: 700; }
+
+  /* Film strip */
+  .film-strip .frame { display: block; font-size: 36px; letter-spacing: 4px; color: var(--text-primary); }
+  .film-strip .frame-num { font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); letter-spacing: 1.5px; display: block; margin-top: 4px; font-weight: 700; }
+
+  .states-caption {
+    width: 100%;
+    max-width: 1440px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 40px;
+    padding: 14px 0 0;
+    border-top: 1px solid var(--border);
+  }
+  .state-col { display: flex; flex-direction: column; gap: 6px; }
+  .state-col h4 {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 4px;
+  }
+  .state-col ul { list-style: none; display: flex; flex-direction: column; gap: 4px; }
+  .state-col li {
+    font-size: 11px;
+    color: var(--text-secondary);
+    line-height: 1.55;
+    padding-left: 14px;
+    position: relative;
+  }
+  .state-col li::before {
+    content: '—';
+    position: absolute;
+    left: 0;
+    color: var(--text-muted);
+  }
+  .state-col li strong { color: var(--text-primary); font-weight: 700; }
+  .state-col code {
+    font-family: var(--font-mono);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 1px 5px;
+    border-radius: 3px;
+    color: var(--accent);
+    font-size: 10px;
+  }
+</style>
+</head>
+<body>
+
+  <!-- Caption -->
+  <div class="canvas-label">
+    <div class="film-strip">
+      <span class="frame">B2B · PROFIL WARSZTATU</span>
+      <span class="frame-num">FRAME 11 / 12 · panel.opony.app/profil</span>
+    </div>
+    <div class="slug">EDYCJA DANYCH PUBLICZNYCH — FORM + LIVE PREVIEW · AUTOSAVE</div>
+    <div class="canvas-meta">
+      <span class="pulse" aria-hidden="true"></span>
+      DRAFT · DESKTOP 1440 × 900
+    </div>
+  </div>
+
+  <!-- Desktop frame -->
+  <div class="desktop-frame">
+
+    <!-- Browser chrome -->
+    <div class="browser-chrome">
+      <div class="traffic-lights"><span class="light red"></span><span class="light yellow"></span><span class="light green"></span></div>
+      <div class="browser-tabs">
+        <div class="browser-tab"><span class="favicon">O</span>Opony · Panel</div>
+      </div>
+      <div class="browser-address">
+        <svg class="lock" viewBox="0 0 16 16" width="12" height="12" fill="currentColor" aria-hidden="true"><path d="M4.5 7V5.5a3.5 3.5 0 0 1 7 0V7h.5a1 1 0 0 1 1 1v5.5a1 1 0 0 1-1 1h-8a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1h.5Zm1.5 0h4V5.5a2 2 0 0 0-4 0V7Z"/></svg>
+        <span class="url">panel.opony.app</span><span class="path">/profil</span>
+      </div>
+    </div>
+
+    <!-- App root -->
+    <div class="app-root">
+
+      <!-- Sidebar -->
+      <nav class="sidebar" aria-label="Nawigacja">
+        <div class="sb-brand">
+          <span class="wordmark">OPONY<span class="dot" aria-hidden="true"></span></span>
+          <span class="panel-tag">Panel</span>
+        </div>
+        <span class="sb-section-label">Operacje</span>
+        <button class="sb-item">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+          Pulpit
+        </button>
+        <button class="sb-item">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          Kalendarz
+        </button>
+        <button class="sb-item">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v18"/><path d="m5 8 7-5 7 5"/><path d="m5 16 7 5 7-5"/></svg>
+          Rezerwacje
+          <span class="sb-badge">2</span>
+        </button>
+        <button class="sb-item">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          Opinie
+        </button>
+
+        <span class="sb-section-label" style="margin-top:14px">Firma</span>
+        <button class="sb-item active" aria-current="page">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          Profil warsztatu
+        </button>
+        <button class="sb-item">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+          Godziny otwarcia
+        </button>
+        <button class="sb-item">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          Strefa dojazdu
+        </button>
+        <button class="sb-item">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          Cennik
+        </button>
+
+        <div class="sb-spacer"></div>
+
+        <div class="sb-user" role="button" tabindex="0">
+          <div class="sb-avatar">JK</div>
+          <div class="sb-user-col">
+            <span class="sb-user-name">Jan Kowalski</span>
+            <span class="sb-user-role">Właściciel</span>
+          </div>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--text-muted)"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
+      </nav>
+
+      <!-- Main -->
+      <main class="main" role="main">
+        <div class="topbar">
+          <div class="tb-breadcrumb">
+            <span>Firma</span>
+            <span class="sep">›</span>
+            <span class="current">Profil warsztatu</span>
+          </div>
+          <div class="tb-spacer"></div>
+
+          <span class="autosave-pill">
+            <span class="dot" aria-hidden="true"></span>
+            Zapisano · 12s temu
+          </span>
+
+          <button class="tb-btn" type="button">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            Podgląd publiczny
+          </button>
+          <button class="tb-btn primary" type="button">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+            Opublikuj zmiany
+          </button>
+        </div>
+
+        <div class="content-split">
+
+          <!-- FORM COLUMN -->
+          <div class="form-col">
+
+            <!-- Tożsamość firmy -->
+            <section class="section" aria-labelledby="sec-identity">
+              <header class="sec-head">
+                <h2 class="sec-title" id="sec-identity">Tożsamość firmy</h2>
+                <span class="sec-kicker">Widoczne publicznie</span>
+                <span class="sec-hint">Pola <span style="color:var(--accent); font-weight:700">*</span> są wymagane</span>
+              </header>
+
+              <div class="field-row three">
+                <div class="field">
+                  <label class="label" for="f-name">Nazwa wyświetlana<span class="req">*</span></label>
+                  <input class="input" id="f-name" type="text" value="Wulkanizacja Nowy Sącz" />
+                  <span class="field-hint">Widoczna na karcie warsztatu i w wynikach wyszukiwania.</span>
+                </div>
+                <div class="field">
+                  <label class="label" for="f-nip">NIP</label>
+                  <div class="locked-input" id="f-nip">
+                    <svg class="lock-ico" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M4.5 7V5.5a3.5 3.5 0 0 1 7 0V7h.5a1 1 0 0 1 1 1v5.5a1 1 0 0 1-1 1h-8a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1h.5Zm1.5 0h4V5.5a2 2 0 0 0-4 0V7Z"/></svg>
+                    <span class="locked-val">734 285 17 91</span>
+                    <span class="locked-tag">GUS · OK</span>
+                  </div>
+                </div>
+                <div class="field">
+                  <label class="label" for="f-reg">Nr wpisu CEIDG</label>
+                  <div class="locked-input" id="f-reg">
+                    <svg class="lock-ico" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M4.5 7V5.5a3.5 3.5 0 0 1 7 0V7h.5a1 1 0 0 1 1 1v5.5a1 1 0 0 1-1 1h-8a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1h.5Zm1.5 0h4V5.5a2 2 0 0 0-4 0V7Z"/></svg>
+                    <span class="locked-val">4821/2019/NS</span>
+                    <span class="locked-tag">Zaakceptowano</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="field">
+                <label class="label" for="f-desc">Opis warsztatu<span class="req">*</span></label>
+                <textarea class="textarea" id="f-desc" rows="3">Rodzinny warsztat wulkanizacyjny działający w Nowym Sączu od 2019 roku. Specjalizujemy się w wymianie opon osobowych i dostawczych oraz wyważaniu kół. Klienci cenią nas za szybkość i czysty warsztat — większość wizyt kończymy w 30 minut.</textarea>
+                <div class="char-counter"><strong>287</strong> / 500 znaków</div>
+              </div>
+
+              <div class="field-row two">
+                <div class="field">
+                  <label class="label" for="f-short">Tagline (krótki opis)</label>
+                  <input class="input" id="f-short" type="text" value="Szybka wymiana opon w centrum Nowego Sącza" />
+                  <span class="field-hint">Max 60 znaków. Pokazujemy na karcie w wynikach.</span>
+                </div>
+                <div class="field">
+                  <label class="label" for="f-founded">Działalność od</label>
+                  <input class="input" id="f-founded" type="text" value="2019" />
+                </div>
+              </div>
+            </section>
+
+            <!-- Typ serwisu -->
+            <section class="section" aria-labelledby="sec-type">
+              <header class="sec-head">
+                <h2 class="sec-title" id="sec-type">Typ serwisu</h2>
+                <span class="sec-kicker">Wpływa na filtry klienta</span>
+              </header>
+
+              <div class="type-grid">
+                <button class="type-card selected" type="button" aria-pressed="true">
+                  <div class="type-ico">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 12l2-9h14l2 9"/><path d="M3 12v7h18v-7"/><circle cx="7" cy="19" r="1.5" fill="currentColor"/><circle cx="17" cy="19" r="1.5" fill="currentColor"/></svg>
+                  </div>
+                  <span class="type-title">Stacjonarny</span>
+                  <span class="type-sub">Klient przyjeżdża pod adres warsztatu.</span>
+                </button>
+                <button class="type-card" type="button" aria-pressed="false">
+                  <div class="type-ico">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="1" y="7" width="14" height="10" rx="1"/><path d="M15 10h4l3 4v3h-7"/><circle cx="5.5" cy="18" r="2"/><circle cx="18.5" cy="18" r="2"/></svg>
+                  </div>
+                  <span class="type-title">Mobilny</span>
+                  <span class="type-sub">Dojazd do klienta w ustalonej strefie.</span>
+                </button>
+                <button class="type-card" type="button" aria-pressed="false">
+                  <div class="type-ico">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg>
+                  </div>
+                  <span class="type-title">Stacjonarny + mobilny</span>
+                  <span class="type-sub">Obsługujesz w warsztacie i z dojazdem.</span>
+                </button>
+              </div>
+            </section>
+
+            <!-- Usługi & pojazdy -->
+            <section class="section" aria-labelledby="sec-services">
+              <header class="sec-head">
+                <h2 class="sec-title" id="sec-services">Zakres usług</h2>
+                <span class="sec-kicker">Filtry w wyszukiwarce</span>
+                <span class="sec-hint"><span class="counter">6 / 12</span> wybrano</span>
+              </header>
+
+              <div class="field">
+                <span class="label">Typ pojazdu</span>
+                <div class="chip-row">
+                  <button class="chip selected" type="button" aria-pressed="true">
+                    <svg class="chip-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 16h18l-2-7H5z"/><circle cx="7" cy="18" r="1.5" fill="currentColor"/><circle cx="17" cy="18" r="1.5" fill="currentColor"/></svg>
+                    Osobowe
+                  </button>
+                  <button class="chip selected" type="button" aria-pressed="true">
+                    <svg class="chip-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="8" width="12" height="8"/><path d="M14 10h4l3 4v2h-7"/></svg>
+                    Dostawcze do 3,5 t
+                  </button>
+                  <button class="chip" type="button" aria-pressed="false">SUV / 4×4</button>
+                  <button class="chip" type="button" aria-pressed="false">Motocykle</button>
+                  <button class="chip" type="button" aria-pressed="false">Ciężarowe &gt; 3,5 t</button>
+                </div>
+              </div>
+
+              <div class="field">
+                <span class="label">Rozmiary opon</span>
+                <div class="chip-row">
+                  <button class="chip selected" type="button" aria-pressed="true">≤ 15"</button>
+                  <button class="chip selected" type="button" aria-pressed="true">16" — 17"</button>
+                  <button class="chip selected" type="button" aria-pressed="true">≥ 18"</button>
+                  <button class="chip" type="button" aria-pressed="false">≥ 21" (run-flat)</button>
+                </div>
+              </div>
+
+              <div class="field">
+                <span class="label">Dodatkowe usługi</span>
+                <div class="chip-row">
+                  <button class="chip selected" type="button" aria-pressed="true">
+                    <svg class="chip-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/></svg>
+                    Wyważanie
+                  </button>
+                  <button class="chip selected" type="button" aria-pressed="true">Sezonowa wymiana</button>
+                  <button class="chip" type="button" aria-pressed="false">Naprawa bieżnika</button>
+                  <button class="chip" type="button" aria-pressed="false">TPMS (czujniki)</button>
+                  <button class="chip" type="button" aria-pressed="false">Geometria</button>
+                  <button class="chip" type="button" aria-pressed="false">Hotel opon</button>
+                </div>
+              </div>
+            </section>
+
+            <!-- Galeria -->
+            <section class="section" aria-labelledby="sec-gallery">
+              <header class="sec-head">
+                <h2 class="sec-title" id="sec-gallery">Galeria</h2>
+                <span class="sec-kicker">Pierwsze = okładka</span>
+                <span class="sec-hint"><span class="counter">5 / 10</span> zdjęć · przeciągnij, by zmienić kolejność</span>
+              </header>
+
+              <div class="gallery-grid">
+                <div class="gallery-tile photo-a">
+                  <span class="cover-badge">★ Okładka</span>
+                  <div class="tile-actions">
+                    <button class="tile-mini-btn" type="button" aria-label="Przesuń">
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="5 9 2 12 5 15"/><polyline points="9 5 12 2 15 5"/><polyline points="15 19 12 22 9 19"/><polyline points="19 9 22 12 19 15"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="12" y1="2" x2="12" y2="22"/></svg>
+                    </button>
+                    <button class="tile-mini-btn danger" type="button" aria-label="Usuń">
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+                    </button>
+                  </div>
+                </div>
+                <div class="gallery-tile photo-b">
+                  <span class="idx-badge">02</span>
+                  <div class="tile-actions">
+                    <button class="tile-mini-btn" type="button" aria-label="Przesuń"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="5 9 2 12 5 15"/><polyline points="9 5 12 2 15 5"/><polyline points="15 19 12 22 9 19"/><polyline points="19 9 22 12 19 15"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="12" y1="2" x2="12" y2="22"/></svg></button>
+                    <button class="tile-mini-btn danger" type="button" aria-label="Usuń"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
+                  </div>
+                </div>
+                <div class="gallery-tile photo-c">
+                  <span class="idx-badge">03</span>
+                  <div class="tile-actions">
+                    <button class="tile-mini-btn" type="button" aria-label="Przesuń"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="5 9 2 12 5 15"/><polyline points="9 5 12 2 15 5"/><polyline points="15 19 12 22 9 19"/><polyline points="19 9 22 12 19 15"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="12" y1="2" x2="12" y2="22"/></svg></button>
+                    <button class="tile-mini-btn danger" type="button" aria-label="Usuń"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
+                  </div>
+                </div>
+                <div class="gallery-tile photo-d">
+                  <span class="idx-badge">04</span>
+                  <div class="tile-actions">
+                    <button class="tile-mini-btn" type="button" aria-label="Przesuń"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="5 9 2 12 5 15"/><polyline points="9 5 12 2 15 5"/><polyline points="15 19 12 22 9 19"/><polyline points="19 9 22 12 19 15"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="12" y1="2" x2="12" y2="22"/></svg></button>
+                    <button class="tile-mini-btn danger" type="button" aria-label="Usuń"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
+                  </div>
+                </div>
+                <div class="gallery-tile photo-e">
+                  <span class="idx-badge">05</span>
+                  <div class="tile-actions">
+                    <button class="tile-mini-btn" type="button" aria-label="Przesuń"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="5 9 2 12 5 15"/><polyline points="9 5 12 2 15 5"/><polyline points="15 19 12 22 9 19"/><polyline points="19 9 22 12 19 15"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="12" y1="2" x2="12" y2="22"/></svg></button>
+                    <button class="tile-mini-btn danger" type="button" aria-label="Usuń"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
+                  </div>
+                </div>
+                <button class="gallery-tile empty" type="button" aria-label="Dodaj zdjęcie">
+                  <svg class="plus-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                  <span class="empty-lbl">Dodaj</span>
+                </button>
+              </div>
+
+              <span class="field-hint">Rekomendacja: zdjęcia poziome 4:3, min. 1200×900 px. Warsztat „od środka", stanowisko z podnośnikiem, ekspres do kawy — nastrój działa lepiej niż logo na ścianie.</span>
+            </section>
+
+            <!-- Kontakt publiczny -->
+            <section class="section" aria-labelledby="sec-contact">
+              <header class="sec-head">
+                <h2 class="sec-title" id="sec-contact">Kontakt i adres</h2>
+                <span class="sec-kicker">Publiczne</span>
+              </header>
+
+              <div class="field-row two">
+                <div class="field">
+                  <label class="label" for="f-addr">Adres warsztatu<span class="req">*</span></label>
+                  <input class="input" id="f-addr" type="text" value="ul. Lwowska 45, 33-300 Nowy Sącz" />
+                </div>
+                <div class="field">
+                  <label class="label" for="f-phone">Telefon publiczny</label>
+                  <input class="input" id="f-phone" type="text" value="+48 600 123 456" />
+                </div>
+              </div>
+
+              <div class="toggle-row">
+                <div class="toggle-text">
+                  <div class="toggle-title">Pokaż numer telefonu na karcie</div>
+                  <div class="toggle-sub">Klient może zadzwonić jednym tapnięciem — rekomendowane dla mobilnych.</div>
+                </div>
+                <button class="switch" type="button" role="switch" aria-checked="true" aria-label="Widoczność telefonu"></button>
+              </div>
+            </section>
+
+          </div>
+
+          <!-- PREVIEW COLUMN -->
+          <aside class="preview-col" aria-label="Podgląd publiczny">
+            <div class="preview-head">
+              <h3 class="preview-title">Podgląd</h3>
+              <span class="preview-kicker">Widok klienta</span>
+              <div class="preview-toolbar" role="tablist" aria-label="Tryb podglądu">
+                <button class="preview-tab active" role="tab" aria-selected="true">Mobile</button>
+                <button class="preview-tab" role="tab" aria-selected="false">Web</button>
+              </div>
+            </div>
+
+            <div class="phone-preview">
+              <div class="phone-screen">
+                <div class="phone-status">
+                  <span>09:41</span>
+                  <div class="cluster">
+                    <svg width="14" height="10" viewBox="0 0 14 10" fill="currentColor" aria-hidden="true"><rect x="0" y="7" width="2" height="3" rx="0.5"/><rect x="3" y="5" width="2" height="5" rx="0.5"/><rect x="6" y="3" width="2" height="7" rx="0.5"/><rect x="9" y="0" width="2" height="10" rx="0.5"/></svg>
+                    <svg width="16" height="10" viewBox="0 0 16 10" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="0.5" y="1" width="12" height="8" rx="1.5"/><rect x="2" y="2.5" width="9" height="5" rx="0.5" fill="currentColor"/><rect x="13.5" y="3.5" width="1.5" height="3" rx="0.5" fill="currentColor"/></svg>
+                  </div>
+                </div>
+
+                <div class="phone-hero">
+                  <button class="phone-back" type="button" aria-label="Wstecz">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
+                  </button>
+                  <div class="phone-dots" aria-hidden="true">
+                    <span class="d active"></span><span class="d"></span><span class="d"></span><span class="d"></span><span class="d"></span>
+                  </div>
+                </div>
+
+                <div class="phone-body">
+                  <div class="pp-name-row">
+                    <h4 class="pp-name">WULKANIZACJA N. SĄCZ</h4>
+                    <span class="pp-badge">PRO</span>
+                  </div>
+
+                  <div class="pp-meta-row">
+                    <span class="pp-rating">
+                      <svg viewBox="0 0 24 24" fill="#FFB020" aria-hidden="true"><polygon points="12 2 15 9 22 10 17 15 18 22 12 19 6 22 7 15 2 10 9 9"/></svg>
+                      <strong>4,8</strong> <span style="color:var(--text-muted)">(127)</span>
+                    </span>
+                    <span class="dot-sep" aria-hidden="true"></span>
+                    <span>ul. Lwowska 45</span>
+                    <span class="dot-sep" aria-hidden="true"></span>
+                    <span><strong>1,2</strong> km</span>
+                  </div>
+
+                  <div class="pp-tag-row">
+                    <span class="pp-tag">OSOBOWE</span>
+                    <span class="pp-tag">DOSTAWCZE</span>
+                    <span class="pp-tag">≤ 15"</span>
+                    <span class="pp-tag">16—17"</span>
+                    <span class="pp-tag">≥ 18"</span>
+                    <span class="pp-tag">WYWAŻANIE</span>
+                  </div>
+
+                  <p class="pp-desc">
+                    Rodzinny warsztat wulkanizacyjny działający w Nowym Sączu od 2019 roku. Specjalizujemy się w wymianie opon osobowych i dostawczych oraz wyważaniu kół.
+                    <span class="pp-desc-fade"> Klienci cenią nas za szybkość i czysty warsztat — większość wizyt kończymy w 30 minut.</span>
+                  </p>
+
+                  <div class="pp-cta-row">
+                    <div class="pp-cta-primary">WYBIERZ TERMIN</div>
+                    <div class="pp-cta-ghost" aria-label="Zadzwoń">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="preview-caption">
+                  Tak widzi profil klient · <strong>aktualizuje się na żywo</strong>
+                </div>
+              </div>
+            </div>
+          </aside>
+
+        </div>
+
+      </main>
+    </div>
+  </div>
+
+  <!-- States caption -->
+  <div class="states-caption">
+    <div class="state-col">
+      <h4>Stany & zachowanie</h4>
+      <ul>
+        <li><strong>Autosave pill</strong> — zielona kropka pulsuje gdy trwa zapis; po 12s zmienia tekst na „Zapisano · Xs temu" (tylko PATCH-e na zmienione pola).</li>
+        <li><strong>Pola locked</strong> (NIP, CEIDG) — zamknięte po weryfikacji w GUS (onboarding step 1); edycja tylko przez support ticket.</li>
+        <li><strong>Type-card selected</strong> — tło <code>--accent-muted</code>, border <code>--accent-border</code>, ikona odwraca kolor na <code>--accent</code>.</li>
+        <li><strong>Chip selected</strong> (<code>aria-pressed="true"</code>) — amber fill; kliknięcie toggle'uje.</li>
+        <li><strong>Gallery reorder</strong> — drag-handle (ikona 4 strzałek); ★ Okładka przechodzi automatycznie na pozycję 01 po przesunięciu.</li>
+        <li><strong>„Opublikuj zmiany"</strong> — primary gdy są niezapisane zmiany w fieldach niepublikowanych (np. typ serwisu wymaga ponownego approvalu) — tu placeholder, bo wszystko autosaves.</li>
+      </ul>
+    </div>
+    <div class="state-col">
+      <h4>Walidacja & policy</h4>
+      <ul>
+        <li><strong>Opis</strong> — min 60 / max 500 znaków; <code>char-counter</code> staje się amber &gt; 450 i czerwony &gt; 500.</li>
+        <li><strong>Galeria</strong> — min 3 zdjęcia wymagane do publikacji (inaczej karta warsztatu w wyszukiwarce pokazuje fallback).</li>
+        <li><strong>Typ serwisu „Mobilny"</strong> — wymaga zdefiniowanej strefy dojazdu (link do B2B-07); jeśli brak, primary CTA <em>zablokowany</em> z tooltipem.</li>
+        <li><strong>Zmiana nazwy firmy</strong> (&gt; 50% tokenów) — trigger re-approval w <code>admin.opony.app</code>; status wraca do <code>PENDING_APPROVAL</code> na 24h.</li>
+        <li><strong>Live preview</strong> — odzwierciedla tylko publiczne pola (opis, tagi, galeria, adres); pola admin (GUS, IBAN) nigdy nie wyciekają.</li>
+        <li><strong>A11y</strong> — type-cards i chipy mają <code>aria-pressed</code>; toggle telefonu to <code>role="switch"</code> z <code>aria-checked</code>.</li>
+      </ul>
+    </div>
+  </div>
+
+</body>
+</html>

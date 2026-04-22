@@ -4,6 +4,14 @@
 
 ---
 
+## ✅ Design phase: ZAMKNIĘTA (2026-04-22)
+
+**38 ekranów HTML w `/design`** — industrial-dark, Bebas Neue + Archivo + JetBrains Mono, graphite #0A0B0E + amber #FF6B1A. Pełna mapa ekran ↔ wireframe ↔ user-story w [`plan-sprintow.md §12.Z`](../docs/plan-sprintow.md#12z-pełny-zakres-design-phase--38-ekranów). Rationale + reguły architekturalne w [ADR-008](../docs/architektura.md#adr-008-design-phase-closed--38-ekranów-3-artefakty-2026-04-22).
+
+**Przed startem Sprint 0:** zespół FE (3 agentów — FE-mobile / FE-panel / FE-landing) powinien przejrzeć swój zakres ekranów (TASK-020b). Design to source of truth — nie wymyślamy UX od nowa podczas implementacji.
+
+---
+
 # FAZA 0: Przygotowanie (przed kodowaniem)
 
 ## 0.1. Konta zewnętrzne — długi lead time (zacznij natychmiast!)
@@ -15,15 +23,11 @@
 - **Rezultat:** Domena aktywna, dostęp do panelu DNS
 - [ ] Zrobione
 
-### TASK-002: Załóż konto Przelewy24 + weryfikacja firmy
-- **Co:** Rejestracja konta merchant w Przelewy24. Wymaga NIP firmy (JDG lub Sp. z o.o.).
-- **Jak:** Formularz na stronie P24 → wpisz dane firmy → wyślij → czekaj na weryfikację.
-- **Czas:** 10 min na formularz, **3–5 dni roboczych** na weryfikację (dlatego TERAZ!)
-- **Rezultat:** `P24_MERCHANT_ID`, `P24_API_KEY`, `P24_CRC` w panelu P24. Dostęp do sandbox `sandbox.przelewy24.pl`.
-- **⚠ Blocker:** Bez tego nie przetestujesz płatności w Sprint 3!
-- [ ] Formularz wysłany
-- [ ] Weryfikacja zakończona
-- [ ] Credentials zapisane bezpiecznie (password manager)
+### TASK-002: ~~Załóż konto Przelewy24~~ — USUNIĘTE (ADR-004)
+
+**Zadanie usunięte** — POC v0 bez płatności, aplikacja darmowa w pilocie. Oszczędność lead time 3–5 dni roboczych (weryfikacja P24).
+
+Wróci w v0.5 po pilocie, gdy włączamy monetyzację (decyzja P24 marketplace vs miesięczne fakturowanie).
 
 ### TASK-003: Załóż konto Twilio + Sender ID
 - **Co:** Konto Twilio + weryfikacja biznesowa + rejestracja alfanumerycznego Sender ID „OPONY" w PL.
@@ -61,11 +65,27 @@
 - [ ] `DATABASE_URL` skopiowany
 
 ### TASK-007: Załóż konto Vercel
-- **Co:** Hosting dla 3 aplikacji Next.js (client, provider, landing).
+- **Co:** Hosting dla 3 aplikacji: `apps/mobile` (Expo RNW web export), `apps/panel` (Next.js), `apps/landing` (Next.js).
 - **Jak:** Vercel.com → Sign up with GitHub → Import project `opony` (po push kodu w Sprint 0). Na razie tylko konto.
 - **Czas:** 5 min
 - **Rezultat:** Konto Vercel połączone z GitHub
 - [ ] Konto aktywne
+
+### TASK-007b: Załóż konto Expo EAS + Apple Developer Program + Google Play Console ⚠️ **BLOKER — lead time 1–2 tyg.**
+- **Co:** Konta pod natywne buildy iOS/Android (v0.5/v1 publishing do App Store + Google Play). **Apple Developer Program ma verification 1–2 tyg.** → musi startować w Fazie 0, razem z TASK-003 Twilio (TASK-002 P24 usunięty — ADR-004).
+- **Jak:**
+  1. **Expo / EAS** — expo.dev → Sign up → Install `eas-cli` globally → `eas login` w repo (po Sprint 0). Free tier = 30 buildów/mc.
+  2. **Apple Developer Program** — developer.apple.com/programs → Enroll (Apple ID + dowód osobisty dla indywidualnego / D-U-N-S + dokumenty firmowe dla JDG/Sp. z o.o.) → **$99/rok**. Verification: 24–48h (indywidualne) / 1–2 tyg. (firmowe).
+  3. **Google Play Console** — play.google.com/console → Sign up → **$25 one-time**. Verification ~1 dzień.
+  4. **App Store Connect** (po Apple Dev approval) — utwórz app record z bundle ID `app.opony.mobile`.
+  5. **Google Play Console** — utwórz app record z package `app.opony.mobile`.
+- **Czas:** 30 min pracy + **1–2 tyg. Apple verification**
+- **Koszt setup:** $99 (Apple) + $25 (Google) = ~500 PLN. Expo EAS free w v0.
+- **Rezultat:** konta gotowe do pierwszego `eas build --platform ios/android`
+- [ ] Expo / EAS konto
+- [ ] Apple Developer Program verified (BLOCKER iOS build)
+- [ ] Google Play Console verified
+- [ ] Bundle ID / package name zarezerwowane
 
 ### TASK-008: Załóż konto Resend + weryfikacja domeny
 - **Co:** Serwis email transakcyjny (potwierdzenia, reset, raporty).
@@ -76,12 +96,12 @@
 - [ ] Rekordy DNS dodane
 - [ ] Domena zweryfikowana
 
-### TASK-009: Załóż konto Sentry + 3 projekty
-- **Co:** Monitoring błędów dla API, client PWA, provider web.
-- **Jak:** Sentry.io → Sign up → Create organization `opony` → Create 3 projects: (1) `opony-api` platform Node.js (2) `opony-client` platform Next.js (3) `opony-provider` platform Next.js.
+### TASK-009: Załóż konto Sentry + 4 projekty
+- **Co:** Monitoring błędów dla API, mobile app (Expo native + web), panel, landing.
+- **Jak:** Sentry.io → Sign up → Create organization `opony` → Create 4 projects: (1) `opony-api` platform Node.js (2) `opony-mobile` platform React Native (obsługuje też web export via `@sentry/react-native` + `@sentry/browser`) (3) `opony-panel` platform Next.js (4) `opony-landing` platform Next.js.
 - **Czas:** 10 min
-- **Rezultat:** 3 × `SENTRY_DSN` (jeden per projekt)
-- [ ] 3 projekty stworzone
+- **Rezultat:** 4 × `SENTRY_DSN` (jeden per projekt)
+- [ ] 4 projekty stworzone
 - [ ] DSN-y zapisane
 
 ### TASK-010: Załóż konto Google Cloud + włącz Maps APIs
@@ -174,6 +194,24 @@
 - **Czas:** 10 min
 - [ ] Przeczytane
 
+### TASK-021b: Przejrzyj design (38 ekranów HTML) ⭐
+- **Co:** Design phase zamknięty (2026-04-22). Przed startem sprintów zobacz jak wygląda cała apka.
+- **Jak:**
+  1. Otwórz [`plan-sprintow.md §12.Z`](../docs/plan-sprintow.md#12z-pełny-zakres-design-phase--38-ekranów) — tabela mapuje każdy plik `.html` do wireframe i user-story.
+  2. Otwórz w przeglądarce minimum po 2 ekrany z każdego artefaktu:
+     - **Klient mobile** — `design/01-home.html`, `design/03-time-slot.html`, `design/07-profile.html` *(typowy booking flow)*
+     - **Panel B2B** — `design/b2b-01-dashboard.html`, `design/b2b-08-szczegol-rezerwacji.html` *(daily ops providera)*
+     - **Landing** — `design/landing-01-home.html`, `design/landing-02-profil-publiczny.html` *(marketing + share)*
+  3. Zwróć uwagę na footer `<caption>` pod każdym ekranem — opisuje stany, edge cases i decyzje a11y. **To jest kontrakt dla FE.**
+  4. Zapoznaj się z regułami architekturalnymi z [ADR-008](../docs/architektura.md#adr-008-design-phase-closed--38-ekranów-3-artefakty-2026-04-22):
+     - Zero booking-flow w landing/panel (wszystkie rezerwacje w app.opony.app)
+     - Miasto pilot = Nowy Sącz (nie Poznań)
+     - Zero płatności w v0 (ADR-004)
+- **Czas:** 30–40 min
+- [ ] Przeglądnięte minimum 6 ekranów (po 2 na artefakt)
+- [ ] Zapoznane z §12.Z (tabela ekran↔US)
+- [ ] Zapoznane z ADR-008 (reguły architekturalne)
+
 ---
 
 ## 0.4. Przygotuj plik z credentials
@@ -182,9 +220,7 @@
 - **Co:** Zbierz wszystkie klucze API z TASKów 002–013 w jedno bezpieczne miejsce.
 - **Jak:** Stwórz plik `credentials-local.md` (NIE commituj do repo!) lub użyj password managera. Zapisz:
   ```
-  P24_MERCHANT_ID=...
-  P24_API_KEY=...
-  P24_CRC=...
+  # P24_* — USUNIĘTE w v0 (ADR-004), wróci w v0.5
   TWILIO_SID=...
   TWILIO_AUTH_TOKEN=...
   AWS_ACCESS_KEY_ID=...
@@ -232,17 +268,21 @@
 - [ ] Swagger działa
 
 ### TASK-026: Uruchom Agent DS-0 (Design System)
-- **Co:** 10 base komponentów + Storybook.
-- **Jak:** Wklej prompt DS-0. Może pracować równolegle z INFRA-DX (oddzielny branch!).
+- **Co:** Ekstrakcja tokenów z HTML mockupów + 10 base komponentów + Storybook.
+- **Source of truth (MUST):** `/design/*.html` — wszystkie tokeny w `:root { --bg, --accent, --font-display ... }` pierwszego-lepszego pliku (np. `design/01-home.html` lines 17–47). Industrial-dark: graphite `#0A0B0E` + amber `#FF6B1A`, Bebas Neue / Archivo / JetBrains Mono. Agent DS-0 **nie wymyśla** tokenów — wyciąga z `:root` do `packages/design-tokens/tokens.json` i generuje 3 flavors (RN StyleSheet + CSS vars + Tailwind config) per ADR-001.
+- **Jak:** Wklej prompt DS-0 z załącznikiem ścieżek `/design/01-home.html` (mobile tokens) + `/design/b2b-01-dashboard.html` (desktop tokens — identyczne `:root`, różnią się tylko scale). Może pracować równolegle z INFRA-DX (oddzielny branch!).
 - **Czas:** 20–30 min
-- **Rezultat:** `/packages/design-system/` z 10 komponentami, Storybook
-- **Weryfikacja:** `pnpm storybook` → otwórz browser → 10 komponentów widocznych
+- **Rezultat:** `/packages/design-tokens/` + `/packages/design-system-native/` + `/packages/design-system-web/` z 10 komponentami, Storybook
+- **Weryfikacja:**
+  - `pnpm storybook` → otwórz browser → 10 komponentów widocznych
+  - Porównaj wizualnie z `/design/01-home.html` — card, chip, slot-pill, CTA muszą mieć ten sam look (kolory, fonty, radius, padding)
 - [ ] Agent uruchomiony
-- [ ] Storybook działa
+- [ ] Tokens wyciągnięte z `/design/01-home.html :root` do `tokens.json`
+- [ ] Storybook działa, komponenty pasują do mockupów
 
 ### TASK-027: Uzupełnij .env.local z credentials
 - **Co:** Wklej prawdziwe credentials do `.env.local` (z TASK-022).
-- **Jak:** `cp .env.example .env.local` → otwórz → wklej wartości z TASK-022. Na razie placeholder'y dla P24/Twilio (jeśli weryfikacja trwa) — `NEXT_PUBLIC_API_MOCK=true` pozwoli FE pracować bez nich.
+- **Jak:** `cp .env.example .env.local` → otwórz → wklej wartości z TASK-022. Na razie placeholder'y dla Twilio (jeśli weryfikacja trwa) — `NEXT_PUBLIC_API_MOCK=true` pozwoli FE pracować bez nich.
 - **Rezultat:** `.env.local` z prawdziwymi lub placeholder credentials
 - [ ] Wypełnione
 
@@ -376,35 +416,33 @@
 
 # FAZA 4: Sprint 3 — Rezerwacja + Płatności (tydzień 3)
 
-### TASK-043: Sprawdź status P24 i Twilio
-- **Co:** Upewnij się, że credentials z TASK-002 i TASK-003 są gotowe.
-- **Jak:** Zaloguj się do panelu P24 → sandbox aktywny? Zaloguj się do Twilio → SMS wysyłany?
-- **⚠** Jeśli P24 jeszcze nie gotowe → agent BE-4 użyje mocka. Ale testy na real sandbox będą niemożliwe.
-- [ ] P24 sandbox aktywny
+### TASK-043: Sprawdź status Twilio
+- **Co:** Upewnij się, że credentials z TASK-003 są gotowe.
+- **Jak:** Zaloguj się do Twilio → SMS wysyłany?
 - [ ] Twilio SMS działa (wyślij testowy na swój numer)
 
-### TASK-044: Uruchom Agent BE-4 (Booking + P24)
-- **Co:** Moduł rezerwacji z integracją Przelewy24 + cron paymentTimeout.
+### TASK-044: Uruchom Agent BE-4 (Booking + bookingExpiryCron)
+- **Co:** Moduł rezerwacji bez płatności (ADR-004) + cron bookingExpiry (PENDING > 2h → auto-cancel).
 - **Jak:** Branch `sprint-3/be-4-booking`. Prompt BE-4 z sekcji 20.
-- **Weryfikacja:** Swagger → `POST /v1/bookings` → zwraca `{booking, paymentUrl}`
+- **Weryfikacja:** Swagger → `POST /v1/bookings` → zwraca `{booking}` ze statusem PENDING + SMS do providera wysłany.
 - [ ] Uruchomiony + zweryfikowany
 
-### TASK-045: Uruchom Agent FE-4 (Booking flow + Payment)
-- **Co:** Flow rezerwacji klienta: wybór slotu → płatność → potwierdzenie.
+### TASK-045: Uruchom Agent FE-4 (Booking flow)
+- **Co:** Flow rezerwacji klienta: wybór slotu → potwierdzenie PENDING (bez płatności).
 - **Jak:** Branch `sprint-3/fe-4-booking`. Prompt FE-4.
-- **Weryfikacja:** `localhost:3000` → provider → slot → „Zapłać" → redirect → potwierdzenie
+- **Weryfikacja:** Expo → provider → slot → „Zarezerwuj termin" → potwierdzenie PENDING
 - [ ] Uruchomiony + zweryfikowany
 
 ### TASK-046: Review + merge Sprint 3
-- [ ] Architekt: review BE-4 (**P24 integracja — KRYTYCZNE!** sprawdź webhook verification, idempotency, race condition)
-- [ ] Projektant: UI review FE-4 (wireframy 12.2, 12.3, 12.8, 12.4)
+- [ ] Architekt: review BE-4 (race condition 409, bookingExpiryCron, idempotency)
+- [ ] Projektant: UI review FE-4 (wireframy 12.2, 12.3, 12.4 — **bez 12.8**, ADR-004)
 - [ ] Swap MSW → real
 - [ ] Merge do main
 - **Checklista Sprint 3:**
-  - [ ] Szukaj → provider → slot → zapłać (P24 sandbox) → SMS → potwierdzenie
+  - [ ] Szukaj → provider → slot → rezerwuj → PENDING + SMS do providera
   - [ ] Double-booking: 2 okna → 1 sukces, 1 × 409
   - [ ] Adres poza strefą → inline error
-  - [ ] Payment timeout: czekaj 15 min → slot zwolniony
+  - [ ] bookingExpiryCron: czekaj 2h → PENDING → CANCELLED_BY_SYSTEM + SMS do klienta
 
 ### TASK-047: Zacznij GTM! (równolegle z kolejnymi sprintami)
 - **Co:** Od teraz masz działający produkt. Zacznij pozyskiwanie providerów.
@@ -449,14 +487,14 @@
 - [ ] FE-6b (B2B opinie + finanse) — branch `sprint-5/fe-6b`
 
 ### TASK-053: Review + merge Sprint 5
-- [ ] Architekt: review BE-6 (settlement + refund P24)
+- [ ] Architekt: review BE-6 (Review CRUD + filtr wulgaryzmów — settlement/refund usunięte, ADR-004)
 - [ ] Projektant: UI review FE-6a + FE-6b (wireframy 12.2, 12.12, 12.17, 12.14)
 - [ ] Swap + merge
 - **Checklista Sprint 5:**
   - [ ] Ocena po COMPLETED → widoczna w profilu
   - [ ] Provider odpowiada na opinię
   - [ ] Settlement obliczony po COMPLETED
-  - [ ] Refund: anuluj > 2h → P24 refund
+  - [ ] Anulowanie > 2h → status CANCELLED, brak kosztów dla klienta (ADR-004 — brak refundu bo brak płatności)
 
 ---
 
@@ -516,7 +554,7 @@
   - [ ] E2E klient: login → szukaj → rezerwuj → zapłać → SMS
   - [ ] E2E provider: login → dashboard → akceptuj → rozpocznij → zakończ
   - [ ] E2E onboarding: signup → NIP → upload → approve → login
-  - [ ] Crony: NO_SHOW ✓, paymentTimeout ✓, weeklyPayouts ✓, ratingCache ✓
+  - [ ] Crony: NO_SHOW ✓, bookingExpiry ✓, ratingCache ✓ (weeklyPayouts/paymentTimeout usunięte — ADR-004)
   - [ ] Lighthouse PWA > 80
   - [ ] p95 API < 300 ms
   - [ ] `npm audit` — zero critical
@@ -526,7 +564,7 @@
 # FAZA 9: Deploy + Soft-launch (tydzień 8)
 
 ### TASK-061: Zamień credentials na produkcyjne
-- **Co:** Podmień sandbox → prod dla P24, Twilio, S3, Resend.
+- **Co:** Podmień sandbox → prod dla Twilio, S3, Resend (P24 nie dotyczy v0 — ADR-004).
 - **Jak:** W Railway → Environment Variables → ustaw produkcyjne wartości. W Vercel → Environment Variables per project.
 - **⚠** NIGDY nie commituj produkcyjnych secrets do repo!
 - [ ] Railway env vars ustawione
@@ -543,10 +581,28 @@
 - [ ] Landing deployed na Vercel
 
 ### TASK-063: Skonfiguruj DNS
-- **Co:** Podepnij domenę.
-- **Jak:** W panelu rejestratora: (1) `opony.app` → CNAME → Vercel (landing) (2) `client.opony.app` → CNAME → Vercel (3) `provider.opony.app` → CNAME → Vercel (4) `api.opony.app` → CNAME → Railway
-- [ ] DNS skonfigurowany
+- **Co:** Podepnij domenę pod 4 aplikacje.
+- **Jak:** W panelu rejestratora:
+  1. `opony.app` → CNAME / A → Vercel (landing — `apps/landing`)
+  2. `app.opony.app` → CNAME → Vercel (mobile web export — `apps/mobile` via `expo export:web`)
+  3. `panel.opony.app` → CNAME → Vercel (provider portal — `apps/panel`)
+  4. `api.opony.app` → CNAME → Railway (NestJS API)
+- **Uwaga:** `app.opony.app` musi też hostować pliki pod `.well-known/apple-app-site-association` i `.well-known/assetlinks.json` (Universal Links / App Links — patrz TASK-063b).
+- [ ] DNS skonfigurowany (4 subdomeny)
 - [ ] SSL automatyczny (Vercel + Railway)
+
+### TASK-063b: Universal Links (iOS) + App Links (Android) ⚠️ **v0.5 bloker dla deep-link z mobile do panel**
+- **Co:** Pliki `apple-app-site-association` (iOS) i `assetlinks.json` (Android) hostowane na `app.opony.app/.well-known/` → umożliwiają otwarcie linku `panel.opony.app/xxx` z mobile Expo apki przez natywny browser (zamiast webview).
+- **Jak:**
+  1. Skonfiguruj w `apps/mobile/app.json` sekcję `ios.associatedDomains: ["applinks:app.opony.app", "applinks:panel.opony.app"]` i `android.intentFilters` (Expo config docs).
+  2. Wygeneruj `apple-app-site-association` — JSON z `appID: TEAMID.app.opony.mobile`, ścieżki `/*` dla app.opony.app oraz `/admin/*` dla panel.opony.app.
+  3. Wygeneruj `assetlinks.json` — JSON z SHA-256 fingerprint keystore'u Google Play.
+  4. Deploy plików jako static assets w `apps/landing/public/.well-known/` (serwowane przez Vercel).
+  5. Test: `branch.io/resources/aasa-validator/` + `developers.google.com/digital-asset-links/tools/generator`.
+- **Kiedy:** v0.5 (razem z pierwszym publishingiem do TestFlight). **Nie potrzebne w v0 czystym (web-only).**
+- [ ] AASA wygenerowane i hostowane
+- [ ] assetlinks.json wygenerowany i hostowany
+- [ ] Deep-link test: `opony://admin` otwiera panel w Expo apce
 - [ ] Wszystkie 4 domeny działają
 
 ### TASK-064: Wyczyść bazę produkcyjną
@@ -568,7 +624,7 @@
 - [ ] Provider: signup → NIP verify (prawdziwy GUS!) → upload → PENDING_APPROVAL
 - [ ] Admin (Retool): approve provider
 - [ ] Provider: login → dashboard → cennik → godziny → strefa
-- [ ] Klient: szukaj → provider widoczny → rezerwuj → zapłać (prawdziwy BLIK!) → SMS
+- [ ] Klient: szukaj → provider widoczny → rezerwuj → SMS do providera → provider accept → CONFIRMED (po wizycie klient płaci offline, v0 bez inline payments)
 
 ---
 

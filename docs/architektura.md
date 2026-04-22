@@ -1,6 +1,6 @@
 # Architektura MVP v0 — Opony.app
 
-> Jeden spójny dokument architektury dla MVP v0. Miasto pilotażowe: Nowy Sącz (~85k mieszkańców). Stack: Next.js + NestJS + PostgreSQL + Przelewy24. Zespół: 4 agentów AI pracujących równolegle w sprintach. Zakres: 139 SP MUST, 7 sprintów, ~7 tygodni.
+> Jeden spójny dokument architektury dla MVP v0. Miasto pilotażowe: Nowy Sącz (~85k mieszkańców). Stack: Expo + RNW (klient) + Next.js (panel + landing) + NestJS + PostgreSQL. Zespół: 4 agentów AI pracujących równolegle w sprintach. Zakres: ~122 SP MUST, 5–6 tygodni. **POC v0 BEZ płatności — aplikacja darmowa w pilocie, monetyzacja v0.5** (ADR-003).
 
 ---
 
@@ -8,13 +8,12 @@
 
 | Warstwa | Technologia | Wersja | Uzasadnienie |
 |---|---|---|---|
-| Frontend klient | Next.js (App Router) + PWA manifest | 14+ | Skip App Store review (1–2 tyg.), szybki TTM, offline-capable via Service Worker |
-| Frontend provider | Next.js (App Router) | 14+ | Desktop-first — providerzy wolą duży ekran, wspólna baza kodu z klientem |
-| Frontend landing | Next.js (Static Export) | 14+ | SEO, szybki load, zero kosztu SSR |
+| Klient (mobile + web) | Expo SDK 50+ + React Native Web | Expo 50+ | **Jeden codebase iOS/Android/Web PWA** — v0 klient-only, v0.5/v1+ provider features w tej samej apce. Natywne apki day-1 via EAS build |
+| Provider portal | Next.js (App Router) | 14+ | **Osobny desktop-first portal pod `panel.opony.app`** — ciężki admin (onboarding, cennik, godziny, strefa, finanse, rezerwacje). Responsive do browser mobilnego jako fallback |
+| Landing | Next.js (Static Export) | 14+ | SEO (`opony.app`, `/nowy-sacz`), szybki load, zero kosztu SSR |
 | Backend API | NestJS (Node.js) | 10+ (Node 20+) | TypeScript end-to-end, Prisma ORM, Swagger auto-docs, Dependency Injection |
 | ORM | Prisma | 5+ | Type-safe queries, deklaratywne migrations, seeding |
 | Baza danych | PostgreSQL | 16 | Bez PostGIS w v0 — haversine w raw SQL wystarczy dla promienia. ACID, partial unique index |
-| Płatności | Przelewy24 REST API v2 | — | Natywny BLIK (~70% PL e-commerce), 1,5% + 0,50 PLN, marketplace mode |
 | SMS | Twilio (startup) → SMSAPI.pl (docelowy) | — | OTP, potwierdzenia, przypomnienia. Interface SmsService → swap via DI |
 | Email | Resend | — | Notyfikacje, potwierdzenia, raporty, alerty admina. Free tier 3k/mc |
 | Mapy | Google Maps JS API | — | Embed, geocoding, Places Autocomplete. $200/mc free credit |
@@ -27,20 +26,22 @@
 | Monorepo | Turborepo + pnpm | pnpm 9+ | Parallel builds, shared packages, cache |
 | Testy | Vitest + Playwright + MSW | — | Unit/integration + E2E + API mocking |
 | Dokumentacja API | Swagger (NestJS plugin) + Storybook | — | Auto-generated z decoratorow, component library |
+| Design reference | Static HTML mockups | 38 ekranów | Source of truth dla FE — `/design/*.html` (industrial-dark, amber accent). Mapa w `plan-sprintow.md §12.Z`. Tokens ekstraktowane do `@opony/design-tokens` (patrz §7). ADR-008 |
 
 **Czego NIE używamy w v0 (świadomie):**
 
 | Technologia | Powod odrzucenia | Kiedy wejdzie |
 |---|---|---|
-| React Native / Expo | PWA wystarczy na walidacje modelu | v1 (po 100+ rez/mc) |
+| PWA (czyste Next.js) klient | Expo + RNW daje mobile + web z jednego codebase — natywne apki gratis | — (zrezygnowano na rzecz Expo RNW) |
 | PostGIS | Haversine wystarczy dla promienia | v1 (polygon stref) |
 | Redis | Row lock w Postgres wystarczy | v1 (cache slotów, sessions) |
 | WebSocket / SSE | Polling co 30s wystarczy dla ~200 rez/mc | v1 |
 | Mapbox | Google Maps ma $200/mc free credit | v1 (3+ miast) |
-| Stripe | P24 tańszy i ma natywny BLIK | v1 (karty zagraniczne, Apple/Google Pay) |
+| Przelewy24 (P24) | POC v0 bez płatności — aplikacja darmowa dla klientów i providerów | v0.5/v1 (BLIK + karty + marketplace split) |
+| Stripe | Aplikacja v0 bez płatności | v1 (karty zagraniczne, Apple/Google Pay) |
 | Auth0 / Clerk | Własny JWT = zero kosztu SaaS, pełna kontrola | nigdy (chyba ze compliance) |
 | CEPIK API | Reczne wpisanie rozmiaru opon w v0 | v1 (auto-fill z VIN) |
-| Push notifications (FCM/APNs) | SMS wystarczy w v0 | v1 (RN app) |
+| Push notifications (Expo Notifications) | SMS wystarczy w v0; Expo Push natywnie gotowe od v0.5 | v0.5 (accept PENDING w mobile) |
 
 ---
 
@@ -53,9 +54,11 @@
                     │                     FRONTEND (Vercel)                    │
                     │                                                         │
                     │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  │
-                    │  │ Client PWA   │  │ Provider Web │  │   Landing    │  │
-                    │  │ (Next.js 14) │  │ (Next.js 14) │  │ (Next.js 14) │  │
-                    │  │ /apps/client │  │/apps/provider│  │/apps/landing │  │
+                    │  │ Client App   │  │ Provider     │  │   Landing    │  │
+                    │  │ Expo + RNW   │  │ Portal       │  │ (Next.js SG) │  │
+                    │  │ iOS/Android/ │  │ (Next.js 14, │  │ opony.app    │  │
+                    │  │  Web PWA     │  │  desktop)    │  │              │  │
+                    │  │ /apps/mobile │  │/apps/panel   │  │/apps/landing │  │
                     │  └──────┬───────┘  └──────┬───────┘  └──────────────┘  │
                     │         │                  │                             │
                     └─────────┼──────────────────┼────────────────────────────┘
@@ -74,12 +77,12 @@
                               │   /apps/api       │
                               └────────┬──────────┘
                                        │
-              ┌────────┬───────┬───────┼────────┬─────────┬──────────┐
-              │        │       │       │        │         │          │
-         ┌────▼───┐ ┌──▼──┐ ┌─▼──┐ ┌──▼───┐ ┌──▼───┐ ┌──▼───┐ ┌───▼────┐
-         │Postgres│ │Twilio│ │ S3 │ │ P24  │ │Resend│ │Google│ │GUS/    │
-         │  16    │ │(SMS) │ │    │ │      │ │      │ │ Maps │ │CEIDG   │
-         └────────┘ └─────┘ └────┘ └──────┘ └──────┘ └──────┘ └────────┘
+              ┌────────┬───────┬───────┬─────────┬──────────┐
+              │        │       │       │         │          │
+         ┌────▼───┐ ┌──▼──┐ ┌─▼──┐ ┌──▼───┐ ┌──▼───┐ ┌───▼────┐
+         │Postgres│ │Twilio│ │ S3 │ │Resend│ │Google│ │GUS/    │
+         │  16    │ │(SMS) │ │    │ │      │ │ Maps │ │CEIDG   │
+         └────────┘ └─────┘ └────┘ └──────┘ └──────┘ └────────┘
 
               ┌──────────────────┐
               │  Retool Cloud    │──── PostgreSQL (read) + NestJS API (write)
@@ -93,17 +96,18 @@
                          ┌──────────────── DNS ─────────────────┐
                          │                                      │
                          │  opony.app         → Vercel (landing)│
-                         │  client.opony.app  → Vercel (PWA)    │
-                         │  provider.opony.app→ Vercel (B2B)    │
+                         │  app.opony.app     → Vercel (Expo RNW web export)
+                         │                       + natywne iOS/Android z tego samego repo
+                         │  panel.opony.app   → Vercel (Next.js provider portal, desktop-first)
                          │  api.opony.app     → Railway (API)   │
                          └──────────────────────────────────────┘
 
 ┌─── Vercel ──────────────────────────────┐  ┌─── Railway ────────────────────┐
 │                                         │  │                                │
 │  ┌──────────┐ ┌───────────┐ ┌────────┐  │  │  ┌──────────┐  ┌───────────┐  │
-│  │  Client  │ │ Provider  │ │Landing │  │  │  │ NestJS   │  │PostgreSQL │  │
-│  │  PWA     │ │   Web     │ │ Static │  │  │  │ API      │  │   16      │  │
-│  │:3000     │ │  :3001    │ │ :3002  │  │  │  │ :4000    │  │  :5432    │  │
+│  │  Mobile  │ │  Panel    │ │Landing │  │  │  │ NestJS   │  │PostgreSQL │  │
+│  │  Expo RNW│ │ Next.js   │ │ Static │  │  │  │ API      │  │   16      │  │
+│  │  :19006  │ │  :3001    │ │ :3002  │  │  │  │ :4000    │  │  :5432    │  │
 │  └──────────┘ └───────────┘ └────────┘  │  │  └──────────┘  └───────────┘  │
 │                                         │  │                                │
 │  Edge Functions, CDN, Preview Deploys   │  │  Auto-restart, Logging, Cron   │
@@ -112,10 +116,9 @@
 ┌─── External Services ──────────────────────────────────────────────────────┐
 │                                                                            │
 │  Twilio (SMS)          │  AWS S3 eu-central-1 (storage)                    │
-│  Przelewy24 (płatności)│  Resend (email)                                   │
-│  Sentry (monitoring)   │  PostHog (analytics)                              │
-│  Google Maps (mapy)    │  GUS BIR / CEIDG (weryfikacja NIP)               │
-│  Retool Cloud (admin)  │                                                   │
+│  Resend (email)        │  Sentry (monitoring)                              │
+│  PostHog (analytics)   │  Google Maps (mapy)                               │
+│  GUS BIR / CEIDG (weryfikacja NIP)  │  Retool Cloud (admin)                │
 └────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -123,20 +126,58 @@
 
 | From → To | Protocol | Auth | Uwagi |
 |---|---|---|---|
-| Client PWA → API | REST/JSON (HTTPS) | Bearer JWT (access 15 min) | Polling co 30s dla slotów dostępnośći |
-| Provider Web → API | REST/JSON (HTTPS) | Bearer JWT (access 15 min) | — |
+| Client App (Expo) → API | REST/JSON (HTTPS) | Bearer JWT `role=CLIENT` (access 15 min) | Polling co 30s dla slotów dostępności. JWT w Expo SecureStore |
+| Provider Portal (Next.js) → API | REST/JSON (HTTPS) | Bearer JWT `role=PROVIDER` (access 15 min) | Guard wymaga `status=APPROVED`; 403 jeśli PENDING_APPROVAL |
 | Landing → API | Brak (statyczny) | — | Formularz waitlist → POST /v1/waitlist |
 | API → PostgreSQL | Prisma Client | Connection string | Connection pool (Railway managed) |
 | API → Twilio | HTTPS (Twilio SDK) | env TWILIO_SID + TWILIO_AUTH_TOKEN | Sender ID: „OPONY" |
-| API → Przelewy24 | HTTPS REST API v2 | env P24_MERCHANT_ID + P24_API_KEY + P24_CRC | Redirect flow |
 | API → S3 | AWS SDK v3 | env AWS_ACCESS_KEY_ID + AWS_SECRET_ACCESS_KEY | Presigned URLs (upload + download) |
 | API → Resend | HTTPS (Resend SDK) | env RESEND_API_KEY | Domena: opony.app (SPF/DKIM/DMARC) |
 | API → Google Maps | HTTPS | env GOOGLE_MAPS_API_KEY | Geocoding + Places Autocomplete (server-side) |
 | API → GUS/CEIDG | HTTPS REST | env GUS_API_KEY | Weryfikacja NIP przy onboardingu |
-| P24 → API | Webhook POST /v1/webhooks/p24 | P24_CRC signature verification | Potwierdzenie/odrzucenie płatności |
 | Twilio → API | Webhook POST /v1/webhooks/twilio | Twilio signature verification | Delivery reports SMS |
 | Retool → PostgreSQL | Direct connection (read-only user) | DB credentials | Dashboardy, raporty SQL |
 | Retool → API | REST/JSON | Admin JWT / API key | Akcje: approve/reject/suspend/ban |
+
+### 2.4. Auth & role-based routing
+
+JWT access token zawiera `role: CLIENT | PROVIDER` + `status: APPROVED | PENDING_APPROVAL | SUSPENDED` (dla providerów).
+
+**Mobile app (Expo + RNW)** akceptuje oba role przy logowaniu:
+- `role=CLIENT` — pokazuje ekrany klienta (Home/Rezerwacje/Profil), brak dostępu do feature'ów providera
+- `role=PROVIDER` + `status=APPROVED` — w v0: ekran informacyjny „Zarządzaj warsztatem w panelu" + deep-link do `panel.opony.app`; w v0.5+: dodatkowa zakładka tabs „Dzień" z dashboardem (W:12.5)
+- `role=PROVIDER` + `status=PENDING_APPROVAL` — ekran blokady z info o czasie weryfikacji 24h (US-24)
+
+**Panel portal (Next.js)** odrzuca login klienta: po `POST /v1/auth/otp-verify` jeśli `role !== PROVIDER` → `403 FORBIDDEN` z `{ detail: "Ten portal jest dla warsztatów. Zaloguj się w aplikacji klienta." }` + link do `app.opony.app`.
+
+**Jeden numer telefonu = jedna rola w v0.** Wielorolowość (pracownik warsztatu ma też konto klienta na tym samym numerze) wymaga `UserRoleBinding[]` i jest scope'owana na v1+.
+
+**Deep-linking:**
+- `opony://panel` (iOS Universal Links + Android App Links) → otwiera `panel.opony.app/dashboard` w domyślnej przeglądarce (webview wewnątrz Expo apki)
+- `apple-app-site-association` i `assetlinks.json` hostowane na `app.opony.app/.well-known/` (konfiguracja Expo `app.json`)
+
+### 2.5. CORS i subdomain scoping
+
+**API CORS origins (whitelista):**
+```
+https://opony.app
+https://app.opony.app
+https://panel.opony.app
+exp://...  (Expo dev client)
+http://localhost:19006  (Expo web dev)
+http://localhost:3001   (Panel dev)
+http://localhost:3002   (Landing dev)
+```
+
+**Token storage:**
+- Mobile (Expo native): `expo-secure-store` — szyfrowany keychain/keystore
+- Mobile (web export): `localStorage` z prefiks `opony_` (brak httpOnly cookies bo Expo+RNW = SPA)
+- Panel (Next.js): `httpOnly cookie` na `.opony.app` (scoping do subdomen)
+
+**Rate limits (API gateway):**
+- OTP: 3 req / 15 min / phone (US-01)
+- Login: 5 req / 15 min / IP
+- Public endpoints (provider listing): 100 req / min / IP
 
 ---
 
@@ -156,8 +197,7 @@ opony/
 │   │   │   ├── provider-panel/ — dashboard + CRUD
 │   │   │   ├── catalog/        — listing providerów
 │   │   │   ├── availability/   — generowanie slotów
-│   │   │   ├── booking/        — rezerwacje + state machine
-│   │   │   ├── payment/        — P24 integration
+│   │   │   ├── booking/        — rezerwacje + state machine + auto-expiry
 │   │   │   ├── review/         — oceny + moderacja
 │   │   │   ├── upload/         — S3 presigned URLs
 │   │   │   ├── sms/            — Twilio/SMSAPI service
@@ -170,29 +210,34 @@ opony/
 │   │   │   ├── migrations/
 │   │   │   └── seed.ts
 │   │   └── test/
-│   ├── client/                 — Next.js PWA (klient)
-│   │   ├── app/
-│   │   │   ├── (auth)/         — login, OTP, consent
-│   │   │   └── (main)/         — search, booking, profile
-│   │   ├── components/
+│   ├── mobile/                 — Expo SDK 50 (iOS + Android + Web PWA) — klient v0, +provider features v0.5/v1
+│   │   ├── app/                — expo-router (file-based routing)
+│   │   │   ├── (auth)/         — login (SMS OTP), OTP entry, consent
+│   │   │   ├── (client)/       — search, booking, profile (role=CLIENT)
+│   │   │   └── (provider)/     — dashboard dnia, etc. (role=PROVIDER) — v0 puste + deep-link do panel, v0.5+ real screens
+│   │   ├── components/         — RN StyleSheet
 │   │   ├── lib/
-│   │   └── mocks/              — MSW handlers
-│   ├── provider/               — Next.js (panel B2B)
+│   │   ├── assets/
+│   │   │   └── .well-known/    — apple-app-site-association, assetlinks.json
+│   │   ├── app.json            — Expo config (bundle id, scheme opony://)
+│   │   └── mocks/              — MSW handlers (dev)
+│   ├── panel/                  — Next.js 14 provider portal (panel.opony.app, desktop-first)
 │   │   ├── app/
-│   │   │   ├── (auth)/         — login, reset, blocked
-│   │   │   ├── (onboarding)/   — signup wizard
-│   │   │   └── (main)/         — dashboard, pricing, etc.
-│   │   ├── components/
+│   │   │   ├── (auth)/         — login (SMS OTP — provider only), blocked (PENDING_APPROVAL)
+│   │   │   ├── (onboarding)/   — signup wizard 3 kroki
+│   │   │   └── (main)/         — dashboard, pricing, hours, zone, finance, settings
+│   │   ├── components/         — CSS-in-JS / Tailwind
 │   │   └── mocks/
-│   └── landing/                — Next.js static
+│   └── landing/                — Next.js 14 static (opony.app, SEO)
 │       ├── app/
 │       │   ├── page.tsx        — hero + CTA + waitlist
 │       │   └── layout.tsx
 │       └── components/
 ├── packages/
-│   ├── shared-types/           — TS interfaces + enums
-│   ├── design-system/          — 10 base components + Storybook
-│   ├── design-tokens/          — JSON (colors, spacing, typography)
+│   ├── shared-types/           — TS interfaces + enums (DTO, Role, Status)
+│   ├── design-tokens/          — JSON (colors, spacing, typography, radii, shadows) — single source of truth
+│   ├── design-system-native/   — React Native StyleSheet komponenty (Button, Card, Chip, Input, Modal...) dla apps/mobile
+│   ├── design-system-web/      — CSS/Tailwind komponenty dla apps/panel + apps/landing
 │   ├── api-client/             — typed fetch from OpenAPI
 │   └── eslint-config/          — shared ESLint rules
 ├── e2e/                        — Playwright tests
@@ -209,11 +254,12 @@ opony/
 
 | Pakiet | Sciezka | Odpowiedzialność |
 |---|---|---|
-| **shared-types** | `/packages/shared-types` | Współdzielone interfejsy TS i enumy (BookingStatus, ProviderStatus, UserRole, DTO types). Importowane przez api, client, provider, api-client. |
-| **design-system** | `/packages/design-system` | 10 bazowych komponentów UI (Button, Input, Badge, Card, Modal, BottomTabBar, SideMenu, Spinner, Toast, EmptyState) + Storybook. Importowane przez client, provider, landing. |
-| **design-tokens** | `/packages/design-tokens` | JSON z tokenami designu (colors, spacing, radii, typography, shadows). Źródło prawdy dla design-system i wszystkich frontendow. |
-| **api-client** | `/packages/api-client` | Typed fetch wrapper generowany z OpenAPI spec (Swagger). Zapewnia type-safe wywolania API w client i provider. |
-| **eslint-config** | `/packages/eslint-config` | Wspoldzielona konfiguracja ESLint + Prettier. Rozszerza eslint-config-next + custom rules. |
+| **shared-types** | `/packages/shared-types` | Współdzielone interfejsy TS i enumy (BookingStatus, ProviderStatus, UserRole, DTO types). Importowane przez api, mobile, panel, landing, api-client. |
+| **design-tokens** | `/packages/design-tokens` | JSON z tokenami designu (colors, spacing, radii, typography, shadows) — **single source of truth**. Build script syncuje do design-system-native i design-system-web. |
+| **design-system-native** | `/packages/design-system-native` | React Native StyleSheet komponenty (Button, Card, Chip, Input, Modal, BottomNav, Spinner, Toast, EmptyState) — dla `apps/mobile` (Expo + RNW). |
+| **design-system-web** | `/packages/design-system-web` | CSS / Tailwind komponenty (Button, Input, Badge, Card, Sidebar, DataTable, Modal, Form, Toast) — dla `apps/panel` (desktop-first) i `apps/landing`. Wizualnie 1:1 z design-system-native. |
+| **api-client** | `/packages/api-client` | Typed fetch wrapper generowany z OpenAPI spec (Swagger). Zapewnia type-safe wywolania API w mobile, panel i landing. |
+| **eslint-config** | `/packages/eslint-config` | Wspoldzielona konfiguracja ESLint + Prettier. |
 
 ---
 
@@ -287,10 +333,6 @@ pnpm generate:api-client    # Regeneruj typed fetch z OpenAPI
 | `TWILIO_SID` | Twilio Account SID | Tak (prod) | `AC...` |
 | `TWILIO_AUTH_TOKEN` | Twilio Auth Token | Tak (prod) | `...` |
 | `TWILIO_PHONE` | Twilio phone number lub Sender ID | Tak (prod) | `OPONY` lub `+48...` |
-| `P24_MERCHANT_ID` | Przelewy24 Merchant ID | Tak (prod) | `123456` |
-| `P24_API_KEY` | Przelewy24 API Key | Tak (prod) | `...` |
-| `P24_CRC` | Przelewy24 CRC Key (weryfikacja webhook) | Tak (prod) | `...` |
-| `P24_CALLBACK_URL` | URL callbacku P24 po płatności | Tak (prod) | `https://api.opony.app/v1/webhooks/p24` |
 | `RESEND_API_KEY` | Resend API Key | Tak (prod) | `re_...` |
 | `AWS_S3_BUCKET` | Nazwa bucketu S3 | Tak (prod) | `opony-uploads-prod` |
 | `AWS_ACCESS_KEY_ID` | AWS Access Key | Tak (prod) | `AKIA...` |
@@ -305,7 +347,7 @@ pnpm generate:api-client    # Regeneruj typed fetch z OpenAPI
 | `NEXT_PUBLIC_POSTHOG_KEY` | PostHog API Key | Nie | `phc_...` |
 | `NEXT_PUBLIC_SENTRY_DSN` | Sentry DSN (frontend) | Nie | `https://...@sentry.io/...` |
 
-**Uwaga:** W trybie dev (`NEXT_PUBLIC_API_MOCK=true`) MSW przechwytuje requesty API — nie potrzebujesz prawdziwych kluczy Twilio/P24/S3.
+**Uwaga:** W trybie dev (`NEXT_PUBLIC_API_MOCK=true`) MSW przechwytuje requesty API — nie potrzebujesz prawdziwych kluczy Twilio/S3.
 
 ---
 
@@ -323,16 +365,14 @@ AppModule
 │   └── EmailModule (ResendService)
 ├── CatalogModule (listing, search)
 │   └── AvailabilityModule (slot generation)
-├── BookingModule (CRUD, state machine)
-│   ├── PaymentModule (P24 service, webhooks)
+├── BookingModule (CRUD, state machine, auto-expiry)
 │   └── SmsModule
 ├── ReviewModule
 ├── UploadModule (S3 presigned URLs)
 ├── AdminModule
 ├── CronModule
 │   ├── NoShowCron
-│   ├── PaymentTimeoutCron
-│   ├── WeeklyPayoutsCron
+│   ├── BookingExpiryCron        (PENDING > 24h = auto-cancel, zastępuje PaymentTimeoutCron)
 │   ├── RatingCacheCron
 │   └── AdminAlertCron
 └── CommonModule (filters, interceptors, pipes)
@@ -403,15 +443,17 @@ ORDER BY distance_km ASC;
 
 **Cache:** Brak cache w v0 (query jest szybki dla 1 providera). V1: Redis cache z invalidacja przy zmianach.
 
-#### 4. Payment timeout
+#### 4. Booking expiry (POC v0, zastępuje payment timeout)
 
-**Problem:** Klient inicjuje płatność ale nie konczy (opuszcza strone P24).
+**Problem:** Provider nie akceptuje rezerwacji PENDING w SLA (2h) → klient czeka w próżni.
 
-**Rozwiązanie:** Cron co 1 min:
-- `Payment.status == INITIATED AND createdAt < NOW() - INTERVAL '15 min'`
-- → `Payment.status = FAILED`
-- → `Booking.status = CANCELLED_BY_CLIENT`
+**Rozwiązanie:** Cron `bookingExpiryCron` co 10 min:
+- `Booking.status == PENDING AND createdAt < NOW() - INTERVAL '2 hours'`
+- → `Booking.status = CANCELLED_BY_SYSTEM`
+- → SMS do klienta („Provider nie odpowiedział — wybierz inny")
 - → Slot zwolniony (usuwany constraint)
+
+W v0 bez płatności nie ma race condition „zapłacił/nie zapłacił" — timeout dotyczy tylko akceptacji providera.
 
 #### 5. Unified auth (jeden system dla obu typow uzytkownikow)
 
@@ -714,7 +756,7 @@ Provider {
   serviceRadiusKm INT DEFAULT 10
   avgRating       DECIMAL(3,2)            -- denormalized cache
   reviewCount     INT DEFAULT 0           -- denormalized cache
-  bankAccountIban VARCHAR(34) NULL        -- do wyplat P24 (US-51)
+  bankAccountIban VARCHAR(34) NULL        -- OPCJONALNE w v0 (zbieramy na v0.5 rozliczenia)
   createdAt       TIMESTAMPTZ
   approvedAt      TIMESTAMPTZ
 }
@@ -785,7 +827,7 @@ Booking {
   basePricePln   DECIMAL(10,2)
   travelFeePln   DECIMAL(10,2)
   totalPricePln  DECIMAL(10,2)
-  paymentMethod  ENUM(ONLINE_BLIK, ONLINE_CARD, ONLINE_TRANSFER)  -- v0: Przelewy24
+  -- v0: brak pola paymentMethod — klient płaci offline providerowi bezpośrednio (v0.5+ wróci ONLINE_BLIK/CARD/TRANSFER)
   notes          TEXT                               -- klient → provider
   rejectReason   VARCHAR(500) NULL
   cancelReason   VARCHAR(500) NULL
@@ -831,25 +873,8 @@ OtpToken {
   INDEX (phone, expiresAt)
 }
 
--- PLATNOSC (Przelewy24)
-Payment {
-  id             UUID PK
-  bookingId      UUID FK → Booking UNIQUE
-  externalId     VARCHAR(100)           -- ID transakcji P24
-  method         ENUM(BLIK, CARD, TRANSFER)
-  status         ENUM(INITIATED, COMPLETED, FAILED, REFUNDED, PARTIALLY_REFUNDED)
-  amountPln      DECIMAL(10,2)          -- kwota klienta (= Booking.totalPricePln)
-  feePln         DECIMAL(10,2)          -- oplata P24 (~1,5% + 0,50)
-  commissionPln  DECIMAL(10,2)          -- prowizja platformy (8%)
-  providerPayoutPln DECIMAL(10,2)       -- kwota do wyplaty providerówi
-  payoutStatus   ENUM(PENDING, PAID, FAILED) DEFAULT PENDING
-  paidOutAt      TIMESTAMPTZ NULL
-  refundedAt     TIMESTAMPTZ NULL
-  createdAt      TIMESTAMPTZ
-  completedAt    TIMESTAMPTZ NULL
-  INDEX (bookingId)
-  INDEX (payoutStatus, paidOutAt)
-}
+-- Tabela Payment USUNIĘTA w v0 (POC bez płatności, ADR-003).
+-- W v0.5+ wróci z polami: externalId, method, status, amountPln, feePln, commissionPln, providerPayoutPln, payoutStatus.
 
 -- ZGODY REGULAMINOWE (RODO / regulamin)
 ConsentLog {
@@ -1093,7 +1118,7 @@ Response `GET /v1/providers/:slug/availability`:
 
 | Method | Path | Opis |
 |---|---|---|
-| POST | `/v1/bookings` | Utwórz + inicjuj płatność. Naglowek: `Idempotency-Key`. Zwraca `{booking, paymentUrl}`. |
+| POST | `/v1/bookings` | Utwórz rezerwację (status=PENDING). Naglowek: `Idempotency-Key`. Zwraca `{booking}`. W v0 bez płatności — provider accept w 2h lub auto-cancel. |
 | GET | `/v1/me/bookings` | Query: `?status=upcoming\|past\|all&page=` |
 | GET | `/v1/bookings/:id` | Szczegóły (sprawdzenie ownership) |
 | POST | `/v1/bookings/:id/cancel` | Body: `{reason}` — klient anuluje |
@@ -1128,21 +1153,16 @@ Response (201):
 
 Mozliwe bledy: `409 SlotAlreadyBooked`, `422 AddressOutsideServiceZone`, `422 VehicleNotOwned`, `429 RateLimitExceeded`.
 
-**Flow płatności:**
-1. `POST /v1/bookings` → tworzy Booking (PENDING) + Payment (INITIATED) + rezerwuje slot (15 min TTL).
-2. Response zawiera `paymentUrl` → klient redirected do Przelewy24.
-3. Klient placi (BLIK ~120s, karta ~30s).
-4. Webhook `POST /v1/webhooks/p24` → Payment.status = COMPLETED → Booking widoczny dla providera.
-5. Jesli brak płatności w 15 min → cron: Payment = FAILED, Booking = CANCELLED_BY_CLIENT, slot zwolniony.
+**Flow rezerwacji (v0, bez płatności):**
+1. `POST /v1/bookings` → tworzy Booking (PENDING) + rezerwuje slot.
+2. Response zawiera `{booking}` → klient widzi „Oczekuje akceptacji providera".
+3. Provider dostaje SMS/push → akceptuje (CONFIRMED) lub odrzuca (REJECTED).
+4. Jesli provider nie odpowie w 2h → cron `bookingExpiryCron`: Booking = CANCELLED_BY_SYSTEM, SMS do klienta („Provider nie odpowiedział — wybierz inny"), slot zwolniony.
+5. Po wizycie — klient płaci providerowi offline (gotówka/przelew). Platforma zarabia 0% w pilocie.
 
-**Dodatkowe endpointy płatności:**
-
-| Method | Path | Opis |
-|---|---|---|
-| POST | `/v1/webhooks/p24` | Webhook Przelewy24 — potwierdzenie/odrzucenie płatności |
-| GET | `/v1/bookings/:id/payment` | Status płatności (klient) |
-| GET | `/v1/provider/me/payouts` | Lista wyplat providera (tygodniowe settlements) |
-| GET | `/v1/provider/me/payouts/:id` | Szczegóły wyplaty (lista rezerwacji + kwoty) |
+**v0 — brak endpointów płatności.** Aplikacja darmowa w pilocie (ADR-003). W v0.5+ wrócą endpointy:
+- `POST /v1/webhooks/p24`, `GET /v1/bookings/:id/payment` (status BLIK)
+- `GET /v1/provider/me/payouts[/:id]` (tygodniowe wypłaty)
 
 ### 9.6. Panel Uslugodawcy (B2B)
 
@@ -1196,14 +1216,13 @@ Wymaga `ADMIN`.
 | Zadanie | Cadencja | Dzialanie |
 |---|---|---|
 | `markNoShows` | co 5 min | `CONFIRMED` + `startAt < NOW()-30min` → `NO_SHOW` + `noShowCount++` |
-| `paymentTimeout` | co 1 min | `Payment.INITIATED` + `createdAt < NOW()-15min` → Payment FAILED, Booking CANCELLED, slot zwolniony (US-54) |
-| `weeklyPayouts` | pon 6:00 | Batch payout: `Payment.payoutStatus=PENDING` + `Booking.COMPLETED` → przelew do providerów (US-55) |
+| `bookingExpiry` | co 10 min | `PENDING` + `createdAt < NOW()-2h` → `CANCELLED_BY_SYSTEM`, SMS do klienta, slot zwolniony (zastępuje paymentTimeout w v0) |
 | `otpCleanup` | co 15 min | Usun OTP z `expiresAt < NOW()` |
 | `updateProviderRatingCache` | co 1 h | Przelicza `Provider.avgRating` / `reviewCount` |
 | `autoSuspendProviders` | raz dziennie | Wykrywa providerów do zawieszenia |
 | `adminPendingAlert` | codziennie 9:00 | Email do admina z lista zalegych `PENDING_APPROVAL` (US-20) |
 | webhook: `sms-status` (Twilio) | event-driven | Logi dostarczenia SMS |
-| webhook: `p24-notification` | event-driven | Potwierdzenie/odrzucenie płatności P24 → update Payment status |
+| ~~`weeklyPayouts`~~ | — | W v0 brak — apka darmowa, bez rozliczeń (wróci w v0.5) |
 
 ### 9.10. Bezpieczenstwo i rate limiting
 
@@ -1342,44 +1361,30 @@ Alternatywa: Postmark (lepsze delivery analytics), SendGrid (wieksza skala).
 
 **Migracja v1:** przy ekspansji na 3+ miast → Mapbox (tańsze per map load) + Nominatim (OpenStreetMap geocoding, self-hosted).
 
-### 10.6. Przelewy24 — płatności online (MVP v0)
+### 10.6. Płatności — NIE w POC v0 (ADR-003)
 
-**Decyzja:** Przelewy24 jako primary payment provider. Powody:
-- **Natywny BLIK** — najpopularniejsza metoda płatności online w PL (~70% e-commerce).
-- **Tansze niz Stripe**: ~1,5% + 0,50 PLN vs Stripe ~2,9% + 1 PLN.
-- **Marketplace mode** (split payments) — platforma automatycznie pobiera prowizje 8%, reszta do providera.
+**Decyzja:** POC v0 bez wbudowanych płatności. Aplikacja darmowa w pilocie Nowego Sącza — brak prowizji, brak BLIK, brak P24 integration.
 
-**Konfiguracja:**
-1. Konto P24 (weryfikacja firmy, 3–5 dni roboczych).
-2. Integracja REST API v2 — redirect flow (klient → P24 → bank/BLIK → callback → app).
-3. Webhook `POST /v1/webhooks/p24` — potwierdzenie/odrzucenie płatności.
-4. Konto sub-merchant per provider (P24 marketplace) LUB zbiorcze konto platformy + tygodniowe payouty reczne (prostsze w v0).
-
-**Flow per rezerwacja:**
+**Flow rezerwacji v0:**
 ```
-Klient klika "Potwierdz" → POST /v1/bookings → Booking PENDING + Payment INITIATED
-     → redirect do P24 (paymentUrl)
-     → klient wybiera BLIK / karte / przelew
-     → P24 przetwarza
-     → webhook /v1/webhooks/p24 → Payment COMPLETED
-     → klient redirect na app → ekran potwierdzenia (US-10)
+Klient klika "Zarezerwuj termin" → POST /v1/bookings → Booking PENDING
+     → provider dostaje SMS/push
+     → provider akceptuje (CONFIRMED) lub odrzuca (REJECTED)
+     → wizyta się odbywa
+     → klient płaci providerowi offline (gotówka/przelew) — POZA PLATFORMĄ
+     → provider klika "Zakończ" → Booking COMPLETED
+     → klient może ocenić (US-16)
 ```
 
-**Koszty:**
-- Setup: 0 PLN (P24 nie pobiera oplaty aktywacyjnej).
-- Per transakcja: ~1,5% + 0,50 PLN → przy 180 PLN = **~3,20 PLN**.
-- Refundy: 0 PLN (P24 nie pobiera za refund).
-- Payouty na konto providera: 0 PLN (przelew bankowy).
+**Implikacje:**
+- Zero kosztów per transakcja (brak fees P24).
+- Zero compliance PCI-DSS / KNF (zwykły marketplace informacyjny).
+- Brak cash flow z platformy (zamierzone w v0 — walidacja funnel + retention).
+- Brak refund flow (anulowanie = klient nic nie traci).
+- Ryzyko no-show wzrasta (klient nie ma skin-in-the-game) → mitigacja przez 2-strike anti-abuse policy.
 
-**Compliance:**
-- PCI-DSS: nie dotyczy (hosted payment page, zero danych kart na naszym serwerze).
-- SCA/3DS: obsługuje P24 automatycznie.
-- RODO: dane transakcji → P24 jako procesor; umowa powierzenia.
-
-**v1: Stripe jako fallback**
-- Karty zagraniczne (turysci) — Stripe Elements.
-- Apple Pay / Google Pay — Stripe.
-- Koszty: 2,9% + 1 PLN → drozsze, ale szerszy zasięg.
+**Monetyzacja w v0.5+ (ADR-003.1):**
+Decyzję A (miesięczne fakturowanie) vs B (P24 marketplace split) podejmujemy po pilocie, na bazie danych z Nowego Sącza. Pole `bankAccountIban` w tabeli Provider zostaje jako opcjonalne — zbieramy na v0.5 bez wymuszania.
 
 ### 10.7. Sentry — monitoring bledow
 
@@ -1416,31 +1421,51 @@ Klient klika "Potwierdz" → POST /v1/bookings → Booking PENDING + Payment INI
 
 ## 11. Decyzje architektoniczne (ADR)
 
-### ADR-001: PWA zamiast React Native
+### ADR-001: Expo + React Native Web (klient) + Next.js portal (provider)
 
-- **Status:** Accepted
-- **Kontekst:** MVP v0 ma walidować model biznesowy, nie zbudować natywną appke. Cel: szybki TTM (time to market) i walidacja w jednym miescie (Nowy Sacz).
-- **Decyzja:** Next.js 14+ PWA dla klienta (mobile-first) i providera (desktop-first). Wspolna baza kodu frontend (monorepo z shared design-system i design-tokens).
+- **Status:** Accepted (rewizja ADR: zastąpiło „PWA zamiast React Native")
+- **Kontekst:** MVP v0 ma walidować model biznesowy, ale potrzebujemy natywnych apek day-1 (engagement, push dla Kasi w v0.5) z minimalnym nakładem. Provider potrzebuje desktop-first ciężkiego admina (cennik, mapa strefy, finanse) — nie robi się tego na mobile.
+- **Decyzja:**
+  - **`apps/mobile`** — Expo SDK 50+ + React Native Web. Jeden codebase dla iOS, Android i Web PWA. v0 tylko feature'y klienta, v0.5+ dodaje feature'y providera (ekrany za guard `role=PROVIDER`).
+  - **`apps/panel`** — osobny Next.js 14 pod `panel.opony.app` (desktop-first responsive). Tylko provider. Ciężki admin.
+  - **`apps/landing`** — osobny Next.js 14 static pod `opony.app`. Tylko SEO/marketing.
+  - **Design system** — 3 pakiety: `design-tokens` (JSON single source) + `design-system-native` (RN StyleSheet dla mobile) + `design-system-web` (CSS/Tailwind dla panel + landing).
 - **Konsekwencje:**
-  - (+) Skip App Store review (1–2 tyg. oszczednosci).
-  - (+) Jedna baza kodu FE — szybsze iteracje.
-  - (+) Instant updates — bez czekania na App Store deploy.
-  - (-) Brak push notifications (SMS zamiast tego — i tak potrzebne).
-  - (-) Ograniczone funkcje natywne (kamera, GPS background).
-- **Rewizja:** v1 — dodanie React Native / Expo po walidacji (>100 rez/mc, >12 aktywnych providerów). PWA zostaje jako fallback.
+  - (+) Natywne apki iOS/Android day-1 via Expo EAS build (nie trzeba migracji w v1).
+  - (+) Web PWA na `app.opony.app` gratis z tego samego codebase'u (expo export:web).
+  - (+) Provider v0.5/v1 dodawany w tej samej apce mobile — zero przepisywania, tylko nowe screens za role guard.
+  - (+) Push notifications (Expo Notifications) dostępne od v0.5 — nie trzeba czekać na v1 rewrite.
+  - (-) 2 flavors design-system (RN StyleSheet vs Web CSS) — mitigated przez shared `design-tokens` JSON.
+  - (-) Osobny deploy dla panel (Vercel project #2) — ~5 min konfiguracji.
+  - (-) Learning curve RN StyleSheet / Flexbox-only dla team'u znającego tylko React DOM (~1 tydz. ramp-up).
+- **Bloker zewnętrzny:** Apple Developer Program ($199/rok) — verification 1–2 tyg. Musi wystartować w Fazie 0 (TASK-007b).
+- **Design status (2026-04-22):** Wszystkie 3 artefakty mają pełne pokrycie w designie (38 ekranów, patrz [ADR-008](#adr-008-design-phase-closed--38-ekranów-3-artefakty-2026-04-22) i [plan-sprintow.md §12.Z](plan-sprintow.md#12z-pełny-zakres-design-phase--38-ekranów)).
+- **Rewizja:**
+  - v0.5 — provider dashboard dnia w mobile (W:12.5) + Expo Push dla PENDING
+  - v1 — full provider flow w mobile (accept w terenie, GPS tracking, navigation to client)
 
-### ADR-002: Przelewy24 zamiast Stripe
+### ADR-002: Przelewy24 zamiast Stripe ⚠️ SUPERSEDED przez ADR-004
 
-- **Status:** Accepted
-- **Kontekst:** Płatności online sa kluczowe dla modelu biznesowego (prowizja 8%). Na polskim rynku BLIK dominuje (~70% e-commerce). Stripe wspiera BLIK, ale jest droższy i wymaga dodatkowej konfiguracji.
-- **Decyzja:** Przelewy24 jako primary payment provider (natywny BLIK, marketplace mode).
+- **Status:** SUPERSEDED (POC v0 bez płatności — patrz ADR-004)
+- **Kontekst (historyczny):** Płatności online były planowane jako klucz modelu (prowizja 8%, BLIK dominuje w PL).
+- **Decyzja (historyczna):** Przelewy24 jako primary payment provider.
+- **Dlaczego SUPERSEDED:** W POC v0 rezygnujemy z wbudowanych płatności (aplikacja darmowa w pilocie). Decyzja P24 vs Stripe wraca w v0.5+ gdy włączamy monetyzację.
+
+### ADR-004: POC v0 bez inline płatności (free pilot Nowy Sącz)
+
+- **Status:** Accepted (2026-04)
+- **Kontekst:** MVP v0 chce walidować *funnel i retention* (czy klienci rezerwują, czy providerzy przyjmują), nie monetyzację. Inline płatności (P24) dodają 3-5 dni lead time (P24 verification), ~16 SP kodu (Payment module, webhooks, refund, settlement, cronsy), KNF/compliance overhead, i zamrażają decyzję prowizja A vs B przed zobaczeniem jak zachowuje się rynek.
+- **Decyzja:** POC v0 **bez wbudowanych płatności**. Aplikacja darmowa w pilocie Nowy Sącz — klient rezerwuje online, płaci providerowi offline (gotówka/przelew) po wizycie. Zero prowizji w v0 (spójne z GTM §17.4 „0% pierwszym 8 providerom przez 3 mc"). Platforma to **zwykły marketplace informacyjny** — brak regulacji KNF/KIP.
 - **Konsekwencje:**
-  - (+) -50% koszt payment processing vs Stripe (~1,5%+0,50 PLN vs ~2,9%+1 PLN).
-  - (+) Natywny BLIK — zero dodatkowej konfiguracji.
-  - (+) Marketplace mode — automatyczny split płatności.
-  - (-) Brak Apple Pay / Google Pay (Stripe ma).
-  - (-) Slabsze SDK i dokumentacja vs Stripe.
-- **Rewizja:** v1 — Stripe jako fallback dla kart zagranicznych i Apple/Google Pay.
+  - (+) Eliminacja TASK-002 (P24 verification 3-5 dni lead time) — projekt startuje szybciej.
+  - (+) -16 SP MUST (Sprint 3 BE-4 + FE-4 + Sprint 5 BE-6 settlement/refund) → timeline 7 tyg → 5-6 tyg.
+  - (+) Brak compliance PCI-DSS, KNF, KIP.
+  - (+) Provider nie wiąże się z P24 marketplace (mniej friction onboarding).
+  - (+) Decyzję A (invoicing) vs B (P24 split) odkładamy do v0.5, gdy mamy dane z pilota.
+  - (-) No-show rate wzrośnie (brak BLIK depozytu) — target <10% realistycznie 20-30% → mitigacja: 2-strike anti-abuse policy.
+  - (-) UVP „Zarezerwuj i zapłać w 2 min" → „Zarezerwuj w 2 min, zapłać jak zawsze u wulkanizatora".
+  - (-) Brak revenue signal w v0 — ale to jest zamierzone (walidacja non-financial).
+- **Rewizja:** v0.5 po pilocie (8 providerów × 3 mc) — wybór A vs B na bazie danych. Tabela `Payment` i moduł wracają.
 
 ### ADR-003: Haversine zamiast PostGIS
 
@@ -1504,6 +1529,55 @@ Klient klika "Potwierdz" → POST /v1/bookings → Booking PENDING + Payment INI
   - (-) Ograniczone customizacje UX.
 - **Rewizja:** v1 — migracja na własny Next.js admin panel gdy potrzebna wieksza customizacja lub więcej adminow.
 
+### ADR-009: B2B-first implementation sequencing (2026-04-22)
+
+- **Status:** Accepted (2026-04-22) — zmienia kolejność sprintów z §7 plan-sprintow.md (wcześniej: klient + B2B równolegle).
+- **Kontekst:** Pierwotny plan zakładał 7 sprintów z przeplataniem feature'ów klienta i providera (Sprint 1: klient auth **i** B2B wizard parallel; Sprint 2: klient search; Sprint 3: klient booking; Sprint 4: panel B2B; Sprint 5-7: polish). Dwie obserwacje wymuszają pivot:
+  1. **Timing sezonu:** dziś 2026-04-22 — szczyt wiosennej wymiany (marzec-maj) już za nami. Następny peak = październik-listopad. Mamy ~5 miesięcy buforu, nie musimy ścigać się o launch w maju.
+  2. **„Pusta apka" problem:** klient launched w tyg. 6 widzi 0 warsztatów, bo providerzy dopiero się wpinają w paralel. GTM §17.4 zakłada 8 pilotów × 3 mc zerowej prowizji — provider rekrutacja potrzebuje **działającego portalu w ręku rozmówcy**, nie 7 tygodni równoległej pracy w próżni.
+- **Decyzja:** Implementacja MVP v0 w dwóch fazach:
+  - **Faza A (Sprint 1-3, ~3 tygodnie) — B2B-first.** `panel.opony.app` LIVE z pełnym flow providera: auth OTP, onboarding wizard, cennik/godziny/strefa/profil, dashboard/kalendarz/lista rezerwacji, opinie, ustawienia. Retool admin setup od Sprint 1 (approve queue). Landing minimalny (provider-facing hero w Sprint 3). **Milestone A:** 8 pilotów onboarded z realnym cennikiem w DB, portal w rękach rozmówców.
+  - **Faza B (Sprint 4-6, ~3 tygodnie) — klient.** `app.opony.app` LIVE z search + booking + ratings. Klient widzi **realne dane 8 providerów** od pierwszego uruchomienia, nie seed data. Landing pivot na client-facing, dodanie `/p/<slug>` + `/nowy-sacz`. **Milestone B:** full marketplace.
+  - **Sprint 7:** soft launch + beta → public launch przed jesiennym szczytem (październik).
+- **Konsekwencje:**
+  - (+) **Zero „pustej apki"** — klient widzi realne 8 warsztatów od dnia 1 w Sprint 6.
+  - (+) **Provider rekrutacja w paralel z Fazą A** — GTM zaczyna rozmowy w tyg. 3 z działającym portalem, nie w tyg. 7 z mockupami.
+  - (+) **Seed effect organiczny** — providerzy mówią swoim klientom „od czerwca rezerwujecie online", tworząc demand pre-launch.
+  - (+) **Cleaner dependency graph w BE** — Provider → Booking → Review zamiast równoległych gałęzi. Booking entity w Sprint 3 z manual-booking po stronie providera, klient POST /bookings w Sprint 5 na gotowym schemacie.
+  - (+) **Retool burn-in od tyg. 1** — admin używa Retool natychmiast do approve, nie „znajdzie się w Sprint 6".
+  - (-) Faza A prowadzi cichy okres dla providera (tyg. 3-6 — portal jest, klientów brak) → mitigacja: nowy ekran [b2b-15-waiting-for-clients](../design/b2b-15-waiting-for-clients.html) (analog `16-empty-waitlist`) + communication plan w `analiza-biznesowa.md §17` (weekly update „klienci startują za X dni").
+  - (-) Wymaga TASK-013 (konto Retool) w Fazie 0 jako blokera Sprint 1, nie Fazie 6 jak było.
+  - (-) Landing musi mieć 2 wersje: provider-facing v1 (Sprint 3), client-facing v2 (Sprint 6). Hero pivot + dopisanie `landing-02`/`landing-03`.
+- **Timeline (zaktualizowany):**
+  - Sprint 0 (scaffold) — bez zmian.
+  - **Sprint 1:** Provider auth + wizard + Retool admin. BE-1 (schema), BE-2 (Provider CRUD), FE-panel-1 (login+wizard).
+  - **Sprint 2:** Provider profile config. BE-3 (Pricing, Schedule, ServiceArea), FE-panel-2 (cennik/godziny/strefa/profil/ustawienia).
+  - **Sprint 3:** Provider daily ops + Booking entity. BE-4 (Booking + manual), FE-panel-3 (dashboard/kalendarz/lista/szczegół/opinie/waiting-for-clients). Landing provider-facing v1. **★ Milestone A.**
+  - **Sprint 4:** Klient auth + catalog. BE-5 (Client auth, listing), FE-mobile-1 (auth+profil+pojazd), FE-mobile-2 (home+detail+map+empty states).
+  - **Sprint 5:** Klient booking flow. BE-6 (POST /bookings, availability), FE-mobile-3 (time-slot+confirmation+list+detail), provider PENDING accept (kontrakt z Sprint 3).
+  - **Sprint 6:** Ratings + polish. BE-7 (Reviews + cron), FE-mobile-4 (rate+reviews), FE-mobile-5 (offline/PWA/error), landing client-facing pivot. **★ Milestone B.**
+  - Sprint 7 (soft launch) — bez zmian.
+- **Rewizja:** Po Milestone A (tyg. 4) — decyzja czy przechodzimy do Fazy B, czy iterujemy Fazę A jeszcze tydzień (feedback od 8 pilotów może zmienić priorytety).
+
+### ADR-008: Design phase closed — 38 ekranów, 3 artefakty (2026-04-22)
+
+- **Status:** Accepted (2026-04-22)
+- **Kontekst:** Przed implementacją potrzebujemy kompletnego visual-language (tokens + componenty) i konkretnych ekranów, żeby FE-mobile / FE-panel / FE-landing mogli pracować równolegle bez koordynacyjnego chaosu. Pierwotnie planowany „Figma 10 ekranów" w Fazie 1 (patrz §7 plan-sprintów) został rozszerzony do pełnego pokrycia MVP v0 w formie statycznych HTML/CSS mockupów.
+- **Decyzja:** Design phase zamknięty **2026-04-22** z **38 ekranami HTML** w folderze `/design`. Industrial-dark aesthetic: graphite `#0A0B0E` + amber `#FF6B1A`, typografia Bebas Neue (display) + Archivo (body) + JetBrains Mono (prices/codes). Pokrycie per artefakt ADR-001:
+  - **A. Klient mobile** (`app.opony.app`, Expo RNW) — 21 ekranów (phone 393×852). Auth flow, booking flow, profil + pojazdy, ratings, onboarding post-OTP, 3 warianty empty-state (US-40), offline, PWA install prompt, error boundary.
+  - **B. Panel B2B** (`panel.opony.app`, Next.js) — 14 ekranów (desktop 1440×900). Login SMS OTP, onboarding 3-step, daily ops (dashboard, kalendarz, szczegół rezerwacji, opinie, lista), firma (cennik/godziny/strefa/profil), ustawienia konta.
+  - **C. Landing** (`opony.app`, Next.js Static) — 3 ekrany. Home marketing, publiczny profil warsztatu (SSR + OG + share, US-42), miasto-listing (SEO long-tail).
+- **Reguły architekturalne (utrwalone w tej fazie):**
+  1. **Zero booking-flow w landing i panel** — żadnych kalendarzy, slot-pickerów ani formularzy rezerwacji w przeglądarce. Wszystkie rezerwacje odbywają się wyłącznie w `app.opony.app`. Landing zawiera CTA „Otwórz w aplikacji" (Universal Links + QR dla desktop), panel ma „Rezerwacja ręczna" (b2b-13) dla wizyt zgłaszanych telefonicznie — jedyny wyjątek.
+  2. **Miasto pilotażowe = Nowy Sącz** (nie Poznań jak w oryginalnych założeniach) — wszystkie designy, SEO routes i copy referują do NS.
+  3. **Zero płatności w v0** (spójne z ADR-004) — ekran „14-payment" nie powstał, step indicator booking flow to 2/2 („Adres → Termin → Potwierdź"), a ekran potwierdzenia pokazuje „płatność u providera" zamiast „BLIK ✅".
+- **Konsekwencje:**
+  - (+) FE-mobile / FE-panel / FE-landing mogą pracować równolegle — gotowe mockupy + states per ekran eliminują ambiguity w dev-handoff.
+  - (+) Tokens design-system (kolory, typografia, spacing) ekstraktowalne z HTML do JSON source-of-truth → `@opony/design-tokens` (patrz §7 Design System).
+  - (+) Edge cases pokryte w designie (offline, error boundary, PWA install, 3 warianty empty-state US-40) — rzadziej wracamy do design-phase w trakcie sprintów.
+  - (-) Mockupy w HTML/CSS (nie Figma) — ograniczona współpraca z designerem-samotnikiem; v1 rozważyć migrację do Figma dla reviews + prototypów.
+- **Dev-handoff:** Pełna mapa ekran ↔ wireframe ↔ user-story w [`plan-sprintow.md §12.Z`](plan-sprintow.md#12z-pełny-zakres-design-phase--38-ekranów). Każdy ekran ma footer `<caption>` z enumeracją stanów, edge cases i decyzji a11y — to jest kontrakt dla developerów.
+
 ---
 
 ## 12. Ewolucja: MVP v0 → v1
@@ -1520,14 +1594,14 @@ MVP v0 validuje model biznesowy w Nowym Saczu. Po spełnieniu kryteriow sukcesu,
 
 | Obszar | MVP v0 | MVP v1 |
 |---|---|---|
-| Platforma klienta | PWA (Next.js) | + React Native / Expo (iOS + Android) |
+| Platforma klienta | Expo + RNW (mobile + web, v0) | Natywne apki published na App Store / Google Play (v1) + provider features w tej samej apce (v0.5/v1) |
 | Typ providera | Tylko mobilny | + Stacjonarny (warsztaty) |
 | Zasięg | 1 miasto (Nowy Sacz) | 3+ miast |
 | Strefa obsługi | Promien (haversine) | Polygon (PostGIS) |
 | Cache | Brak | Redis (sloty, sessions) |
-| Płatności | P24 only | + Stripe (karty zagraniczne, Apple/Google Pay) |
+| Płatności | — (offline, brak inline) | v0.5: P24 (BLIK + karty + marketplace split lub invoicing NET 14) · v1: + Stripe fallback |
 | Sloty real-time | Polling 30s | WebSocket / SSE |
-| Powiadomienia | SMS + email | + Push (FCM/APNs via Expo) |
+| Powiadomienia | SMS + email | + Expo Notifications (native push) — możliwe już w v0.5 |
 | Mapy | Google Maps | + Mapbox (tańsze per load) |
 | Admin | Retool Cloud | Własny Next.js admin panel |
 | Profil pojazdu | Reczne wpisanie | Auto-fill z VIN (CEPIK API) |

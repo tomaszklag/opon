@@ -49,7 +49,7 @@
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body { height: 100%; }
   body {
-    --phone-scale: min(1, calc((100vh - 240px) / 852), calc((100vw - 60px) / 393));
+    --phone-scale: min(1, calc((100vh - 240px) / 852px), calc((100vw - 60px) / 393px));
     font-family: var(--font-body);
     background: var(--bg);
     color: var(--text-primary);
@@ -68,12 +68,6 @@
     gap: 28px;
   }
 
-  .phone-holder {
-    width: calc(393px * var(--phone-scale));
-    height: calc(852px * var(--phone-scale));
-    position: relative;
-    flex-shrink: 0;
-  }
 
   .canvas-label {
     width: 100%;
@@ -134,11 +128,12 @@
       0 24px 48px rgba(0, 0, 0, 0.45),
       inset 0 0 0 1px rgba(255, 255, 255, 0.03);
     overflow: hidden;
-    position: absolute;
-    top: 0; left: 0;
+    position: relative;
     isolation: isolate;
+    flex-shrink: 0;
     transform: scale(var(--phone-scale));
-    transform-origin: top left;
+    transform-origin: top center;
+    margin-bottom: calc((var(--phone-scale) - 1) * 852px);
   }
   .phone::before {
     content: '';
@@ -637,7 +632,7 @@
     max-width: 560px;
     width: 100%;
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 16px;
     padding-top: 12px;
     border-top: 1px solid var(--border);
@@ -666,7 +661,6 @@
     <span class="canvas-meta"><span class="pulse"></span>W:12.10 · US-13 / 07 / 16</span>
   </header>
 
-  <div class="phone-holder">
   <main class="phone" role="region" aria-label="Mockup — szczegół rezerwacji">
 
     <div class="status-bar" aria-hidden="true">
@@ -759,31 +753,30 @@
           </div>
         </section>
 
-        <!-- PAYMENT -->
+        <!-- PAYMENT (offline po wizycie) -->
         <section aria-labelledby="sec-pay">
           <h2 class="section-title" id="sec-pay">
             Płatność
-            <span class="sub">Paragon #4F2K</span>
+            <span class="sub">Po wizycie · bezpośrednio do providera</span>
           </h2>
           <div class="payment-card">
             <div class="pay-main">
               <div class="pay-left">
                 <span class="pay-ico" aria-hidden="true">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
                 </span>
                 <div class="pay-col">
-                  <span class="pay-method">BLIK</span>
+                  <span class="pay-method">Do zapłaty po wizycie</span>
                   <span class="pay-amount">180<span class="zl">zł</span></span>
                 </div>
               </div>
-              <span class="paid-badge-big">
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7"/></svg>
-                Opłacone
+              <span class="paid-badge-big" style="background: rgba(158, 162, 173, 0.14); border-color: rgba(158, 162, 173, 0.32); color: var(--text-secondary);">
+                Offline
               </span>
             </div>
             <div class="pay-notice">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v5"/><circle cx="12" cy="16" r="0.5" fill="currentColor"/></svg>
-              <div><strong>Anulowanie do 2 h przed wizytą</strong> = pełny zwrot na konto w ciągu 3–5 dni roboczych.</div>
+              <div><strong>Zapłacisz providerowi bezpośrednio</strong> — gotówka lub przelew. Aplikacja darmowa w pilocie. <strong>Anulowanie do 2 h przed wizytą</strong> = brak zobowiązań.</div>
             </div>
           </div>
         </section>
@@ -800,7 +793,7 @@
               <div class="tl-time">13 kwi 2026 · 18:42</div>
             </div>
             <div class="tl-event">
-              <div class="tl-label">Płatność BLIK zatwierdzona</div>
+              <div class="tl-label">SMS do providera wysłany</div>
               <div class="tl-time">13 kwi 2026 · 18:42</div>
             </div>
             <div class="tl-event">
@@ -849,7 +842,6 @@
 
     </div>
   </main>
-  </div>
 
   <footer class="caption">
     <div>

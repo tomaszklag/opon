@@ -1,0 +1,965 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Opony Panel — B2B-12 Logowanie · SMS OTP</title>
+<!--
+  Screen: Panel providera — Logowanie (SMS OTP, bez hasła)
+  Ref:    docs/plan-sprintow.md → W:12.20 (auth providera), ADR §19.9 (OTP-only)
+  US:     US-46 (provider loguje się numerem telefonu)
+  Tone:   industrial-dark · split hero (form + social proof) · OTP step 2 preview inline
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Bebas+Neue&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0A0B0E;
+    --bg-tint-top: #12141A;
+    --surface: #14171D;
+    --surface-raised: #1B1E26;
+    --surface-hover: #23272F;
+    --border: #262A34;
+    --border-strong: #363B47;
+    --hairline: rgba(255, 255, 255, 0.06);
+    --text-primary: #F5F4EF;
+    --text-secondary: #9EA2AD;
+    --text-muted: #60646F;
+    --text-on-accent: #0A0B0E;
+    --accent: #FF6B1A;
+    --accent-hover: #FF8039;
+    --accent-muted: rgba(255, 107, 26, 0.14);
+    --accent-border: rgba(255, 107, 26, 0.32);
+    --accent-glow: rgba(255, 107, 26, 0.45);
+    --success: #2EE0A0;
+    --success-muted: rgba(46, 224, 160, 0.14);
+    --success-border: rgba(46, 224, 160, 0.32);
+    --warning: #FFB020;
+    --warning-muted: rgba(255, 176, 32, 0.14);
+    --warning-border: rgba(255, 176, 32, 0.32);
+    --danger: #FF5757;
+    --danger-muted: rgba(255, 87, 87, 0.12);
+    --danger-border: rgba(255, 87, 87, 0.32);
+    --font-display: 'Bebas Neue', sans-serif;
+    --font-body: 'Archivo', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; overflow-x: hidden; max-width: 100vw; }
+  body {
+    --desktop-scale: min(1, calc((100vh - 200px) / 900px), calc((100vw - 80px) / 1440px));
+    font-family: var(--font-body);
+    background: var(--bg);
+    color: var(--text-primary);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    background-image:
+      radial-gradient(ellipse 70% 50% at 50% 0%, rgba(255, 107, 26, 0.05) 0%, transparent 60%),
+      linear-gradient(180deg, var(--bg-tint-top) 0%, var(--bg) 30%);
+    background-attachment: fixed;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 40px 40px 60px;
+    gap: 24px;
+  }
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 4px var(--accent-muted); opacity: 1; }
+    50%      { box-shadow: 0 0 0 8px transparent; opacity: 0.6; }
+  }
+  @keyframes caretBlink {
+    0%, 49% { opacity: 1; }
+    50%, 100% { opacity: 0; }
+  }
+
+  .canvas-label {
+    width: 100%;
+    max-width: 1440px;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: baseline;
+    gap: 20px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  .film-strip .frame { display: block; font-family: var(--font-display); font-size: 36px; letter-spacing: 4px; line-height: 1; color: var(--text-primary); }
+  .film-strip .frame-num { font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); letter-spacing: 1.5px; display: block; margin-top: 4px; font-weight: 700; }
+  .slug {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    border-left: 1px solid var(--border);
+    padding-left: 18px;
+  }
+  .canvas-meta {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-secondary);
+    letter-spacing: 1px;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .canvas-meta .pulse {
+    display: inline-block;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 0 4px var(--accent-muted);
+    animation: pulse 1800ms ease-in-out infinite;
+  }
+
+  /* Desktop frame */
+  .desktop-frame {
+    width: 1440px;
+    height: 900px;
+    background: var(--bg);
+    border-radius: 14px;
+    border: 1px solid #1C1E24;
+    box-shadow: 0 40px 120px rgba(0, 0, 0, 0.6), 0 20px 40px rgba(0, 0, 0, 0.4);
+    overflow: hidden;
+    position: relative;
+    flex-shrink: 0;
+    transform: scale(var(--desktop-scale));
+    transform-origin: top center;
+    margin-bottom: calc((var(--desktop-scale) - 1) * 900px);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .browser-chrome {
+    height: 44px;
+    background: linear-gradient(180deg, #1A1D23, #14171D);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    gap: 16px;
+    flex-shrink: 0;
+  }
+  .traffic-lights { display: inline-flex; gap: 8px; }
+  .light { width: 12px; height: 12px; border-radius: 50%; }
+  .light.red { background: #FF5F57; }
+  .light.yellow { background: #FEBC2E; }
+  .light.green { background: #28C840; }
+  .browser-tabs { display: inline-flex; gap: 2px; }
+  .browser-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-bottom: none;
+    border-radius: 8px 8px 0 0;
+    font-size: 12px;
+    color: var(--text-primary);
+    position: relative;
+    top: 6px;
+  }
+  .browser-tab .favicon {
+    width: 14px; height: 14px;
+    border-radius: 3px;
+    background: var(--accent);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-display);
+    font-size: 9px;
+    color: var(--text-on-accent);
+    letter-spacing: 0.5px;
+  }
+  .browser-address {
+    flex: 1;
+    max-width: 480px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+  .browser-address .lock { color: var(--success); }
+  .browser-address .url { color: var(--text-primary); }
+  .browser-address .path { color: var(--text-secondary); }
+
+  /* Split */
+  .split {
+    flex: 1;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  /* ============ FORM SIDE ============ */
+  .form-side {
+    display: flex;
+    flex-direction: column;
+    padding: 32px 44px 24px;
+    min-width: 0;
+    position: relative;
+  }
+  .brand-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .wordmark {
+    font-family: var(--font-display);
+    font-size: 30px;
+    letter-spacing: 3.5px;
+    line-height: 1;
+    color: var(--text-primary);
+    display: inline-flex;
+    align-items: baseline;
+    gap: 4px;
+  }
+  .wordmark .dot {
+    display: inline-block;
+    width: 7px; height: 7px;
+    background: var(--accent);
+    border-radius: 50%;
+    transform: translateY(-2px);
+    box-shadow: 0 0 12px var(--accent-glow);
+  }
+  .panel-tag {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    padding: 3px 7px;
+    border-radius: 5px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    font-weight: 700;
+  }
+
+  .form-frame {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: stretch;
+    max-width: 440px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 30px 0;
+    gap: 28px;
+  }
+
+  .kicker-row {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    align-self: flex-start;
+  }
+  .kicker-num {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 2px;
+    color: var(--text-on-accent);
+    background: var(--accent);
+    padding: 3px 8px;
+    border-radius: 4px;
+  }
+  .kicker-label {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+
+  h1.title {
+    font-family: var(--font-display);
+    font-size: 56px;
+    letter-spacing: 2.5px;
+    line-height: 0.95;
+    color: var(--text-primary);
+  }
+  .subtitle {
+    font-size: 14px;
+    line-height: 1.55;
+    color: var(--text-secondary);
+    max-width: 380px;
+    margin-top: -18px;
+  }
+  .subtitle strong { color: var(--text-primary); font-weight: 700; }
+
+  /* Phone input */
+  .input-group { display: flex; flex-direction: column; gap: 10px; }
+  .label-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+  }
+  .input-label {
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 1.3px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+  .input-hint {
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+
+  .phone-input {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 10px;
+    align-items: stretch;
+  }
+  .phone-prefix {
+    padding: 14px 14px 14px 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .flag-pl {
+    width: 22px;
+    height: 14px;
+    border-radius: 2px;
+    background: linear-gradient(180deg, #FFFFFF 0 50%, #DC143C 50% 100%);
+    border: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .prefix-code {
+    font-family: var(--font-mono);
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text-primary);
+    letter-spacing: 0.5px;
+  }
+  .phone-field {
+    background: var(--surface);
+    border: 1px solid var(--accent-border);
+    border-radius: 10px;
+    padding: 14px 16px;
+    font-family: var(--font-mono);
+    font-size: 18px;
+    letter-spacing: 2px;
+    color: var(--text-primary);
+    outline: none;
+    box-shadow: 0 0 0 3px var(--accent-muted);
+    display: flex;
+    align-items: center;
+    gap: 2px;
+  }
+  .phone-field .typed { color: var(--text-primary); }
+  .phone-field .caret {
+    display: inline-block;
+    width: 2px;
+    height: 18px;
+    background: var(--accent);
+    margin-left: 1px;
+    animation: caretBlink 1000ms step-end infinite;
+  }
+  .phone-field .placeholder {
+    color: var(--text-muted);
+    letter-spacing: 2px;
+  }
+
+  .helper-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    color: var(--text-secondary);
+  }
+  .helper-row .check-ico {
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: var(--success-muted);
+    color: var(--success);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .cta-primary {
+    padding: 16px 18px;
+    background: var(--accent);
+    color: var(--text-on-accent);
+    border: none;
+    border-radius: 12px;
+    font-family: var(--font-display);
+    font-size: 19px;
+    letter-spacing: 3px;
+    line-height: 1;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    box-shadow: 0 10px 30px rgba(255, 107, 26, 0.35);
+    transition: background 140ms, transform 80ms;
+  }
+  .cta-primary:hover { background: var(--accent-hover); }
+  .cta-primary:active { transform: translateY(1px); }
+  .cta-primary .arr { width: 18px; height: 18px; }
+
+  .alt-link-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 18px;
+    border-top: 1px dashed var(--border);
+    gap: 14px;
+  }
+  .alt-text { font-size: 12px; color: var(--text-secondary); }
+  .alt-text a { color: var(--accent); font-weight: 700; text-decoration: none; }
+  .alt-text a:hover { text-decoration: underline; }
+  .help-link {
+    font-size: 11px;
+    color: var(--text-muted);
+    font-weight: 600;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .help-link:hover { color: var(--text-secondary); }
+  .help-link svg { width: 12px; height: 12px; }
+
+  /* Footer on form side */
+  .form-footer {
+    display: flex;
+    gap: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+    justify-content: space-between;
+    align-items: center;
+  }
+  .legal-row {
+    font-family: var(--font-mono);
+    font-size: 9.5px;
+    letter-spacing: 0.8px;
+    color: var(--text-muted);
+  }
+  .legal-row a { color: var(--text-secondary); text-decoration: none; }
+  .legal-row a:hover { color: var(--text-primary); }
+  .legal-row .sep { color: var(--border-strong); padding: 0 6px; }
+
+  .trust-cluster {
+    display: inline-flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .trust-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 8px;
+    border-radius: 5px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    font-family: var(--font-mono);
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+  }
+  .trust-badge .ico { width: 10px; height: 10px; color: var(--success); }
+
+  /* ============ HERO SIDE ============ */
+  .hero-side {
+    background:
+      radial-gradient(ellipse 60% 50% at 30% 20%, rgba(255, 107, 26, 0.18) 0%, transparent 60%),
+      radial-gradient(ellipse 40% 40% at 80% 80%, rgba(255, 107, 26, 0.08) 0%, transparent 60%),
+      linear-gradient(135deg, #1B1316 0%, #14171D 55%, #0A0B0E 100%);
+    position: relative;
+    overflow: hidden;
+    padding: 44px 52px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    border-left: 1px solid var(--border);
+  }
+  .hero-side::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(255, 107, 26, 0.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 107, 26, 0.05) 1px, transparent 1px);
+    background-size: 80px 80px;
+    mask-image: radial-gradient(ellipse 80% 70% at 50% 50%, #000 30%, transparent 80%);
+  }
+  .hero-side > * { position: relative; z-index: 1; }
+
+  /* OTP preview card (floating) */
+  .otp-preview {
+    position: absolute;
+    top: 70px;
+    right: 52px;
+    width: 264px;
+    background: rgba(20, 23, 29, 0.85);
+    backdrop-filter: blur(14px);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5), 0 0 0 1px var(--hairline);
+    transform: rotate(3deg);
+    z-index: 2;
+  }
+  .otp-preview::before {
+    content: '';
+    position: absolute;
+    top: -28px;
+    left: 50%;
+    transform: translateX(-50%);
+    border-left: 1px dashed var(--accent-border);
+    height: 28px;
+  }
+  .otp-preview-label {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 8px;
+  }
+  .otp-preview-title {
+    font-family: var(--font-display);
+    font-size: 17px;
+    letter-spacing: 1.5px;
+    color: var(--text-primary);
+    line-height: 1;
+    margin-bottom: 8px;
+  }
+  .otp-preview-sub {
+    font-size: 11px;
+    color: var(--text-secondary);
+    margin-bottom: 14px;
+    line-height: 1.4;
+  }
+  .otp-preview-sub strong {
+    font-family: var(--font-mono);
+    color: var(--text-primary);
+    font-weight: 700;
+  }
+  .otp-cells {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 6px;
+  }
+  .otp-cell {
+    aspect-ratio: 1;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-mono);
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-primary);
+  }
+  .otp-cell.filled { border-color: var(--accent-border); background: var(--accent-muted); color: var(--accent); }
+  .otp-cell.active {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-muted);
+  }
+  .otp-timer-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 12px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--text-muted);
+    letter-spacing: 0.5px;
+  }
+  .otp-timer-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 7px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--accent);
+    font-weight: 700;
+  }
+  .otp-timer-pill .mini-dot {
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+
+  .hero-intro {
+    max-width: 420px;
+  }
+  .hero-kicker {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 14px;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .hero-kicker::before {
+    content: '';
+    width: 24px; height: 2px;
+    background: var(--accent);
+  }
+  .hero-title {
+    font-family: var(--font-display);
+    font-size: 62px;
+    line-height: 0.95;
+    letter-spacing: 2.5px;
+    color: var(--text-primary);
+  }
+  .hero-title .em { color: var(--accent); }
+
+  /* Stats bottom */
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+    padding: 22px 0 0;
+    border-top: 1px solid var(--hairline);
+  }
+  .stat-col {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .stat-val {
+    font-family: var(--font-display);
+    font-size: 42px;
+    letter-spacing: 2px;
+    line-height: 0.9;
+    color: var(--text-primary);
+  }
+  .stat-val .small { font-size: 20px; color: var(--text-secondary); letter-spacing: 1px; }
+  .stat-val .em { color: var(--accent); }
+  .stat-lbl {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    line-height: 1.4;
+  }
+
+  /* Testimonial quote */
+  .quote-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px 22px;
+    margin-top: 28px;
+    position: relative;
+    overflow: hidden;
+  }
+  .quote-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 3px;
+    height: 100%;
+    background: var(--accent);
+  }
+  .quote-text {
+    font-size: 14px;
+    line-height: 1.55;
+    color: var(--text-primary);
+    margin-bottom: 14px;
+    font-style: italic;
+  }
+  .quote-author {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .quote-avatar {
+    width: 36px; height: 36px;
+    border-radius: 9px;
+    background: linear-gradient(135deg, #FF8039 0%, #C73F0A 100%);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-display);
+    font-size: 14px;
+    color: var(--text-on-accent);
+    letter-spacing: 1.5px;
+    flex-shrink: 0;
+  }
+  .quote-info { display: flex; flex-direction: column; gap: 2px; }
+  .quote-name {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-primary);
+  }
+  .quote-role {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--text-muted);
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+
+  /* States caption */
+  .states-caption {
+    width: 100%;
+    max-width: 1440px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 40px;
+    padding: 14px 0 0;
+    border-top: 1px solid var(--border);
+  }
+  .state-col { display: flex; flex-direction: column; gap: 6px; }
+  .state-col h4 {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 4px;
+  }
+  .state-col ul { list-style: none; display: flex; flex-direction: column; gap: 4px; }
+  .state-col li {
+    font-size: 11px;
+    color: var(--text-secondary);
+    line-height: 1.55;
+    padding-left: 14px;
+    position: relative;
+  }
+  .state-col li::before {
+    content: '—';
+    position: absolute;
+    left: 0;
+    color: var(--text-muted);
+  }
+  .state-col li strong { color: var(--text-primary); font-weight: 700; }
+  .state-col code {
+    font-family: var(--font-mono);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 1px 5px;
+    border-radius: 3px;
+    color: var(--accent);
+    font-size: 10px;
+  }
+</style>
+</head>
+<body>
+
+  <!-- Caption -->
+  <div class="canvas-label">
+    <div class="film-strip">
+      <span class="frame">B2B · LOGOWANIE PROVIDERA</span>
+      <span class="frame-num">FRAME 12 / 13 · panel.opony.app/auth — krok 1/2</span>
+    </div>
+    <div class="slug">SMS OTP · BEZ HASŁA · SPLIT HERO · PROVIDER ENTRY POINT</div>
+    <div class="canvas-meta">
+      <span class="pulse" aria-hidden="true"></span>
+      DRAFT · DESKTOP 1440 × 900
+    </div>
+  </div>
+
+  <!-- Desktop frame -->
+  <div class="desktop-frame">
+
+    <!-- Browser chrome -->
+    <div class="browser-chrome">
+      <div class="traffic-lights"><span class="light red"></span><span class="light yellow"></span><span class="light green"></span></div>
+      <div class="browser-tabs">
+        <div class="browser-tab"><span class="favicon">O</span>Opony · Panel warsztatu</div>
+      </div>
+      <div class="browser-address">
+        <svg class="lock" viewBox="0 0 16 16" width="12" height="12" fill="currentColor" aria-hidden="true"><path d="M4.5 7V5.5a3.5 3.5 0 0 1 7 0V7h.5a1 1 0 0 1 1 1v5.5a1 1 0 0 1-1 1h-8a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1h.5Zm1.5 0h4V5.5a2 2 0 0 0-4 0V7Z"/></svg>
+        <span class="url">panel.opony.app</span><span class="path">/auth</span>
+      </div>
+    </div>
+
+    <!-- Split -->
+    <div class="split">
+
+      <!-- FORM SIDE -->
+      <section class="form-side" aria-labelledby="login-title">
+        <div class="brand-row">
+          <span class="wordmark">OPONY<span class="dot" aria-hidden="true"></span></span>
+          <span class="panel-tag">Panel warsztatu</span>
+        </div>
+
+        <div class="form-frame">
+          <div class="kicker-row">
+            <span class="kicker-num">01 / 02</span>
+            <span class="kicker-label">Podaj numer telefonu</span>
+          </div>
+
+          <h1 class="title" id="login-title">WITAJ<br>Z POWROTEM</h1>
+          <p class="subtitle">Logujemy się jednym kodem SMS — <strong>bez haseł do zapamiętania</strong>. Użyj numeru, który podałeś podczas rejestracji warsztatu.</p>
+
+          <div class="input-group">
+            <div class="label-row">
+              <label class="input-label" for="phone-field">Numer telefonu warsztatu</label>
+              <span class="input-hint">Ten sam, co przy rejestracji</span>
+            </div>
+            <div class="phone-input">
+              <div class="phone-prefix">
+                <span class="flag-pl" aria-hidden="true"></span>
+                <span class="prefix-code">+48</span>
+              </div>
+              <div class="phone-field" id="phone-field" role="textbox" aria-label="Numer telefonu">
+                <span class="typed">600 123 45</span><span class="caret" aria-hidden="true"></span><span class="placeholder"> _</span>
+              </div>
+            </div>
+            <div class="helper-row">
+              <span class="check-ico" aria-hidden="true">
+                <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+              </span>
+              Numer rozpoznany · Wulkanizacja Nowy Sącz
+            </div>
+          </div>
+
+          <button class="cta-primary" type="button">
+            WYŚLIJ KOD SMS
+            <svg class="arr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+          </button>
+
+          <div class="alt-link-row">
+            <span class="alt-text">Nie masz jeszcze konta? <a href="#">Załóż warsztat</a></span>
+            <a class="help-link" href="#">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              Problem z logowaniem?
+            </a>
+          </div>
+        </div>
+
+        <footer class="form-footer">
+          <div class="legal-row">
+            <a href="#">Regulamin</a><span class="sep">·</span>
+            <a href="#">Polityka prywatności</a><span class="sep">·</span>
+            <a href="#">RODO</a>
+          </div>
+          <div class="trust-cluster">
+            <span class="trust-badge">
+              <svg class="ico" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M4.5 7V5.5a3.5 3.5 0 0 1 7 0V7h.5a1 1 0 0 1 1 1v5.5a1 1 0 0 1-1 1h-8a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1h.5Z"/></svg>
+              TLS 1.3
+            </span>
+            <span class="trust-badge">
+              <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+              RODO
+            </span>
+          </div>
+        </footer>
+      </section>
+
+      <!-- HERO SIDE -->
+      <aside class="hero-side" aria-label="Social proof">
+
+        <!-- OTP step 2 preview -->
+        <div class="otp-preview" aria-label="Podgląd kroku 2: wpisanie kodu">
+          <div class="otp-preview-label">★ Krok 2 · po kliknięciu</div>
+          <h3 class="otp-preview-title">WPROWADŹ KOD</h3>
+          <p class="otp-preview-sub">Wysłaliśmy 6-cyfrowy kod na <strong>+48 600 123 456</strong></p>
+          <div class="otp-cells" aria-hidden="true">
+            <div class="otp-cell filled">4</div>
+            <div class="otp-cell filled">8</div>
+            <div class="otp-cell filled">2</div>
+            <div class="otp-cell active">_</div>
+            <div class="otp-cell"></div>
+            <div class="otp-cell"></div>
+          </div>
+          <div class="otp-timer-row">
+            <span>Wyślij ponownie</span>
+            <span class="otp-timer-pill"><span class="mini-dot" aria-hidden="true"></span>01:48</span>
+          </div>
+        </div>
+
+        <div class="hero-intro">
+          <div class="hero-kicker">Dla warsztatów — pilot Nowy Sącz</div>
+          <h2 class="hero-title">ZARZĄDZAJ<br>REZERWACJAMI<br>Z <span class="em">JEDNEGO</span><br>MIEJSCA.</h2>
+        </div>
+
+        <div class="stats-row">
+          <div class="stat-col">
+            <span class="stat-val"><span class="em">23</span></span>
+            <span class="stat-lbl">Warsztatów<br>w Nowym Sączu</span>
+          </div>
+          <div class="stat-col">
+            <span class="stat-val">1,2<span class="small">k</span></span>
+            <span class="stat-lbl">Rezerwacji<br>miesięcznie</span>
+          </div>
+          <div class="stat-col">
+            <span class="stat-val">4,8<span class="small">/5</span></span>
+            <span class="stat-lbl">Średnia ocen<br>w pilocie</span>
+          </div>
+        </div>
+
+        <blockquote class="quote-card">
+          <p class="quote-text">„Zero telefonów przed sezonem. Klienci sami wybierają wolny slot, a ja rano otwieram pulpit i wiem co mnie czeka. Tego mi brakowało."</p>
+          <div class="quote-author">
+            <div class="quote-avatar">PK</div>
+            <div class="quote-info">
+              <span class="quote-name">Paweł Kępa</span>
+              <span class="quote-role">Wulkanizacja Kępa · N. Sącz · PILOT</span>
+            </div>
+          </div>
+        </blockquote>
+
+      </aside>
+
+    </div>
+  </div>
+
+  <!-- States caption -->
+  <div class="states-caption">
+    <div class="state-col">
+      <h4>Stany inputu telefonu</h4>
+      <ul>
+        <li><strong>Empty</strong> — placeholder „600 000 000", border <code>--border</code>, brak glow.</li>
+        <li><strong>Focused + typing</strong> (pokazane) — border <code>--accent-border</code>, box-shadow glow, caret pulsuje.</li>
+        <li><strong>Recognized</strong> (pokazane) — pod inputem „Numer rozpoznany · [nazwa warsztatu]" z zieloną checkbox.</li>
+        <li><strong>Invalid format</strong> — border <code>--danger-border</code>, poniżej „Podaj 9 cyfr bez +48".</li>
+        <li><strong>Not registered</strong> — info pill „Nie mamy takiego numeru → <em>Załóż warsztat</em>".</li>
+        <li><strong>Rate limit</strong> (&gt; 5 prób / 10min) — disabled CTA, „Spróbuj za 03:21" z odliczaniem.</li>
+      </ul>
+    </div>
+    <div class="state-col">
+      <h4>Flow & security</h4>
+      <ul>
+        <li><strong>Step 1 → Step 2</strong> — po kliknięciu „Wyślij kod" karta OTP (floating preview) staje się głównym widokiem; numer visible + edit.</li>
+        <li><strong>Kod SMS</strong> — 6 cyfr, TTL 5 min; po 3 błędach auto-lock na 10 min (ADR §19.9).</li>
+        <li><strong>PENDING_APPROVAL</strong> — po poprawnym OTP jeśli status warsztatu ≠ APPROVED → redirect do <code>/onboarding/weryfikacja</code> (ekran B2B-04).</li>
+        <li><strong>Rola = CLIENT</strong> (numer z app mobile, nie provider) — komunikat „To numer klienta. Aby otworzyć panel, zarejestruj warsztat."</li>
+        <li><strong>Session</strong> — JWT access (15 min) + refresh (30 dni) w httpOnly cookie; po 30 dniach bez aktywności reloguj OTP.</li>
+        <li><strong>A11y</strong> — <code>autocomplete="tel"</code>, <code>inputmode="numeric"</code>; CTA disabled ma <code>aria-disabled="true"</code> z hint dlaczego.</li>
+      </ul>
+    </div>
+  </div>
+
+</body>
+</html>

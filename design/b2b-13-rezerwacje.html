@@ -1,0 +1,1767 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Opony Panel — B2B-13 Lista rezerwacji · Admin table</title>
+<!--
+  Screen: Panel providera — Lista wszystkich rezerwacji (all-time, filtry, search, export)
+  Ref:    docs/plan-sprintow.md → W:12.13 (provider listing, bulk actions)
+  US:     US-20 (provider przegląda historię rezerwacji), US-21 (masowe akcje)
+  Tone:   industrial-dark · dense admin table · sticky filter bar · bulk action drawer
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Bebas+Neue&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0A0B0E;
+    --bg-tint-top: #12141A;
+    --surface: #14171D;
+    --surface-raised: #1B1E26;
+    --surface-hover: #23272F;
+    --border: #262A34;
+    --border-strong: #363B47;
+    --hairline: rgba(255, 255, 255, 0.06);
+    --text-primary: #F5F4EF;
+    --text-secondary: #9EA2AD;
+    --text-muted: #60646F;
+    --text-on-accent: #0A0B0E;
+    --accent: #FF6B1A;
+    --accent-hover: #FF8039;
+    --accent-muted: rgba(255, 107, 26, 0.14);
+    --accent-border: rgba(255, 107, 26, 0.32);
+    --accent-glow: rgba(255, 107, 26, 0.45);
+    --success: #2EE0A0;
+    --success-muted: rgba(46, 224, 160, 0.14);
+    --success-border: rgba(46, 224, 160, 0.32);
+    --warning: #FFB020;
+    --warning-muted: rgba(255, 176, 32, 0.14);
+    --warning-border: rgba(255, 176, 32, 0.32);
+    --danger: #FF5757;
+    --danger-muted: rgba(255, 87, 87, 0.12);
+    --danger-border: rgba(255, 87, 87, 0.32);
+    --font-display: 'Bebas Neue', sans-serif;
+    --font-body: 'Archivo', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; overflow-x: hidden; max-width: 100vw; }
+  body {
+    --desktop-scale: min(1, calc((100vh - 200px) / 900px), calc((100vw - 80px) / 1440px));
+    font-family: var(--font-body);
+    background: var(--bg);
+    color: var(--text-primary);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    background-image:
+      radial-gradient(ellipse 70% 50% at 50% 0%, rgba(255, 107, 26, 0.05) 0%, transparent 60%),
+      linear-gradient(180deg, var(--bg-tint-top) 0%, var(--bg) 30%);
+    background-attachment: fixed;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 40px 40px 60px;
+    gap: 24px;
+  }
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 4px var(--accent-muted); opacity: 1; }
+    50%      { box-shadow: 0 0 0 8px transparent; opacity: 0.6; }
+  }
+  @keyframes slideUp {
+    from { transform: translateY(12px); opacity: 0; }
+    to   { transform: translateY(0); opacity: 1; }
+  }
+
+  .canvas-label {
+    width: 100%;
+    max-width: 1440px;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: baseline;
+    gap: 20px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  .film-strip .frame { display: block; font-family: var(--font-display); font-size: 36px; letter-spacing: 4px; line-height: 1; color: var(--text-primary); }
+  .film-strip .frame-num { font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); letter-spacing: 1.5px; display: block; margin-top: 4px; font-weight: 700; }
+  .slug {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    border-left: 1px solid var(--border);
+    padding-left: 18px;
+  }
+  .canvas-meta {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-secondary);
+    letter-spacing: 1px;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .canvas-meta .pulse {
+    display: inline-block;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 0 4px var(--accent-muted);
+    animation: pulse 1800ms ease-in-out infinite;
+  }
+
+  /* Desktop frame */
+  .desktop-frame {
+    width: 1440px;
+    height: 900px;
+    background: var(--bg);
+    border-radius: 14px;
+    border: 1px solid #1C1E24;
+    box-shadow: 0 40px 120px rgba(0, 0, 0, 0.6), 0 20px 40px rgba(0, 0, 0, 0.4);
+    overflow: hidden;
+    position: relative;
+    flex-shrink: 0;
+    transform: scale(var(--desktop-scale));
+    transform-origin: top center;
+    margin-bottom: calc((var(--desktop-scale) - 1) * 900px);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .browser-chrome {
+    height: 44px;
+    background: linear-gradient(180deg, #1A1D23, #14171D);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    gap: 16px;
+    flex-shrink: 0;
+  }
+  .traffic-lights { display: inline-flex; gap: 8px; }
+  .light { width: 12px; height: 12px; border-radius: 50%; }
+  .light.red { background: #FF5F57; }
+  .light.yellow { background: #FEBC2E; }
+  .light.green { background: #28C840; }
+  .browser-tabs { display: inline-flex; gap: 2px; }
+  .browser-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-bottom: none;
+    border-radius: 8px 8px 0 0;
+    font-size: 12px;
+    color: var(--text-primary);
+    position: relative;
+    top: 6px;
+  }
+  .browser-tab .favicon {
+    width: 14px; height: 14px;
+    border-radius: 3px;
+    background: var(--accent);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-display);
+    font-size: 9px;
+    color: var(--text-on-accent);
+    letter-spacing: 0.5px;
+  }
+  .browser-address {
+    flex: 1;
+    max-width: 560px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+  .browser-address .lock { color: var(--success); }
+  .browser-address .url { color: var(--text-primary); }
+  .browser-address .path { color: var(--text-secondary); }
+
+  /* App root */
+  .app-root {
+    flex: 1;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: 220px 1fr;
+  }
+  .sidebar {
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    padding: 20px 14px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .sb-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px 18px;
+  }
+  .sb-brand .wordmark {
+    font-family: var(--font-display);
+    font-size: 26px;
+    letter-spacing: 3px;
+    line-height: 1;
+    color: var(--text-primary);
+    display: inline-flex;
+    align-items: baseline;
+    gap: 3px;
+  }
+  .sb-brand .dot {
+    display: inline-block;
+    width: 6px; height: 6px;
+    background: var(--accent);
+    border-radius: 50%;
+    transform: translateY(-2px);
+    box-shadow: 0 0 10px var(--accent-glow);
+  }
+  .sb-brand .panel-tag {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    padding: 2px 5px;
+    border-radius: 4px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    font-weight: 700;
+    margin-left: auto;
+  }
+  .sb-section-label {
+    font-family: var(--font-body);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 1.3px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    padding: 8px 10px 4px;
+  }
+  .sb-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 10px;
+    border-radius: 8px;
+    background: transparent;
+    border: 1px solid transparent;
+    color: var(--text-secondary);
+    font-family: var(--font-body);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: left;
+    width: 100%;
+    transition: background 140ms ease, color 140ms ease;
+  }
+  .sb-item:hover { background: var(--surface-hover); color: var(--text-primary); }
+  .sb-item.active {
+    background: var(--accent-muted);
+    color: var(--accent);
+    border-color: var(--accent-border);
+  }
+  .sb-badge {
+    margin-left: auto;
+    min-width: 20px; height: 18px;
+    padding: 0 6px;
+    background: var(--accent);
+    color: var(--text-on-accent);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 700;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .sb-spacer { flex: 1; }
+  .sb-user {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    cursor: pointer;
+  }
+  .sb-avatar {
+    width: 34px; height: 34px;
+    border-radius: 9px;
+    background: linear-gradient(135deg, #FF8039 0%, #C73F0A 100%);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-display);
+    font-size: 15px;
+    color: var(--text-on-accent);
+    letter-spacing: 1.5px;
+    flex-shrink: 0;
+  }
+  .sb-user-col { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  .sb-user-name {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1.1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .sb-user-role {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    color: var(--accent);
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    font-weight: 700;
+  }
+
+  /* Main */
+  .main { display: flex; flex-direction: column; overflow: hidden; }
+  .topbar {
+    height: 58px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 28px;
+    gap: 16px;
+    flex-shrink: 0;
+  }
+  .tb-breadcrumb {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--text-muted);
+    font-weight: 600;
+  }
+  .tb-breadcrumb .sep { color: var(--border-strong); }
+  .tb-breadcrumb .current { color: var(--text-primary); font-weight: 700; }
+  .tb-spacer { flex: 1; }
+
+  .tb-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-family: var(--font-body);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-primary);
+  }
+  .tb-btn:hover { background: var(--surface); border-color: var(--border-strong); }
+  .tb-btn.primary {
+    background: var(--accent);
+    color: var(--text-on-accent);
+    border-color: transparent;
+  }
+  .tb-btn.primary:hover { background: var(--accent-hover); }
+
+  /* Content */
+  .content {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 20px 28px 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    scrollbar-width: thin;
+  }
+  .content::-webkit-scrollbar { width: 6px; }
+  .content::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  /* KPI strip */
+  .kpi-strip {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+  }
+  .kpi-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 13px 16px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    position: relative;
+    overflow: hidden;
+  }
+  .kpi-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 1px;
+    background: var(--hairline);
+  }
+  .kpi-lbl {
+    font-family: var(--font-mono);
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: 1.3px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+  .kpi-val {
+    font-family: var(--font-display);
+    font-size: 30px;
+    letter-spacing: 1.5px;
+    line-height: 1;
+    color: var(--text-primary);
+    margin-top: 4px;
+  }
+  .kpi-val .unit {
+    font-family: var(--font-mono);
+    font-size: 14px;
+    color: var(--text-secondary);
+    font-weight: 700;
+    margin-left: 2px;
+    letter-spacing: 0.5px;
+  }
+  .kpi-trend {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 700;
+    margin-top: 4px;
+  }
+  .kpi-trend.pos { color: var(--success); }
+  .kpi-trend.neg { color: var(--danger); }
+  .kpi-trend.neu { color: var(--text-muted); }
+  .kpi-trend svg { width: 10px; height: 10px; }
+
+  /* Filter bar */
+  .filter-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    flex-wrap: wrap;
+  }
+  .search-input {
+    flex: 1;
+    min-width: 220px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 12px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+  .search-input:focus-within { border-color: var(--accent-border); }
+  .search-input .ico { width: 14px; height: 14px; color: var(--text-muted); flex-shrink: 0; }
+  .search-input input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    font-family: var(--font-body);
+    font-size: 12.5px;
+    color: var(--text-primary);
+  }
+  .search-input input::placeholder { color: var(--text-muted); }
+  .search-input .kbd {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 5px;
+    border-radius: 3px;
+    background: var(--surface-hover);
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    letter-spacing: 0.5px;
+  }
+
+  .divider-v {
+    width: 1px;
+    height: 24px;
+    background: var(--border);
+  }
+
+  .filter-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 11px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-family: var(--font-body);
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all 120ms;
+  }
+  .filter-btn:hover { background: var(--surface-hover); border-color: var(--border-strong); }
+  .filter-btn.active {
+    background: var(--accent-muted);
+    border-color: var(--accent-border);
+    color: var(--accent);
+  }
+  .filter-btn svg { width: 12px; height: 12px; }
+  .filter-btn .count-pill {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    font-weight: 800;
+    padding: 1px 5px;
+    border-radius: 4px;
+    background: var(--accent);
+    color: var(--text-on-accent);
+    letter-spacing: 0.3px;
+  }
+
+  /* Status chips row */
+  .status-tabs {
+    display: inline-flex;
+    gap: 3px;
+    padding: 3px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 9px;
+  }
+  .status-tab {
+    padding: 6px 11px;
+    font-family: var(--font-body);
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-muted);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .status-tab:hover { color: var(--text-primary); }
+  .status-tab.active {
+    background: var(--surface);
+    color: var(--text-primary);
+    box-shadow: 0 0 0 1px var(--border);
+  }
+  .status-tab .tab-count {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 700;
+    padding: 1px 5px;
+    border-radius: 4px;
+    background: var(--surface-hover);
+    color: var(--text-secondary);
+  }
+  .status-tab.active .tab-count {
+    background: var(--accent-muted);
+    color: var(--accent);
+  }
+  .status-tab .warn-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--warning);
+    box-shadow: 0 0 0 3px var(--warning-muted);
+  }
+
+  /* Bulk action bar */
+  .bulk-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    background: linear-gradient(90deg, var(--accent) 0%, #D95A15 100%);
+    color: var(--text-on-accent);
+    border-radius: 12px;
+    animation: slideUp 180ms ease-out;
+    box-shadow: 0 8px 24px rgba(255, 107, 26, 0.25);
+  }
+  .bulk-count {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+  }
+  .bulk-count strong {
+    font-family: var(--font-display);
+    font-size: 18px;
+    letter-spacing: 1px;
+    margin-right: 4px;
+  }
+  .bulk-divider {
+    width: 1px;
+    height: 20px;
+    background: rgba(10, 11, 14, 0.25);
+  }
+  .bulk-actions {
+    display: inline-flex;
+    gap: 6px;
+    flex: 1;
+  }
+  .bulk-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 7px 10px;
+    background: rgba(10, 11, 14, 0.18);
+    border: 1px solid rgba(10, 11, 14, 0.3);
+    color: var(--text-on-accent);
+    border-radius: 7px;
+    font-size: 11.5px;
+    font-weight: 700;
+    cursor: pointer;
+    letter-spacing: 0.2px;
+  }
+  .bulk-btn:hover { background: rgba(10, 11, 14, 0.3); }
+  .bulk-btn svg { width: 12px; height: 12px; }
+  .bulk-close {
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    background: rgba(10, 11, 14, 0.2);
+    border: none;
+    color: var(--text-on-accent);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .bulk-close:hover { background: rgba(10, 11, 14, 0.35); }
+
+  /* Table */
+  .table-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+  .bookings-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12.5px;
+  }
+  .bookings-table thead {
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+  }
+  .bookings-table th {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 1.3px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    text-align: left;
+    padding: 11px 14px;
+    white-space: nowrap;
+    user-select: none;
+  }
+  .bookings-table th.sortable { cursor: pointer; }
+  .bookings-table th.sortable:hover { color: var(--text-primary); }
+  .bookings-table th .sort-ico {
+    width: 10px; height: 10px;
+    display: inline-block;
+    margin-left: 4px;
+    color: var(--accent);
+    vertical-align: middle;
+  }
+  .bookings-table td {
+    padding: 11px 14px;
+    border-bottom: 1px solid var(--hairline);
+    vertical-align: middle;
+    color: var(--text-primary);
+  }
+  .bookings-table tr:last-child td { border-bottom: none; }
+  .bookings-table tbody tr { transition: background 100ms; cursor: pointer; }
+  .bookings-table tbody tr:hover { background: var(--surface-hover); }
+  .bookings-table tbody tr.selected { background: var(--accent-muted); }
+  .bookings-table tbody tr.selected:hover { background: rgba(255, 107, 26, 0.2); }
+
+  .tcol-chk { width: 32px; padding-left: 18px !important; padding-right: 6px !important; }
+  .checkbox {
+    width: 16px; height: 16px;
+    border-radius: 4px;
+    border: 1.5px solid var(--border-strong);
+    background: var(--bg);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 100ms;
+  }
+  .checkbox:hover { border-color: var(--accent-border); }
+  .checkbox.checked {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--text-on-accent);
+  }
+  .checkbox.checked svg { width: 10px; height: 10px; }
+  .checkbox.indeterminate {
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+  .checkbox.indeterminate::after {
+    content: '';
+    width: 8px; height: 2px;
+    background: var(--text-on-accent);
+    border-radius: 1px;
+  }
+
+  .cell-id {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    font-weight: 700;
+    color: var(--text-muted);
+    letter-spacing: 0.3px;
+    display: block;
+    margin-bottom: 2px;
+  }
+  .cell-datetime {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+  }
+  .cell-datetime .date-main {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-primary);
+    letter-spacing: 0.3px;
+  }
+  .cell-datetime .date-rel {
+    font-size: 10.5px;
+    color: var(--text-muted);
+  }
+  .cell-datetime .date-rel.today { color: var(--accent); font-weight: 700; }
+  .cell-datetime .date-rel.soon { color: var(--warning); font-weight: 700; }
+
+  .client-cell {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+  }
+  .client-avatar {
+    width: 28px; height: 28px;
+    border-radius: 7px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-display);
+    font-size: 12px;
+    letter-spacing: 1px;
+    color: var(--text-on-accent);
+    flex-shrink: 0;
+  }
+  .client-avatar.c1 { background: linear-gradient(135deg, #FF8039 0%, #C73F0A 100%); }
+  .client-avatar.c2 { background: linear-gradient(135deg, #64B5F6 0%, #1976D2 100%); }
+  .client-avatar.c3 { background: linear-gradient(135deg, #AED581 0%, #558B2F 100%); }
+  .client-avatar.c4 { background: linear-gradient(135deg, #BA68C8 0%, #6A1B9A 100%); }
+  .client-avatar.c5 { background: linear-gradient(135deg, #FFD54F 0%, #F57F17 100%); }
+  .client-avatar.c6 { background: linear-gradient(135deg, #4FC3F7 0%, #0277BD 100%); }
+  .client-info {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+  }
+  .client-name {
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1.2;
+  }
+  .client-phone {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    color: var(--text-muted);
+    letter-spacing: 0.3px;
+  }
+
+  .service-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .service-name {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+  .service-meta {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--text-muted);
+    letter-spacing: 0.3px;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .service-meta .dot {
+    display: inline-block;
+    width: 2px; height: 2px;
+    border-radius: 50%;
+    background: var(--border-strong);
+  }
+
+  .amount {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-primary);
+    letter-spacing: 0.3px;
+    white-space: nowrap;
+  }
+  .amount .unit { color: var(--text-muted); font-weight: 500; margin-left: 1px; }
+
+  .status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 8px;
+    border-radius: 5px;
+    font-family: var(--font-mono);
+    font-size: 9.5px;
+    font-weight: 800;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    border: 1px solid;
+    white-space: nowrap;
+  }
+  .status-badge .dot {
+    width: 5px; height: 5px;
+    border-radius: 50%;
+  }
+  .status-badge.confirmed {
+    background: var(--accent-muted);
+    border-color: var(--accent-border);
+    color: var(--accent);
+  }
+  .status-badge.confirmed .dot { background: var(--accent); }
+  .status-badge.pending {
+    background: var(--warning-muted);
+    border-color: var(--warning-border);
+    color: var(--warning);
+  }
+  .status-badge.pending .dot { background: var(--warning); animation: pulse 1400ms ease-in-out infinite; box-shadow: 0 0 0 3px rgba(255, 176, 32, 0.2); }
+  .status-badge.completed {
+    background: var(--success-muted);
+    border-color: var(--success-border);
+    color: var(--success);
+  }
+  .status-badge.completed .dot { background: var(--success); }
+  .status-badge.cancelled {
+    background: rgba(96, 100, 111, 0.1);
+    border-color: var(--border);
+    color: var(--text-muted);
+  }
+  .status-badge.cancelled .dot { background: var(--text-muted); }
+  .status-badge.no-show {
+    background: var(--danger-muted);
+    border-color: var(--danger-border);
+    color: var(--danger);
+  }
+  .status-badge.no-show .dot { background: var(--danger); }
+
+  .source-pill {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+  .source-pill.manual {
+    background: var(--surface-raised);
+    color: var(--text-primary);
+  }
+
+  .row-actions {
+    display: inline-flex;
+    gap: 3px;
+    justify-content: flex-end;
+  }
+  .action-btn {
+    width: 28px; height: 28px;
+    border-radius: 6px;
+    background: transparent;
+    border: 1px solid transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 100ms;
+  }
+  .action-btn:hover {
+    background: var(--surface-hover);
+    border-color: var(--border);
+    color: var(--text-primary);
+  }
+  .action-btn svg { width: 14px; height: 14px; }
+
+  .new-dot {
+    display: inline-block;
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    margin-right: 6px;
+    box-shadow: 0 0 0 3px var(--accent-muted);
+    animation: pulse 1600ms ease-in-out infinite;
+    vertical-align: middle;
+  }
+
+  /* Pagination footer */
+  .table-footer {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 18px;
+    border-top: 1px solid var(--border);
+    background: var(--bg);
+    flex-shrink: 0;
+  }
+  .range-info {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-secondary);
+    letter-spacing: 0.3px;
+  }
+  .range-info strong { color: var(--text-primary); font-weight: 700; }
+  .page-size {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 0.3px;
+  }
+  .page-size select {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 3px 6px;
+    color: var(--text-primary);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 700;
+    outline: none;
+    cursor: pointer;
+  }
+  .pag-spacer { flex: 1; }
+  .pag-nav {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+  }
+  .pag-btn {
+    min-width: 28px; height: 28px;
+    padding: 0 8px;
+    border-radius: 6px;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 100ms;
+  }
+  .pag-btn:hover { background: var(--surface); color: var(--text-primary); border-color: var(--border-strong); }
+  .pag-btn.active {
+    background: var(--accent);
+    color: var(--text-on-accent);
+    border-color: transparent;
+  }
+  .pag-btn.disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+  }
+  .pag-btn svg { width: 11px; height: 11px; }
+  .pag-ellipsis {
+    padding: 0 4px;
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+    font-size: 11px;
+  }
+
+  /* States caption */
+  .states-caption {
+    width: 100%;
+    max-width: 1440px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 40px;
+    padding: 14px 0 0;
+    border-top: 1px solid var(--border);
+  }
+  .state-col { display: flex; flex-direction: column; gap: 6px; }
+  .state-col h4 {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 4px;
+  }
+  .state-col ul { list-style: none; display: flex; flex-direction: column; gap: 4px; }
+  .state-col li {
+    font-size: 11px;
+    color: var(--text-secondary);
+    line-height: 1.55;
+    padding-left: 14px;
+    position: relative;
+  }
+  .state-col li::before {
+    content: '—';
+    position: absolute;
+    left: 0;
+    color: var(--text-muted);
+  }
+  .state-col li strong { color: var(--text-primary); font-weight: 700; }
+  .state-col code {
+    font-family: var(--font-mono);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 1px 5px;
+    border-radius: 3px;
+    color: var(--accent);
+    font-size: 10px;
+  }
+</style>
+</head>
+<body>
+
+  <!-- Caption -->
+  <div class="canvas-label">
+    <div class="film-strip">
+      <span class="frame">B2B · LISTA REZERWACJI</span>
+      <span class="frame-num">FRAME 13 / 13 · panel.opony.app/rezerwacje</span>
+    </div>
+    <div class="slug">ADMIN TABLE · FILTRY · SEARCH · BULK ACTIONS · 127 POZYCJI</div>
+    <div class="canvas-meta">
+      <span class="pulse" aria-hidden="true"></span>
+      DRAFT · DESKTOP 1440 × 900
+    </div>
+  </div>
+
+  <!-- Desktop frame -->
+  <div class="desktop-frame">
+
+    <!-- Browser chrome -->
+    <div class="browser-chrome">
+      <div class="traffic-lights"><span class="light red"></span><span class="light yellow"></span><span class="light green"></span></div>
+      <div class="browser-tabs">
+        <div class="browser-tab"><span class="favicon">O</span>Opony · Panel · Rezerwacje</div>
+      </div>
+      <div class="browser-address">
+        <svg class="lock" viewBox="0 0 16 16" width="12" height="12" fill="currentColor" aria-hidden="true"><path d="M4.5 7V5.5a3.5 3.5 0 0 1 7 0V7h.5a1 1 0 0 1 1 1v5.5a1 1 0 0 1-1 1h-8a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1h.5Zm1.5 0h4V5.5a2 2 0 0 0-4 0V7Z"/></svg>
+        <span class="url">panel.opony.app</span><span class="path">/rezerwacje?status=all&amp;range=30d</span>
+      </div>
+    </div>
+
+    <div class="app-root">
+
+      <!-- Sidebar -->
+      <nav class="sidebar" aria-label="Nawigacja">
+        <div class="sb-brand">
+          <span class="wordmark">OPONY<span class="dot" aria-hidden="true"></span></span>
+          <span class="panel-tag">Panel</span>
+        </div>
+        <span class="sb-section-label">Operacje</span>
+        <button class="sb-item">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+          Pulpit
+        </button>
+        <button class="sb-item">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          Kalendarz
+        </button>
+        <button class="sb-item active" aria-current="page">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v18"/><path d="m5 8 7-5 7 5"/><path d="m5 16 7 5 7-5"/></svg>
+          Rezerwacje
+          <span class="sb-badge">2</span>
+        </button>
+        <button class="sb-item">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          Opinie
+        </button>
+
+        <span class="sb-section-label" style="margin-top:14px">Firma</span>
+        <button class="sb-item">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          Profil warsztatu
+        </button>
+        <button class="sb-item">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+          Godziny otwarcia
+        </button>
+        <button class="sb-item">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          Strefa dojazdu
+        </button>
+        <button class="sb-item">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          Cennik
+        </button>
+
+        <div class="sb-spacer"></div>
+
+        <div class="sb-user" role="button" tabindex="0">
+          <div class="sb-avatar">JK</div>
+          <div class="sb-user-col">
+            <span class="sb-user-name">Jan Kowalski</span>
+            <span class="sb-user-role">Właściciel</span>
+          </div>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--text-muted)"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
+      </nav>
+
+      <!-- Main -->
+      <main class="main" role="main">
+        <div class="topbar">
+          <div class="tb-breadcrumb">
+            <span>Operacje</span>
+            <span class="sep">›</span>
+            <span class="current">Rezerwacje</span>
+          </div>
+          <div class="tb-spacer"></div>
+
+          <button class="tb-btn" type="button">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Eksport CSV
+          </button>
+          <button class="tb-btn primary" type="button">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Rezerwacja ręczna
+          </button>
+        </div>
+
+        <div class="content">
+
+          <!-- KPI strip -->
+          <div class="kpi-strip">
+            <div class="kpi-card">
+              <span class="kpi-lbl">Łącznie (30 dni)</span>
+              <span class="kpi-val">127</span>
+              <span class="kpi-trend pos">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="18 15 12 9 6 15"/></svg>
+                +18 vs poprzedni okres
+              </span>
+            </div>
+            <div class="kpi-card">
+              <span class="kpi-lbl">Przychód</span>
+              <span class="kpi-val">21 847<span class="unit">zł</span></span>
+              <span class="kpi-trend pos">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="18 15 12 9 6 15"/></svg>
+                +14,2%
+              </span>
+            </div>
+            <div class="kpi-card">
+              <span class="kpi-lbl">Śr. wartość</span>
+              <span class="kpi-val">172<span class="unit">zł</span></span>
+              <span class="kpi-trend neu">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                bez zmian
+              </span>
+            </div>
+            <div class="kpi-card">
+              <span class="kpi-lbl">Realizacja</span>
+              <span class="kpi-val">94<span class="unit">%</span></span>
+              <span class="kpi-trend neg">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="6 9 12 15 18 9"/></svg>
+                −2 pp (1 no-show)
+              </span>
+            </div>
+          </div>
+
+          <!-- Filter bar -->
+          <div class="filter-bar" role="search">
+            <label class="search-input">
+              <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <input type="search" placeholder="Szukaj klienta, telefonu, ID rezerwacji…" value="" aria-label="Szukaj" />
+              <span class="kbd">⌘K</span>
+            </label>
+
+            <span class="divider-v"></span>
+
+            <button class="filter-btn active" type="button" aria-pressed="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              Ostatnie 30 dni
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+
+            <button class="filter-btn" type="button">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 16h18l-2-7H5z"/><circle cx="7" cy="18" r="1.5" fill="currentColor"/><circle cx="17" cy="18" r="1.5" fill="currentColor"/></svg>
+              Typ pojazdu
+            </button>
+
+            <button class="filter-btn" type="button">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+              Kwota
+            </button>
+
+            <button class="filter-btn" type="button">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+              Więcej
+              <span class="count-pill">2</span>
+            </button>
+
+            <span class="divider-v"></span>
+
+            <div class="status-tabs" role="tablist" aria-label="Filtr statusu">
+              <button class="status-tab active" role="tab" aria-selected="true">
+                Wszystkie <span class="tab-count">127</span>
+              </button>
+              <button class="status-tab" role="tab" aria-selected="false">
+                <span class="warn-dot" aria-hidden="true"></span>
+                Oczekujące <span class="tab-count">2</span>
+              </button>
+              <button class="status-tab" role="tab" aria-selected="false">
+                Potwierdzone <span class="tab-count">14</span>
+              </button>
+              <button class="status-tab" role="tab" aria-selected="false">
+                Zakończone <span class="tab-count">106</span>
+              </button>
+              <button class="status-tab" role="tab" aria-selected="false">
+                Anulowane <span class="tab-count">5</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Bulk actions bar (active when rows selected) -->
+          <div class="bulk-bar" role="region" aria-label="Akcje masowe">
+            <span class="bulk-count"><strong>3</strong> zaznaczono</span>
+            <span class="bulk-divider"></span>
+            <div class="bulk-actions">
+              <button class="bulk-btn" type="button">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+                Potwierdź
+              </button>
+              <button class="bulk-btn" type="button">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M4 7h16"/><path d="M19 7l-1 13a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 7"/></svg>
+                Anuluj
+              </button>
+              <button class="bulk-btn" type="button">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                Eksport zaznaczonych
+              </button>
+              <button class="bulk-btn" type="button">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+                Wyślij SMS
+              </button>
+            </div>
+            <button class="bulk-close" type="button" aria-label="Odznacz wszystko">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </div>
+
+          <!-- Table -->
+          <div class="table-wrap">
+            <table class="bookings-table" aria-label="Lista rezerwacji">
+              <thead>
+                <tr>
+                  <th class="tcol-chk">
+                    <span class="checkbox indeterminate" role="checkbox" aria-checked="mixed" aria-label="Zaznacz wszystkie"></span>
+                  </th>
+                  <th class="sortable">
+                    Data &amp; godzina
+                    <svg class="sort-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+                  </th>
+                  <th>Klient</th>
+                  <th>Usługa</th>
+                  <th class="sortable" style="text-align:right">Kwota</th>
+                  <th>Status</th>
+                  <th>Źródło</th>
+                  <th style="text-align:right"></th>
+                </tr>
+              </thead>
+              <tbody>
+
+                <!-- Row 1: PENDING, NEW -->
+                <tr class="selected">
+                  <td class="tcol-chk">
+                    <span class="checkbox checked" role="checkbox" aria-checked="true" aria-label="Zaznacz">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><polyline points="20 6 9 17 4 12"/></svg>
+                    </span>
+                  </td>
+                  <td>
+                    <span class="cell-id">#BR-2026-1183</span>
+                    <div class="cell-datetime">
+                      <span class="date-main">Dziś · 14:30</span>
+                      <span class="date-rel today"><span class="new-dot" aria-hidden="true"></span>Za 2 godz 15 min</span>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="client-cell">
+                      <div class="client-avatar c1">KW</div>
+                      <div class="client-info">
+                        <span class="client-name">Karolina Wójcik</span>
+                        <span class="client-phone">+48 602 ••• 214</span>
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="service-cell">
+                      <span class="service-name">Wymiana 4× — 17"</span>
+                      <span class="service-meta">Opel Astra<span class="dot"></span>45 min<span class="dot"></span>Wyważanie</span>
+                    </div>
+                  </td>
+                  <td style="text-align:right"><span class="amount">180,00<span class="unit"> zł</span></span></td>
+                  <td><span class="status-badge pending"><span class="dot" aria-hidden="true"></span>Oczekuje</span></td>
+                  <td><span class="source-pill">APP</span></td>
+                  <td>
+                    <div class="row-actions">
+                      <button class="action-btn" type="button" aria-label="Zobacz"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
+                      <button class="action-btn" type="button" aria-label="Więcej"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg></button>
+                    </div>
+                  </td>
+                </tr>
+
+                <!-- Row 2: PENDING -->
+                <tr class="selected">
+                  <td class="tcol-chk">
+                    <span class="checkbox checked" role="checkbox" aria-checked="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><polyline points="20 6 9 17 4 12"/></svg></span>
+                  </td>
+                  <td>
+                    <span class="cell-id">#BR-2026-1182</span>
+                    <div class="cell-datetime">
+                      <span class="date-main">Dziś · 16:00</span>
+                      <span class="date-rel soon">Za 3 godz 45 min</span>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="client-cell">
+                      <div class="client-avatar c2">MS</div>
+                      <div class="client-info">
+                        <span class="client-name">Michał Szymański</span>
+                        <span class="client-phone">+48 698 ••• 077</span>
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="service-cell">
+                      <span class="service-name">Wymiana 4× — 18"</span>
+                      <span class="service-meta">BMW 320d<span class="dot"></span>60 min</span>
+                    </div>
+                  </td>
+                  <td style="text-align:right"><span class="amount">240,00<span class="unit"> zł</span></span></td>
+                  <td><span class="status-badge pending"><span class="dot" aria-hidden="true"></span>Oczekuje</span></td>
+                  <td><span class="source-pill">APP</span></td>
+                  <td>
+                    <div class="row-actions">
+                      <button class="action-btn" type="button" aria-label="Zobacz"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
+                      <button class="action-btn" type="button" aria-label="Więcej"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg></button>
+                    </div>
+                  </td>
+                </tr>
+
+                <!-- Row 3: CONFIRMED, jutro -->
+                <tr class="selected">
+                  <td class="tcol-chk">
+                    <span class="checkbox checked" role="checkbox" aria-checked="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><polyline points="20 6 9 17 4 12"/></svg></span>
+                  </td>
+                  <td>
+                    <span class="cell-id">#BR-2026-1178</span>
+                    <div class="cell-datetime">
+                      <span class="date-main">Jutro · 09:15</span>
+                      <span class="date-rel">Czw · 23 kwie</span>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="client-cell">
+                      <div class="client-avatar c3">AN</div>
+                      <div class="client-info">
+                        <span class="client-name">Agnieszka Nowak</span>
+                        <span class="client-phone">+48 601 ••• 339</span>
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="service-cell">
+                      <span class="service-name">Wymiana 4× — 16"</span>
+                      <span class="service-meta">Škoda Fabia<span class="dot"></span>45 min<span class="dot"></span>TPMS</span>
+                    </div>
+                  </td>
+                  <td style="text-align:right"><span class="amount">165,00<span class="unit"> zł</span></span></td>
+                  <td><span class="status-badge confirmed"><span class="dot" aria-hidden="true"></span>Potwierdzone</span></td>
+                  <td><span class="source-pill">APP</span></td>
+                  <td>
+                    <div class="row-actions">
+                      <button class="action-btn" type="button" aria-label="Zobacz"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
+                      <button class="action-btn" type="button" aria-label="Więcej"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg></button>
+                    </div>
+                  </td>
+                </tr>
+
+                <!-- Row 4: CONFIRMED piątek -->
+                <tr>
+                  <td class="tcol-chk">
+                    <span class="checkbox" role="checkbox" aria-checked="false"></span>
+                  </td>
+                  <td>
+                    <span class="cell-id">#BR-2026-1176</span>
+                    <div class="cell-datetime">
+                      <span class="date-main">Pt · 24 kwie · 11:30</span>
+                      <span class="date-rel">Za 3 dni</span>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="client-cell">
+                      <div class="client-avatar c4">TK</div>
+                      <div class="client-info">
+                        <span class="client-name">Tomasz Krawczyk</span>
+                        <span class="client-phone">+48 505 ••• 112</span>
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="service-cell">
+                      <span class="service-name">Wymiana 4× — 18"</span>
+                      <span class="service-meta">Audi Q5<span class="dot"></span>60 min<span class="dot"></span>SUV</span>
+                    </div>
+                  </td>
+                  <td style="text-align:right"><span class="amount">260,00<span class="unit"> zł</span></span></td>
+                  <td><span class="status-badge confirmed"><span class="dot" aria-hidden="true"></span>Potwierdzone</span></td>
+                  <td><span class="source-pill">APP</span></td>
+                  <td>
+                    <div class="row-actions">
+                      <button class="action-btn" type="button" aria-label="Zobacz"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
+                      <button class="action-btn" type="button" aria-label="Więcej"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg></button>
+                    </div>
+                  </td>
+                </tr>
+
+                <!-- Row 5: CONFIRMED sobota, manual -->
+                <tr>
+                  <td class="tcol-chk">
+                    <span class="checkbox" role="checkbox" aria-checked="false"></span>
+                  </td>
+                  <td>
+                    <span class="cell-id">#BR-2026-1174</span>
+                    <div class="cell-datetime">
+                      <span class="date-main">Sob · 25 kwie · 10:00</span>
+                      <span class="date-rel">Za 4 dni</span>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="client-cell">
+                      <div class="client-avatar c5">RB</div>
+                      <div class="client-info">
+                        <span class="client-name">Roman Bąk</span>
+                        <span class="client-phone">+48 608 ••• 459</span>
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="service-cell">
+                      <span class="service-name">Wymiana 2× — 15"</span>
+                      <span class="service-meta">Fiat 500<span class="dot"></span>30 min</span>
+                    </div>
+                  </td>
+                  <td style="text-align:right"><span class="amount">90,00<span class="unit"> zł</span></span></td>
+                  <td><span class="status-badge confirmed"><span class="dot" aria-hidden="true"></span>Potwierdzone</span></td>
+                  <td><span class="source-pill manual">RĘCZNA</span></td>
+                  <td>
+                    <div class="row-actions">
+                      <button class="action-btn" type="button" aria-label="Zobacz"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
+                      <button class="action-btn" type="button" aria-label="Więcej"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg></button>
+                    </div>
+                  </td>
+                </tr>
+
+                <!-- Row 6: COMPLETED -->
+                <tr>
+                  <td class="tcol-chk">
+                    <span class="checkbox" role="checkbox" aria-checked="false"></span>
+                  </td>
+                  <td>
+                    <span class="cell-id">#BR-2026-1167</span>
+                    <div class="cell-datetime">
+                      <span class="date-main">Pon · 20 kwie · 15:45</span>
+                      <span class="date-rel">Przed 1 dniem</span>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="client-cell">
+                      <div class="client-avatar c6">PL</div>
+                      <div class="client-info">
+                        <span class="client-name">Piotr Lewandowski</span>
+                        <span class="client-phone">+48 511 ••• 824</span>
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="service-cell">
+                      <span class="service-name">Wymiana 4× — 17"</span>
+                      <span class="service-meta">VW Passat<span class="dot"></span>45 min<span class="dot"></span>Wyważanie</span>
+                    </div>
+                  </td>
+                  <td style="text-align:right"><span class="amount">180,00<span class="unit"> zł</span></span></td>
+                  <td><span class="status-badge completed"><span class="dot" aria-hidden="true"></span>Zakończone</span></td>
+                  <td><span class="source-pill">APP</span></td>
+                  <td>
+                    <div class="row-actions">
+                      <button class="action-btn" type="button" aria-label="Zobacz"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
+                      <button class="action-btn" type="button" aria-label="Więcej"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg></button>
+                    </div>
+                  </td>
+                </tr>
+
+                <!-- Row 7: COMPLETED dost -->
+                <tr>
+                  <td class="tcol-chk">
+                    <span class="checkbox" role="checkbox" aria-checked="false"></span>
+                  </td>
+                  <td>
+                    <span class="cell-id">#BR-2026-1163</span>
+                    <div class="cell-datetime">
+                      <span class="date-main">Pon · 20 kwie · 11:00</span>
+                      <span class="date-rel">Przed 1 dniem</span>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="client-cell">
+                      <div class="client-avatar c1">MZ</div>
+                      <div class="client-info">
+                        <span class="client-name">Marek Zawadzki</span>
+                        <span class="client-phone">+48 604 ••• 631</span>
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="service-cell">
+                      <span class="service-name">Wymiana 4× — 16" (dostawczy)</span>
+                      <span class="service-meta">Renault Master<span class="dot"></span>90 min</span>
+                    </div>
+                  </td>
+                  <td style="text-align:right"><span class="amount">320,00<span class="unit"> zł</span></span></td>
+                  <td><span class="status-badge completed"><span class="dot" aria-hidden="true"></span>Zakończone</span></td>
+                  <td><span class="source-pill">APP</span></td>
+                  <td>
+                    <div class="row-actions">
+                      <button class="action-btn" type="button" aria-label="Zobacz"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
+                      <button class="action-btn" type="button" aria-label="Więcej"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg></button>
+                    </div>
+                  </td>
+                </tr>
+
+                <!-- Row 8: CANCELLED -->
+                <tr>
+                  <td class="tcol-chk">
+                    <span class="checkbox" role="checkbox" aria-checked="false"></span>
+                  </td>
+                  <td>
+                    <span class="cell-id">#BR-2026-1158</span>
+                    <div class="cell-datetime">
+                      <span class="date-main">Sob · 18 kwie · 13:30</span>
+                      <span class="date-rel">Przed 3 dniami</span>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="client-cell">
+                      <div class="client-avatar c2">JM</div>
+                      <div class="client-info">
+                        <span class="client-name">Joanna Mazur</span>
+                        <span class="client-phone">+48 696 ••• 208</span>
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="service-cell">
+                      <span class="service-name">Wymiana 4× — 17"</span>
+                      <span class="service-meta">Ford Focus<span class="dot"></span>Anulowane przez klienta</span>
+                    </div>
+                  </td>
+                  <td style="text-align:right"><span class="amount" style="color:var(--text-muted); text-decoration: line-through">180,00<span class="unit"> zł</span></span></td>
+                  <td><span class="status-badge cancelled"><span class="dot" aria-hidden="true"></span>Anulowane</span></td>
+                  <td><span class="source-pill">APP</span></td>
+                  <td>
+                    <div class="row-actions">
+                      <button class="action-btn" type="button" aria-label="Zobacz"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
+                      <button class="action-btn" type="button" aria-label="Więcej"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg></button>
+                    </div>
+                  </td>
+                </tr>
+
+                <!-- Row 9: NO_SHOW -->
+                <tr>
+                  <td class="tcol-chk">
+                    <span class="checkbox" role="checkbox" aria-checked="false"></span>
+                  </td>
+                  <td>
+                    <span class="cell-id">#BR-2026-1152</span>
+                    <div class="cell-datetime">
+                      <span class="date-main">Pt · 17 kwie · 17:15</span>
+                      <span class="date-rel">Przed 4 dniami</span>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="client-cell">
+                      <div class="client-avatar c3">DK</div>
+                      <div class="client-info">
+                        <span class="client-name">Damian Kowal</span>
+                        <span class="client-phone">+48 513 ••• 770</span>
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="service-cell">
+                      <span class="service-name">Wymiana 4× — 15"</span>
+                      <span class="service-meta">Opel Corsa<span class="dot"></span>Klient się nie pojawił</span>
+                    </div>
+                  </td>
+                  <td style="text-align:right"><span class="amount" style="color:var(--text-muted); text-decoration: line-through">140,00<span class="unit"> zł</span></span></td>
+                  <td><span class="status-badge no-show"><span class="dot" aria-hidden="true"></span>No-show</span></td>
+                  <td><span class="source-pill">APP</span></td>
+                  <td>
+                    <div class="row-actions">
+                      <button class="action-btn" type="button" aria-label="Zobacz"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
+                      <button class="action-btn" type="button" aria-label="Więcej"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg></button>
+                    </div>
+                  </td>
+                </tr>
+
+                <!-- Row 10: COMPLETED -->
+                <tr>
+                  <td class="tcol-chk">
+                    <span class="checkbox" role="checkbox" aria-checked="false"></span>
+                  </td>
+                  <td>
+                    <span class="cell-id">#BR-2026-1148</span>
+                    <div class="cell-datetime">
+                      <span class="date-main">Czw · 16 kwie · 10:30</span>
+                      <span class="date-rel">Przed 5 dniami</span>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="client-cell">
+                      <div class="client-avatar c4">EB</div>
+                      <div class="client-info">
+                        <span class="client-name">Ewa Borkowska</span>
+                        <span class="client-phone">+48 602 ••• 991</span>
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="service-cell">
+                      <span class="service-name">Wymiana 4× — 16"</span>
+                      <span class="service-meta">Toyota Corolla<span class="dot"></span>45 min</span>
+                    </div>
+                  </td>
+                  <td style="text-align:right"><span class="amount">160,00<span class="unit"> zł</span></span></td>
+                  <td><span class="status-badge completed"><span class="dot" aria-hidden="true"></span>Zakończone</span></td>
+                  <td><span class="source-pill">APP</span></td>
+                  <td>
+                    <div class="row-actions">
+                      <button class="action-btn" type="button" aria-label="Zobacz"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
+                      <button class="action-btn" type="button" aria-label="Więcej"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg></button>
+                    </div>
+                  </td>
+                </tr>
+
+              </tbody>
+            </table>
+
+            <!-- Pagination -->
+            <div class="table-footer">
+              <span class="range-info"><strong>1–10</strong> z <strong>127</strong> pozycji</span>
+              <span class="divider-v"></span>
+              <span class="page-size">
+                Na stronę
+                <select aria-label="Liczba pozycji na stronę">
+                  <option>10</option>
+                  <option>25</option>
+                  <option>50</option>
+                  <option>100</option>
+                </select>
+              </span>
+              <span class="pag-spacer"></span>
+              <nav class="pag-nav" aria-label="Paginacja">
+                <button class="pag-btn disabled" type="button" aria-label="Poprzednia" disabled>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+                </button>
+                <button class="pag-btn active" type="button" aria-current="page">1</button>
+                <button class="pag-btn" type="button">2</button>
+                <button class="pag-btn" type="button">3</button>
+                <button class="pag-btn" type="button">4</button>
+                <span class="pag-ellipsis">…</span>
+                <button class="pag-btn" type="button">13</button>
+                <button class="pag-btn" type="button" aria-label="Następna">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+                </button>
+              </nav>
+            </div>
+          </div>
+
+        </div>
+
+      </main>
+    </div>
+  </div>
+
+  <!-- States caption -->
+  <div class="states-caption">
+    <div class="state-col">
+      <h4>Stany wiersza i akcje</h4>
+      <ul>
+        <li><strong>Hover</strong> — tło <code>--surface-hover</code>, kursor pointer → klik otwiera szczegół (B2B-08).</li>
+        <li><strong>Selected</strong> (pokazane, 3 wiersze) — tło <code>--accent-muted</code>, checkbox wypełniony amber; pojawia się bulk-bar ze slideUp.</li>
+        <li><strong>Status = PENDING</strong> — żółta kropka z pulsem (wymaga akcji provider); SLA 15 min na potwierdzenie.</li>
+        <li><strong>Status = NO_SHOW</strong> — czerwony badge, kwota przekreślona; liczy się do „Realizacja" w KPI.</li>
+        <li><strong>Nowa rezerwacja</strong> (pokazana #1183) — <code>new-dot</code> amber + tekst „Za X godz" w accent; znika po 1h od otwarcia.</li>
+        <li><strong>Źródło RĘCZNA</strong> — rezerwacja dodana przez providera (np. telefoniczna); nie ma klienta w CRM, brak oceny w flow.</li>
+        <li><strong>Checkbox header</strong> — stan <code>indeterminate</code> (pasek) gdy część wierszy zaznaczona; pełny → zaznacz stronę; toggle → odznacz wszystko.</li>
+      </ul>
+    </div>
+    <div class="state-col">
+      <h4>Filtry, search &amp; eksport</h4>
+      <ul>
+        <li><strong>Search</strong> — fuzzy po: imię, nazwisko, telefon (ostatnie 3 cyfry), ID (#BR-2026-XXXX), marka/model auta; skrót <code>⌘K</code>.</li>
+        <li><strong>Date range</strong> — presety (Dziś · Ten tydzień · 30 dni · Ten kwartał) + custom picker; wszystkie liczniki w topie odświeżają się na żywo.</li>
+        <li><strong>Status tabs</strong> — licznik per tab; klik = pełne przefiltrowanie; URL state w query (<code>?status=pending</code>) dla shareable links.</li>
+        <li><strong>„Więcej" (2)</strong> — liczba aktywnych ukrytych filtrów (np. „Tylko wyważanie", „Kwota &gt; 200 zł") z popoverem do edycji.</li>
+        <li><strong>Empty state</strong> (brak wyników) — ilustracja opony + „Brak rezerwacji pasujących do filtrów. <em>Wyczyść filtry</em>".</li>
+        <li><strong>Eksport CSV</strong> — eksportuje aktualną listę po filtrach (nie zaznaczone); eksport zaznaczonych jest w bulk-bar.</li>
+        <li><strong>A11y</strong> — <code>role="checkbox"</code>, <code>aria-checked="mixed"</code> dla indeterminate; status badges mają text-label (nie tylko kolor); nawigacja klawiaturą Tab/Space/Enter.</li>
+      </ul>
+    </div>
+  </div>
+
+</body>
+</html>

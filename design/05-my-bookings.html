@@ -49,7 +49,7 @@
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body { height: 100%; }
   body {
-    --phone-scale: min(1, calc((100vh - 240px) / 852), calc((100vw - 60px) / 393));
+    --phone-scale: min(1, calc((100vh - 240px) / 852px), calc((100vw - 60px) / 393px));
     font-family: var(--font-body);
     background: var(--bg);
     color: var(--text-primary);
@@ -68,12 +68,6 @@
     gap: 28px;
   }
 
-  .phone-holder {
-    width: calc(393px * var(--phone-scale));
-    height: calc(852px * var(--phone-scale));
-    position: relative;
-    flex-shrink: 0;
-  }
 
   .canvas-label {
     width: 100%;
@@ -130,11 +124,12 @@
       0 24px 48px rgba(0, 0, 0, 0.45),
       inset 0 0 0 1px rgba(255, 255, 255, 0.03);
     overflow: hidden;
-    position: absolute;
-    top: 0; left: 0;
+    position: relative;
     isolation: isolate;
+    flex-shrink: 0;
     transform: scale(var(--phone-scale));
-    transform-origin: top left;
+    transform-origin: top center;
+    margin-bottom: calc((var(--phone-scale) - 1) * 852px);
   }
   .phone::before {
     content: '';
@@ -583,7 +578,7 @@
     max-width: 560px;
     width: 100%;
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 16px;
     padding-top: 12px;
     border-top: 1px solid var(--border);
@@ -612,7 +607,6 @@
     <span class="canvas-meta"><span class="pulse"></span>W:12.9 · US-11 / 12 / 16</span>
   </header>
 
-  <div class="phone-holder">
   <main class="phone" role="region" aria-label="Mockup — moje rezerwacje">
 
     <div class="status-bar" aria-hidden="true">
@@ -686,9 +680,8 @@
             <div class="b-price-col">
               <span class="b-price">180 zł</span>
               <span class="b-price-sep">·</span>
-              <span class="b-pay paid">
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7"/></svg>
-                BLIK · opłacone
+              <span class="b-pay" style="color: var(--text-muted); font-size: 10px;">
+                szacunek · płatne po wizycie
               </span>
             </div>
             <span class="b-arrow" aria-hidden="true">
@@ -736,9 +729,8 @@
             <div class="b-price-col">
               <span class="b-price">200 zł</span>
               <span class="b-price-sep">·</span>
-              <span class="b-pay pending">
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
-                BLIK · autoryzacja
+              <span class="b-pay" style="color: var(--text-muted); font-size: 10px;">
+                szacunek · płatne po wizycie
               </span>
             </div>
             <span class="b-arrow" aria-hidden="true">
@@ -784,9 +776,8 @@
             <div class="b-price-col">
               <span class="b-price" style="color: var(--text-secondary);">220 zł</span>
               <span class="b-price-sep">·</span>
-              <span class="b-pay paid">
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7"/></svg>
-                BLIK · rozliczone
+              <span class="b-pay" style="color: var(--text-muted); font-size: 10px;">
+                zapłacone offline
               </span>
             </div>
             <span class="b-arrow" aria-hidden="true">
@@ -815,7 +806,6 @@
 
     </div>
   </main>
-  </div>
 
   <footer class="caption">
     <div>
