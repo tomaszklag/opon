@@ -1,58 +1,276 @@
 <!DOCTYPE html>
 <html lang="pl">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Spis treści designów</title>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 20px; }
-        ul { list-style-type: none; padding: 0; }
-        li { margin: 5px 0; }
-        a { text-decoration: none; color: #007bff; }
-        a:hover { text-decoration: underline; }
-    </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Opony.app — Spis treści designów</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Bebas+Neue&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    /* surfaces */
+    --bg: #0A0B0E;
+    --bg-tint-top: #12141A;
+    --surface: #14171D;
+    --surface-raised: #1B1E26;
+    --surface-hover: #23272F;
+    /* borders */
+    --border: #262A34;
+    --border-strong: #363B47;
+    --hairline: rgba(255, 255, 255, 0.06);
+    /* text */
+    --text-primary: #F5F4EF;
+    --text-secondary: #9EA2AD;
+    --text-muted: #60646F;
+    --text-on-accent: #0A0B0E;
+    /* accent */
+    --accent: #FF6B1A;
+    --accent-hover: #FF8039;
+    --accent-muted: rgba(255, 107, 26, 0.14);
+    --accent-border: rgba(255, 107, 26, 0.32);
+    --accent-glow: rgba(255, 107, 26, 0.45);
+    /* semantic */
+    --success: #2EE0A0;
+    --warning: #FFB020;
+    --danger: #FF5757;
+    /* fonts */
+    --font-display: 'Bebas Neue', sans-serif;
+    --font-body: 'Archivo', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body { height: 100%; }
+
+  body {
+    font-family: var(--font-body);
+    background: var(--bg);
+    color: var(--text-primary);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    background-image:
+      radial-gradient(ellipse 70% 50% at 50% 0%, rgba(255, 107, 26, 0.07) 0%, transparent 60%),
+      radial-gradient(ellipse 50% 30% at 90% 100%, rgba(46, 224, 160, 0.03) 0%, transparent 60%),
+      linear-gradient(180deg, var(--bg-tint-top) 0%, var(--bg) 30%);
+    background-attachment: fixed;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 48px 24px 80px;
+    gap: 28px;
+  }
+
+  h1 {
+    font-family: var(--font-display);
+    font-size: 48px;
+    letter-spacing: 4px;
+    line-height: 1;
+    color: var(--text-primary);
+    text-align: center;
+    margin-bottom: 40px;
+  }
+
+  .design-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+    max-width: 1200px;
+    width: 100%;
+  }
+
+  .design-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    transition: all 0.2s ease;
+    text-decoration: none;
+    color: var(--text-primary);
+    display: block;
+  }
+
+  .design-item:hover {
+    background: var(--surface-hover);
+    border-color: var(--accent-border);
+    box-shadow: 0 0 20px var(--accent-glow);
+    transform: translateY(-2px);
+  }
+
+  .design-title {
+    font-family: var(--font-mono);
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--accent);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .design-desc {
+    font-size: 14px;
+    color: var(--text-secondary);
+    line-height: 1.4;
+  }
+</style>
 </head>
 <body>
-    <h1>Spis treści plików HTML w katalogu design</h1>
-    <ul>
-        <li><a href="design/01-home.html">01-home</a></li>
-        <li><a href="design/02-provider-detail.html">02-provider-detail</a></li>
-        <li><a href="design/03-time-slot.html">03-time-slot</a></li>
-        <li><a href="design/04-booking-confirmed.html">04-booking-confirmed</a></li>
-        <li><a href="design/05-my-bookings.html">05-my-bookings</a></li>
-        <li><a href="design/06-booking-detail.html">06-booking-detail</a></li>
-        <li><a href="design/07-profile.html">07-profile</a></li>
-        <li><a href="design/08-auth-phone.html">08-auth-phone</a></li>
-        <li><a href="design/09-auth-otp.html">09-auth-otp</a></li>
-        <li><a href="design/10-auth-consent.html">10-auth-consent</a></li>
-        <li><a href="design/11-map.html">11-map</a></li>
-        <li><a href="design/12-rate-visit.html">12-rate-visit</a></li>
-        <li><a href="design/13-reviews.html">13-reviews</a></li>
-        <li><a href="design/14-profil-setup.html">14-profil-setup</a></li>
-        <li><a href="design/15-dodaj-pojazd.html">15-dodaj-pojazd</a></li>
-        <li><a href="design/16-empty-waitlist.html">16-empty-waitlist</a></li>
-        <li><a href="design/17-home-brak-pojazdu.html">17-home-brak-pojazdu</a></li>
-        <li><a href="design/18-home-brak-dostepnosci.html">18-home-brak-dostepnosci</a></li>
-        <li><a href="design/19-offline-state.html">19-offline-state</a></li>
-        <li><a href="design/20-pwa-install.html">20-pwa-install</a></li>
-        <li><a href="design/21-error-boundary.html">21-error-boundary</a></li>
-        <li><a href="design/b2b-01-dashboard.html">b2b-01-dashboard</a></li>
-        <li><a href="design/b2b-02-onboarding-firma.html">b2b-02-onboarding-firma</a></li>
-        <li><a href="design/b2b-03-onboarding-zdjecia.html">b2b-03-onboarding-zdjecia</a></li>
-        <li><a href="design/b2b-04-onboarding-weryfikacja.html">b2b-04-onboarding-weryfikacja</a></li>
-        <li><a href="design/b2b-05-cennik.html">b2b-05-cennik</a></li>
-        <li><a href="design/b2b-06-godziny.html">b2b-06-godziny</a></li>
-        <li><a href="design/b2b-07-strefa.html">b2b-07-strefa</a></li>
-        <li><a href="design/b2b-08-szczegol-rezerwacji.html">b2b-08-szczegol-rezerwacji</a></li>
-        <li><a href="design/b2b-09-kalendarz.html">b2b-09-kalendarz</a></li>
-        <li><a href="design/b2b-10-opinie.html">b2b-10-opinie</a></li>
-        <li><a href="design/b2b-11-profil.html">b2b-11-profil</a></li>
-        <li><a href="design/b2b-12-login.html">b2b-12-login</a></li>
-        <li><a href="design/b2b-13-rezerwacje.html">b2b-13-rezerwacje</a></li>
-        <li><a href="design/b2b-14-ustawienia.html">b2b-14-ustawienia</a></li>
-        <li><a href="design/landing-01-home.html">landing-01-home</a></li>
-        <li><a href="design/landing-02-profil-publiczny.html">landing-02-profil-publiczny</a></li>
-        <li><a href="design/landing-03-miasto.html">landing-03-miasto</a></li>
-    </ul>
+    <h1>Spis treści designów</h1>
+    <div class="design-list">
+        <a href="design/01-home.html" class="design-item">
+            <div class="design-title">01-home</div>
+            <div class="design-desc">Strona główna z listą punktów</div>
+        </a>
+        <a href="design/02-provider-detail.html" class="design-item">
+            <div class="design-title">02-provider-detail</div>
+            <div class="design-desc">Szczegóły dostawcy</div>
+        </a>
+        <a href="design/03-time-slot.html" class="design-item">
+            <div class="design-title">03-time-slot</div>
+            <div class="design-desc">Wybór slotu czasowego</div>
+        </a>
+        <a href="design/04-booking-confirmed.html" class="design-item">
+            <div class="design-title">04-booking-confirmed</div>
+            <div class="design-desc">Potwierdzenie rezerwacji</div>
+        </a>
+        <a href="design/05-my-bookings.html" class="design-item">
+            <div class="design-title">05-my-bookings</div>
+            <div class="design-desc">Moje rezerwacje</div>
+        </a>
+        <a href="design/06-booking-detail.html" class="design-item">
+            <div class="design-title">06-booking-detail</div>
+            <div class="design-desc">Szczegóły rezerwacji</div>
+        </a>
+        <a href="design/07-profile.html" class="design-item">
+            <div class="design-title">07-profile</div>
+            <div class="design-desc">Profil użytkownika</div>
+        </a>
+        <a href="design/08-auth-phone.html" class="design-item">
+            <div class="design-title">08-auth-phone</div>
+            <div class="design-desc">Autoryzacja - telefon</div>
+        </a>
+        <a href="design/09-auth-otp.html" class="design-item">
+            <div class="design-title">09-auth-otp</div>
+            <div class="design-desc">Autoryzacja - kod OTP</div>
+        </a>
+        <a href="design/10-auth-consent.html" class="design-item">
+            <div class="design-title">10-auth-consent</div>
+            <div class="design-desc">Autoryzacja - zgoda</div>
+        </a>
+        <a href="design/11-map.html" class="design-item">
+            <div class="design-title">11-map</div>
+            <div class="design-desc">Mapa lokalizacji</div>
+        </a>
+        <a href="design/12-rate-visit.html" class="design-item">
+            <div class="design-title">12-rate-visit</div>
+            <div class="design-desc">Ocena wizyty</div>
+        </a>
+        <a href="design/13-reviews.html" class="design-item">
+            <div class="design-title">13-reviews</div>
+            <div class="design-desc">Opinie</div>
+        </a>
+        <a href="design/14-profil-setup.html" class="design-item">
+            <div class="design-title">14-profil-setup</div>
+            <div class="design-desc">Konfiguracja profilu</div>
+        </a>
+        <a href="design/15-dodaj-pojazd.html" class="design-item">
+            <div class="design-title">15-dodaj-pojazd</div>
+            <div class="design-desc">Dodaj pojazd</div>
+        </a>
+        <a href="design/16-empty-waitlist.html" class="design-item">
+            <div class="design-title">16-empty-waitlist</div>
+            <div class="design-desc">Pusta lista oczekiwania</div>
+        </a>
+        <a href="design/17-home-brak-pojazdu.html" class="design-item">
+            <div class="design-title">17-home-brak-pojazdu</div>
+            <div class="design-desc">Strona główna - brak pojazdu</div>
+        </a>
+        <a href="design/18-home-brak-dostepnosci.html" class="design-item">
+            <div class="design-title">18-home-brak-dostepnosci</div>
+            <div class="design-desc">Strona główna - brak dostępności</div>
+        </a>
+        <a href="design/19-offline-state.html" class="design-item">
+            <div class="design-title">19-offline-state</div>
+            <div class="design-desc">Stan offline</div>
+        </a>
+        <a href="design/20-pwa-install.html" class="design-item">
+            <div class="design-title">20-pwa-install</div>
+            <div class="design-desc">Instalacja PWA</div>
+        </a>
+        <a href="design/21-error-boundary.html" class="design-item">
+            <div class="design-title">21-error-boundary</div>
+            <div class="design-desc">Granica błędu</div>
+        </a>
+        <a href="design/b2b-01-dashboard.html" class="design-item">
+            <div class="design-title">b2b-01-dashboard</div>
+            <div class="design-desc">Dashboard B2B</div>
+        </a>
+        <a href="design/b2b-02-onboarding-firma.html" class="design-item">
+            <div class="design-title">b2b-02-onboarding-firma</div>
+            <div class="design-desc">Onboarding firmy</div>
+        </a>
+        <a href="design/b2b-03-onboarding-zdjecia.html" class="design-item">
+            <div class="design-title">b2b-03-onboarding-zdjecia</div>
+            <div class="design-desc">Onboarding - zdjęcia</div>
+        </a>
+        <a href="design/b2b-04-onboarding-weryfikacja.html" class="design-item">
+            <div class="design-title">b2b-04-onboarding-weryfikacja</div>
+            <div class="design-desc">Onboarding - weryfikacja</div>
+        </a>
+        <a href="design/b2b-05-cennik.html" class="design-item">
+            <div class="design-title">b2b-05-cennik</div>
+            <div class="design-desc">Cennik B2B</div>
+        </a>
+        <a href="design/b2b-06-godziny.html" class="design-item">
+            <div class="design-title">b2b-06-godziny</div>
+            <div class="design-desc">Godziny pracy</div>
+        </a>
+        <a href="design/b2b-07-strefa.html" class="design-item">
+            <div class="design-title">b2b-07-strefa</div>
+            <div class="design-desc">Strefa działania</div>
+        </a>
+        <a href="design/b2b-08-szczegol-rezerwacji.html" class="design-item">
+            <div class="design-title">b2b-08-szczegol-rezerwacji</div>
+            <div class="design-desc">Szczegóły rezerwacji B2B</div>
+        </a>
+        <a href="design/b2b-09-kalendarz.html" class="design-item">
+            <div class="design-title">b2b-09-kalendarz</div>
+            <div class="design-desc">Kalendarz B2B</div>
+        </a>
+        <a href="design/b2b-10-opinie.html" class="design-item">
+            <div class="design-title">b2b-10-opinie</div>
+            <div class="design-desc">Opinie B2B</div>
+        </a>
+        <a href="design/b2b-11-profil.html" class="design-item">
+            <div class="design-title">b2b-11-profil</div>
+            <div class="design-desc">Profil B2B</div>
+        </a>
+        <a href="design/b2b-12-login.html" class="design-item">
+            <div class="design-title">b2b-12-login</div>
+            <div class="design-desc">Logowanie B2B</div>
+        </a>
+        <a href="design/b2b-13-rezerwacje.html" class="design-item">
+            <div class="design-title">b2b-13-rezerwacje</div>
+            <div class="design-desc">Rezerwacje B2B</div>
+        </a>
+        <a href="design/b2b-14-ustawienia.html" class="design-item">
+            <div class="design-title">b2b-14-ustawienia</div>
+            <div class="design-desc">Ustawienia B2B</div>
+        </a>
+        <a href="design/landing-01-home.html" class="design-item">
+            <div class="design-title">landing-01-home</div>
+            <div class="design-desc">Landing page - home</div>
+        </a>
+        <a href="design/landing-02-profil-publiczny.html" class="design-item">
+            <div class="design-title">landing-02-profil-publiczny</div>
+            <div class="design-desc">Landing page - profil publiczny</div>
+        </a>
+        <a href="design/landing-03-miasto.html" class="design-item">
+            <div class="design-title">landing-03-miasto</div>
+            <div class="design-desc">Landing page - miasto</div>
+        </a>
+    </div>
 </body>
 </html>
