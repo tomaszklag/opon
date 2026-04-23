@@ -1,0 +1,65 @@
+@import url('https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Bebas+Neue&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+:root {
+  /* surfaces */
+  --bg: #0A0B0E;
+  --bg-tint-top: #12141A;
+  --surface: #14171D;
+  --surface-raised: #1B1E26;
+  --surface-hover: #23272F;
+  /* borders */
+  --border: #262A34;
+  --border-strong: #363B47;
+  --hairline: rgba(255, 255, 255, 0.06);
+  /* text */
+  --text-primary: #F5F4EF;
+  --text-secondary: #9EA2AD;
+  --text-muted: #60646F;
+  --text-on-accent: #0A0B0E;
+  /* accent — amber */
+  --accent: #FF6B1A;
+  --accent-hover: #FF8039;
+  --accent-muted: rgba(255, 107, 26, 0.14);
+  --accent-border: rgba(255, 107, 26, 0.32);
+  --accent-glow: rgba(255, 107, 26, 0.45);
+  /* semantic */
+  --success: #2EE0A0;
+  --warning: #FFB020;
+  --danger: #FF5757;
+  --info: #3B8EEA;
+  /* fonts */
+  --font-display: 'Bebas Neue', sans-serif;
+  --font-body: 'Archivo', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  /* spacing */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  /* radius */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-full: 9999px;
+  /* shadows */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.6);
+  --shadow-accent: 0 0 20px var(--accent-glow);
+  /* transitions */
+  --transition-fast: 0.12s ease;
+  --transition-base: 0.18s ease;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}

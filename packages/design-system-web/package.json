@@ -3,14 +3,36 @@
   "version": "0.1.0",
   "private": true,
   "main": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./global.css": "./src/global.css"
+  },
   "scripts": {
-    "build": "echo \"design-system-web: wypełnia DS-0\"",
-    "lint": "echo \"design-system-web: no lint yet\""
+    "build": "echo \"design-system-web: transpiled by Next.js via transpilePackages\"",
+    "storybook": "storybook dev -p 6006",
+    "build-storybook": "storybook build",
+    "lint": "eslint src --ext .ts,.tsx",
+    "type-check": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0"
   },
   "dependencies": {
-    "@opony/design-tokens": "workspace:*"
+    "@opony/design-tokens": "workspace:*",
+    "react-hot-toast": "^2.4.1"
   },
   "devDependencies": {
-    "typescript": "^5.6.3"
+    "@opony/eslint-config": "workspace:*",
+    "@storybook/addon-essentials": "^8.4.7",
+    "@storybook/react": "^8.4.7",
+    "@storybook/react-vite": "^8.4.7",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "storybook": "^8.4.7",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.0"
   }
 }

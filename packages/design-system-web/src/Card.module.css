@@ -1,0 +1,23 @@
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  box-shadow: var(--shadow-sm);
+  transition: border-color var(--transition-base), box-shadow var(--transition-base);
+}
+
+.hoverable {
+  cursor: pointer;
+}
+
+.hoverable:hover {
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-md);
+  background: var(--surface-raised);
+}
+
+.hoverable:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}

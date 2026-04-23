@@ -9,6 +9,7 @@ build/
 out/
 .expo/
 .turbo/
+storybook-static/
 
 # Environment files
 .env

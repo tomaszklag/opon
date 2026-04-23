@@ -31,6 +31,15 @@
     "husky": "^9.1.7",
     "lint-staged": "^15.2.10"
   },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "husky",
+      "@prisma/engines",
+      "prisma",
+      "sharp"
+    ]
+  },
   "lint-staged": {
     "**/*.{ts,tsx,js,jsx}": [
       "eslint --fix",

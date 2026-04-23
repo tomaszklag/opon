@@ -4,7 +4,8 @@
   "private": true,
   "main": "./tokens.json",
   "exports": {
-    ".": "./tokens.json"
+    ".": "./tokens.json",
+    "./ts": "./src/index.ts"
   },
   "scripts": {
     "build": "echo \"design-tokens: no build step\"",
