@@ -102,11 +102,9 @@ Konfiguracja:
 - `pnpm-workspace.yaml`
 - `.nvmrc` (Node 20)
 - `.gitignore` (standard Node + wygenerowane pliki)
-- `.env.example` z placeholderami per `architektura.md §4` (DATABASE*URL, JWT_SECRET, TWILIO*_, AWS\__,
+- `.env.example` z placeholderami per `architektura.md §4` (DATABASE*URL, JWT_SECRET, TWILIO*\_, AWS\_\_,
   RESEND_API_KEY, SENTRY_DSN, GOOGLE_MAPS_API_KEY, GUS_API_KEY)
-- `docker-compose.yml` (Postgres 16 + Mailpit — do lokalnego dev)
 - `README.md` (setup guide zgodny z `architektura.md §4`)
-- `.github/workflows/ci.yml` — lint → test → build (na każdy PR)
 
 Per workspace minimalny placeholder:
 

@@ -12,6 +12,7 @@
     "build": "turbo build",
     "lint": "turbo lint",
     "type-check": "turbo type-check",
+    "generate:api-client": "openapi-typescript http://localhost:4000/v1/docs-json -o packages/api-client/src/schema.d.ts",
     "db:migrate": "cd apps/api && pnpm prisma migrate dev",
     "db:seed": "cd apps/api && pnpm prisma db seed",
     "db:studio": "cd apps/api && pnpm prisma studio",

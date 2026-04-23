@@ -6,5 +6,7 @@ onlyBuiltDependencies:
   - '@nestjs/core'
   - '@prisma/client'
   - '@prisma/engines'
+  - '@sentry/cli'
+  - msw
   - prisma
   - unrs-resolver

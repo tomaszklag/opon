@@ -2,23 +2,26 @@
   "name": "@opony/api-client",
   "version": "0.1.0",
   "private": true,
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "default": "./dist/index.js"
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
     }
   },
   "scripts": {
-    "build": "echo \"api-client: wypełnia INFRA-DX\"",
+    "build": "tsc --noEmit",
     "lint": "echo \"api-client: no lint yet\"",
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
-    "@opony/shared-types": "workspace:*"
+    "@opony/shared-types": "workspace:*",
+    "openapi-fetch": "^0.12.0"
   },
   "devDependencies": {
+    "@types/node": "^22.10.0",
+    "openapi-typescript": "^7.0.0",
     "typescript": "^5.6.3"
   }
 }
