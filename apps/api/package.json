@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
-    "dev": "nest start --watch",
+    "dev": "nest build && nest start --watch",
     "start": "node dist/main",
     "lint": "eslint src --ext .ts",
     "type-check": "tsc --noEmit",

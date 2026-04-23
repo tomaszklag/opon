@@ -5,7 +5,13 @@ module.exports = {
     project: './tsconfig.json',
     tsconfigRootDir: __dirname,
   },
-  ignorePatterns: ['dist/', 'prisma/seed.d.ts'],
+  ignorePatterns: ['dist/', 'prisma/'],
+  overrides: [
+    {
+      files: ['.eslintrc.js', '*.config.js'],
+      parserOptions: { project: null },
+    },
+  ],
   rules: {
     '@typescript-eslint/interface-name-prefix': 'off',
     '@typescript-eslint/explicit-function-return-type': 'off',

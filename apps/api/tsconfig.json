@@ -20,6 +20,6 @@
       "@opony/shared-types": ["../../packages/shared-types/src/index.ts"]
     }
   },
-  "include": ["src", ".eslintrc.js", "prisma/**/*.ts"],
-  "exclude": ["node_modules", "dist", "prisma/seed.d.ts"]
+  "include": ["src"],
+  "exclude": ["node_modules", "dist"]
 }
