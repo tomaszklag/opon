@@ -26,3 +26,7 @@ type Story = StoryObj<typeof Card>;
 export const Default: Story = {};
 export const Hoverable: Story = { args: { hoverable: true } };
 export const Clickable: Story = { args: { hoverable: true, onClick: () => alert('Kliknięto!') } };
+export const WithAccent: Story = { args: { accent: true } };
+export const AccentClickable: Story = {
+  args: { accent: true, hoverable: true, onClick: () => alert('Kliknięto!') },
+};

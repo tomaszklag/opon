@@ -6,6 +6,7 @@ export interface CardProps {
   children: React.ReactNode;
   className?: string;
   hoverable?: boolean;
+  accent?: boolean;
   onClick?: () => void;
   as?: React.ElementType;
 }
@@ -14,10 +15,16 @@ export function Card({
   children,
   className,
   hoverable = false,
+  accent = false,
   onClick,
   as: Tag = 'div',
 }: CardProps) {
-  const cls = [styles.card, hoverable || onClick ? styles.hoverable : null, className]
+  const cls = [
+    styles.card,
+    hoverable || onClick ? styles.hoverable : null,
+    accent ? styles.accent : null,
+    className,
+  ]
     .filter(Boolean)
     .join(' ');
 
