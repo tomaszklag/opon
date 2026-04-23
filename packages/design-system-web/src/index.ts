@@ -13,7 +13,9 @@ export * from './display/Avatar';
 export * from './display/Badge';
 export * from './display/Card';
 export * from './display/Chip';
+export * from './display/DataTable';
 export * from './display/EmptyState';
+export * from './display/StarRating';
 export * from './display/StepIndicator';
 
 // feedback

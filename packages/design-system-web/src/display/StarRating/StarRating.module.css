@@ -1,0 +1,69 @@
+.root {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.star {
+  display: flex;
+  align-items: center;
+  color: var(--border);
+  transition: color var(--transition-fast);
+}
+
+.star.filled {
+  color: var(--accent);
+}
+
+/* Sizes */
+.sm .star svg,
+.sm .star {
+  width: 16px;
+  height: 16px;
+}
+
+.md .star svg,
+.md .star {
+  width: 20px;
+  height: 20px;
+}
+
+.lg .star svg,
+.lg .star {
+  width: 28px;
+  height: 28px;
+}
+
+/* Interactive */
+.interactive .star {
+  cursor: pointer;
+}
+
+.interactive .star:hover,
+.interactive .star:hover ~ .star {
+  color: var(--accent);
+}
+
+.input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
