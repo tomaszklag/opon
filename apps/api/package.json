@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
-    "dev": "nest build && nest start --watch",
+    "dev": "nodemon",
     "start": "node dist/main",
     "lint": "eslint src --ext .ts",
     "type-check": "tsc --noEmit",
@@ -30,6 +30,7 @@
     "@opony/eslint-config": "workspace:*",
     "@types/express": "^5.0.0",
     "@types/node": "^22.10.0",
+    "nodemon": "^3.1.14",
     "prisma": "^5.22.0",
     "ts-loader": "^9.5.1",
     "ts-node": "^10.9.2",
