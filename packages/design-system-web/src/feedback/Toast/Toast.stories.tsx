@@ -1,8 +1,7 @@
 'use client';
-import React from 'react';
 import type { Meta, StoryObj } from '@storybook/react';
 import { Toaster, toast } from './Toast';
-import { Button } from './Button';
+import { Button } from '../../forms/Button';
 
 const meta: Meta = {
   title: 'Design System/Toast',
