@@ -1,0 +1,18 @@
+// This is your Prisma schema file.
+// Tabele tworzy BE-1a w Sprint 1.
+// Learn more: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Placeholder model — usuwa BE-1a w Sprint 1
+// model Placeholder {
+//   id        String   @id @default(cuid())
+//   createdAt DateTime @default(now())
+// }
