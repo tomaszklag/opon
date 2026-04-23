@@ -1,0 +1,50 @@
+.root {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+}
+
+.cell {
+  width: 48px;
+  height: 58px;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: 0;
+  color: var(--text-primary);
+  background: var(--surface-raised);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-md);
+  outline: none;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast),
+    background var(--transition-fast);
+  caret-color: var(--accent);
+}
+
+.cell::selection {
+  background: var(--accent-muted);
+}
+
+.cell:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-muted);
+}
+
+.cell.filled {
+  background: var(--surface-raised);
+  border-color: var(--accent-border);
+}
+
+.cell.error {
+  border-color: var(--danger);
+}
+
+.cell.error:focus {
+  box-shadow: 0 0 0 3px rgba(255, 87, 87, 0.16);
+}
+
+.cell:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
