@@ -368,16 +368,20 @@ Po merge do `main`:
 
 ## 6. Harmonogram agentów per sprint
 
+> **ADR-009 B2B-first reorder (2026-04-22):** Sprint 1-3 = Faza A (provider portal LIVE → Milestone A). Sprint 4-6 = Faza B (klient z realnymi danymi 8 pilotów → Milestone B). Szczegóły w [`plan-sprintow.md §20`](../docs/plan-sprintow.md#20-plan-sprintów-dla-agentów-ai) + [`checklist-orkiestratora.md`](../docs/checklist-orkiestratora.md).
+
 | Sprint | Orkiestrator | Architekt | Projektant | Dev BE | Dev FE | Tester |
 |---|---|---|---|---|---|---|
-| **0** | Setup repo, env | Review scaffold | **DS-0** (design system) | INFRA-REPO, INFRA-DX | — | — |
-| **1** | Uruchom 4 agentów | Review schema (ALL tables!) | UI review FE-1, FE-2 | BE-1a, BE-1b, BE-2 | FE-1, FE-2 | Smoke |
-| **2** | Uruchom 2 agentów | Code review | UI review FE-3 | BE-3 | FE-3 | Smoke |
-| **3** | Uruchom 2 agentów | Code review | UI review FE-4 | BE-4 | FE-4 | Smoke |
-| **4** | Uruchom 3 agentów | Code review | UI review FE-5a, FE-5b | BE-5 | FE-5a, FE-5b | Smoke |
-| **5** | Uruchom 3 agentów | Code review | UI review FE-6a, FE-6b | BE-6 | FE-6a, FE-6b | Smoke |
-| **6** | Uruchom 3 + Retool | Code review + Retool config | UI review FE-7a, FE-7b | BE-7 | FE-7a, FE-7b | Smoke |
-| **7** | Final review | **Security audit** | **A11y audit** | BE-8a, BE-8b | FE-8 | **QA-E2E + QA-CRON** |
+| **0** | Setup repo, env | Review scaffold | **DS-0** (ekstrakcja tokenów z `/design`) | INFRA-REPO, INFRA-DX | — | — |
+| **1 · Faza A** | 4 agenty + Retool admin | Review schema (ALL tables!) | UI review FE-panel-1 | BE-1a, BE-1b (shared OTP + provider onboarding + GUS + S3) | FE-panel-1 (login b2b-12 + wizard b2b-02/03/04) | Smoke |
+| **2 · Faza A** | 3 agenty | Code review (2-step OTP, soft-delete) | UI review FE-panel-2, FE-panel-3 | BE-2 (pricing/schedule/zone/photos/profile/settings) | FE-panel-2 (cennik/godziny/strefa), FE-panel-3 (profil/ustawienia) | Smoke |
+| **3 · Faza A** | 5 agentów + Retool-2 | Code review (state machine booking KRYTYCZNE) | UI review FE-panel-4/5 + FE-landing-1a | BE-3 (Booking + manual + state machine + CSV) | FE-panel-4 (dashboard/kalendarz/lista/szczegół), FE-panel-5 (opinie + b2b-15 waiting), FE-landing-1a (landing provider v1) | Smoke |
+| **★ MILESTONE A** | **Onboard 2-3 pilotów + GTM start + decision gate (iterate vs Faza B)** | | | | | |
+| **4 · Faza B** | 3 agenty | Code review (haversine, availability) | UI review FE-mobile-1, FE-mobile-2 | BE-4 (client auth reuse + vehicle + catalog + waitlist) | FE-mobile-1 (auth 08-10 + onboarding 14-15 + profil 07), FE-mobile-2 (home 01 + detail 02 + map 11 + empty 16-18) | Smoke |
+| **5 · Faza B** | 3 agenty | Code review (409 race, idempotency) | UI review FE-mobile-3 | BE-5 (POST /bookings + slot lock) | FE-mobile-3 (booking flow 03-06), FE-panel-6 (PENDING refinement) | Smoke |
+| **6 · Faza B** | 4 agenty | Code review (review filter, cron) | UI review FE-mobile-4/5 + FE-landing-2 | BE-6 (review + 2 crony) | FE-mobile-4 (rate 12 + reviews 13), FE-mobile-5 (polish 19-21), FE-landing-2 (client pivot + /p/slug + /nowy-sacz) | Smoke |
+| **★ MILESTONE B** | **Full marketplace LIVE · F&F testing → soft launch gate** | | | | | |
+| **7** | Final review | **Security audit** | **A11y audit** | BE-8a, BE-8b | FE-8 (polish + manual booking refinement) | **QA-E2E + QA-CRON** |
 
 ---
 

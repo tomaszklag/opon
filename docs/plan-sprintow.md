@@ -1593,323 +1593,467 @@ DoD: Retool queue pokazuje PENDING providerów, approve/reject działa, provider
 
 ---
 
-### Sprint 2 (tydzień 2) — Katalog + Mapa
+### Sprint 2 (tydzień 2) — Provider profile CRUD (cennik · godziny · strefa · profil · ustawienia)
 
-**Agent BE-3 — Provider listing + availability** `(US-38, US-04a, US-04b, US-05, US-06)` — **SCHEMA OWNER** (jeśli nowe tabele)
+**Agent BE-2 — Provider profile modules** `(US-32, US-33, US-34, US-12, US-13)`
 
 Prompt:
-> Zbuduj endpointy katalogu providerów. GET /v1/providers (publiczny, @Public, bez auth) — query: city, lat, lng, tireSize, date, sort (distance/price/rating), page (20/stronę). Dla każdego providera oblicz: dystans (haversine: `acos(sin(lat1)*sin(lat2) + cos(lat1)*cos(lat2)*cos(lng2-lng1)) * 6371` w raw SQL / Prisma `$queryRaw`), cenę per tireSize (lookup PricingTier), najbliższy wolny slot (generuj sloty z WorkingHours − ScheduleException − istniejące Booking WHERE status IN (PENDING, CONFIRMED, IN_PROGRESS)). GET /v1/providers/:slug — szczegóły + cennik + godziny + top 3 opinie. GET /v1/providers/:slug/availability — sloty per dzień na 7 dni do przodu (A:14.4 response format). GET /v1/providers/:slug/reviews — paginacja, sortowanie (newest, rating_desc, rating_asc), filtrowanie po gwiazdkach. Walidacja: zwracaj tylko APPROVED providerów.
+> Rozbuduj moduł providera o endpointy konfiguracyjne (schemat Prisma już istnieje — używaj istniejących tabel PricingTier, WorkingHours, ScheduleException, ProviderPhoto).
 >
-> Update OpenAPI spec po dodaniu endpointów. Rozszerz seed o dane slotów (WorkingHours dla 5 providerów).
+> Endpointy (prefix /v1/provider/me, wszystkie za `@RequireProviderOwner()`):
+> - GET/PUT /pricing — 3 tiery cen (≤15"/16-17"/≥18") + dopłaty (dostawcze, wyważanie, TPMS). Walidacja: positive numbers, max 9999 zł.
+> - GET/PUT /working-hours — 7 dni × {open, close, slotMinutes, isClosed}; slotMinutes per dzień (nadpisywalne — patrz `b2b-06-godziny.html`).
+> - GET/POST/DELETE /exceptions — urlopy / święta (dateRange, reason).
+> - GET/POST/DELETE/PATCH /photos — max 10 zdjęć, max 5 MB każde, cover flag. S3 reuse z Sprint 1 UploadService.
+> - GET/PATCH /profile — nazwa wyświetlana, opis (max 500), tagline (max 60), typ serwisu (STATIONARY|MOBILE|BOTH), zakres usług (carTypes[], tireSizes[], extraServices[]). Patrz `b2b-11-profil.html`.
+> - GET/PATCH /service-area — dla MOBILE: centrum (lat/lng) + promień km (max 50).
+> - GET/PATCH /settings — telefon kontakt, email admin, notyfikacje (matrix: eventType × channel SMS/Email/Push), pauza warsztatu (isActive + unpauseAt). Patrz `b2b-14-ustawienia.html`.
+> - POST /settings/change-phone/start + /confirm — 2-step OTP flow (US-47 provider).
+> - POST /auth/logout-all — invalidate all refresh tokens oprócz current session.
+> - DELETE /me — soft delete 30-day window (US-46 provider).
 
 Output:
 ```
-/apps/api/src/catalog/        — module, controller, service
-/apps/api/src/availability/   — slot generation service
-/apps/api/src/review/         — module (read-only)
+/apps/api/src/provider-panel/pricing/      — controller + service
+/apps/api/src/provider-panel/schedule/     — working-hours + exceptions
+/apps/api/src/provider-panel/zone/         — service-area
+/apps/api/src/provider-panel/profile/      — profile + photos
+/apps/api/src/provider-panel/settings/     — notifications, pause, phone change, sessions, delete
 ```
 
-Referencje: S:13.1 (Provider, PricingTier, WorkingHours, Booking), A:14.4, US-38, US-04a, US-04b.
-DoD: `/v1/providers?lat=49.62&lng=20.69&tireSize=205/55R16&sort=distance` → lista z cenami/slotami. `/v1/providers/:slug/availability` → 7 dni slotów. Testy: pusta lista, 1 provider, sortowanie, filtrowanie.
+Referencje: S:13.1, A:14.6, A:14.7, `design/b2b-05-cennik.html`, `b2b-06-godziny.html`, `b2b-07-strefa.html`, `b2b-11-profil.html`, `b2b-14-ustawienia.html`. US-32, US-33, US-34, US-12, US-13, US-46 provider, US-47 provider.
+DEPENDS ON: Sprint 1 BE-1b (auth + provider base).
+DoD: CRUD wszystkich modułów. Walidacje Zod. 2-step OTP change-phone. Soft delete 30d. Testy ≥ 8.
 
-**Agent FE-3 — Klient: Lista + Mapa + Filtry** `(US-38, US-04a, US-04b, US-05, US-06)` — **startuje z MSW od dnia 1**
+**Agent FE-panel-2 — Panel cennik · godziny · strefa** `(US-32, US-33, US-34)` — **startuje z MSW**
 
 Prompt:
-> Zbuduj główny ekran klienta — wyszukiwarka providerów. **Dzień 1–2: buduj z MSW mockami** (handlers na `/v1/providers` zwracające seed data z Sprint 0). **Dzień 3–5: swap na realny API z BE-3.**
+> Zbuduj 3 ekrany konfiguracyjne panelu + layout z sidebar menu (z SideMenu `@opony/design-system-web`). Wszystko za guard PENDING → jeśli status ≠ APPROVED, pokaż ekran blokady (reuse `b2b-04-onboarding-weryfikacja.html`).
 >
-> 2 widoki (toggle): lista kart (W:12.1) i mapa Google (W:12.13). Na starcie: browser Geolocation API → jeśli denied, dropdown „Wybierz miasto" (v0: tylko Nowy Sącz). Karta providera (`@opony/design-system Card`): logo, nazwa, ocena (Badge), dystans, cena „180 zł / wymiana 4 opon" (jawny label!), najbliższy slot. Filtry: [Dziś][Jutro][Weekend] chips + sortowanie dropdown. Search box (debounce 300ms, filtruje po nazwie client-side). Mapa: `@googlemaps/js-api-loader`, piny z oceną, tap → mini-karta z CTA. Empty states (`@opony/design-system EmptyState`): brak pojazdu, brak providerów (waitlist form), wszyscy zajęci.
->
-> Użyj `@opony/api-client` (typed fetch). Filtrowanie client-side na załadowanej liście (bez re-requestu do API).
+> **Ekrany (pixel-match z `/design`):**
+> 1. Layout z sidebar → wzór z `b2b-01-dashboard.html` (Operacje: Pulpit/Kalendarz/Rezerwacje/Opinie · Firma: Profil/Godziny/Strefa/Cennik · Ustawienia). Pulpit + kalendarz + rezerwacje + opinie to placeholdery (pełna impl w Sprint 3).
+> 2. Cennik → [`b2b-05-cennik.html`](../design/b2b-05-cennik.html) — 3 tiery (≤15" / 16-17" popular / ≥18") z live preview, dopłaty (dostawcze, wyważanie, TPMS).
+> 3. Godziny → [`b2b-06-godziny.html`](../design/b2b-06-godziny.html) — 7 dni × (open/close/slotMinutes/isClosed) z per-day slot override (Cz=60min, Sb=30min przykład), wyjątki (+ Dodaj urlop).
+> 4. Strefa → [`b2b-07-strefa.html`](../design/b2b-07-strefa.html) — Google Maps SVG embed z draggable markerem + slider promień (1-50 km) + lista dzielnic w zasięgu.
 
 Output:
 ```
-/apps/client/app/(main)/search/page.tsx
-/apps/client/components/ProviderCard.tsx
-/apps/client/components/ProviderMap.tsx
-/apps/client/components/FilterBar.tsx
-/apps/client/components/SearchBox.tsx
+/apps/panel/app/(main)/layout.tsx             — sidebar + topbar z b2b-01
+/apps/panel/app/(main)/cennik/page.tsx        — b2b-05 impl
+/apps/panel/app/(main)/godziny/page.tsx       — b2b-06 impl
+/apps/panel/app/(main)/strefa/page.tsx        — b2b-07 impl
+/apps/panel/app/(blocked)/page.tsx            — reuse b2b-04 dla PENDING_APPROVAL
+/apps/panel/components/PricingEditor.tsx
+/apps/panel/components/ScheduleGrid.tsx
+/apps/panel/components/ServiceAreaMap.tsx
 ```
 
-Referencje: W:12.1, W:12.13, US-38, US-04a, US-04b, US-05, US-06, US-40, `@opony/design-system`.
-DoD: Lista i mapa z danymi (MSW, potem real API). Filtry + sort. Geolokalizacja z fallback. 3 empty states. Responsive.
+Referencje: `design/b2b-05-cennik.html`, `b2b-06-godziny.html`, `b2b-07-strefa.html`, `b2b-01-dashboard.html` (layout wzór), US-32, US-33, US-34, `@opony/design-system-web`.
+DoD: 3 ekrany CRUD z save. Mapa działa (Google Maps JS API). Slot per dzień override. PENDING blockade screen. Pixel-match.
+
+**Agent FE-panel-3 — Panel profil warsztatu + ustawienia konta** `(US-12, US-13, US-46 provider, US-47 provider)` — **startuje z MSW**
+
+Prompt:
+> Zbuduj 2 ekrany: edycja profilu publicznego + ustawienia konta.
+>
+> **Ekrany:**
+> 1. Profil warsztatu → [`b2b-11-profil.html`](../design/b2b-11-profil.html) — form po lewej (5 sekcji: Tożsamość, Typ serwisu, Usługi, Galeria, Kontakt), **live preview** phone mockup po prawej pokazujący jak klient widzi profil. Autosave pill „Zapisano · Xs temu". Galeria: drag-to-reorder, ★ okładka, upload S3 do 10 zdjęć.
+> 2. Ustawienia konta → [`b2b-14-ustawienia.html`](../design/b2b-14-ustawienia.html) — TOC scroll-spy (6 sekcji): Kontakt (zmiana tel 2-step OTP), Pauza warsztatu (4 presety), Powiadomienia matrix (6 eventów × 3 kanały), Aktywne sesje (lista + wyloguj wszystkie inne), Dane RODO (eksport mailto + zgłoś nieprawidłowość), Danger zone (zawieś widoczność + usuń konto 30d soft-delete).
+
+Output:
+```
+/apps/panel/app/(main)/profil/page.tsx        — b2b-11 impl
+/apps/panel/app/(main)/ustawienia/page.tsx    — b2b-14 impl
+/apps/panel/components/ProfilePreview.tsx     — live preview phone mockup
+/apps/panel/components/GalleryReorder.tsx     — drag-reorder + S3 upload
+/apps/panel/components/PhoneChangeFlow.tsx    — 2-step OTP
+/apps/panel/components/NotificationMatrix.tsx
+```
+
+Referencje: `design/b2b-11-profil.html`, `b2b-14-ustawienia.html`, US-12, US-13, US-46 provider, US-47 provider.
+DoD: Profil z live preview + autosave. Galeria reorder. Ustawienia: zmiana tel 2-step, pauza 4 presety, notyfikacje matrix, sesje, danger zone z confirm.
 
 **Checklista integracyjna Sprint 2:**
-- [ ] Otwórz client PWA → mapa z 5 providerami z seeda
-- [ ] Filtry: „Dziś" → lista się kurczy; sortowanie: cena → inna kolejność
-- [ ] Klik na provider → przejście do profilu (placeholder na razie)
-- [ ] Empty state: wpisz miasto „Wrocław" → waitlist form
+- [ ] Provider approved → login → dashboard placeholder → cennik → save → reload → zachowane
+- [ ] Godziny: ustaw Pn-Pt 8-18, Sb 9-14, Nd closed → slot przeliczone per dzień
+- [ ] Strefa: drag marker + promień 15km → save
+- [ ] Profil: edycja opisu + dodaj 3 zdjęcia do galerii → live preview się aktualizuje
+- [ ] Zmiana numeru: OTP na stary + nowy → zmiana w DB + AuditLog
+- [ ] Pauza warsztatu „Weekend" → Provider.isActive=false do pon 8:00 (cron)
 
 ---
 
-### Sprint 3 (tydzień 3) — Rezerwacja (bez płatności — ADR-004)
+### Sprint 3 (tydzień 3) — Provider daily ops + Booking entity + Landing provider v1 — ★ Milestone A
 
-**Agent BE-4 — Booking + bookingExpiry** `(US-08a–c, US-09, US-10, US-54)` — **SCHEMA OWNER**
+**Agent BE-3 — Booking entity + manual booking + state machine** `(US-20, US-21, US-27, US-28, US-29, US-54)` — **SCHEMA OWNER dla Booking**
 
 Prompt:
-> Zbuduj moduł rezerwacji w NestJS. Tabela Booking (migracja Prisma — jeśli nie istnieje z Sprint 0 seed). **POC v0 bez płatności — nie tworzymy modułu Payment ani integracji Przelewy24** (ADR-004).
+> Zbuduj moduł rezerwacji (Booking już w schemacie Prisma z BE-1a). **POC v0 bez płatności — ADR-004.** Client-side POST /bookings dopiero w Sprint 5; w tym sprincie tylko provider-side.
 >
-> POST /v1/bookings — waliduj: slot wolny (`SELECT ... FOR UPDATE` w transakcji Prisma `$transaction`), adres w strefie (haversine ≤ serviceRadiusKm), pojazd należy do klienta (vehicleId z JWT userId), klient nie zbanowany. Utwórz Booking (PENDING). Zwróć `{booking}`. Nagłówek `Idempotency-Key` → sprawdź w tabeli. **Wyślij SMS do providera** („Nowa rezerwacja od [imię] — akceptuj w ciągu 2h: [link do panelu]") — Twilio.
+> Endpointy:
+> - POST /v1/provider/me/bookings — **manual booking** (US-30): provider wpisuje klienta telefonicznego — body {clientPhone, clientName, tireSize, startAt, address, notes}. Znajdź User po phone LUB utwórz nowego z role=CLIENT (bez OTP — status „guest"). Booking od razu CONFIRMED. SMS do klienta jeśli ma konto na platformie.
+> - GET /v1/provider/me/bookings?from&to&status&page — lista z paginacją, filtrami (status tabs), search (name/phone/id), include klient name+phone+address.
+> - GET /v1/provider/me/bookings/:id — szczegóły z timeline statusów (query AuditLog), klient card, mini-map route dla MOBILE.
+> - POST /v1/provider/me/bookings/:id/accept|reject|start|complete|cancel|no-show — state machine z S:13.3, invalid → 422. Accept → SMS klient „Potwierdzone". Complete → trigger review-request SMS.
+> - GET /v1/provider/me/bookings/calendar?week=YYYY-WW — response format dla kalendarza tygodniowego (b2b-09).
+> - POST /v1/provider/me/bookings/:id/reply-review — odpowiedź na opinię (US-17 provider side, US-48).
+> - POST /v1/provider/me/reviews/:id/report — zgłoszenie opinii (US-48).
+> - GET /v1/provider/me/bookings/export?format=csv&from&to — CSV eksport (b2b-13 primary CTA).
 >
-> Race condition: unique partial index `(providerId, startAt) WHERE status IN (PENDING, CONFIRMED, IN_PROGRESS)` — catch unique violation → 409 + `GET /v1/providers/:slug/availability` → 3 alternatywne sloty w response.
->
-> GET /v1/me/bookings?status=upcoming|past|all&page= (lista klienta). GET /v1/bookings/:id (szczegóły + ownership check). POST /v1/bookings/:id/cancel (US-14 — w v0 bez refundu, po prostu status=CANCELLED_BY_CLIENT).
->
-> **WAŻNE: Dodaj cron `bookingExpiryCron`** — co 10 min: `Booking.status = PENDING AND createdAt < NOW()-2h` → Booking = CANCELLED_BY_SYSTEM, SMS do klienta („Provider nie odpowiedział — wybierz inny"), slot zwolniony. To zastępuje usunięty paymentTimeout (ADR-004).
+> Cron `bookingExpiryCron`: co 10 min sprawdza `Booking.status=PENDING AND createdAt < NOW()-2h` → CANCELLED_BY_SYSTEM. Zastępuje paymentTimeout (ADR-004).
 
 Output:
 ```
-/apps/api/src/booking/        — module, controller, service, dto, bookingExpiryCron
-/apps/api/src/sms/            — Twilio service (send provider notify + client confirmation)
-/apps/api/prisma/migrations/  — Booking (bez Payment)
+/apps/api/src/booking/            — core module z state machine
+/apps/api/src/booking/manual/     — provider-side create (US-30)
+/apps/api/src/booking/export/     — CSV generator
+/apps/api/src/review/             — reply + report (read+write po stronie providera)
+/apps/api/src/cron/               — bookingExpiryCron
 ```
 
-Referencje: S:13.1 (Booking), A:14.5 (flow rezerwacji), US-08a–c, US-10, US-54 (ADR-004).
-DoD: Flow: create → PENDING → provider SMS → accept/reject/expiry cron. 409 race condition. Testy ≥ 5 (happy path, 409, address out of zone, PENDING expiry, cancel).
+Referencje: S:13.1 (Booking, Review, AuditLog), S:13.3 (state machine), A:14.5, US-20, US-21, US-27, US-28, US-29, US-30, US-48, US-54 (ADR-004). ADR-009.
+DoD: Manual booking działa (provider wpisuje phone → klient guest lub existing → CONFIRMED). State machine enforced. CSV export. bookingExpiryCron. Testy ≥ 6.
 
-**Agent FE-4 — Klient: Booking flow** `(US-08a–c, US-09, US-10)` — **startuje z MSW**
+**Agent FE-panel-4 — Dashboard + Kalendarz + Lista rezerwacji + Szczegół** `(US-20, US-21, US-27, US-28)` — **startuje z MSW**
 
 Prompt:
-> Zbuduj flow rezerwacji klienta. **Dzień 1–2 z MSW mockami** (POST /v1/bookings → return booking PENDING). **Dzień 3–5 swap na real API.** **Bez płatności online** (ADR-004).
+> Zbuduj 4 ekrany daily ops + kontrakt z Retool dla booking approval (jeśli klient generuje PENDING w Sprint 5 — na razie tylko manual booking od providera).
 >
-> 3 ekrany: (1) **Minimal provider view** (W:12.2 — uproszczony: nazwa, cennik, godziny, CTA „Zarezerwuj termin"; pełny profil z recenzjami/carousel zbuduje FE-6a w sprincie 5). (2) Wybór slotu (W:12.3) — kalendarz 7 dni, sloty pogrupowane rano/popołudnie/wieczór, adres z `@googlemaps/places` autouzupełnianiem, pole notatki (React Hook Form, Zod max 500 zn.), step indicator ● ● ○, CTA „Zarezerwuj termin" (bez kwoty — płatność offline). (3) Potwierdzenie (W:12.4) — kod, data, provider, adres, status PENDING („Oczekuje akceptacji providera"), info o płatności offline („Zapłacisz providerowi po wizycie — gotówka lub przelew"), .ics download.
->
-> Error handling: 409 → modal „Slot zajęty" + 3 alternatywy (klik = retry). 422 → highlight pola. Toast na 5xx.
+> **Ekrany:**
+> 1. Pulpit → [`b2b-01-dashboard.html`](../design/b2b-01-dashboard.html) — 4 KPI cards (dziś wizyt / brutto / avg / realizacja), today's bookings lista z akcjami inline, PENDING inbox (pusty w Sprint 3 — klient jeszcze nie rezerwuje), nowe opinie. **Bez brutto/netto/prowizji** (ADR-004).
+> 2. Kalendarz → [`b2b-09-kalendarz.html`](../design/b2b-09-kalendarz.html) — tygodniowy grid z positioned booking blocks, current time indicator (czerwona linia), nav tygodni.
+> 3. Lista rezerwacji → [`b2b-13-rezerwacje.html`](../design/b2b-13-rezerwacje.html) — full admin table z filtrami (status tabs, date range, typ pojazdu, kwota), search, bulk actions bar (Potwierdź/Anuluj/Eksport/SMS), CSV export, pagination. Primary CTA „+ Rezerwacja ręczna" (US-30) → modal.
+> 4. Szczegół rezerwacji → [`b2b-08-szczegol-rezerwacji.html`](../design/b2b-08-szczegol-rezerwacji.html) — klient card, mini-map route dla MOBILE, timeline, akcje kontekstowe per status.
 
 Output:
 ```
-/apps/mobile/app/(client)/provider/[slug].tsx       — MINIMAL view
-/apps/mobile/app/(client)/booking/new.tsx
-/apps/mobile/app/(client)/booking/confirmed/[id].tsx
-/apps/mobile/components/SlotPicker.tsx
-/apps/mobile/components/AddressInput.tsx
-/apps/client/components/StepIndicator.tsx
+/apps/panel/app/(main)/dashboard/page.tsx            — b2b-01 impl
+/apps/panel/app/(main)/kalendarz/page.tsx            — b2b-09 impl
+/apps/panel/app/(main)/rezerwacje/page.tsx           — b2b-13 impl
+/apps/panel/app/(main)/rezerwacje/[id]/page.tsx      — b2b-08 impl
+/apps/panel/components/ManualBookingModal.tsx        — US-30 form
+/apps/panel/components/BookingCard.tsx
+/apps/panel/components/CalendarWeekGrid.tsx
+/apps/panel/components/BookingFilterBar.tsx
 ```
 
-Referencje: W:12.2 (minimal), W:12.3, W:12.4, US-08a–c, US-09, US-10, `@opony/design-system-native`.
-DoD: Kompletny flow z MSW, potem real API. Status PENDING po rezerwacji (bez P24). Error states. .ics download.
+Referencje: `design/b2b-01-dashboard.html`, `b2b-09-kalendarz.html`, `b2b-13-rezerwacje.html`, `b2b-08-szczegol-rezerwacji.html`, US-20, US-21, US-27, US-28, US-30.
+DoD: 4 ekrany + manual booking modal. State-machine-aware akcje. Kalendarz tygodniowy. CSV export działa. Pixel-match.
 
-**Checklista integracyjna Sprint 3:**
-- [ ] Klient: szukaj → provider → slot → rezerwuj → potwierdzenie (PENDING) + SMS do providera
-- [ ] Double-booking: 2 okna rezerwują ten sam slot → 1 sukces, 1 × 409 z alternatywami
-- [ ] Adres poza strefą → inline error
-- [ ] `/v1/me/bookings` → lista rezerwacji klienta
-- [ ] `bookingExpiryCron` — rezerwacja PENDING > 2h → CANCELLED_BY_SYSTEM + SMS
+**Agent FE-panel-5 — Opinie moderacja + Waiting-for-clients** `(US-17 provider, US-48, ADR-009 mitigacja)` — **NEW ekran w design phase**
+
+Prompt:
+> Zbuduj 2 ekrany:
+> 1. Opinie → [`b2b-10-opinie.html`](../design/b2b-10-opinie.html) — rating distribution chart, response stats (95% rate, Top 5%), tabs (Wszystkie/Do odpowiedzi/Z odpowiedzią/Zgłoszone), inline reply composer z quick-template chips, zgłaszanie nadużyć.
+> 2. **Waiting-for-clients** (NOWY ekran — `b2b-15-waiting-for-clients.html` utworzony w tym sprincie przez designera) — pokazywany w pulpicie gdy provider approved ale klient-side jeszcze nie LIVE. Copy: „Gotowe! Twój profil jest live. Klienci będą rezerwować od [data launch klienta — config env `CLIENT_LAUNCH_DATE`]". Weekly update banner „jesteśmy na etapie X, zostało Y dni do startu klientów". Mitigacja ADR-009 „cichy okres".
+>
+> Jeśli `CLIENT_LAUNCH_DATE > NOW()` i 0 bookings w DB → pokazuj waiting-for-clients zamiast standardowego dashboardu. Po launch klienta (config flip) → standard b2b-01 dashboard.
+
+Output:
+```
+/apps/panel/app/(main)/opinie/page.tsx                — b2b-10 impl
+/apps/panel/app/(main)/dashboard/WaitingForClients.tsx — b2b-15 impl
+/apps/panel/components/ReplyComposer.tsx
+/apps/panel/components/RatingDistribution.tsx
+```
+
+Referencje: `design/b2b-10-opinie.html`, `design/b2b-15-waiting-for-clients.html` (do utworzenia w Sprint 3 day 1 przez Projektanta), US-17 provider, US-48, ADR-009.
+DoD: Opinie CRUD + odpowiedzi z templates + zgłoszenia. Waiting screen z countdown do `CLIENT_LAUNCH_DATE`. Toggle między waiting i standard dashboard.
+
+**Agent FE-landing-1a — Landing provider-facing v1** `(rekrutacja providerów)`
+
+Prompt:
+> Zbuduj landing minimalny pod `opony.app` z hero provider-facing (w Sprint 6 robimy pełny pivot na client-facing + dodajemy `/p/<slug>` i `/nowy-sacz`). Tylko 1 strona, `/` route.
+>
+> Referencja: [`landing-01-home.html`](../design/landing-01-home.html) — **weź sekcję "For providers" z dolu strony i promuj do hero**. Dodatkowo: small client section „Klienci startują [data] — zostaw email" (waitlist). Landing w wersji v1 ma za cel **rekrutację 8 pilotów** — hero+benefity+CTA „Zarejestruj warsztat" → redirect `panel.opony.app/signup`.
+
+Output:
+```
+/apps/landing/app/page.tsx                    — provider-facing v1 hero
+/apps/landing/components/ProviderCTA.tsx
+/apps/landing/components/ClientWaitlistMini.tsx
+```
+
+Referencje: `design/landing-01-home.html` (sekcja "For providers"), US-42 (v2 w Sprint 6), ADR-009.
+DoD: Landing LIVE przed końcem Sprint 3. Hero promuje „Zarejestruj warsztat". Google Search Console config.
+
+**Agent Retool-2 — Booking management admin view**
+
+Prompt (do orkiestratora):
+> Rozbuduj Retool o drugi dashboard: lista wszystkich Booking z filtrami (status, provider, data), drill-down z pełnymi danymi. Admin może ręcznie zmienić status (w razie disputów) z AuditLog zapisem. Query: `SELECT b.*, p.companyName, u.phone AS clientPhone FROM Booking b JOIN Provider p ON b.providerId=p.id JOIN User u ON b.userId=u.id ORDER BY b.startAt DESC LIMIT 100`.
+
+DoD: Admin może audytować bookings + force-change status.
 
 ---
 
-### Sprint 4 (tydzień 4) — Panel B2B
+★ **Milestone A (koniec Sprint 3) — Provider portal LIVE:**
+- [ ] `panel.opony.app` LIVE z pełnym flow: login → dashboard → manual booking → kalendarz → profil → ustawienia
+- [ ] Retool admin z 2 dashboardami (approval queue + booking management)
+- [ ] `opony.app` landing v1 provider-facing LIVE
+- [ ] 2-3 pilotów onboarded end-to-end w produkcji (dogfooding)
+- [ ] GTM start: zaczynamy rozmowy z pozostałymi 5-6 pilotami z portalem w ręku
+- [ ] Decision gate: iterować Sprint 3 jeszcze tydzień (feedback od pilotów) czy lecimy do Fazy B?
 
-**Agent BE-5 — Provider panel + S3 upload** `(US-21, US-23, US-24, US-25, US-26)`
+---
+
+## FAZA B — KLIENT (Sprint 4-6)
+
+### Sprint 4 (tydzień 4) — Klient auth + profil + pojazd + catalog + mapa
+
+**Agent BE-4 — Client auth (reuse OTP) + Vehicle CRUD + Provider listing** `(US-01, US-45, US-02, US-03, US-04a, US-04b, US-05, US-38)`
 
 Prompt:
-> Zbuduj endpointy panelu B2B providera w NestJS.
->
-> **Auth providera**: Provider loguje się SMS OTP (te same endpointy co klient — `/v1/auth/otp/*`). Brak oddzielnych endpointów `/v1/provider/auth/*`. Guard `@RequireProviderOwner()` sprawdza `role` z JWT.
->
-> Guard: `@RequireProviderOwner()` → sprawdź role + Provider.status. Jeśli status ≠ APPROVED → 403 z `{detail: "Konto w statusie [status]", providerStatus: "PENDING_APPROVAL"}` (FE wyświetli odpowiedni ekran).
->
-> **S3 Upload Service** (reużywalny przez Sprint 6 onboarding): `UploadService` — generuje presigned PUT URL (AWS SDK v3), waliduje typ (JPG/PNG) i rozmiar (max 5 MB), zapisuje URL w DB (ProviderPhoto / docs). Env vars: AWS_S3_BUCKET, AWS_ACCESS_KEY, AWS_SECRET_KEY, AWS_REGION. Dodaj do `.env.example`.
->
-> Endpointy (prefix /v1/provider/me): GET/PATCH (profil), GET/PUT /pricing (3 widełki), GET/PUT /working-hours (7 dni + slotMinutes), GET/POST/DELETE /exceptions, GET/POST/DELETE /photos (S3 presigned URL), GET /bookings?from&to&status (lista z paginacją, include klient name+phone+address), POST /bookings/:id/accept|reject|start|complete|cancel — **waliduj przejścia state machine (S:13.3)** — invalid transition → 422 z aktualnym statusem.
->
-> Booking actions: accept → SMS do klienta; reject → SMS + trigger refund; complete → trigger settlement (commissionPln, providerPayoutPln).
+> Reuse shared OTP auth z Sprint 1 (ten sam /v1/auth/otp/*). Dodaj client-side endpoints:
+> - GET/PATCH /v1/me (profil klienta — imię, nazwisko, email opt, adres opt z geocoding).
+> - GET/POST/PATCH/DELETE /v1/me/vehicles (US-03 — regex `^\d{3}/\d{2}\s?R\d{2}$`, lookup po marka+model+rok z katalogu OE-size — **dodaj mocka katalogu producenta** w tym sprincie, real API w v0.5).
+> - POST /v1/me/consent (US-45).
+> - POST /v1/me/delete (US-46 — soft 30d).
+> - POST /v1/waitlist (US-40 — email + city; unique(email, city)).
+> - GET /v1/providers?city&lat&lng&tireSize&date&sort&page — publiczny catalog, haversine dystans, cena per tireSize, najbliższy slot. Tylko APPROVED.
+> - GET /v1/providers/:slug — szczegóły + cennik + godziny + top 3 opinie.
+> - GET /v1/providers/:slug/availability — sloty 7 dni (A:14.4).
 
 Output:
 ```
-/apps/api/src/provider-panel/ — module, controller, service
-/apps/api/src/upload/         — S3 UploadService (presigned URLs) — REUŻYWALNY
-/apps/api/src/booking/        — rozszerzenie: provider-side actions + SMS
+/apps/api/src/user/             — client profile
+/apps/api/src/vehicle/          — CRUD + katalog lookup mock
+/apps/api/src/catalog/          — provider listing
+/apps/api/src/availability/     — slot generation
+/apps/api/src/waitlist/         — US-40
 ```
 
-Referencje: S:13.1, S:13.3 (state machine), A:14.6, US-21, US-23–26.
-DoD: Provider auth (SMS OTP → JWT z providerId). CRUD pricing/hours/exceptions/photos (S3). Booking state machine. SMS. Testy ≥ 5.
+Referencje: S:13.1, A:14.2, A:14.3, A:14.4, US-01, US-02, US-03, US-04a/b, US-05, US-38, US-40, US-45, US-46.
+DoD: Client auth + vehicle CRUD + catalog listing z haversine. Waitlist POST. Testy ≥ 5.
 
-**Agent FE-5a — B2B: Login + Dashboard** `(US-21, US-26)` — **startuje z MSW**
+**Agent FE-mobile-1 — Klient auth + onboarding post-OTP** `(US-01, US-45, US-02, US-03)` — **startuje z MSW**
 
 Prompt:
-> Zbuduj core panelu providera. **Dzień 1–2 z MSW** (napisz handlery: GET /v1/provider/me → mock provider, GET /v1/provider/me/bookings → mock 5 rezerwacji z różnymi statusami).
+> Zbuduj `apps/mobile` (Expo + RNW) flow auth + onboarding post-OTP.
 >
-> Ekrany: (1) Login SMS OTP (ten sam flow co klient — phone + code, React Hook Form + Zod). Ekran blokady (403 z `providerStatus`). (2) Layout z `@opony/design-system-web Sidebar`: Dzień, Kalendarz, Cennik, Godziny, Strefa, Opinie 🔴N, Ustawienia. **Menu „Finanse" ukryte w v0 (ADR-004).** (3) Dashboard dnia (W:12.5) — lista chronologiczna z `BookingCard` (imię, adres, dystans, cena cennikowa — *estymata*, `StatusBadge`), akcje inline (Akceptuj/Odrzuć/Rozpocznij/Zakończ → call API → optimistic update). **Bez wskaźników brutto/netto/pending payout** (ADR-004).
+> **Ekrany (pixel-match):**
+> 1. [`08-auth-phone.html`](../design/08-auth-phone.html) — login phone.
+> 2. [`09-auth-otp.html`](../design/09-auth-otp.html) — OTP 6-cyfr, countdown 60s.
+> 3. [`10-auth-consent.html`](../design/10-auth-consent.html) — zgody RODO (2 req + 1 opt).
+> 4. [`14-profil-setup.html`](../design/14-profil-setup.html) — imię/nazwisko (req) + email/adres (opt, z Places API).
+> 5. [`15-dodaj-pojazd.html`](../design/15-dodaj-pojazd.html) — **3 metody tire-size picker**: Marka·Model·Rok (active, lookup z katalogu OE) / Wymiar (wheel picker 3-part: szerokość/profil/felga) / Skan OCR (disabled „Wkrótce").
+> 6. [`07-profile.html`](../design/07-profile.html) — profil + pojazdy + ulubione + ustawienia.
+>
+> Auth state: Zustand `useAuthStore` z JWT w `expo-secure-store` (native) / `localStorage` (web). `@opony/design-system-native`.
 
 Output:
 ```
-/apps/provider/app/(auth)/login/page.tsx        — phone + OTP code (reuse klient flow)
-/apps/provider/app/(auth)/blocked/page.tsx
-/apps/provider/app/(main)/layout.tsx — SideMenu + header
-/apps/provider/app/(main)/dashboard/page.tsx
-/apps/provider/components/BookingCard.tsx
-/apps/provider/mocks/handlers/provider.ts
+/apps/mobile/app/(auth)/phone.tsx            — 08 impl
+/apps/mobile/app/(auth)/otp.tsx              — 09 impl
+/apps/mobile/app/(auth)/consent.tsx          — 10 impl
+/apps/mobile/app/(onboarding)/profile.tsx    — 14 impl
+/apps/mobile/app/(onboarding)/vehicle.tsx    — 15 impl
+/apps/mobile/app/(main)/profile.tsx          — 07 impl
+/apps/mobile/components/TireSizeTabs.tsx     — 3 metody
+/apps/mobile/components/TireWheelPicker.tsx  — 3-part picker
 ```
 
-Referencje: W:12.5, US-21, US-26, `@opony/design-system`.
-DoD: Login → dashboard z rezerwacjami. Akcje inline. Layout z menu. Responsive.
+Referencje: `design/08-*.html` do `15-*.html`, US-01, US-02, US-03, US-45, `@opony/design-system-native`.
+DoD: Flow login → OTP → consent → profile setup → vehicle → home. 3 metody tire-size. Pixel-match.
 
-**Agent FE-5b — B2B: Cennik + Godziny + Strefa + Profil** `(US-23, US-24, US-25)` — **startuje z MSW**
+**Agent FE-mobile-2 — Klient home + provider detail + mapa + empty states** `(US-04a/b, US-05, US-06, US-07, US-38, US-40)` — **startuje z MSW**
 
 Prompt:
-> Rozbuduj panel providera (na layoucie z FE-5a). **MSW handlery** na: GET/PUT /v1/provider/me/pricing, GET/PUT /v1/provider/me/working-hours, GET/POST/DELETE /v1/provider/me/exceptions, GET/POST/DELETE /v1/provider/me/photos.
+> Zbuduj catalog z mapą + 3 empty states.
 >
-> Ekrany: (1) Cennik (W:12.7 top) — 3 widełki + dopłaty (React Hook Form + Zod: positive numbers). (2) Godziny (W:12.7 mid) — 7 dni × open/close/slotMinutes + toggle nieczynne + wyjątki (lista + dodaj/usuń). (3) Strefa (W:12.7 bottom) — Google Maps `@googlemaps/js-api-loader` z draggable markerem + input promień km. (4) Profil — opis (textarea 2000 zn), logo (single upload), galeria do 10 zdjęć (drag-and-drop `react-dropzone`, S3 presigned URL, preview thumbnails).
+> **Ekrany:**
+> 1. [`01-home.html`](../design/01-home.html) — lista warsztatów + filtry (Dziś/Jutro/Weekend/Mobilny/Ocena ≥4.5), search.
+> 2. [`02-provider-detail.html`](../design/02-provider-detail.html) — pełny profil (carousel zdjęć, cennik, godziny, opinie top 3), sticky CTA „Zarezerwuj termin" (aktywny ale action w Sprint 5).
+> 3. [`11-map.html`](../design/11-map.html) — Google Maps z pinami providerów, mini-karta po tap, toggle lista/mapa.
+> 4. Empty states: [`16-empty-waitlist.html`](../design/16-empty-waitlist.html) (miasto nie-NS → waitlist form), [`17-home-brak-pojazdu.html`](../design/17-home-brak-pojazdu.html) (brak pojazdu → widełki cen + CTA), [`18-home-brak-dostepnosci.html`](../design/18-home-brak-dostepnosci.html) (wszyscy zajęci 7+ dni → baner).
+>
+> Geolokalizacja: browser Geolocation API → fallback dropdown „Wybierz miasto" (v0 tylko Nowy Sącz, inne → empty-waitlist). `@opony/api-client` dla catalog. Filtry client-side na cache'owanym JSON.
 
 Output:
 ```
-/apps/provider/app/(main)/pricing/page.tsx
-/apps/provider/app/(main)/hours/page.tsx
-/apps/provider/app/(main)/zone/page.tsx
-/apps/provider/app/(main)/profile/page.tsx
-/apps/provider/components/PhotoGallery.tsx
-/apps/provider/mocks/handlers/pricing.ts, hours.ts
+/apps/mobile/app/(main)/index.tsx                    — 01 impl
+/apps/mobile/app/(main)/provider/[slug]/index.tsx    — 02 impl
+/apps/mobile/app/(main)/map.tsx                      — 11 impl
+/apps/mobile/app/(empty)/waitlist.tsx                — 16 impl
+/apps/mobile/components/ProviderCard.tsx
+/apps/mobile/components/ProviderMap.tsx
+/apps/mobile/components/FilterChips.tsx
+/apps/mobile/components/EmptyStates.tsx              — 3 warianty
 ```
 
-Referencje: W:12.7, US-23, US-24, US-25, `@opony/design-system`.
-DoD: 4 ekrany CRUD z formularzami. Upload zdjęć do S3. Mapa ze strefą. Zod walidacja.
+Referencje: `design/01-home.html`, `02-provider-detail.html`, `11-map.html`, `16-18-*.html`, US-04a/b, US-05, US-06, US-07, US-38, US-40.
+DoD: Home + detail + map + 3 empty states. Filtry + sort client-side. Geo fallback. Pixel-match.
 
 **Checklista integracyjna Sprint 4:**
-- [ ] Provider login (SMS OTP) → dashboard z rezerwacjami z seeda
-- [ ] Akceptuj rezerwację → status CONFIRMED, klient SMS
-- [ ] Edycja cennika → save → reload → zachowane
-- [ ] Upload zdjęcia profilu → S3 → widoczne
-- [ ] Provider PENDING_APPROVAL → ekran blokady
+- [ ] Client login OTP → consent → profile setup → vehicle (3 metody picker) → home
+- [ ] Home widzi 8 pilotów onboarded w Sprint 1-3 (realne dane!)
+- [ ] Klik na providera → pełny profil z cennikiem/godzinami/opiniami top 3
+- [ ] Mapa: 8 pinów, tap → mini-karta
+- [ ] Empty state: user z Krakowa → waitlist form; user bez pojazdu → widełki cen
 
 ---
 
-### Sprint 5 (tydzień 5) — Oceny + Rozliczenia
+### Sprint 5 (tydzień 5) — Klient booking flow + provider PENDING accept
 
-**Agent BE-6 — Reviews + Provider profile** `(US-16, US-17, US-48, US-07)` — **settlement/refund USUNIĘTE w v0 (ADR-004)**
+**Agent BE-5 — POST /bookings + availability + slot lock** `(US-08a–c, US-09, US-10, US-14)`
 
 Prompt:
-> Rozbuduj moduły: (1) Review — POST /bookings/:id/review (tylko COMPLETED, max 90 dni, 1000 znaków, filtr wulgaryzmów — lista słów PL), GET /providers/:slug/reviews (paginacja + rozkład %, sortowanie, filtrowanie po gwiazdkach). Pole seenByProvider. (2) Rozbuduj GET /providers/:slug — dodaj avgRating, reviewCount, pełny cennik, godziny.
+> Zbuduj client-side booking (state machine istnieje z Sprint 3):
+> - POST /v1/bookings — body {providerId, vehicleId, startAt, address, notes}. Waliduj: slot wolny (partial unique index catch 409 → 3 alternatywy), adres w strefie (haversine), ownership pojazdu, klient nie zbanowany. Tworzy Booking PENDING. Idempotency-Key header. **SMS do providera** „Nowa rezerwacja — akceptuj w 2h".
+> - GET /v1/me/bookings?status=upcoming|past&page — lista klienta.
+> - GET /v1/bookings/:id — szczegóły z ownership check.
+> - POST /v1/bookings/:id/cancel — US-14 v0 bez refundu (ADR-004), po prostu CANCELLED_BY_CLIENT.
+> - GET /v1/me/favorites + POST/DELETE — US-41 ulubione.
+
+Output:
+```
+/apps/api/src/booking/client/      — POST create + cancel z client-side
+/apps/api/src/booking/favorites/   — US-41
+```
+
+Referencje: S:13.1, A:14.5, US-08a–c, US-09, US-10, US-14, US-41. Wykorzystuje state machine z Sprint 3.
+DoD: Client booking flow end-to-end. 409 race condition. Ulubione. Testy ≥ 5.
+
+**Agent FE-mobile-3 — Klient booking flow + historia** `(US-08a–c, US-09, US-10, US-14, US-18, US-19)` — **startuje z MSW**
+
+Prompt:
+> Zbuduj 4 ekrany booking flow + historia.
 >
-> **USUNIĘTE w v0 (ADR-004):** Settlement (brak prowizji bo aplikacja darmowa), Refund (brak płatności → anulowanie = zero kosztów). POST /bookings/:id/cancel w v0 tylko zmienia status, bez logiki refundu. Wróci w v0.5 gdy włączamy monetyzację.
-
-Output:
-```
-/apps/api/src/review/         — pełny CRUD + filtr wulgaryzmów
-/apps/api/src/catalog/        — rozszerzenie: pełny profil providera
-```
-
-Referencje: S:13.1 (Review), A:14.5, US-16, US-17, US-48, US-07.
-DoD: Review CRUD + filtr. Profil providera kompletny. **Zero settlement/refund logic** (ADR-004).
-
-**Agent FE-6a — Klient: PEŁNY profil providera + Oceny** `(US-07, US-16, US-17)` — **startuje z MSW**
-
-Prompt:
-> WAŻNE: W sprint 3 (FE-4) zbudowano minimalny widok providera `/provider/[slug]` (tylko nazwa, cennik, godziny, CTA booking). Teraz **rozbudowujesz tę stronę** do pełnego profilu (W:12.2): dodaj carousel zdjęć (swipe), sekcję „O nas" (opis), przycisk ♡ „Dodaj do ulubionych" (localStorage + API), przycisk „Udostępnij" (Web Share API / fallback clipboard), pełna sekcja opinii (top 3 + „zobacz wszystkie →"). NIE przepisuj od zera — rozszerzaj istniejący plik.
+> **Ekrany:**
+> 1. [`03-time-slot.html`](../design/03-time-slot.html) — wybór slotu (7 dni nav, sloty rano/popołudnie/wieczór), adres z Places, notatka, step indicator 2/2, CTA „Zarezerwuj 180 zł" (bez kwoty dla płatności — ADR-004: offline u providera).
+> 2. [`04-booking-confirmed.html`](../design/04-booking-confirmed.html) — kod OPN-XXXX, .ics download, status PENDING „Oczekuje akceptacji".
+> 3. [`05-my-bookings.html`](../design/05-my-bookings.html) — lista z tabs Nadchodzące/Historia.
+> 4. [`06-booking-detail.html`](../design/06-booking-detail.html) — szczegół z akcjami (Dodaj do kal / Zmień termin / Anuluj / Oceń po COMPLETED).
 >
-> Nowe ekrany: (1) Formularz oceny (W:12.12) — gwiazdki 1–5 (tap), komentarz React Hook Form + Zod (max 1000 zn z licznikiem), CTA „Wyślij" + „Pomiń — oceń później". Dostępny tylko po COMPLETED (sprawdź status booking). (2) Lista opinii fullpage (W:12.17) — rozkład % (progress bars), filtry chips po ⭐, sortowanie, odpowiedzi providera, badge „✓ Zweryfikowany klient". Lazy loading (`IntersectionObserver` + paginacja API).
+> Error handling: 409 → modal „Slot zajęty" + 3 alternatywy. 422 → highlight pola. Toast 5xx.
 
 Output:
 ```
-/apps/client/app/(main)/provider/[slug]/page.tsx — ROZSZERZENIE (carousel, opis, ulubione, share)
-/apps/client/app/(main)/provider/[slug]/reviews/page.tsx — lista pełna
-/apps/client/app/(main)/booking/[id]/review/page.tsx
-/apps/client/components/RatingForm.tsx
-/apps/client/components/ReviewList.tsx
-/apps/client/components/RatingDistribution.tsx
-/apps/client/components/PhotoCarousel.tsx
+/apps/mobile/app/(booking)/new.tsx                   — 03 impl
+/apps/mobile/app/(booking)/confirmed/[id].tsx        — 04 impl
+/apps/mobile/app/(main)/bookings/index.tsx           — 05 impl
+/apps/mobile/app/(main)/bookings/[id].tsx            — 06 impl
+/apps/mobile/components/SlotPicker.tsx
+/apps/mobile/components/AddressInput.tsx
+/apps/mobile/components/BookingTimeline.tsx
 ```
 
-Referencje: W:12.2 (full), W:12.12, W:12.17, US-07, US-16, US-17, `@opony/design-system`.
-DoD: Profil providera kompletny (carousel, opis, opinie, ulubione, share). Rating form działa. Lista opinii z rozkładem + filtry.
+Referencje: `design/03-time-slot.html`, `04-booking-confirmed.html`, `05-my-bookings.html`, `06-booking-detail.html`, US-08a–c, US-09, US-10, US-14, US-18, US-19.
+DoD: Pełny booking flow z MSW → real API. 409 retry. .ics. Historia z tabs. Pixel-match.
 
-**Agent FE-6b — B2B: Opinie + Finanse** `(US-48, US-51, US-53)` — **startuje z MSW**
+**Agent FE-panel-6 — Provider PENDING accept refinement** `(US-21)`
 
 Prompt:
-> Rozbuduj panel providera: (1) Sekcja „Opinie" — lista opinii z przyciskami „Odpowiedz" (tekst, 1 odpowiedź/opinię, edit 24h) + „Zgłoś" (kategoria + komentarz). Badge new reviews. (2) **Sekcja „Finanse" USUNIĘTA w v0 (ADR-004)** — aplikacja darmowa, brak wypłat. Wróci w v0.5.
+> Rozbuduj dashboard (b2b-01) z Sprint 3: teraz PENDING inbox ma **realne bookings** od klientów. Dodaj:
+> - Akcje inline Akceptuj/Odrzuć (optimistic update → API → SMS do klienta).
+> - Push-like notification (browser Notifications API — Expo Push w v0.5) przy nowej PENDING.
+> - Auto-refresh dashboard co 30s (polling — ADR-006).
 
-Output:
-```
-/apps/provider/app/(main)/reviews/
-/apps/provider/app/(main)/finances/
-/apps/provider/components/ReviewReplyForm.tsx
-/apps/provider/components/ReportForm.tsx
-/apps/provider/components/PayoutHistory.tsx
-```
+Referencje: `design/b2b-01-dashboard.html`, US-21, ADR-006, ADR-009.
+DoD: PENDING accept flow działa end-to-end (klient rezerwuje → provider dostaje SMS + notification → akcja → klient dostaje confirmation SMS).
 
-Referencje: W:12.14, US-48, US-53, `@opony/design-system`.
-DoD: Opinie z reply + zgłoś. Finanse z saldem i historią wypłat.
+**Checklista integracyjna Sprint 5:**
+- [ ] Klient: search → provider → slot → rezerwuj → potwierdzenie PENDING + SMS do providera
+- [ ] Provider: dashboard refresh → PENDING widoczny → Akceptuj → klient dostaje SMS „Potwierdzone"
+- [ ] Double-booking: 2 klientów ten sam slot → 1 sukces, 1 × 409 z alternatywami
+- [ ] Adres poza strefą → inline error
+- [ ] bookingExpiryCron: PENDING > 2h → CANCELLED_BY_SYSTEM + SMS
 
 ---
 
-### Sprint 6 (tydzień 6) — Onboarding + Historia + System
+### Sprint 6 (tydzień 6) — Ratings + polish + landing client pivot — ★ Milestone B
 
-**Agent BE-7 — Upload + Admin + Crons** `(US-19, US-44, US-20, US-36, US-11)`
+**Agent BE-6 — Review entity + cron + complete flow** `(US-16, US-17, US-37)`
 
 Prompt:
-> Zbuduj: (1) File upload — POST /provider/me/docs (multipart, max 5MB, JPG/PNG → S3, update status PENDING_DOCS → PENDING_APPROVAL). (2) Admin endpoints — GET /admin/providers?status=PENDING_APPROVAL, POST /admin/providers/:id/approve|reject|suspend (A:14.8). Przy reject: kategoria powodu → SMS + email do providera (US-44). Przy approve: SMS + email „konto aktywne". (3) Cron markNoShows — co 5 min: CONFIRMED + startAt < NOW()-30min → NO_SHOW + noShowCount++. (4) Cron adminPendingAlert — codziennie 9:00: email z listą PENDING_APPROVAL. (5) SMS przypomnienia (US-11): po CONFIRMED → schedule 2 SMS (24h i 1h przed). Przy anulowaniu → unieważnij scheduled.
+> Zbuduj review module:
+> - POST /v1/bookings/:id/review — tylko COMPLETED + max 90 dni, 1000 znaków, filtr wulgaryzmów (lista PL).
+> - GET /v1/providers/:slug/reviews — paginacja + rozkład %, sort (newest, rating_desc/asc), filter po ⭐.
+> - Pole seenByProvider (unread flag dla b2b-10).
+> - Cron `updateRatingCache` — co 1h: `Provider.avgRating` + `reviewCount` z Review WHERE isHidden=false.
+> - Cron `completionReminder` — co 1h: COMPLETED bookings bez review po 24h → SMS „Oceń wizytę".
 
 Output:
 ```
-/apps/api/src/upload/         — S3 service + multer config
-/apps/api/src/admin/          — module, controller, service
-/apps/api/src/cron/           — NestJS @Cron: noShow, adminAlert, reminders
-/apps/api/src/sms/            — rozszerzenie: scheduled SMS
+/apps/api/src/review/             — client-side CRUD
+/apps/api/src/cron/               — updateRatingCache + completionReminder
 ```
 
-Referencje: S:13.1, A:14.8, US-19, US-44, US-20, US-36, US-11.
-DoD: Upload do S3. Admin approve/reject z SMS. Cron NO_SHOW. Przypomnienia scheduled.
+Referencje: S:13.1, A:14.5, US-16, US-17, US-37.
+DoD: Review flow + 2 crons. Testy ≥ 4.
 
-**Agent FE-7a — Klient: Rezerwacje lista + szczegół + RODO** `(US-12, US-13, US-46)`
+**Agent FE-mobile-4 — Klient rate + reviews list** `(US-16, US-17)` — **startuje z MSW**
 
 Prompt:
-> Zbuduj: (1) Lista rezerwacji (W:12.9) — tabs Nadchodzące/Historia, karta: data, provider, status badge kolorem, cena, 💳 status. Pusta lista → CTA „Znajdź punkt". (2) Szczegół rezerwacji (W:12.10) — pełne dane, timeline statusów, akcje per status (Anuluj, Zmień termin, Oceń), info o refundzie, „Dodaj do kalendarza". (3) Profil sekcja ustawienia: „Usuń konto" z dialogiem potwierdzającym + „Pobierz dane" mailto.
+> Zbuduj:
+> 1. [`12-rate-visit.html`](../design/12-rate-visit.html) — form oceny (gwiazdki tap + comment 1000 zn + counter). Dostępny tylko po COMPLETED.
+> 2. [`13-reviews.html`](../design/13-reviews.html) — pełna lista opinii providera z rozkładem, filtrami, odpowiedziami.
 
 Output:
 ```
-/apps/client/app/(main)/bookings/
-/apps/client/app/(main)/bookings/[id]/
-/apps/client/components/BookingCard.tsx
-/apps/client/components/StatusTimeline.tsx
-/apps/client/app/(main)/profile/settings/
+/apps/mobile/app/(booking)/[id]/review.tsx           — 12 impl
+/apps/mobile/app/(main)/provider/[slug]/reviews.tsx  — 13 impl
+/apps/mobile/components/RatingForm.tsx
+/apps/mobile/components/ReviewList.tsx
 ```
 
-Referencje: W:12.9, W:12.10, W:12.11 (ustawienia), US-12, US-13, US-46, `@opony/design-system`.
-DoD: Lista rezerwacji (tabs + badge), szczegół z timeline + akcjami, settings RODO. Responsive.
+Referencje: `design/12-rate-visit.html`, `13-reviews.html`, US-16, US-17.
+DoD: Rate form + reviews list. Pixel-match.
 
-**Agent FE-7b — B2B: Onboarding wizard kroki 2–3** `(US-19, US-44)` — **startuje z MSW**
+**Agent FE-mobile-5 — Polish: offline + PWA install + error boundary** `(polish)`
 
 Prompt:
-> Dokończ wizard: (1) Krok 2/3 „Materiały" (W:12.15 krok 2) — upload 3 zdjęć (drag-and-drop z `react-dropzone` + preview thumbnails), walidacja JPG/PNG max 5MB, progress bar uploadu (presigned URL → S3 PUT). Po uploadzie wszystkich 3 → call API → status PENDING_APPROVAL. (2) Krok 3/3 „Weryfikacja" (W:12.15 krok 3) — ekran oczekiwania z animacją + info „sprawdzimy w 24h". (3) Ekran post-rejection (US-44): komunikat z kategorią powodu + mailto CTA `kontakt@opony.app`.
+> Zbuduj 3 polish ekrany/komponenty:
+> 1. [`19-offline-state.html`](../design/19-offline-state.html) — offline banner sticky top + cache badges na cards + bottom sheet „Potrzebne połączenie" przy próbie booking. Trigger: `navigator.onLine === false` OR API timeout >8s. Cache z AsyncStorage (RN) / localStorage (web), TTL listing 1h, profil 24h.
+> 2. [`20-pwa-install.html`](../design/20-pwa-install.html) — bottom-sheet prompt (po 2 wizycie OR 1 booking), cooldown 7 dni dismiss, 3 cooldowns → never. Android `beforeinstallprompt`, iOS manual tutorial + Share button hint.
+> 3. [`21-error-boundary.html`](../design/21-error-boundary.html) — React top-level ErrorBoundary z Sentry capture, errorId display, retry + fallback home.
 
 Output:
 ```
-/apps/provider/app/(onboarding)/photos/page.tsx
-/apps/provider/app/(onboarding)/verification/page.tsx
-/apps/provider/app/(onboarding)/rejected/page.tsx
-/apps/provider/components/PhotoUploader.tsx
+/apps/mobile/components/OfflineBanner.tsx
+/apps/mobile/components/CacheProvider.tsx      — AsyncStorage wrapper
+/apps/mobile/components/PwaInstallPrompt.tsx
+/apps/mobile/components/ErrorBoundary.tsx
+/apps/mobile/lib/network.ts                     — online/offline detection
 ```
 
-Referencje: W:12.15 kroki 2–3, US-19, US-44, `@opony/design-system`.
-DoD: Upload z drag-and-drop + preview. Status flow PENDING_DOCS → PENDING_APPROVAL. Ekran rejection z mailto.
+Referencje: `design/19-offline-state.html`, `20-pwa-install.html`, `21-error-boundary.html`.
+DoD: Offline mode z cache. PWA install prompt (Android + iOS). Error boundary z Sentry + errorId.
 
-**⚠ HUMAN TASK: RETOOL — Admin panel** `(US-20)`
+**Agent FE-landing-2 — Landing client-facing pivot + landing-02 + landing-03** `(US-42, SEO)`
 
-> To NIE jest zadanie dla agenta AI — Retool Cloud konfiguruje się przez GUI (klik-klik), nie przez kod. Founder/dev konfiguruje ręcznie.
+Prompt:
+> Pivot landing z v1 (provider-facing) na v2 (client-facing + provider section below fold).
+>
+> **Ekrany:**
+> 1. [`landing-01-home.html`](../design/landing-01-home.html) — pełna wersja: hero client-facing, how-it-works, cities waitlist, provider section, FAQ.
+> 2. [`landing-02-profil-publiczny.html`](../design/landing-02-profil-publiczny.html) — `/p/<slug>` SSR + OG tags + JSON-LD LocalBusiness+Review (US-42). CTA „Otwórz w aplikacji" (Universal Link + QR code dla desktop — BEZ booking w przeglądarce per memory).
+> 3. [`landing-03-miasto.html`](../design/landing-03-miasto.html) — `/nowy-sacz` SEO long-tail listing + `/nowy-sacz/[tireSize]` sub-routes. SSG + ISR 15 min.
 
-Instrukcja krok po kroku:
-1. Załóż konto Retool Cloud → nowy app „Opony Admin".
-2. Dodaj Resource: Postgres (connection string z Railway + read/write user).
-3. Dodaj Resource: REST API (base URL: `https://api.opony.app/v1`, header `Authorization: Bearer <admin_jwt>`).
-4. Zbuduj 5 ekranów:
-   - **Providers**: tabela `SELECT * FROM "Provider"` + filtry status + akcje Approve/Reject (REST POST).
-   - **Bookings**: tabela `SELECT * FROM "Booking" JOIN "User"...` + filtry + audit log.
-   - **Reviews**: `reported=true` + akcja Hide.
-   - **Users**: wyszukiwanie + ban.
-   - **Dashboard**: SQL charts (rez/dzień, revenue/mc, nowi providerzy).
-5. Akcje modyfikujące TYLKO przez REST API — NIGDY direct SQL UPDATE.
+Output:
+```
+/apps/landing/app/page.tsx                           — 01 pełna impl
+/apps/landing/app/p/[slug]/page.tsx                  — 02 impl z SSR
+/apps/landing/app/[city]/page.tsx                    — 03 impl
+/apps/landing/app/[city]/[tireSize]/page.tsx         — sub-routes SEO
+/apps/landing/components/OGMeta.tsx
+/apps/landing/components/AppOpenCTA.tsx              — Universal Link + QR
+```
 
-Referencje: A:14.8, architektura.md 18.4.
-DoD: Admin loguje się → PENDING_APPROVAL → approve → provider SMS. Czas: ~3h pracy manualnej.
-
-**Checklista integracyjna Sprint 6:**
-- [ ] Provider onboarding: signup → NIP → upload zdjęć → PENDING_APPROVAL
-- [ ] Admin (Retool): approve provider → SMS do providera „konto aktywne"
-- [ ] Admin: reject → provider widzi ekran rejection z kategorią
-- [ ] Klient: lista rezerwacji (nadchodzące + historia)
-- [ ] Cron NO_SHOW: rezerwacja sprzed 35 min → automatycznie NO_SHOW
-- [ ] Przypomnienie SMS: 24h przed → SMS wysłany
+Referencje: `design/landing-01-home.html`, `landing-02-profil-publiczny.html`, `landing-03-miasto.html`, US-42, SEO.
+DoD: 3 trasy LIVE z SSR/SSG. OG preview działa (Facebook debugger). JSON-LD LocalBusiness w profilu. Zero booking flow w przeglądarce.
 
 ---
+
+★ **Milestone B (koniec Sprint 6) — Full marketplace LIVE:**
+- [ ] `app.opony.app` (Expo RNW web PWA) LIVE z pełnym flow klienta
+- [ ] `panel.opony.app` z realnym PENDING flow (klient → provider accept)
+- [ ] `opony.app` z 3 trasami (/, /p/<slug>, /nowy-sacz)
+- [ ] 8 pilotów aktywnych, pierwsze rezerwacje od F&F testing
+- [ ] Offline + PWA install + error boundary LIVE
+- [ ] Beta gate: Sprint 7 = soft launch z publicznością
+
+---
+
 
 ### Sprint 7 (tydzień 7) — Polish + Systemowe + Soft-launch
 

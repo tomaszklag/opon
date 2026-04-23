@@ -22,8 +22,11 @@
 | User stories | 58 (43 MUST / 15 SHOULD) |
 | Story points MUST | 125 SP (po ADR-004 —16 SP za usunięty Payment module) |
 | Zespół | 4 osoby (2 mid + 1 senior + 1 designer part-time) |
-| Czas do launchu | ~5–6 tygodni (po ADR-004 — skrócone z 7 tyg) |
-| Ekrany designu | 38 HTML (21 klient w tym 3 polish + 14 B2B + 3 landing) |
+| **Sekwencja implementacji** | **B2B-first (ADR-009)** — Faza A (Sprint 1-3, 3 tyg) → Milestone A → Faza B (Sprint 4-6, 3 tyg) → Milestone B → Sprint 7 soft launch |
+| **★ Milestone A** (koniec tyg. 3-4) | Provider portal LIVE, Retool admin, onboard 2-3 pilotów, GTM start, landing provider v1 |
+| **★ Milestone B** (koniec tyg. 6-7) | Klient LIVE z realnymi danymi 8 pilotów, landing client-facing + /p/slug + /nowy-sacz |
+| Soft launch target | Koniec tyg. 7 → beta lipiec-sierpień → **public launch przed jesiennym szczytem (październik 2026)** |
+| Ekrany designu | 39 HTML (21 klient w tym 3 polish + 15 B2B w tym b2b-15 waiting-for-clients + 3 landing) |
 | Koszt setup | ~161 000 PLN |
 | Runway bootstrap (rok 1) | ~371 000 PLN |
 | Cash burn rok 1 | ~331 000 PLN |
@@ -46,11 +49,12 @@
 - **Monitoring:** Sentry + PostHog
 - **Design reference:** 39 statycznych HTML mockupów w `/design` (industrial-dark, Bebas Neue + Archivo + JetBrains Mono, graphite `#0A0B0E` + amber `#FF6B1A`)
 
-## Reguły architekturalne (utrwalone w design phase)
+## Reguły architekturalne (utrwalone w design + planning phase)
 
 1. **Zero booking-flow w landing i panel** — wszystkie rezerwacje wyłącznie w `app.opony.app` (mobile + web PWA); landing/panel ma CTA „Otwórz w aplikacji" (Universal Links + QR dla desktop). Wyjątek: b2b-13 „Rezerwacja ręczna" dla wizyt zgłaszanych telefonicznie.
 2. **Miasto pilot = Nowy Sącz** (nie Poznań jak w oryginalnych założeniach).
 3. **Zero płatności w v0** (ADR-004) — wracają w v0.5+ po danych z pilota.
+4. **B2B-first implementation** (ADR-009) — provider portal LIVE w Fazie A (Sprint 1-3) przed klientem w Fazie B (Sprint 4-6). Zero „pustej apki" na launch — klient widzi realne dane 8 pilotów od dnia 1.
 
 ## Ścieżka ekspansji
 

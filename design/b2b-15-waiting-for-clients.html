@@ -1,0 +1,1186 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Opony Panel — B2B-15 Waiting for clients · ADR-009 mitigacja</title>
+<!--
+  Screen: Panel providera — pulpit w okresie Fazy A (ADR-009), przed launchem klienta
+  Ref:    docs/architektura.md ADR-009 (B2B-first sequencing — „cichy okres" mitigation)
+  Flow:   Provider APPROVED + 0 bookings + today < CLIENT_LAUNCH_DATE → pokaż ten ekran zamiast b2b-01-dashboard
+  Tone:   industrial-dark · desktop · countdown + progress + preselling tips · utrzymuje momentum
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Bebas+Neue&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0A0B0E;
+    --bg-tint-top: #12141A;
+    --surface: #14171D;
+    --surface-raised: #1B1E26;
+    --surface-hover: #23272F;
+    --border: #262A34;
+    --border-strong: #363B47;
+    --hairline: rgba(255, 255, 255, 0.06);
+    --text-primary: #F5F4EF;
+    --text-secondary: #9EA2AD;
+    --text-muted: #60646F;
+    --text-on-accent: #0A0B0E;
+    --accent: #FF6B1A;
+    --accent-hover: #FF8039;
+    --accent-muted: rgba(255, 107, 26, 0.14);
+    --accent-border: rgba(255, 107, 26, 0.32);
+    --accent-glow: rgba(255, 107, 26, 0.45);
+    --success: #2EE0A0;
+    --success-muted: rgba(46, 224, 160, 0.14);
+    --success-border: rgba(46, 224, 160, 0.32);
+    --warning: #FFB020;
+    --warning-muted: rgba(255, 176, 32, 0.14);
+    --warning-border: rgba(255, 176, 32, 0.32);
+    --danger: #FF5757;
+    --font-display: 'Bebas Neue', sans-serif;
+    --font-body: 'Archivo', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; overflow-x: hidden; max-width: 100vw; }
+  body {
+    --desktop-scale: min(1, calc((100vh - 200px) / 900px), calc((100vw - 80px) / 1440px));
+    font-family: var(--font-body);
+    background: var(--bg);
+    color: var(--text-primary);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    background-image:
+      radial-gradient(ellipse 70% 50% at 50% 0%, rgba(255, 107, 26, 0.05) 0%, transparent 60%),
+      linear-gradient(180deg, var(--bg-tint-top) 0%, var(--bg) 30%);
+    background-attachment: fixed;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 40px 40px 60px;
+    gap: 24px;
+  }
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 4px var(--accent-muted); opacity: 1; }
+    50%      { box-shadow: 0 0 0 8px transparent; opacity: 0.6; }
+  }
+  @keyframes countdown {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.02); }
+  }
+  @keyframes progressFill {
+    from { transform: scaleX(0); }
+    to { transform: scaleX(var(--fill, 1)); }
+  }
+
+  .canvas-label {
+    width: 100%;
+    max-width: 1440px;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: baseline;
+    gap: 20px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  .film-strip .frame { display: block; font-family: var(--font-display); font-size: 36px; letter-spacing: 4px; line-height: 1; color: var(--text-primary); }
+  .film-strip .frame-num { font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); letter-spacing: 1.5px; display: block; margin-top: 4px; font-weight: 700; }
+  .slug {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    border-left: 1px solid var(--border);
+    padding-left: 18px;
+  }
+  .canvas-meta {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-secondary);
+    letter-spacing: 1px;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .canvas-meta .pulse {
+    display: inline-block;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--warning);
+    box-shadow: 0 0 0 4px var(--warning-muted);
+    animation: pulse 1800ms ease-in-out infinite;
+  }
+
+  /* Desktop frame (reused pattern) */
+  .desktop-frame {
+    width: 1440px;
+    height: 900px;
+    background: var(--bg);
+    border-radius: 14px;
+    border: 1px solid #1C1E24;
+    box-shadow: 0 40px 120px rgba(0, 0, 0, 0.6), 0 20px 40px rgba(0, 0, 0, 0.4);
+    overflow: hidden;
+    position: relative;
+    flex-shrink: 0;
+    transform: scale(var(--desktop-scale));
+    transform-origin: top center;
+    margin-bottom: calc((var(--desktop-scale) - 1) * 900px);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .browser-chrome {
+    height: 44px;
+    background: linear-gradient(180deg, #1A1D23, #14171D);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    gap: 16px;
+    flex-shrink: 0;
+  }
+  .traffic-lights { display: inline-flex; gap: 8px; }
+  .light { width: 12px; height: 12px; border-radius: 50%; }
+  .light.red { background: #FF5F57; }
+  .light.yellow { background: #FEBC2E; }
+  .light.green { background: #28C840; }
+  .browser-tabs { display: inline-flex; gap: 2px; }
+  .browser-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-bottom: none;
+    border-radius: 8px 8px 0 0;
+    font-size: 12px;
+    color: var(--text-primary);
+    position: relative;
+    top: 6px;
+  }
+  .browser-tab .favicon {
+    width: 14px; height: 14px;
+    border-radius: 3px;
+    background: var(--accent);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-display);
+    font-size: 9px;
+    color: var(--text-on-accent);
+    letter-spacing: 0.5px;
+  }
+  .browser-address {
+    flex: 1;
+    max-width: 480px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+  .browser-address .lock { color: var(--success); }
+  .browser-address .url { color: var(--text-primary); }
+  .browser-address .path { color: var(--text-secondary); }
+
+  /* App root */
+  .app-root {
+    flex: 1;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: 220px 1fr;
+  }
+  .sidebar {
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    padding: 20px 14px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .sb-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px 18px;
+  }
+  .sb-brand .wordmark {
+    font-family: var(--font-display);
+    font-size: 26px;
+    letter-spacing: 3px;
+    line-height: 1;
+    color: var(--text-primary);
+    display: inline-flex;
+    align-items: baseline;
+    gap: 3px;
+  }
+  .sb-brand .dot {
+    display: inline-block;
+    width: 6px; height: 6px;
+    background: var(--accent);
+    border-radius: 50%;
+    transform: translateY(-2px);
+    box-shadow: 0 0 10px var(--accent-glow);
+  }
+  .sb-brand .panel-tag {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    padding: 2px 5px;
+    border-radius: 4px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    font-weight: 700;
+    margin-left: auto;
+  }
+  .sb-section-label {
+    font-family: var(--font-body);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 1.3px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    padding: 8px 10px 4px;
+  }
+  .sb-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 10px;
+    border-radius: 8px;
+    background: transparent;
+    border: 1px solid transparent;
+    color: var(--text-secondary);
+    font-family: var(--font-body);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: left;
+    width: 100%;
+    transition: background 140ms ease, color 140ms ease;
+  }
+  .sb-item:hover { background: var(--surface-hover); color: var(--text-primary); }
+  .sb-item.active {
+    background: var(--accent-muted);
+    color: var(--accent);
+    border-color: var(--accent-border);
+  }
+  .sb-spacer { flex: 1; }
+  .sb-user {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    cursor: pointer;
+  }
+  .sb-avatar {
+    width: 34px; height: 34px;
+    border-radius: 9px;
+    background: linear-gradient(135deg, #FF8039 0%, #C73F0A 100%);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-display);
+    font-size: 15px;
+    color: var(--text-on-accent);
+    letter-spacing: 1.5px;
+    flex-shrink: 0;
+  }
+  .sb-user-col { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  .sb-user-name {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1.1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .sb-user-role {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    color: var(--accent);
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    font-weight: 700;
+  }
+
+  /* Main */
+  .main { display: flex; flex-direction: column; overflow: hidden; }
+  .topbar {
+    height: 58px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 28px;
+    gap: 16px;
+    flex-shrink: 0;
+  }
+  .tb-breadcrumb {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--text-muted);
+    font-weight: 600;
+  }
+  .tb-breadcrumb .sep { color: var(--border-strong); }
+  .tb-breadcrumb .current { color: var(--text-primary); font-weight: 700; }
+  .tb-spacer { flex: 1; }
+  .status-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 11px;
+    background: var(--success-muted);
+    border: 1px solid var(--success-border);
+    border-radius: 999px;
+    color: var(--success);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .status-chip::before {
+    content: '';
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--success);
+    box-shadow: 0 0 0 3px rgba(46, 224, 160, 0.25);
+  }
+
+  /* Content grid */
+  .content {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 24px 28px 32px;
+    display: grid;
+    grid-template-columns: 1.4fr 1fr;
+    grid-template-rows: auto auto auto;
+    gap: 16px;
+    scrollbar-width: thin;
+  }
+  .content::-webkit-scrollbar { width: 6px; }
+  .content::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  /* === HERO COUNTDOWN CARD (span 2 cols) === */
+  .hero-card {
+    grid-column: 1 / -1;
+    position: relative;
+    padding: 28px 32px;
+    background: linear-gradient(135deg, rgba(255, 107, 26, 0.12) 0%, var(--surface) 55%);
+    border: 1px solid var(--accent-border);
+    border-radius: 16px;
+    overflow: hidden;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 28px;
+    align-items: center;
+  }
+  .hero-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 1px;
+    background: linear-gradient(90deg, transparent, var(--accent-border), transparent);
+  }
+  .hero-card::after {
+    content: 'NS';
+    position: absolute;
+    bottom: -60px;
+    right: 40px;
+    font-family: var(--font-display);
+    font-size: 280px;
+    letter-spacing: -6px;
+    color: var(--accent);
+    opacity: 0.05;
+    line-height: 1;
+    pointer-events: none;
+  }
+  .hero-col { position: relative; z-index: 1; }
+  .hero-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 11px;
+    background: var(--accent-muted);
+    border: 1px solid var(--accent-border);
+    border-radius: 999px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 1.3px;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 14px;
+  }
+  .hero-eyebrow::before {
+    content: '';
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+  .hero-title {
+    font-family: var(--font-display);
+    font-size: 48px;
+    line-height: 0.95;
+    letter-spacing: 2px;
+    color: var(--text-primary);
+    margin-bottom: 12px;
+  }
+  .hero-title .em { color: var(--accent); }
+  .hero-sub {
+    font-size: 14px;
+    line-height: 1.55;
+    color: var(--text-secondary);
+    max-width: 520px;
+  }
+  .hero-sub strong { color: var(--text-primary); font-weight: 700; }
+
+  .countdown-block {
+    position: relative;
+    z-index: 1;
+    padding: 20px 24px;
+    background: var(--bg);
+    border: 1px solid var(--accent-border);
+    border-radius: 14px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    animation: countdown 4000ms ease-in-out infinite;
+  }
+  .countdown-lbl {
+    font-family: var(--font-mono);
+    font-size: 9.5px;
+    font-weight: 800;
+    letter-spacing: 1.3px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+  .countdown-val {
+    font-family: var(--font-display);
+    font-size: 80px;
+    line-height: 0.9;
+    letter-spacing: 2px;
+    color: var(--accent);
+    text-shadow: 0 0 24px var(--accent-glow);
+  }
+  .countdown-unit {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+  }
+  .countdown-date {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    letter-spacing: 0.5px;
+    color: var(--text-muted);
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px dashed var(--border);
+    width: 100%;
+    text-align: center;
+  }
+  .countdown-date strong { color: var(--accent); }
+
+  /* === TIMELINE card === */
+  .timeline-card {
+    grid-column: 1 / 2;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .card-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding-bottom: 12px;
+    border-bottom: 1px dashed var(--border);
+  }
+  .card-title {
+    font-family: var(--font-display);
+    font-size: 20px;
+    letter-spacing: 2px;
+    line-height: 1;
+    color: var(--text-primary);
+  }
+  .card-kicker {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 1.3px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    padding: 3px 7px;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+  }
+
+  .timeline {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    position: relative;
+  }
+  .timeline::before {
+    content: '';
+    position: absolute;
+    left: 13px;
+    top: 16px;
+    bottom: 16px;
+    width: 2px;
+    background: var(--border);
+    border-radius: 1px;
+  }
+  .tl-item {
+    display: grid;
+    grid-template-columns: 28px 1fr auto;
+    gap: 14px;
+    align-items: center;
+    padding: 10px 0;
+    position: relative;
+  }
+  .tl-dot {
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    border: 2px solid var(--border-strong);
+    background: var(--bg);
+    justify-self: center;
+    position: relative;
+    z-index: 1;
+  }
+  .tl-item.done .tl-dot {
+    background: var(--success);
+    border-color: var(--success);
+  }
+  .tl-item.done .tl-dot::after {
+    content: '';
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%) rotate(45deg);
+    width: 3px;
+    height: 6px;
+    border: solid var(--bg);
+    border-width: 0 2px 2px 0;
+  }
+  .tl-item.current .tl-dot {
+    background: var(--accent);
+    border-color: var(--accent);
+    box-shadow: 0 0 0 4px var(--accent-muted);
+    animation: pulse 1800ms ease-in-out infinite;
+  }
+  .tl-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .tl-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1.2;
+  }
+  .tl-item.future .tl-title { color: var(--text-muted); font-weight: 600; }
+  .tl-sub {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--text-muted);
+    letter-spacing: 0.3px;
+  }
+  .tl-item.current .tl-sub { color: var(--accent); font-weight: 700; }
+  .tl-date {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--text-secondary);
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+  }
+  .tl-item.current .tl-date { color: var(--accent); }
+
+  /* === RIGHT COL: Setup progress + stats === */
+  .right-col {
+    grid-column: 2 / 3;
+    grid-row: 2 / 3;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .setup-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .setup-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+  }
+  .setup-val {
+    font-family: var(--font-display);
+    font-size: 38px;
+    letter-spacing: 1.5px;
+    line-height: 1;
+    color: var(--text-primary);
+  }
+  .setup-val .unit { font-family: var(--font-mono); font-size: 14px; color: var(--text-secondary); font-weight: 700; }
+  .setup-progress-wrap {
+    height: 8px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+    position: relative;
+  }
+  .setup-progress-fill {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent) 0%, var(--accent-hover) 100%);
+    border-radius: 4px;
+    transform-origin: left;
+    animation: progressFill 900ms cubic-bezier(0.4, 1.2, 0.3, 1) forwards;
+    transform: scaleX(0.85);
+    box-shadow: 0 0 12px var(--accent-glow);
+  }
+
+  .setup-checklist {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    padding-top: 12px;
+    border-top: 1px dashed var(--border);
+  }
+  .setup-item {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    font-size: 11.5px;
+    color: var(--text-secondary);
+  }
+  .setup-item .check {
+    width: 14px; height: 14px;
+    border-radius: 4px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    flex-grow: 0;
+  }
+  .setup-item.done .check {
+    background: var(--success);
+    color: var(--bg);
+  }
+  .setup-item.done .check svg { width: 9px; height: 9px; }
+  .setup-item.pending .check {
+    border: 1.5px solid var(--warning);
+    background: var(--warning-muted);
+  }
+  .setup-item.done { color: var(--text-primary); }
+  .setup-item.pending { color: var(--warning); font-weight: 700; }
+  .setup-item .link {
+    margin-left: auto;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--accent);
+    text-decoration: none;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+
+  .waitlist-mini-card {
+    background: linear-gradient(135deg, rgba(46, 224, 160, 0.08) 0%, var(--surface) 55%);
+    border: 1px solid var(--success-border);
+    border-radius: 14px;
+    padding: 16px 18px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .waitlist-ico {
+    width: 42px; height: 42px;
+    border-radius: 10px;
+    background: var(--success);
+    color: var(--bg);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .waitlist-ico svg { width: 20px; height: 20px; }
+  .waitlist-col { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+  .waitlist-val {
+    font-family: var(--font-display);
+    font-size: 30px;
+    letter-spacing: 1.5px;
+    line-height: 1;
+    color: var(--text-primary);
+  }
+  .waitlist-lbl {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    line-height: 1.3;
+  }
+  .waitlist-trend {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--success);
+    letter-spacing: 0.3px;
+    margin-top: 2px;
+  }
+
+  /* === Preselling tips (span 2 cols bottom) === */
+  .tips-card {
+    grid-column: 1 / -1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .tips-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+  }
+  .tip-card {
+    padding: 16px 18px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .tip-num {
+    font-family: var(--font-display);
+    font-size: 22px;
+    letter-spacing: 1.5px;
+    color: var(--accent);
+    line-height: 1;
+  }
+  .tip-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1.3;
+  }
+  .tip-desc {
+    font-size: 11.5px;
+    color: var(--text-muted);
+    line-height: 1.5;
+    flex: 1;
+  }
+  .tip-cta {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: var(--accent);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding-top: 8px;
+    border-top: 1px dashed var(--border);
+  }
+  .tip-cta svg { width: 11px; height: 11px; }
+
+  /* States caption */
+  .states-caption {
+    width: 100%;
+    max-width: 1440px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 40px;
+    padding: 14px 0 0;
+    border-top: 1px solid var(--border);
+  }
+  .state-col { display: flex; flex-direction: column; gap: 6px; }
+  .state-col h4 {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 4px;
+  }
+  .state-col ul { list-style: none; display: flex; flex-direction: column; gap: 4px; }
+  .state-col li {
+    font-size: 11px;
+    color: var(--text-secondary);
+    line-height: 1.55;
+    padding-left: 14px;
+    position: relative;
+  }
+  .state-col li::before {
+    content: '—';
+    position: absolute;
+    left: 0;
+    color: var(--text-muted);
+  }
+  .state-col li strong { color: var(--text-primary); font-weight: 700; }
+  .state-col code {
+    font-family: var(--font-mono);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 1px 5px;
+    border-radius: 3px;
+    color: var(--accent);
+    font-size: 10px;
+  }
+</style>
+</head>
+<body>
+
+  <div class="canvas-label">
+    <div class="film-strip">
+      <span class="frame">B2B · WAITING FOR CLIENTS</span>
+      <span class="frame-num">FRAME 15 · panel.opony.app/dashboard · ADR-009 „cichy okres"</span>
+    </div>
+    <div class="slug">PROVIDER APPROVED · CLIENT NOT LIVE YET · COUNTDOWN + PROGRESS + PRESELLING</div>
+    <div class="canvas-meta">
+      <span class="pulse" aria-hidden="true"></span>
+      DRAFT · DESKTOP 1440 × 900
+    </div>
+  </div>
+
+  <div class="desktop-frame">
+
+    <div class="browser-chrome">
+      <div class="traffic-lights"><span class="light red"></span><span class="light yellow"></span><span class="light green"></span></div>
+      <div class="browser-tabs">
+        <div class="browser-tab"><span class="favicon">O</span>Opony · Panel</div>
+      </div>
+      <div class="browser-address">
+        <svg class="lock" viewBox="0 0 16 16" width="12" height="12" fill="currentColor" aria-hidden="true"><path d="M4.5 7V5.5a3.5 3.5 0 0 1 7 0V7h.5a1 1 0 0 1 1 1v5.5a1 1 0 0 1-1 1h-8a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1h.5Zm1.5 0h4V5.5a2 2 0 0 0-4 0V7Z"/></svg>
+        <span class="url">panel.opony.app</span><span class="path">/dashboard</span>
+      </div>
+    </div>
+
+    <div class="app-root">
+
+      <!-- Sidebar -->
+      <nav class="sidebar" aria-label="Nawigacja">
+        <div class="sb-brand">
+          <span class="wordmark">OPONY<span class="dot" aria-hidden="true"></span></span>
+          <span class="panel-tag">Panel</span>
+        </div>
+        <span class="sb-section-label">Operacje</span>
+        <button class="sb-item active" aria-current="page">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+          Pulpit
+        </button>
+        <button class="sb-item">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          Kalendarz
+        </button>
+        <button class="sb-item">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v18"/><path d="m5 8 7-5 7 5"/><path d="m5 16 7 5 7-5"/></svg>
+          Rezerwacje
+        </button>
+        <button class="sb-item">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          Opinie
+        </button>
+
+        <span class="sb-section-label" style="margin-top:14px">Firma</span>
+        <button class="sb-item">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          Profil warsztatu
+        </button>
+        <button class="sb-item">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+          Godziny otwarcia
+        </button>
+        <button class="sb-item">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          Strefa dojazdu
+        </button>
+        <button class="sb-item">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          Cennik
+        </button>
+
+        <div class="sb-spacer"></div>
+
+        <div class="sb-user" role="button" tabindex="0">
+          <div class="sb-avatar">JK</div>
+          <div class="sb-user-col">
+            <span class="sb-user-name">Jan Kowalski</span>
+            <span class="sb-user-role">Właściciel</span>
+          </div>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--text-muted)"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
+      </nav>
+
+      <!-- Main -->
+      <main class="main" role="main">
+        <div class="topbar">
+          <div class="tb-breadcrumb">
+            <span>Operacje</span>
+            <span class="sep">›</span>
+            <span class="current">Pulpit</span>
+          </div>
+          <div class="tb-spacer"></div>
+          <span class="status-chip">Warsztat aktywny · Widoczny publicznie</span>
+        </div>
+
+        <div class="content">
+
+          <!-- HERO COUNTDOWN -->
+          <section class="hero-card" aria-labelledby="hero-title">
+            <div class="hero-col">
+              <div class="hero-eyebrow">Pilot Nowy Sącz · Faza A live</div>
+              <h1 class="hero-title" id="hero-title">GOTOWE!<br>KLIENCI STARTUJĄ<br><span class="em">WKRÓTCE.</span></h1>
+              <p class="hero-sub">Twój profil jest <strong>widoczny w wyszukiwarce</strong> warsztatów w Nowym Sączu. Rekrutujemy jeszcze <strong>5 pilotażowych warsztatów</strong>, a aplikacja kliencka (<strong>app.opony.app</strong>) startuje zgodnie z planem. Póki co uzupełnij resztę konfiguracji i poinformuj swoich stałych klientów — startujemy z silnym popytem.</p>
+            </div>
+            <div class="countdown-block" aria-label="Dni do startu klientów">
+              <span class="countdown-lbl">Start klientów za</span>
+              <span class="countdown-val">21</span>
+              <span class="countdown-unit">dni</span>
+              <span class="countdown-date">Planowany launch: <strong>14 maja 2026</strong></span>
+            </div>
+          </section>
+
+          <!-- TIMELINE (left col, 2nd row) -->
+          <section class="timeline-card" aria-labelledby="tl-title">
+            <header class="card-head">
+              <h2 class="card-title" id="tl-title">Roadmapa pilotu</h2>
+              <span class="card-kicker">ADR-009 faza A/B</span>
+            </header>
+
+            <div class="timeline">
+              <div class="tl-item done">
+                <span class="tl-dot" aria-hidden="true"></span>
+                <div class="tl-body">
+                  <span class="tl-title">Portal LIVE</span>
+                  <span class="tl-sub">Provider może konfigurować warsztat</span>
+                </div>
+                <span class="tl-date">11 kwi</span>
+              </div>
+              <div class="tl-item done">
+                <span class="tl-dot" aria-hidden="true"></span>
+                <div class="tl-body">
+                  <span class="tl-title">Twoja rejestracja zaakceptowana</span>
+                  <span class="tl-sub">Weryfikacja GUS + zdjęcia · Status APPROVED</span>
+                </div>
+                <span class="tl-date">18 kwi</span>
+              </div>
+              <div class="tl-item current">
+                <span class="tl-dot" aria-hidden="true"></span>
+                <div class="tl-body">
+                  <span class="tl-title">Rekrutacja pozostałych 5 pilotów</span>
+                  <span class="tl-sub">• Jesteśmy tutaj · 3 z 8 warsztatów onboardowanych</span>
+                </div>
+                <span class="tl-date">Tyg. 3-4</span>
+              </div>
+              <div class="tl-item future">
+                <span class="tl-dot" aria-hidden="true"></span>
+                <div class="tl-body">
+                  <span class="tl-title">Start aplikacji klienckiej</span>
+                  <span class="tl-sub">app.opony.app LIVE · Pierwsze rezerwacje</span>
+                </div>
+                <span class="tl-date">14 maja</span>
+              </div>
+              <div class="tl-item future">
+                <span class="tl-dot" aria-hidden="true"></span>
+                <div class="tl-body">
+                  <span class="tl-title">Beta z F&amp;F · soft launch</span>
+                  <span class="tl-sub">Friends & family testing + marketing ramp</span>
+                </div>
+                <span class="tl-date">Lip-sie</span>
+              </div>
+              <div class="tl-item future">
+                <span class="tl-dot" aria-hidden="true"></span>
+                <div class="tl-body">
+                  <span class="tl-title">Sezon jesienny · public launch</span>
+                  <span class="tl-sub">Szczyt popytu — wymiana letnie → zimowe</span>
+                </div>
+                <span class="tl-date">Październik</span>
+              </div>
+            </div>
+          </section>
+
+          <!-- RIGHT COL: Setup + Waitlist -->
+          <aside class="right-col">
+            <section class="setup-card" aria-labelledby="setup-title">
+              <header class="card-head">
+                <h2 class="card-title" id="setup-title">Twoja konfiguracja</h2>
+                <span class="card-kicker">6 / 7 ✓</span>
+              </header>
+
+              <div class="setup-head">
+                <span class="setup-val">85<span class="unit">%</span></span>
+                <span style="font-family:var(--font-mono); font-size:10px; color:var(--text-muted); letter-spacing:0.5px; text-transform:uppercase; font-weight:700">Ukończone</span>
+              </div>
+              <div class="setup-progress-wrap" aria-hidden="true">
+                <div class="setup-progress-fill" style="--fill: 0.85"></div>
+              </div>
+
+              <div class="setup-checklist">
+                <div class="setup-item done">
+                  <span class="check" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><polyline points="20 6 9 17 4 12"/></svg>
+                  </span>
+                  Dane firmy (NIP, CEIDG)
+                </div>
+                <div class="setup-item done">
+                  <span class="check" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><polyline points="20 6 9 17 4 12"/></svg>
+                  </span>
+                  Cennik (3 tiery)
+                </div>
+                <div class="setup-item done">
+                  <span class="check" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><polyline points="20 6 9 17 4 12"/></svg>
+                  </span>
+                  Godziny otwarcia
+                </div>
+                <div class="setup-item done">
+                  <span class="check" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><polyline points="20 6 9 17 4 12"/></svg>
+                  </span>
+                  Typ serwisu &amp; usługi
+                </div>
+                <div class="setup-item done">
+                  <span class="check" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><polyline points="20 6 9 17 4 12"/></svg>
+                  </span>
+                  Galeria (5 zdjęć)
+                </div>
+                <div class="setup-item done">
+                  <span class="check" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><polyline points="20 6 9 17 4 12"/></svg>
+                  </span>
+                  Strefa dojazdu
+                </div>
+                <div class="setup-item pending">
+                  <span class="check" aria-hidden="true"></span>
+                  Opis warsztatu (&lt; 60 zn)
+                  <a class="link" href="#">Dokończ →</a>
+                </div>
+              </div>
+            </section>
+
+            <section class="waitlist-mini-card" aria-label="Waitlist klientów">
+              <span class="waitlist-ico" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+              </span>
+              <div class="waitlist-col">
+                <span class="waitlist-val">47</span>
+                <span class="waitlist-lbl">Klientów już czeka<br>na aplikację w NS</span>
+                <span class="waitlist-trend">+12 w ostatnim tygodniu</span>
+              </div>
+            </section>
+          </aside>
+
+          <!-- PRESELLING TIPS (span full bottom) -->
+          <section class="tips-card" aria-labelledby="tips-title">
+            <header class="card-head">
+              <h2 class="card-title" id="tips-title">W międzyczasie — pomóż nam startować z popytem</h2>
+              <span class="card-kicker">Preselling</span>
+            </header>
+
+            <div class="tips-grid">
+              <article class="tip-card">
+                <span class="tip-num">01</span>
+                <h3 class="tip-title">Powiedz stałym klientom</h3>
+                <p class="tip-desc">Przy następnej wizycie wspomnij: „Od 14 maja możecie rezerwować online na <strong>opony.app</strong> — koniec z telefonami". Wyślemy Ci gotowe ulotki do wydrukowania.</p>
+                <a class="tip-cta" href="#">
+                  Pobierz ulotki (PDF)
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+                </a>
+              </article>
+              <article class="tip-card">
+                <span class="tip-num">02</span>
+                <h3 class="tip-title">Udostępnij swój profil publiczny</h3>
+                <p class="tip-desc">Twój profil jest już pod adresem <strong>opony.app/p/jan-kowalski-ns</strong>. Wrzuć link na Facebook warsztatu, do Google Business, do stopki maila.</p>
+                <a class="tip-cta" href="#">
+                  Kopiuj link + QR do druku
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+                </a>
+              </article>
+              <article class="tip-card">
+                <span class="tip-num">03</span>
+                <h3 class="tip-title">Doprecyzuj konfigurację</h3>
+                <p class="tip-desc">Masz jeszcze <strong>1 pole do uzupełnienia</strong> — opis warsztatu w profilu. Krótszy niż 60 znaków → wyszukiwarka pokazuje placeholder. Zajmie Ci to 2 min.</p>
+                <a class="tip-cta" href="#">
+                  Uzupełnij opis
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+                </a>
+              </article>
+            </div>
+          </section>
+
+        </div>
+
+      </main>
+    </div>
+  </div>
+
+  <!-- States caption -->
+  <div class="states-caption">
+    <div class="state-col">
+      <h4>Trigger &amp; logika</h4>
+      <ul>
+        <li><strong>Warunek pokazania</strong> — <code>Provider.status=APPROVED</code> AND <code>COUNT(Booking WHERE providerId=me) = 0</code> AND <code>TODAY &lt; CLIENT_LAUNCH_DATE</code>. Toggle env <code>CLIENT_LAUNCH_DATE</code> (string ISO date).</li>
+        <li><strong>Fallback do b2b-01</strong> — po launchu klienta (data minęła) albo gdy pojawi się pierwsza rezerwacja — automatycznie standardowy dashboard z KPI.</li>
+        <li><strong>Countdown</strong> — live Date.now() vs CLIENT_LAUNCH_DATE; format „X dni" → „X godzin" w ostatniej dobie → „LIVE" po przekroczeniu.</li>
+        <li><strong>Timeline „current"</strong> — pulsujący amber dot, aktualizuje się automatycznie per tydzień (env flag).</li>
+        <li><strong>Waitlist counter (47)</strong> — live query z <code>WaitlistSignup WHERE city='Nowy Sącz'</code>; aktualizuje się co 15 min (cache).</li>
+      </ul>
+    </div>
+    <div class="state-col">
+      <h4>Mitigacja ADR-009 „cichy okres"</h4>
+      <ul>
+        <li><strong>Cel ekranu</strong> — utrzymać momentum providera przez 2-4 tyg. między APPROVED a client launch. Bez tego provider czuje, że się zarejestrował i nic się nie dzieje.</li>
+        <li><strong>Setup progress (85%)</strong> — pokazuje że jest 1 rzecz do zrobienia (opis) + daje satysfakcję z dopięcia. Gdy 100% → zamieniamy na „Setup complete · Gotowe".</li>
+        <li><strong>Preselling tips (3 karty)</strong> — concrete actions które provider może zrobić TERAZ, żeby nie był pasywny. „Ulotki PDF" i „QR do druku" — realny material do dystrybucji.</li>
+        <li><strong>Waitlist card</strong> — social proof że popyt jest (klienci czekają), provider nie jest sam; +12/tydz trend sugeruje ramp-up.</li>
+        <li><strong>Weekly email</strong> (poza ekranem, w `notification` module) — „W tym tygodniu: [progres]. Zostało X dni" — uzupełnia screen dla providerów którzy nie otwierają panelu codziennie.</li>
+        <li><strong>A11y</strong> — timeline z <code>role="list"</code>; countdown ma <code>aria-live="polite"</code> dla SR; progress bar ma <code>role="progressbar"</code> z <code>aria-valuenow</code>.</li>
+      </ul>
+    </div>
+  </div>
+
+</body>
+</html>

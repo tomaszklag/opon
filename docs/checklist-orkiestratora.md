@@ -300,13 +300,16 @@ Wróci w v0.5 po pilocie, gdy włączamy monetyzację (decyzja P24 marketplace v
 
 ---
 
-# FAZA 2: Sprint 1 — Auth + Profil (tydzień 1)
+# FAZA 2: Sprint 1 — Provider auth + onboarding wizard + Retool admin (tydzień 1)
+
+> **ADR-009 B2B-first:** Sprint 1-3 to Faza A (provider portal LIVE → Milestone A). Klient pojawi się w Sprint 4. Nie uruchamiaj jeszcze agentów FE-mobile.
 
 ### TASK-029: Uruchom Agent BE-1a (Schema Owner)
 - **Co:** Stworzenie PEŁNEGO schematu Prisma (14 tabel) + seed data.
-- **Jak:** Branch `sprint-1/be-1a-schema`. Wklej prompt BE-1a z sekcji 20. Dodaj kontekst: _"Repo istnieje ze scaffoldu Sprint 0. Pracujesz w /apps/api. Stwórz schemat Prisma ze WSZYSTKIMI tabelami zgodnie z architektura.md sekcja 8."_
+- **Jak:** Branch `sprint-1/be-1a-schema`. Wklej prompt BE-1a z `plan-sprintow.md §20`. Dodaj kontekst: _"Repo istnieje ze scaffoldu Sprint 0. Pracujesz w /apps/api. Stwórz schemat Prisma ze WSZYSTKIMI tabelami zgodnie z architektura.md §8."_
+- **Seed:** 1 admin (role=ADMIN) + 2 providerów PENDING_APPROVAL (do testu approve flow). Reszta seed rozbuduje się w kolejnych sprintach.
 - **Czas:** 20–30 min
-- **Weryfikacja:** `pnpm db:migrate` → 14+ tabel. `pnpm db:seed` → dane w DB. `npx prisma studio` → przeglądaj dane.
+- **Weryfikacja:** `pnpm db:migrate` → 14+ tabel. `pnpm db:seed` → dane w DB. `npx prisma studio` → przeglądaj.
 - **⚠ KRYTYCZNE:** To fundament. Uruchom Architekta na review ZANIM merge'ujesz!
 - [ ] Agent uruchomiony
 - [ ] Migracja działa
@@ -314,241 +317,327 @@ Wróci w v0.5 po pilocie, gdy włączamy monetyzację (decyzja P24 marketplace v
 
 ### TASK-030: Architekt — review schematu BE-1a
 - **Co:** Code review schematu Prisma — najważniejszy review w projekcie.
-- **Jak:** Uruchom Claude Code z promptem: _"Zrób review PR sprint-1/be-1a-schema. Sprawdź schema.prisma i seed.ts. Referencja: docs/architektura.md sekcja 8. Sprawdź: wszystkie tabele obecne, typy pól, relacje FK, unique constraints (partial index!), enumy, indeksy. Zaakceptuj lub odrzuć z komentarzami."_
-- **Rezultat:** Lista komentarzy lub approval
+- **Jak:** Prompt: _"Zrób review PR sprint-1/be-1a-schema. Sprawdź schema.prisma i seed.ts. Referencja: architektura.md §8. Sprawdź: wszystkie tabele, typy, FK, unique constraints (partial index!), enumy, indeksy."_
 - [ ] Review zrobiony
-- [ ] Schema approved (po ewentualnych poprawkach)
+- [ ] Schema approved
 
 ### TASK-031: Merge BE-1a do main
 - **Co:** Schema owner merge'uje PIERWSZY — reszta agentów na niego czeka.
 - **Jak:** `git checkout main && git merge sprint-1/be-1a-schema && git push`
 - [ ] Merge zrobiony
 
-### TASK-032: Uruchom Agent BE-1b (Auth logic)
-- **Co:** Moduł autentykacji OTP + user + vehicle.
-- **Jak:** Branch `sprint-1/be-1b-auth`. Wklej prompt BE-1b. Dodaj: _"Schema Prisma jest gotowa (merge BE-1a). Pracujesz na gotowych tabelach — NIE twórz migracji."_
-- **Czas:** 30–45 min
-- **Weryfikacja:** Swagger → `POST /v1/auth/otp/request` + `/verify` → JWT
+### TASK-032: Uruchom Agent BE-1b (Shared auth + Provider onboarding + GUS)
+- **Co:** Auth SMS OTP (shared dla CLIENT i PROVIDER_OWNER) + provider signup + GUS + S3 UploadService.
+- **Jak:** Branch `sprint-1/be-1b-auth-provider`. Wklej prompt BE-1b z §20 nowego planu. Dodaj: _"Schema Prisma gotowa (merge BE-1a). Client-side endpoints (GET/PATCH /v1/me, /vehicles) — pominięte w Sprint 1, wracają w Sprint 4."_
+- **Czas:** 45–60 min
+- **Weryfikacja:** Swagger → `POST /v1/auth/otp/request` → SMS → `/verify` → JWT. `POST /v1/provider/signup` → NIP verify (mock GUS) → upload zdjęć S3 → PENDING_APPROVAL.
+- [ ] OTP flow działa
+- [ ] Provider signup → PENDING_APPROVAL
+- [ ] S3 upload działa
+
+### TASK-033: Uruchom Agent FE-panel-1 (Login + onboarding wizard 3-step)
+- **Co:** Provider login (b2b-12) + wizard 3 kroki (b2b-02, b2b-03, b2b-04).
+- **Jak:** Branch `sprint-1/fe-panel-1-auth-wizard`. Wklej prompt FE-panel-1. Agent startuje z MSW — NIE czeka na BE.
+- **Czas:** 60–90 min
+- **Design reference:** `/design/b2b-12-login.html`, `b2b-02-onboarding-firma.html`, `b2b-03-onboarding-zdjecia.html`, `b2b-04-onboarding-weryfikacja.html`
+- **Weryfikacja:** `http://localhost:3001` → signup → NIP auto-fill → upload 3 zdjęć → pending screen. Pixel-match z mockupami.
 - [ ] Agent uruchomiony
-- [ ] OTP flow działa w Swagger
+- [ ] Flow działa z MSW (signup → pending)
+- [ ] Login OTP działa
 
-### TASK-033: Uruchom Agent BE-2 (Provider onboarding)
-- **Co:** Rejestracja providera + GUS NIP verify.
-- **Jak:** Branch `sprint-1/be-2-provider`. Wklej prompt BE-2. Może startować równolegle z BE-1b (oba na gotowym schemacie).
-- **Czas:** 30–45 min
-- **Weryfikacja:** Swagger → `POST /v1/provider/signup` → Provider created
-- [ ] Agent uruchomiony
-- [ ] Signup flow działa
+### TASK-034: Skonfiguruj Retool — admin approve queue (HUMAN TASK — Ty!) ⚠ KRYTYCZNE
+- **Co:** Provider approval queue w Retool (wcześniej było w Sprint 6 — ADR-009 przesuwa na Sprint 1, admin approve potrzebny od razu).
+- **Dlaczego teraz:** Bez Retoola nikt nie może zatwierdzić providerów → blokada Sprint 3 Milestone A (onboard 8 pilotów).
+- **Jak:**
+  1. Zaloguj się do Retool (TASK-013).
+  2. Połączenie: Postgres read + REST API write (użyj admin JWT z seed).
+  3. **Approval queue:** Query `SELECT p.id, p.companyName, p.nip, p.status, p.createdAt, u.phone, u.email FROM Provider p JOIN User u ON p.userId = u.id WHERE p.status = 'PENDING_APPROVAL' ORDER BY p.createdAt ASC`.
+  4. Per-wiersz akcje: `[✓ Approve]` → POST /v1/admin/providers/:id/approve | `[✗ Reject]` → modal z „Powód" → POST /v1/admin/providers/:id/reject | `[Szczegóły]` → drawer ze zdjęciami S3.
+- **Czas:** ~1,5h
+- **Weryfikacja E2E:** signup w panel.opony.app → pending → zaloguj jako admin w Retool → Approve → provider dostaje SMS „konto aktywne" → login → dashboard.
+- [ ] Retool połączone z Postgres + API
+- [ ] Approval queue widoczny
+- [ ] E2E approve flow działa
 
-### TASK-034: Uruchom Agent FE-1 (Klient auth UI)
-- **Co:** Ekrany logowania klienta (OTP + regulamin + profil + pojazdy).
-- **Jak:** Branch `sprint-1/fe-1-client-auth`. Wklej prompt FE-1. Agent startuje z MSW mockami — NIE czeka na BE.
-- **Czas:** 30–60 min
-- **Weryfikacja:** `http://localhost:3000` → ekran logowania → wpisz numer → OTP → profil
-- [ ] Agent uruchomiony
-- [ ] Flow działa z MSW
+### TASK-035: Architekt — review BE-1b
+- **Co:** Review auth + provider onboarding.
+- **Jak:** Prompt: _"Review PR sprint-1/be-1b-auth-provider. Focus: JWT guards (role-based), OTP rate limiting, GUS mock + fallback CEIDG, S3 presigned URL security, state machine statusów Provider."_
+- [ ] Review zrobiony
 
-### TASK-035: Uruchom Agent FE-2 (B2B wizard krok 1)
-- **Co:** Formularz rejestracji providera.
-- **Jak:** Branch `sprint-1/fe-2-b2b-wizard`. Wklej prompt FE-2.
-- **Czas:** 20–30 min
-- **Weryfikacja:** `http://localhost:3001` → formularz NIP + auto-fill + zgody
-- [ ] Agent uruchomiony
-- [ ] Wizard step 1 działa z MSW
+### TASK-036: Projektant — UI review FE-panel-1
+- **Co:** Pixel-match z mockupami design phase.
+- **Jak:** Prompt: _"UI review PR sprint-1/fe-panel-1-auth-wizard. Mockupy: design/b2b-12-login.html, b2b-02/03/04-onboarding-*.html. Sprawdź pixel-match, @opony/design-system-web, responsive, a11y. Patrz footer <caption> każdego mockupu dla stanów + a11y baseline."_
+- [ ] Review zrobiony
 
-### TASK-036: Architekt — review BE-1b + BE-2
-- **Co:** Code review logiki auth i provider onboardingu.
-- **Jak:** Uruchom Architekta na oba PR-y. Focus: JWT guards, OTP rate limiting, GUS mock, error handling.
-- [ ] BE-1b reviewed
-- [ ] BE-2 reviewed
+### TASK-037: FE swap MSW → real API
+- **Co:** Podłącz panel do BE.
+- **Jak:** `.env.local` → `NEXT_PUBLIC_API_MOCK=false`. Test: signup → NIP verify → upload → pending → admin Retool approve → provider login → dashboard placeholder.
+- [ ] Provider panel działa end-to-end z real API + Retool
 
-### TASK-037: Projektant — UI review FE-1 + FE-2
-- **Co:** Sprawdzenie zgodności UI z wireframami.
-- **Jak:** Uruchom Projektanta z promptem: _"UI review PR sprint-1/fe-1-client-auth. Wireframy: plan-sprintow.md sekcja 12.16 (OTP), 12.11 (profil). Sprawdź: zgodność z wireframe, @opony/design-system, responsive, a11y."_
-- [ ] FE-1 reviewed
-- [ ] FE-2 reviewed
-
-### TASK-038: FE swap MSW → real API
-- **Co:** Podłącz frontend do prawdziwego backendu.
-- **Jak:** W `.env.local` ustaw `NEXT_PUBLIC_API_MOCK=false`. Uruchom `pnpm dev`. Przetestuj: login OTP → profil.
-- **⚠** Jeśli coś nie działa — to normalne przy pierwszym swap. Napraw ręcznie lub uruchom agenta z opisem problemu.
-- [ ] Client PWA działa z real API
-- [ ] Provider panel działa z real API
-
-### TASK-039: Merge + checklista Sprint 1
-- **Co:** Merge wszystkich PR-ów + weryfikacja.
-- **Jak:** Merge: BE-1b → main, BE-2 → main (rebase), FE-1 → main, FE-2 → main.
+### TASK-038: Merge + checklista Sprint 1
 - **Checklista Sprint 1:**
   - [ ] `pnpm build` — zero errors
-  - [ ] OTP login → JWT → GET /v1/me → profil
-  - [ ] Provider signup → NIP verify → PENDING_DOCS
-  - [ ] Swagger `/v1/docs` — endpointy auth + provider
-  - [ ] Seed data rozszerzony
+  - [ ] Provider signup z Twilio OTP → NIP mock GUS → upload 3 zdjęć S3 → PENDING_APPROVAL
+  - [ ] Admin Retool approve → SMS do providera + status APPROVED
+  - [ ] Provider login OTP → dashboard placeholder (pełny w Sprint 3)
+  - [ ] Swagger `/v1/docs` — endpointy /auth/*, /provider/*, /admin/providers/*
   - [ ] Push do main → CI green
 
 ---
 
-# FAZA 3: Sprint 2 — Katalog + Mapa (tydzień 2)
+# FAZA 3: Sprint 2 — Provider profile CRUD (tydzień 2)
 
-### TASK-040: Uruchom Agent BE-3 (Katalog + availability)
-- **Co:** API listingu providerów z cenami, slotami, dystansem.
-- **Jak:** Branch `sprint-2/be-3-catalog`. Prompt BE-3 z sekcji 20.
-- **Weryfikacja:** Swagger → `GET /v1/providers?lat=49.62&lng=20.69` → lista providerów z seeda
+### TASK-039: Uruchom Agent BE-2 (Provider profile modules)
+- **Co:** Pricing, Schedule, ServiceArea, Photos, Profile, Settings (zmiana tel 2-step OTP, sesje, soft-delete 30d).
+- **Jak:** Branch `sprint-2/be-2-provider-crud`. Prompt BE-2 z nowego §20.
+- **Czas:** 60–90 min
+- **Weryfikacja:** Swagger → PUT /v1/provider/me/pricing (3 tiery) → save → GET → zachowane. Wszystkie endpointy z §20 BE-2 w Swagger.
 - [ ] Uruchomiony + zweryfikowany
 
-### TASK-041: Uruchom Agent FE-3 (Lista + Mapa + Filtry)
-- **Co:** Główny ekran klienta — wyszukiwarka z mapą.
-- **Jak:** Branch `sprint-2/fe-3-catalog`. Prompt FE-3. MSW od dnia 1.
-- **Weryfikacja:** `localhost:3000` → mapa z pinami + lista kart
+### TASK-040: Uruchom Agent FE-panel-2 (Cennik + Godziny + Strefa)
+- **Co:** 3 ekrany konfiguracyjne + layout z sidebar.
+- **Design reference:** `/design/b2b-05-cennik.html`, `b2b-06-godziny.html`, `b2b-07-strefa.html`, `b2b-01-dashboard.html` (layout wzór).
+- **Jak:** Branch `sprint-2/fe-panel-2-crud`. Prompt FE-panel-2.
+- **Weryfikacja:** Provider zalogowany → `http://localhost:3001/cennik` → 3 tiery z live preview. `/godziny` → 7 dni + per-day slot override. `/strefa` → Google Maps z draggable marker.
+- [ ] Uruchomiony + zweryfikowany
+
+### TASK-041: Uruchom Agent FE-panel-3 (Profil warsztatu + Ustawienia konta)
+- **Co:** Edycja profilu publicznego (b2b-11) + ustawienia (b2b-14 z 6 sekcjami).
+- **Design reference:** `/design/b2b-11-profil.html` (z live preview phone mockup), `b2b-14-ustawienia.html`.
+- **Jak:** Branch `sprint-2/fe-panel-3-profil-ustawienia`. Prompt FE-panel-3.
+- **Weryfikacja:** Profil z autosave + live preview + galeria reorder. Ustawienia: zmiana tel 2-step OTP, pauza 4 presety, notyfikacje matrix, sesje, danger zone z 3-step confirm.
 - [ ] Uruchomiony + zweryfikowany
 
 ### TASK-042: Review + merge Sprint 2
-- [ ] Architekt: review BE-3
-- [ ] Projektant: UI review FE-3 (wireframy 12.1, 12.13)
-- [ ] FE-3: swap MSW → real API
+- [ ] Architekt: review BE-2 (2-step OTP phone change, soft delete 30d, S3 upload validacje)
+- [ ] Projektant: UI review FE-panel-2 + FE-panel-3 (pixel-match z 5 mockupami: b2b-05/06/07/11/14)
+- [ ] FE swap MSW → real API
 - [ ] Merge do main
 - **Checklista Sprint 2:**
-  - [ ] Mapa z 5 providerami
-  - [ ] Filtry: „Dziś" → lista się kurczy
-  - [ ] Empty state: wpisz „Wrocław" → waitlist
+  - [ ] Provider approved → login → dashboard placeholder → cennik → save → reload → zachowane
+  - [ ] Godziny: Pn-Pt 8-18, Sb 9-14, Nd closed → slot per day override działa
+  - [ ] Strefa: drag marker + promień 15 km → save
+  - [ ] Profil: edycja + 3 zdjęcia galerii → live preview się aktualizuje
+  - [ ] Zmiana tel: OTP stary + nowy → zmiana w DB + AuditLog
+  - [ ] Pauza warsztatu „Weekend" → isActive=false do pon 8:00
 
 ---
 
-# FAZA 4: Sprint 3 — Rezerwacja + Płatności (tydzień 3)
+# FAZA 4: Sprint 3 — Provider daily ops + Booking entity + Landing v1 — ★ Milestone A (tydzień 3)
 
-### TASK-043: Sprawdź status Twilio
-- **Co:** Upewnij się, że credentials z TASK-003 są gotowe.
-- **Jak:** Zaloguj się do Twilio → SMS wysyłany?
-- [ ] Twilio SMS działa (wyślij testowy na swój numer)
+### TASK-043: Sprawdź status Twilio (production-ready)
+- **Co:** Provider SMS notifications mają działać w Sprint 3.
+- **Jak:** Zaloguj się do Twilio → sandbox działa? Trial balance ma $. Wyślij testowy SMS przez Twilio console.
+- [ ] Twilio SMS działa
 
-### TASK-044: Uruchom Agent BE-4 (Booking + bookingExpiryCron)
-- **Co:** Moduł rezerwacji bez płatności (ADR-004) + cron bookingExpiry (PENDING > 2h → auto-cancel).
-- **Jak:** Branch `sprint-3/be-4-booking`. Prompt BE-4 z sekcji 20.
-- **Weryfikacja:** Swagger → `POST /v1/bookings` → zwraca `{booking}` ze statusem PENDING + SMS do providera wysłany.
+### TASK-044: Design — dodanie ekranu b2b-15-waiting-for-clients
+- **Co:** Ekran pokazywany w Sprint 3-4 (ADR-009 „cichy okres" mitigation), gdy provider approved ale klient nie LIVE.
+- **Status:** ✓ Utworzony (2026-04-23). Plik: `/design/b2b-15-waiting-for-clients.html`.
+- **Jak używa:** FE-panel-5 w TASK-046 implementuje ten ekran. Toggle: `Provider.status=APPROVED AND COUNT(Booking)=0 AND TODAY<CLIENT_LAUNCH_DATE` → waiting; else standard dashboard.
+- [x] Ekran istnieje
+
+### TASK-045: Uruchom Agent BE-3 (Booking entity + manual booking + state machine)
+- **Co:** Booking entity w BE, manual booking (provider wpisuje telefonicznego klienta), state machine, CSV export, review moderation.
+- **Jak:** Branch `sprint-3/be-3-booking`. Prompt BE-3 z §20. POC v0 bez płatności (ADR-004). Client-side POST /bookings dopiero w Sprint 5.
+- **Czas:** 60–90 min
+- **Weryfikacja:** `POST /v1/provider/me/bookings` (manual) → CONFIRMED + SMS. GET /bookings/calendar?week=2026-17 → response format dla b2b-09. CSV export.
 - [ ] Uruchomiony + zweryfikowany
 
-### TASK-045: Uruchom Agent FE-4 (Booking flow)
-- **Co:** Flow rezerwacji klienta: wybór slotu → potwierdzenie PENDING (bez płatności).
-- **Jak:** Branch `sprint-3/fe-4-booking`. Prompt FE-4.
-- **Weryfikacja:** Expo → provider → slot → „Zarezerwuj termin" → potwierdzenie PENDING
+### TASK-046: Uruchom Agent FE-panel-4 (Dashboard + Kalendarz + Lista + Szczegół)
+- **Co:** 4 ekrany daily ops.
+- **Design reference:** `/design/b2b-01-dashboard.html`, `b2b-09-kalendarz.html`, `b2b-13-rezerwacje.html`, `b2b-08-szczegol-rezerwacji.html`.
+- **Jak:** Branch `sprint-3/fe-panel-4-daily-ops`. Prompt FE-panel-4.
+- **Weryfikacja:** `/dashboard`, `/kalendarz`, `/rezerwacje`, `/rezerwacje/:id`. Manual booking modal działa (US-30).
 - [ ] Uruchomiony + zweryfikowany
 
-### TASK-046: Review + merge Sprint 3
-- [ ] Architekt: review BE-4 (race condition 409, bookingExpiryCron, idempotency)
-- [ ] Projektant: UI review FE-4 (wireframy 12.2, 12.3, 12.4 — **bez 12.8**, ADR-004)
-- [ ] Swap MSW → real
+### TASK-047: Uruchom Agent FE-panel-5 (Opinie + Waiting-for-clients)
+- **Co:** Opinie moderacja (b2b-10) + waiting-for-clients (b2b-15, fallback dla pustego dashboard w Fazie A).
+- **Design reference:** `/design/b2b-10-opinie.html`, `b2b-15-waiting-for-clients.html`.
+- **Jak:** Branch `sprint-3/fe-panel-5-opinie-waiting`. Prompt FE-panel-5. Ustaw env `CLIENT_LAUNCH_DATE=2026-05-14` (lub realny termin Fazy B).
+- **Weryfikacja:** Provider bez bookings → widzi b2b-15 z countdown. Dodaj manual booking → widok przełącza się na b2b-01 dashboard.
+- [ ] Uruchomiony + zweryfikowany
+
+### TASK-048: Uruchom Agent FE-landing-1a (Landing provider-facing v1)
+- **Co:** Minimalny landing `opony.app/` z hero promującym „Zarejestruj warsztat" (rekrutacja 8 pilotów). Pełna wersja client-facing w Sprint 6.
+- **Design reference:** `/design/landing-01-home.html` — wziąć sekcję "For providers" i promować do hero.
+- **Jak:** Branch `sprint-3/fe-landing-1a-provider`. Prompt FE-landing-1a.
+- **Weryfikacja:** `opony.app` LIVE. Hero: „Zarządzaj rezerwacjami, nie telefonami". CTA → redirect do `panel.opony.app/signup`.
+- [ ] Landing v1 LIVE
+
+### TASK-049: Skonfiguruj Retool-2 — Booking management (HUMAN TASK)
+- **Co:** Drugi Retool dashboard — audyt bookings + force-change status.
+- **Jak:** Query `SELECT b.*, p.companyName, u.phone AS clientPhone FROM Booking b JOIN Provider p ON b.providerId=p.id JOIN User u ON b.userId=u.id ORDER BY b.startAt DESC LIMIT 100`. Per-wiersz: drill-down drawer, force status change z AuditLog zapisem.
+- **Czas:** ~1h
+- [ ] Booking management dashboard w Retool działa
+
+### TASK-050: Review + merge Sprint 3
+- [ ] Architekt: review BE-3 (state machine S:13.3, bookingExpiryCron, race condition 409 partial unique index, AuditLog)
+- [ ] Projektant: UI review FE-panel-4 + FE-panel-5 + FE-landing-1a (pixel-match: b2b-01/08/09/10/13/15, landing-01 provider variant)
+- [ ] FE swap MSW → real API
 - [ ] Merge do main
 - **Checklista Sprint 3:**
-  - [ ] Szukaj → provider → slot → rezerwuj → PENDING + SMS do providera
-  - [ ] Double-booking: 2 okna → 1 sukces, 1 × 409
-  - [ ] Adres poza strefą → inline error
-  - [ ] bookingExpiryCron: czekaj 2h → PENDING → CANCELLED_BY_SYSTEM + SMS do klienta
+  - [ ] Provider: dashboard placeholder → widzi b2b-15 waiting-for-clients z countdown 21 dni
+  - [ ] Dodaj manual booking (US-30) → widok przełącza się na b2b-01 dashboard
+  - [ ] Kalendarz tygodniowy pokazuje manual booking w slocie
+  - [ ] Lista rezerwacji z filtrami + CSV export
+  - [ ] Provider odpowiada na opinię (seed z BE-1a)
+  - [ ] `opony.app` LIVE z hero provider-facing v1
+  - [ ] bookingExpiryCron: PENDING > 2h → CANCELLED_BY_SYSTEM + SMS
 
-### TASK-047: Zacznij GTM! (równolegle z kolejnymi sprintami)
-- **Co:** Od teraz masz działający produkt. Zacznij pozyskiwanie providerów.
-- **Jak:** Przeczytaj `analiza-biznesowa.md` sekcja 17 → research Google Maps → Excel → dzwonienie.
-- **Cel przed Sprint 6:** 5 zainteresowanych providerów
-- [ ] Research zrobiony (Excel z providerami w Nowym Sączu)
-- [ ] Pierwsze 5 telefonów wykonanych
+### TASK-051: ★ Milestone A gate — decyzja iterować vs lecieć do Fazy B
+- **Co:** Koniec tygodnia 3-4. Portal LIVE, Retool działa, landing v1. Czas onboardować pilotów.
+- **Kroki:**
+  1. **Onboard 2-3 pilotów end-to-end w produkcji** (dogfooding) — ty wypełniasz z providerami ich portale.
+  2. **GTM start — rekrutacja pozostałych 5-6 pilotów** przez `opony.app/` i telefoniczny outreach.
+  3. **Decision gate:** jeśli pilot feedback wskazuje luki w panelu (ekrany brakujące / nieczytelne UX) → iteracja +1 tydzień w Fazie A. W przeciwnym razie → lecimy do Sprint 4 (Faza B).
+- **Czas:** 3-5 dni (równolegle z ewentualną iteracją)
+- [ ] 2-3 pilotów onboarded end-to-end
+- [ ] Rekrutacja pozostałych 5-6 w toku
+- [ ] Decision: start Sprint 4 (data: ...........) albo iterate Sprint 3 (feedback items: ...........)
 
 ---
 
-# FAZA 5: Sprint 4 — Panel B2B (tydzień 4)
+# FAZA 5: Sprint 4 — Klient auth + catalog + mapa (tydzień 4)
 
-### TASK-048: Uruchom Agent BE-5 (Provider panel + S3)
-- **Jak:** Branch `sprint-4/be-5-panel`. Prompt BE-5.
+> **★ Milestone A passed.** Faza B rusza. Klient dostanie realne dane 8 pilotów z Fazy A od dnia 1.
+
+### TASK-052: Uruchom Agent BE-4 (Client auth + Vehicle + Provider listing)
+- **Co:** Client-side /v1/me endpointy (reuse shared OTP z Sprint 1), Vehicle CRUD z katalogiem OE-size mock, Provider public listing z haversine, availability, waitlist (US-40).
+- **Jak:** Branch `sprint-4/be-4-client-catalog`. Prompt BE-4 z §20 nowego planu.
+- **Weryfikacja:** `GET /v1/providers?lat=49.62&lng=20.69&tireSize=205/55R16&sort=distance` → lista 8 pilotów z cenami + dystansami. `POST /v1/waitlist` działa.
 - [ ] Uruchomiony + zweryfikowany
 
-### TASK-049: Uruchom Agent FE-5a (Login + Dashboard)
-- **Jak:** Branch `sprint-4/fe-5a-dashboard`. Prompt FE-5a.
+### TASK-053: Uruchom Agent FE-mobile-1 (Auth + onboarding post-OTP)
+- **Co:** Expo RNW apka `apps/mobile` — login → OTP → consent → profil → pojazd (3 metody tire-size).
+- **Design reference:** `/design/08-auth-phone.html`, `09-auth-otp.html`, `10-auth-consent.html`, `14-profil-setup.html`, `15-dodaj-pojazd.html`, `07-profile.html`.
+- **Jak:** Branch `sprint-4/fe-mobile-1-auth-onboarding`. Prompt FE-mobile-1.
+- **Weryfikacja:** Expo dev → `http://localhost:3000` → login → OTP → consent → profile setup → vehicle (3 tabs: Marka+Model+Rok / Wymiar / Skan disabled) → home placeholder.
 - [ ] Uruchomiony + zweryfikowany
 
-### TASK-050: Uruchom Agent FE-5b (Cennik + Godziny + Strefa)
-- **Jak:** Branch `sprint-4/fe-5b-crud`. Prompt FE-5b.
+### TASK-054: Uruchom Agent FE-mobile-2 (Home + detail + mapa + empty states)
+- **Co:** Catalog klienta + 3 warianty empty-state (US-40).
+- **Design reference:** `/design/01-home.html`, `02-provider-detail.html`, `11-map.html`, `16-empty-waitlist.html`, `17-home-brak-pojazdu.html`, `18-home-brak-dostepnosci.html`.
+- **Jak:** Branch `sprint-4/fe-mobile-2-catalog`. Prompt FE-mobile-2.
+- **Weryfikacja:** Home pokazuje 8 pilotów onboarded w Sprint 3 (realne dane!). Detail: pełny profil. Map: Google Maps + piny. Empty states: user z Krakowa → waitlist, user bez pojazdu → widełki cen.
 - [ ] Uruchomiony + zweryfikowany
 
-### TASK-051: Review + merge Sprint 4
-- [ ] Architekt: review BE-5 (state machine booking — KRYTYCZNE!)
-- [ ] Projektant: UI review FE-5a + FE-5b (wireframy 12.5, 12.7)
-- [ ] Swap + merge
+### TASK-055: Review + merge Sprint 4
+- [ ] Architekt: review BE-4 (haversine, availability slot generation, waitlist unique constraint)
+- [ ] Projektant: UI review FE-mobile-1 + FE-mobile-2 (pixel-match 9 ekranów: 08-10, 14-15, 07, 01-02, 11, 16-18)
+- [ ] FE swap MSW → real API
+- [ ] Merge do main
 - **Checklista Sprint 4:**
-  - [ ] Provider login (OTP) → dashboard
-  - [ ] Akceptuj → CONFIRMED, klient SMS
-  - [ ] Cennik → save → reload → zachowane
-  - [ ] Upload zdjęcie → S3
+  - [ ] Client login OTP → consent → profile setup → vehicle → home
+  - [ ] Home widzi 8 pilotów z Fazy A (realne dane!)
+  - [ ] Klik na providera → pełny profil (cennik, godziny, opinie top 3)
+  - [ ] Mapa: 8 pinów, tap → mini-karta
+  - [ ] Empty: user z Krakowa → waitlist; user bez pojazdu → widełki cen + CTA
 
 ---
 
-# FAZA 6: Sprint 5 — Oceny + Rozliczenia (tydzień 5)
+# FAZA 6: Sprint 5 — Klient booking flow + provider PENDING accept (tydzień 5)
 
-### TASK-052: Uruchom 3 agentów Sprint 5
-- [ ] BE-6 (reviews + settlement + refund) — branch `sprint-5/be-6`
-- [ ] FE-6a (profil providera + oceny) — branch `sprint-5/fe-6a`
-- [ ] FE-6b (B2B opinie + finanse) — branch `sprint-5/fe-6b`
+### TASK-056: Uruchom Agent BE-5 (POST /bookings + availability + slot lock)
+- **Co:** Client-side booking (state machine z Sprint 3 BE-3). POST /v1/bookings z partial unique index, cancel, favorites.
+- **Jak:** Branch `sprint-5/be-5-client-booking`. Prompt BE-5 z §20.
+- **Weryfikacja:** `POST /v1/bookings` → PENDING + SMS do providera. 409 race condition zwraca 3 alternatywy.
+- [ ] Uruchomiony + zweryfikowany
 
-### TASK-053: Review + merge Sprint 5
-- [ ] Architekt: review BE-6 (Review CRUD + filtr wulgaryzmów — settlement/refund usunięte, ADR-004)
-- [ ] Projektant: UI review FE-6a + FE-6b (wireframy 12.2, 12.12, 12.17, 12.14)
-- [ ] Swap + merge
+### TASK-057: Uruchom Agent FE-mobile-3 (Booking flow + historia)
+- **Co:** 4 ekrany booking flow klienta.
+- **Design reference:** `/design/03-time-slot.html`, `04-booking-confirmed.html`, `05-my-bookings.html`, `06-booking-detail.html`.
+- **Jak:** Branch `sprint-5/fe-mobile-3-booking`. Prompt FE-mobile-3.
+- **Weryfikacja:** Klient: provider → slot → „Zarezerwuj 180 zł" → kod OPN-XXXX + .ics. Historia z tabs Nadchodzące/Historia.
+- [ ] Uruchomiony + zweryfikowany
+
+### TASK-058: Uruchom Agent FE-panel-6 (Provider PENDING accept refinement)
+- **Co:** Rozbuduj dashboard z Sprint 3 — PENDING inbox ma teraz realne bookings od klientów (z Sprint 5). Push-like notification + auto-refresh 30s polling.
+- **Jak:** Branch `sprint-5/fe-panel-6-pending-refine`. Prompt FE-panel-6 z §20.
+- **Weryfikacja:** Klient rezerwuje → provider dashboard auto-refresh → PENDING visible → Akceptuj → klient SMS „Potwierdzone".
+- [ ] Uruchomiony + zweryfikowany
+
+### TASK-059: Review + merge Sprint 5
+- [ ] Architekt: review BE-5 (race condition 409, Idempotency-Key, state machine z Sprint 3)
+- [ ] Projektant: UI review FE-mobile-3 (pixel-match 03-06)
+- [ ] FE swap + merge
 - **Checklista Sprint 5:**
-  - [ ] Ocena po COMPLETED → widoczna w profilu
-  - [ ] Provider odpowiada na opinię
-  - [ ] Settlement obliczony po COMPLETED
-  - [ ] Anulowanie > 2h → status CANCELLED, brak kosztów dla klienta (ADR-004 — brak refundu bo brak płatności)
+  - [ ] Klient: search → provider → slot → rezerwuj → PENDING + SMS do providera
+  - [ ] Provider: dashboard auto-refresh → PENDING → Akceptuj → klient dostaje SMS „Potwierdzone"
+  - [ ] Double-booking: 2 klientów → 1 × 409 z 3 alternatywami
+  - [ ] Adres poza strefą → inline error
+  - [ ] bookingExpiryCron: PENDING > 2h → CANCELLED_BY_SYSTEM
 
 ---
 
-# FAZA 7: Sprint 6 — Onboarding + System (tydzień 6)
+# FAZA 7: Sprint 6 — Ratings + polish + landing client pivot — ★ Milestone B (tydzień 6)
 
-### TASK-054: Uruchom 3 agentów Sprint 6
-- [ ] BE-7 (upload + admin + crony) — branch `sprint-6/be-7`
-- [ ] FE-7a (rezerwacje klient + RODO) — branch `sprint-6/fe-7a`
-- [ ] FE-7b (onboarding wizard 2–3) — branch `sprint-6/fe-7b`
+### TASK-060: Uruchom Agent BE-6 (Review + cron updateRatingCache + completionReminder)
+- **Co:** Review module z filtrem wulgaryzmów PL + 2 crony.
+- **Jak:** Branch `sprint-6/be-6-reviews`. Prompt BE-6 z §20.
+- **Weryfikacja:** `POST /v1/bookings/:id/review` → review zapisany. Cron updateRatingCache → Provider.avgRating się aktualizuje. Cron completionReminder → SMS po 24h COMPLETED bez review.
+- [ ] Uruchomiony + zweryfikowany
 
-### TASK-055: Skonfiguruj Retool (HUMAN TASK — Ty!)
-- **Co:** 5 ekranów admin panelu.
-- **Jak:** Patrz instrukcja w `plan-sprintow.md` sekcja 20, Sprint 6, HUMAN TASK.
-- **Czas:** ~3h
-- [ ] Providers dashboard (approve/reject)
-- [ ] Bookings dashboard
-- [ ] Reviews moderation
-- [ ] Users management
-- [ ] Stats dashboard
+### TASK-061: Uruchom Agent FE-mobile-4 (Rate + reviews list)
+- **Co:** Ocena wizyty + pełna lista opinii providera.
+- **Design reference:** `/design/12-rate-visit.html`, `13-reviews.html`.
+- **Jak:** Branch `sprint-6/fe-mobile-4-ratings`. Prompt FE-mobile-4.
+- [ ] Uruchomiony + zweryfikowany
 
-### TASK-056: Review + merge Sprint 6
-- [ ] Architekt: review BE-7
-- [ ] Projektant: UI review FE-7a + FE-7b
-- [ ] Merge
-- **Checklista Sprint 6:**
-  - [ ] Onboarding: signup → NIP → upload → PENDING_APPROVAL
-  - [ ] Retool: approve → SMS do providera
-  - [ ] Klient: lista rezerwacji
-  - [ ] Cron NO_SHOW: rez sprzed 35 min → automatycznie
+### TASK-062: Uruchom Agent FE-mobile-5 (Polish: offline + PWA install + error boundary)
+- **Co:** 3 polish ekrany/komponenty.
+- **Design reference:** `/design/19-offline-state.html`, `20-pwa-install.html`, `21-error-boundary.html`.
+- **Jak:** Branch `sprint-6/fe-mobile-5-polish`. Prompt FE-mobile-5.
+- **Weryfikacja:** Chrome DevTools → Network offline → offline banner + cache badges. 2 wizyty → PWA install prompt. React crash → error boundary z Sentry errorId.
+- [ ] Uruchomiony + zweryfikowany
+
+### TASK-063: Uruchom Agent FE-landing-2 (Landing client pivot + /p/slug + /nowy-sacz)
+- **Co:** Pivot landing z v1 (provider) na v2 (client-facing + provider section below fold) + 2 nowe trasy.
+- **Design reference:** `/design/landing-01-home.html`, `landing-02-profil-publiczny.html`, `landing-03-miasto.html`.
+- **Jak:** Branch `sprint-6/fe-landing-2-client-pivot`. Prompt FE-landing-2.
+- **Weryfikacja:** `opony.app/` — hero client-facing. `opony.app/p/wulkanizacja-nowy-sacz` — SSR + OG preview (Facebook debugger). `opony.app/nowy-sacz` — SEO listing z 8 pilotami.
+- [ ] 3 trasy LIVE
+
+### TASK-064: Review + merge Sprint 6 — ★ Milestone B gate
+- [ ] Architekt: review BE-6 (review filter wulgaryzmów, cron idempotency)
+- [ ] Projektant: UI review FE-mobile-4/5 + FE-landing-2 (pixel-match 12, 13, 19-21, landing-01/02/03)
+- [ ] FE swap + merge
+- [ ] **SEO:** Submit sitemap do Google Search Console. Test OG preview w FB debugger.
+- **Checklista Sprint 6 + Milestone B:**
+  - [ ] Ocena wizyty po COMPLETED → widoczna w profilu providera
+  - [ ] Provider odpowiada na opinię
+  - [ ] Offline mode: cache działa, booking zablokowane offline
+  - [ ] PWA install: Android native prompt, iOS tutorial + QR
+  - [ ] Error boundary: crash → screen z errorId, Sentry capture
+  - [ ] `opony.app` client-facing LIVE
+  - [ ] `opony.app/p/<slug>` SSR + OG działa (share na FB pokazuje bogaty preview)
+  - [ ] `opony.app/nowy-sacz` SEO listing LIVE
+  - [ ] F&F testing: 3-5 osób rezerwuje → pozytywny feedback
+  - [ ] **Gate:** decyzja soft launch Sprint 7 (data: ...........) lub dodatkowa iteracja
 
 ---
 
 # FAZA 8: Sprint 7 — Polish + Soft-launch (tydzień 7)
 
-### TASK-057: Uruchom 5 agentów Sprint 7
+### TASK-065: Uruchom 5 agentów Sprint 7
 - [ ] BE-8a (booking detail + manual + eskalacja) — branch `sprint-7/be-8a`
 - [ ] BE-8b (crony systemowe) — branch `sprint-7/be-8b`
 - [ ] FE-8 (B2B szczegół + manual booking) — branch `sprint-7/fe-8`
 - [ ] QA-E2E (Playwright testy) — branch `sprint-7/qa-e2e`
 - [ ] QA-CRON (testy cronów) — branch `sprint-7/qa-cron`
 
-### TASK-058: Architekt — Security audit
+### TASK-066: Architekt — Security audit
 - **Co:** Przegląd bezpieczeństwa przed launch.
 - **Jak:** Prompt: _"Security audit repo opony. Sprawdź: auth (JWT expiry, rate limiting), injection (SQL, XSS), RODO (dane osobowe, soft delete, anonimizacja), dependencies (npm audit), env vars (żadne secrets w kodzie)."_
 - [ ] Audit zrobiony
 - [ ] Krytyczne issues naprawione
 
-### TASK-059: Projektant — A11y audit
+### TASK-067: Projektant — A11y audit
 - **Co:** Przegląd dostępności.
 - **Jak:** Prompt: _"A11y audit client PWA + provider panel. Sprawdź: semantic HTML, ARIA labels, focus states, keyboard navigation, kontrast WCAG AA, screen reader (VoiceOver/NVDA sim)."_
 - [ ] Audit zrobiony
 - [ ] Krytyczne issues naprawione
 
-### TASK-060: Final merge + checklista
+### TASK-068: Final merge + checklista
 - [ ] Merge wszystkich PR-ów
 - **FINAL checklista:**
   - [ ] E2E klient: login → szukaj → rezerwuj → zapłać → SMS
@@ -563,7 +652,7 @@ Wróci w v0.5 po pilocie, gdy włączamy monetyzację (decyzja P24 marketplace v
 
 # FAZA 9: Deploy + Soft-launch (tydzień 8)
 
-### TASK-061: Zamień credentials na produkcyjne
+### TASK-069: Zamień credentials na produkcyjne
 - **Co:** Podmień sandbox → prod dla Twilio, S3, Resend (P24 nie dotyczy v0 — ADR-004).
 - **Jak:** W Railway → Environment Variables → ustaw produkcyjne wartości. W Vercel → Environment Variables per project.
 - **⚠** NIGDY nie commituj produkcyjnych secrets do repo!
@@ -571,7 +660,7 @@ Wróci w v0.5 po pilocie, gdy włączamy monetyzację (decyzja P24 marketplace v
 - [ ] Vercel env vars ustawione (×3 projekty)
 - [ ] `NEXT_PUBLIC_API_MOCK=false` wszędzie
 
-### TASK-062: Deploy na produkcję
+### TASK-070: Deploy na produkcję
 - **Co:** Uruchom aplikację na prawdziwych serwerach.
 - **Jak:** (1) Railway: połącz z GitHub `main` branch → auto-deploy API. (2) Vercel: Import 3 projekty (client, provider, landing) z monorepo.
 - **Weryfikacja:** Otwórz `https://api.opony.app/v1/health` → `{"status":"ok"}`
@@ -580,18 +669,18 @@ Wróci w v0.5 po pilocie, gdy włączamy monetyzację (decyzja P24 marketplace v
 - [ ] Provider deployed na Vercel
 - [ ] Landing deployed na Vercel
 
-### TASK-063: Skonfiguruj DNS
+### TASK-071: Skonfiguruj DNS
 - **Co:** Podepnij domenę pod 4 aplikacje.
 - **Jak:** W panelu rejestratora:
   1. `opony.app` → CNAME / A → Vercel (landing — `apps/landing`)
   2. `app.opony.app` → CNAME → Vercel (mobile web export — `apps/mobile` via `expo export:web`)
   3. `panel.opony.app` → CNAME → Vercel (provider portal — `apps/panel`)
   4. `api.opony.app` → CNAME → Railway (NestJS API)
-- **Uwaga:** `app.opony.app` musi też hostować pliki pod `.well-known/apple-app-site-association` i `.well-known/assetlinks.json` (Universal Links / App Links — patrz TASK-063b).
+- **Uwaga:** `app.opony.app` musi też hostować pliki pod `.well-known/apple-app-site-association` i `.well-known/assetlinks.json` (Universal Links / App Links — patrz TASK-071b).
 - [ ] DNS skonfigurowany (4 subdomeny)
 - [ ] SSL automatyczny (Vercel + Railway)
 
-### TASK-063b: Universal Links (iOS) + App Links (Android) ⚠️ **v0.5 bloker dla deep-link z mobile do panel**
+### TASK-071b: Universal Links (iOS) + App Links (Android) ⚠️ **v0.5 bloker dla deep-link z mobile do panel**
 - **Co:** Pliki `apple-app-site-association` (iOS) i `assetlinks.json` (Android) hostowane na `app.opony.app/.well-known/` → umożliwiają otwarcie linku `panel.opony.app/xxx` z mobile Expo apki przez natywny browser (zamiast webview).
 - **Jak:**
   1. Skonfiguruj w `apps/mobile/app.json` sekcję `ios.associatedDomains: ["applinks:app.opony.app", "applinks:panel.opony.app"]` i `android.intentFilters` (Expo config docs).
@@ -605,19 +694,19 @@ Wróci w v0.5 po pilocie, gdy włączamy monetyzację (decyzja P24 marketplace v
 - [ ] Deep-link test: `opony://admin` otwiera panel w Expo apce
 - [ ] Wszystkie 4 domeny działają
 
-### TASK-064: Wyczyść bazę produkcyjną
+### TASK-072: Wyczyść bazę produkcyjną
 - **Co:** Usuń dane testowe z seeda.
 - **Jak:** Railway → Postgres → Query: `TRUNCATE ALL TABLES CASCADE` (lub `npx prisma migrate reset` na produkcji — UWAŻAJ!)
 - **Rezultat:** Czysta baza, gotowa na prawdziwych userów
 - [ ] Baza wyczyszczona
 
-### TASK-065: Załóż konto admina
+### TASK-073: Załóż konto admina
 - **Co:** Twój admin w bazie produkcyjnej.
 - **Jak:** Railway Postgres → INSERT INTO "User" (id, phone, role) VALUES (uuid, '+48TWOJNUMER', 'ADMIN')
 - [ ] Admin stworzony
 - [ ] Retool połączony z produkcyjną bazą
 
-### TASK-066: Smoke test produkcji
+### TASK-074: Smoke test produkcji
 - **Co:** Przejdź ręcznie kluczowy flow na produkcji.
 - [ ] Klient: login OTP (prawdziwy SMS!) → profil → pojazd
 - [ ] Klient: szukaj → (pusta lista — brak providerów)
@@ -630,7 +719,7 @@ Wróci w v0.5 po pilocie, gdy włączamy monetyzację (decyzja P24 marketplace v
 
 # FAZA 10: Onboarding providerów (tydzień 8–9)
 
-### TASK-067: Onboarding 8 pilotażowych providerów
+### TASK-075: Onboarding 8 pilotażowych providerów
 - **Co:** Osobiście (!) pomóż 8 providerom założyć konto.
 - **Jak:** Patrz `analiza-biznesowa.md` sekcja 17.5 (onboarding playbook). Wizyta na miejscu + demo na tablecie.
 - **Na każdego providera:**
@@ -643,7 +732,7 @@ Wróci w v0.5 po pilocie, gdy włączamy monetyzację (decyzja P24 marketplace v
   - [ ] Provider: ustawił strefę obsługi
   - [ ] Test: zarezerwuj u niego z innego telefonu → SMS → działa
 
-### TASK-068: Seed demand — pierwsi klienci
+### TASK-076: Seed demand — pierwsi klienci
 - **Co:** Wygeneruj pierwsze rezerwacje (bez nich providerzy odejdą).
 - **Jak:** Patrz `analiza-biznesowa.md` sekcja 17.9.
 - [ ] Friends & family: 20 SMS z kodem RODZINA
@@ -656,29 +745,29 @@ Wróci w v0.5 po pilocie, gdy włączamy monetyzację (decyzja P24 marketplace v
 
 # FAZA 11: Monitoring + Iteracja (tydzień 9+)
 
-### TASK-069: Codzienny monitoring (pierwsze 2 tygodnie)
+### TASK-077: Codzienny monitoring (pierwsze 2 tygodnie)
 - **Codziennie 15 min:**
   - [ ] Sentry → nowe błędy? → jeśli critical → uruchom deva na fix
   - [ ] Retool dashboard → ile rezerwacji dziś? PENDING bez reakcji > 4h?
   - [ ] PostHog → funnel: ile wchodzi na stronę → ile rezerwuje? Gdzie drop?
   - [ ] Twilio logs → SMS-y dochodzą?
 
-### TASK-070: Tygodniowy check-in z providerami
+### TASK-078: Tygodniowy check-in z providerami
 - **Co tydzień:**
   - [ ] Zadzwoń do 3 providerów: „Jak leci? Problemy?"
   - [ ] Zbierz feedback → zapisz w notatce
   - [ ] Jeśli bug → zgłoś → uruchom agenta na fix
 
-### TASK-071: Decyzja po 2 tygodniach
+### TASK-079: Decyzja po 2 tygodniach
 - **Po 2 tyg od soft-launch oceń:**
   - [ ] Ile rezerwacji? (cel: > 20 w 2 tyg.)
   - [ ] Ile aktywnych providerów? (cel: > 5 z 8)
   - [ ] NPS prowiderów (zapytaj 1–10)
   - [ ] Critical bugi? Czy platforma jest stabilna?
-  - **Jeśli OK:** → Public launch (TASK-072)
+  - **Jeśli OK:** → Public launch (TASK-080)
   - **Jeśli NIE:** → Iteracja (napraw bugi, dodaj feedback, spróbuj ponownie)
 
-### TASK-072: Public launch
+### TASK-080: Public launch
 - [ ] Kampania marketingowa pełna (sekcja 17.8 w `analiza-biznesowa.md`)
 - [ ] Kolejni providerzy (tier 2–3)
 - [ ] Partnerstwa lokalne (myjnie, stacje)

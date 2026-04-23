@@ -433,6 +433,20 @@ Decyzję A vs B **podejmujemy po pilocie** na bazie zachowania providerów i kli
 
 **Cel docelowy: ~20 aktywnych providerów** (nie 50 jak w Poznaniu — mniejszy rynek, pełne pokrycie wymaga mniej graczy).
 
+**Synchronizacja z ADR-009 B2B-first (2026-04-22):**
+
+Dev sekwencja została zmieniona z „klient + B2B równolegle" na **B2B-first** (provider portal LIVE w tyg. 3-4, klient w tyg. 6-7). To zmienia GTM timeline:
+
+| Tydzień | Stan dev | GTM action | Rationale |
+|---|---|---|---|
+| 1-2 | Sprint 1-2 (provider panel CRUD) | Research + outreach prep — Excel providerów, szablony emaili, ulotki | Portal jeszcze nie LIVE — nie rozmawiamy |
+| **3-4** | **Sprint 3 + Milestone A** (portal LIVE) | **Onboard 2-3 pilotów end-to-end (dogfooding) + outreach 5-6 kolejnych** | Portal jest w ręku rozmówcy — realna demo. Landing `opony.app` hero „Zarejestruj warsztat" LIVE. |
+| 5-6 | Sprint 4-5 (klient dev w toku) | Onboardowani providerzy dopełniają cennik/godziny/galerię w panelu. Weekly update email („klienci startują za X dni"). Preselling: providerzy mówią stałym klientom | „Cichy okres" ADR-009 — ekran `b2b-15-waiting-for-clients` + tip cards trzymają momentum |
+| **6-7** | **Sprint 6 + Milestone B** (klient LIVE, marketplace działa) | F&F testing (3-5 osób rezerwuje), provider dostaje PENDING, walidacja flow end-to-end | Realne dane 8 providerów widoczne w kliencie od dnia 1 — zero „pustej apki" |
+| 7+ | Sprint 7 soft launch | Beta publiczna, provider-side ulotki w obiegu, marketing ramp przed jesienią | Październik jesienny szczyt — full launch gate |
+
+**Dlaczego to GTM winning:** W pierwotnym planie prowadziliśmy outreach do 8 pilotów przez 7 tygodni **bez działającego produktu**. Teraz od tyg. 3 mamy panel w ręku, od tyg. 4 realnych pilotów onboarded, od tyg. 6 klienta. Provider rekrutacja staje się dużo łatwiejsza („zobacz, właśnie klikam twoje dane w panelu") i daje seed effect — providerzy mówią swoim stałym klientom o aplikacji **przed** jej launchem.
+
 ### 17.1. Research i segmentacja rynku (Nowy Sącz)
 
 **Jak policzyć rynek:**
