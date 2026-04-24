@@ -18,7 +18,7 @@
 
 .groupLabel {
   font-family: var(--font-display);
-  font-size: 14px;
+  font-size: var(--text-md);
   letter-spacing: 2px;
   color: var(--text-secondary);
   white-space: nowrap;
@@ -26,7 +26,7 @@
 
 .groupCount {
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: var(--text-2xs);
   color: var(--text-muted);
   letter-spacing: 0.5px;
   white-space: nowrap;
@@ -47,12 +47,12 @@
 .slot {
   position: relative;
   padding: 12px 8px;
-  border-radius: 10px;
+  border-radius: var(--radius-avatar);
   background: var(--surface);
   border: 1px solid var(--border);
   font-family: var(--font-mono);
-  font-weight: 700;
-  font-size: 14px;
+  font-weight: var(--font-bold);
+  font-size: var(--text-md);
   color: var(--text-primary);
   text-align: center;
   cursor: pointer;

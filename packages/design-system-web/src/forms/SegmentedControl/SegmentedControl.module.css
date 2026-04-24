@@ -21,8 +21,8 @@
   height: 36px;
   border-radius: calc(var(--radius-md) - 2px);
   font-family: var(--font-body);
-  font-size: 14px;
-  font-weight: 500;
+  font-size: var(--text-md);
+  font-weight: var(--font-medium);
   color: var(--text-muted);
   cursor: pointer;
   user-select: none;

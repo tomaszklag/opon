@@ -18,8 +18,8 @@
   background: var(--surface);
   color: var(--text-secondary);
   font-family: var(--font-mono);
-  font-size: 13px;
-  font-weight: 700;
+  font-size: var(--text-base);
+  font-weight: var(--font-bold);
   cursor: pointer;
   transition: background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
 }
@@ -51,6 +51,6 @@
   height: 36px;
   color: var(--text-muted);
   font-family: var(--font-mono);
-  font-size: 13px;
+  font-size: var(--text-base);
   user-select: none;
 }

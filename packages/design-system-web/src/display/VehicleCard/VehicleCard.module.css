@@ -2,7 +2,7 @@
   position: relative;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 14px;
+  border-radius: var(--radius-card);
   padding: 14px;
   display: flex;
   align-items: center;
@@ -57,8 +57,8 @@
 }
 
 .name {
-  font-size: 15px;
-  font-weight: 700;
+  font-size: var(--text-lg);
+  font-weight: var(--font-bold);
   color: var(--text-primary);
   line-height: 1.1;
   overflow: hidden;
@@ -67,8 +67,8 @@
 }
 
 .defaultBadge {
-  font-size: 9px;
-  font-weight: 800;
+  font-size: var(--text-2xs);
+  font-weight: var(--font-extrabold);
   letter-spacing: 1.1px;
   text-transform: uppercase;
   padding: 2px 6px;
@@ -86,8 +86,8 @@
 
 .tire {
   font-family: var(--font-mono);
-  font-weight: 700;
-  font-size: 12px;
+  font-weight: var(--font-bold);
+  font-size: var(--text-sm);
   padding: 3px 8px;
   border-radius: 4px;
   background: var(--accent-muted);
@@ -97,7 +97,7 @@
 }
 
 .meta {
-  font-size: 11px;
+  font-size: var(--text-xs);
   color: var(--text-muted);
 }
 

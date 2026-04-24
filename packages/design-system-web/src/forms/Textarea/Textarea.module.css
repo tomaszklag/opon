@@ -7,8 +7,8 @@
 
 .label {
   font-family: var(--font-body);
-  font-size: 13px;
-  font-weight: 500;
+  font-size: var(--text-base);
+  font-weight: var(--font-medium);
   color: var(--text-secondary);
   letter-spacing: 0.03em;
 }
@@ -26,8 +26,8 @@
   border-radius: var(--radius-md);
   color: var(--text-primary);
   font-family: var(--font-body);
-  font-size: 15px;
-  line-height: 1.5;
+  font-size: var(--text-lg);
+  line-height: var(--leading-normal);
   resize: none;
   transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
   outline: none;
@@ -67,20 +67,20 @@
 }
 
 .hint {
-  font-size: 12px;
+  font-size: var(--text-sm);
   color: var(--text-muted);
   margin: 0;
 }
 
 .errorMsg {
-  font-size: 12px;
+  font-size: var(--text-sm);
   color: var(--danger);
   margin: 0;
 }
 
 .counter {
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: var(--text-sm);
   color: var(--text-muted);
   flex-shrink: 0;
   margin-left: auto;

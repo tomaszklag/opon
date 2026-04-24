@@ -33,7 +33,7 @@
   outline: none;
   color: var(--text-primary);
   font-family: var(--font-body);
-  font-size: 14px;
+  font-size: var(--text-md);
   /* remove browser default search clear button */
   -webkit-appearance: none;
 }

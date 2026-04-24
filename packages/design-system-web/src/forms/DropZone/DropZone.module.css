@@ -7,8 +7,8 @@
 
 .label {
   font-family: var(--font-body);
-  font-size: 13px;
-  font-weight: 500;
+  font-size: var(--text-base);
+  font-weight: var(--font-medium);
   color: var(--text-secondary);
   letter-spacing: 0.03em;
 }
@@ -57,7 +57,7 @@
 
 .cta {
   font-family: var(--font-body);
-  font-size: 14px;
+  font-size: var(--text-md);
   color: var(--text-secondary);
 }
 
@@ -67,11 +67,11 @@
 
 .sub {
   color: var(--text-muted);
-  font-weight: 400;
+  font-weight: var(--font-regular);
 }
 
 .hint {
-  font-size: 12px;
+  font-size: var(--text-sm);
   color: var(--text-muted);
 }
 

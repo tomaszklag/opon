@@ -5,9 +5,9 @@
 }
 
 .label {
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 1.4px;
+  font-size: var(--text-2xs);
+  font-weight: var(--font-extrabold);
+  letter-spacing: var(--tracking-label);
   text-transform: uppercase;
   color: var(--text-muted);
 }
@@ -44,8 +44,8 @@
   background: var(--bg);
   border-right: 1px solid var(--border);
   font-family: var(--font-mono);
-  font-weight: 700;
-  font-size: 16px;
+  font-weight: var(--font-bold);
+  font-size: var(--text-xl);
   color: var(--accent);
   letter-spacing: 0.5px;
   flex-shrink: 0;
@@ -74,8 +74,8 @@
   padding: 16px 14px;
   color: var(--text-primary);
   font-family: var(--font-mono);
-  font-weight: 600;
-  font-size: 18px;
+  font-weight: var(--font-semibold);
+  font-size: var(--text-2xl);
   letter-spacing: 2px;
 }
 
@@ -85,11 +85,11 @@
 }
 
 .hint {
-  font-size: 11px;
+  font-size: var(--text-xs);
   color: var(--text-muted);
 }
 
 .errorText {
-  font-size: 11px;
+  font-size: var(--text-xs);
   color: var(--danger);
 }

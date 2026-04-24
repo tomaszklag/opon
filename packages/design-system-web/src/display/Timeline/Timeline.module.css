@@ -76,10 +76,10 @@
 }
 
 .label {
-  font-size: 13px;
-  font-weight: 700;
+  font-size: var(--text-base);
+  font-weight: var(--font-bold);
   color: var(--text-primary);
-  line-height: 1.2;
+  line-height: var(--leading-tight);
 }
 
 .current .label { color: var(--accent); }
@@ -87,8 +87,8 @@
 
 .time {
   font-family: var(--font-mono);
-  font-size: 11px;
-  font-weight: 700;
+  font-size: var(--text-xs);
+  font-weight: var(--font-bold);
   color: var(--text-muted);
   letter-spacing: 0.5px;
 }
@@ -96,6 +96,6 @@
 .current .time { color: var(--accent); }
 
 .sub {
-  font-size: 12px;
+  font-size: var(--text-sm);
   color: var(--text-secondary);
 }

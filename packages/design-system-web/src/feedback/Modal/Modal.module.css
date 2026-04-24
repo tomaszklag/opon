@@ -44,9 +44,9 @@
 
 .title {
   font-family: var(--font-display);
-  font-size: 20px;
+  font-size: var(--text-3xl);
   color: var(--text-primary);
-  letter-spacing: 0.04em;
+  letter-spacing: var(--tracking-wider);
   margin: 0;
 }
 

@@ -2,7 +2,7 @@
   position: relative;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 14px;
+  border-radius: var(--radius-card);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
   overflow: visible;
 }
@@ -45,21 +45,21 @@
 }
 
 .codeLabel {
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 1.4px;
+  font-size: var(--text-2xs);
+  font-weight: var(--font-extrabold);
+  letter-spacing: var(--tracking-label);
   text-transform: uppercase;
   color: var(--text-muted);
-  line-height: 1;
+  line-height: var(--leading-none);
 }
 
 .code {
   font-family: var(--font-mono);
-  font-weight: 700;
-  font-size: 28px;
+  font-weight: var(--font-bold);
+  font-size: var(--text-5xl);
   letter-spacing: 1.5px;
   color: var(--text-primary);
-  line-height: 1;
+  line-height: var(--leading-none);
 }
 
 .codeAccent {
@@ -71,14 +71,14 @@
   align-items: center;
   gap: 6px;
   padding: 8px 10px;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   background: var(--bg);
   border: 1px solid var(--border);
   color: var(--text-secondary);
   font-family: var(--font-body);
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 1.1px;
+  font-size: var(--text-2xs);
+  font-weight: var(--font-extrabold);
+  letter-spacing: var(--tracking-label);
   text-transform: uppercase;
   cursor: pointer;
   transition: all var(--transition-base);
@@ -112,7 +112,7 @@
 .ico {
   width: 34px;
   height: 34px;
-  border-radius: 10px;
+  border-radius: var(--radius-avatar);
   background: var(--bg);
   border: 1px solid var(--border);
   display: inline-flex;
@@ -137,24 +137,24 @@
 }
 
 .rowLabel {
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 1.2px;
+  font-size: var(--text-2xs);
+  font-weight: var(--font-extrabold);
+  letter-spacing: var(--tracking-label);
   text-transform: uppercase;
   color: var(--text-muted);
-  line-height: 1;
+  line-height: var(--leading-none);
   margin-bottom: 2px;
 }
 
 .rowValue {
-  font-size: 15px;
-  font-weight: 700;
+  font-size: var(--text-lg);
+  font-weight: var(--font-bold);
   color: var(--text-primary);
-  line-height: 1.3;
+  line-height: var(--leading-snug);
 }
 
 .rowSub {
-  font-size: 12px;
+  font-size: var(--text-sm);
   color: var(--text-secondary);
   margin-top: 3px;
 }

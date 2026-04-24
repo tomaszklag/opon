@@ -65,12 +65,12 @@
 
 .labelText {
   font-family: var(--font-body);
-  font-size: 15px;
+  font-size: var(--text-lg);
   color: var(--text-primary);
 }
 
 .errorMsg {
-  font-size: 12px;
+  font-size: var(--text-sm);
   color: var(--danger);
   margin: 0;
 }

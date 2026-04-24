@@ -53,11 +53,11 @@
   left: 50%;
   transform: translateX(-50%);
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: var(--text-xs);
   letter-spacing: 1px;
   color: var(--text-primary);
   padding: 4px 10px;
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   background: rgba(10, 11, 14, 0.55);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
@@ -67,7 +67,7 @@
 
 .counter strong {
   color: var(--accent);
-  font-weight: 700;
+  font-weight: var(--font-bold);
 }
 
 .dots {
@@ -79,7 +79,7 @@
 .dot {
   width: 6px;
   height: 6px;
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   background: var(--border-strong);
   border: none;
   cursor: pointer;

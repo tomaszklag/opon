@@ -5,8 +5,8 @@
   padding: 10px 12px;
   background: var(--bg);
   border: 1px dashed var(--border);
-  border-radius: 10px;
-  font-size: 12px;
+  border-radius: var(--radius-avatar);
+  font-size: var(--text-sm);
   line-height: 1.4;
   color: var(--text-secondary);
 }

@@ -9,10 +9,10 @@
   align-items: center;
   gap: 6px;
   padding: 3px 8px;
-  border-radius: 5px;
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 1.1px;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-2xs);
+  font-weight: var(--font-extrabold);
+  letter-spacing: var(--tracking-label);
   text-transform: uppercase;
   width: fit-content;
 }
@@ -79,8 +79,8 @@
 }
 
 .day {
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--text-md);
+  font-weight: var(--font-semibold);
   color: var(--text-primary);
   display: inline-flex;
   align-items: baseline;
@@ -89,14 +89,14 @@
 
 .today .day {
   color: var(--accent);
-  font-weight: 700;
+  font-weight: var(--font-bold);
 }
 
 .todayTag {
   font-family: var(--font-body);
-  font-size: 9px;
-  font-weight: 800;
-  letter-spacing: 1.2px;
+  font-size: var(--text-2xs);
+  font-weight: var(--font-extrabold);
+  letter-spacing: var(--tracking-label);
   text-transform: uppercase;
   color: var(--text-on-accent);
   background: var(--accent);
@@ -106,8 +106,8 @@
 
 .hours {
   font-family: var(--font-mono);
-  font-weight: 700;
-  font-size: 14px;
+  font-weight: var(--font-bold);
+  font-size: var(--text-md);
   color: var(--text-primary);
   letter-spacing: 0.5px;
 }
@@ -118,5 +118,5 @@
 
 .closedRow .hours {
   color: var(--text-muted);
-  font-weight: 500;
+  font-weight: var(--font-medium);
 }

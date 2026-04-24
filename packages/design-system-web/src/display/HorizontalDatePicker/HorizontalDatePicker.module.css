@@ -50,8 +50,8 @@
 }
 
 .dow {
-  font-size: 10px;
-  font-weight: 700;
+  font-size: var(--text-2xs);
+  font-weight: var(--font-bold);
   letter-spacing: 1px;
   text-transform: uppercase;
   color: var(--text-muted);
@@ -64,9 +64,9 @@
 
 .num {
   font-family: var(--font-display);
-  font-size: 22px;
+  font-size: var(--text-4xl);
   letter-spacing: 1px;
-  line-height: 1;
+  line-height: var(--leading-none);
   color: var(--text-primary);
 }
 

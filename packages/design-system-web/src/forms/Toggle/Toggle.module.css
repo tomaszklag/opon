@@ -35,7 +35,7 @@
 .track {
   position: relative;
   flex-shrink: 0;
-  border-radius: 100px;
+  border-radius: var(--radius-full);
   background: var(--surface-hover);
   border: 1px solid var(--border);
   transition: background var(--transition-fast), border-color var(--transition-fast);
@@ -103,14 +103,14 @@
 
 .labelText {
   font-family: var(--font-body);
-  font-size: 15px;
+  font-size: var(--text-lg);
   color: var(--text-primary);
-  line-height: 1.3;
+  line-height: var(--leading-snug);
 }
 
 .description {
   font-family: var(--font-body);
-  font-size: 13px;
+  font-size: var(--text-base);
   color: var(--text-muted);
   line-height: 1.4;
 }
