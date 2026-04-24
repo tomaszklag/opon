@@ -920,6 +920,16 @@
       — Alternatywny edge (US-40): <em>wszyscy providerzy zajęci 7+ dni</em> — baner informacyjny „Brak slotów w tym tygodniu, sprawdź dalsze daty" (osobny ekran, następny w kolejce).<br>
       — A11y: banner ma <code>role="region"</code> + <code>aria-labelledby</code>; pulsująca kropka ma <code>aria-hidden</code> (dekoracja), nie jest sygnałem treści.
     </div>
+    <div style="grid-column: 1 / -1; border-top: 1px solid var(--border); padding-top: 12px; margin-top: 4px;">
+      <strong>DS Components</strong>
+      <code style="font-family:var(--font-mono);color:var(--text-secondary);font-size:10px">AppHeader</code> (wordmark) ·
+      <code style="font-family:var(--font-mono);color:var(--text-secondary);font-size:10px">NoticeBlock</code> variant="warning" (banner "Dodaj pojazd" — niezdismissowalny, z CTA "Dodaj →") (<em>⚠️ NoticeBlock potrzebuje fullWidth + non-dismissible + embedded CTA button</em>) ·
+      <code style="font-family:var(--font-mono);color:var(--text-secondary);font-size:10px">SearchInput</code> ·
+      <code style="font-family:var(--font-mono);color:var(--text-secondary);font-size:10px">SegmentedControl</code> ·
+      <code style="font-family:var(--font-mono);color:var(--text-secondary);font-size:10px">Chip</code> ×n (filtry) ·
+      <code style="font-family:var(--font-mono);color:var(--text-secondary);font-size:10px">ProviderCard</code> ×n (bez `nextSlot`, cena jako "140–240 zł" widełki, <em>⚠️ price jako string</em>) ·
+      <code style="font-family:var(--font-mono);color:var(--text-secondary);font-size:10px">BottomTabBar</code>
+    </div>
   </footer>
 
 </body>

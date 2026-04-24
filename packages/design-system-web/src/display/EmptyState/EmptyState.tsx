@@ -1,7 +1,7 @@
 import React from 'react';
 import styles from './EmptyState.module.css';
 
-export type EmptyStateIllustration = 'calendar' | 'search' | 'tire' | 'done';
+export type EmptyStateIllustration = 'calendar' | 'search' | 'tire' | 'done' | 'warning';
 
 export interface EmptyStateProps {
   title: string;
@@ -94,6 +94,35 @@ const ILLUSTRATIONS: Record<EmptyStateIllustration, React.ReactNode> = {
         strokeLinecap="round"
         strokeLinejoin="round"
       />
+    </svg>
+  ),
+  warning: (
+    <svg width="64" height="64" viewBox="0 0 64 64" fill="none" aria-hidden="true">
+      <circle cx="32" cy="32" r="24" stroke="var(--border-strong)" strokeWidth="2.5" />
+      <circle cx="32" cy="32" r="12" stroke="var(--border-strong)" strokeWidth="2" />
+      <path
+        d="M26 22 Q32 16 38 22 Q30 28 28 36"
+        stroke="var(--border-strong)"
+        strokeWidth="2"
+        strokeLinecap="round"
+        fill="none"
+      />
+      <path
+        d="M32 8v10M32 46v10M8 32h10M46 32h10"
+        stroke="var(--border-strong)"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+      <circle
+        cx="32"
+        cy="32"
+        r="7"
+        fill="var(--warning-muted)"
+        stroke="var(--warning)"
+        strokeWidth="1.5"
+      />
+      <path d="M32 28v5" stroke="var(--warning)" strokeWidth="2" strokeLinecap="round" />
+      <circle cx="32" cy="36.5" r="1" fill="var(--warning)" />
     </svg>
   ),
 };

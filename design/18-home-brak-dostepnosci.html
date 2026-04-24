@@ -943,6 +943,13 @@
       — Slot-pill <code>.slot.warn</code> na earliest card — żółte tło, subtle signal „to nie jest idealne, ale jest najbliższe".<br>
       — A11y: baner <code>role="alert"</code> z <code>aria-live="polite"</code>; disabled chipy mają <code>aria-disabled="true"</code>.
     </div>
+    <div style="grid-column: 1 / -1; border-top: 1px solid var(--border); padding-top: 12px; margin-top: 4px;">
+      <strong>DS Components</strong>
+      jak <em>01-home</em> + <code style="font-family:var(--font-mono);color:var(--text-secondary);font-size:10px">NoticeBlock</code> variant="warning" (baner "Brak slotów w tym tygodniu") ·
+      <code style="font-family:var(--font-mono);color:var(--text-secondary);font-size:10px">Chip</code> z disabled + badge "0" (<em>⚠️ Chip disabled z count badge per item</em>) ·
+      <code style="font-family:var(--font-mono);color:var(--text-secondary);font-size:10px">ProviderCard</code> "earliest" z <code style="font-family:var(--font-mono);color:var(--text-secondary);font-size:10px">Badge</code> "NAJBLIŻSZY TERMIN" overlay + slot warn color (<em>⚠️ ProviderCard bez badge overlay</em>) ·
+      <code style="font-family:var(--font-mono);color:var(--text-secondary);font-size:10px">Button</code> primary "Pokaż dalsze daty" + Button secondary "Powiadom mnie"
+    </div>
   </footer>
 
 </body>

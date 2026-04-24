@@ -6,6 +6,7 @@ export interface InputProps extends Omit<React.InputHTMLAttributes<HTMLInputElem
   label?: string;
   error?: string;
   hint?: string;
+  success?: boolean;
   prefix?: React.ReactNode;
   suffix?: React.ReactNode;
 }
@@ -14,6 +15,7 @@ export function Input({
   label,
   error,
   hint,
+  success,
   id,
   className,
   required,
@@ -31,6 +33,7 @@ export function Input({
       className={[
         styles.input,
         error ? styles.error : null,
+        success && !error ? styles.success : null,
         prefix ? styles.hasPrefix : null,
         suffix ? styles.hasSuffix : null,
         className,

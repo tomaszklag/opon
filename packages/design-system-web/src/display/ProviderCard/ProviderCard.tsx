@@ -18,6 +18,9 @@ export interface ProviderCardProps {
   nextSlotUrgent?: boolean;
   favorite?: boolean;
   onFavoriteToggle?: (e: React.MouseEvent) => void;
+  disabled?: boolean;
+  cached?: boolean;
+  featured?: boolean;
   onClick?: () => void;
   className?: string;
 }
@@ -54,17 +57,29 @@ export function ProviderCard({
   nextSlotUrgent,
   favorite,
   onFavoriteToggle,
+  disabled,
+  cached,
+  featured,
   onClick,
   className,
 }: ProviderCardProps) {
-  const cls = [styles.card, className].filter(Boolean).join(' ');
+  const cls = [
+    styles.card,
+    disabled ? styles.disabled : null,
+    cached ? styles.cached : null,
+    featured ? styles.featured : null,
+    className,
+  ]
+    .filter(Boolean)
+    .join(' ');
 
   return (
     <article
       className={cls}
-      onClick={onClick}
-      role={onClick ? 'button' : undefined}
-      tabIndex={onClick ? 0 : undefined}
+      onClick={disabled ? undefined : onClick}
+      role={onClick && !disabled ? 'button' : undefined}
+      tabIndex={onClick && !disabled ? 0 : undefined}
+      aria-disabled={disabled ? 'true' : undefined}
       onKeyDown={
         onClick
           ? (e) => {
@@ -73,6 +88,11 @@ export function ProviderCard({
           : undefined
       }
     >
+      {featured && (
+        <div className={styles.featuredBadge} aria-label="Wyróżniony warsztat">
+          ★ FEATURED
+        </div>
+      )}
       <header className={styles.head}>
         {photoUrl ? (
           <img className={styles.avatarPhoto} src={photoUrl} alt={name} />

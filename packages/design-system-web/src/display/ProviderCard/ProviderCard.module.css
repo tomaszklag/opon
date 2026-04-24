@@ -267,3 +267,57 @@
   box-shadow: 0 0 0 4px var(--accent-muted);
   animation: pulse 1800ms ease-in-out infinite;
 }
+
+.disabled {
+  opacity: 0.6;
+  cursor: default;
+  pointer-events: none;
+  filter: grayscale(0.4);
+}
+
+.disabled:hover {
+  transform: none;
+  border-color: var(--border);
+  background: var(--surface);
+}
+
+.cached {
+  position: relative;
+}
+
+.cached::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background-image: repeating-linear-gradient(
+    -45deg,
+    transparent,
+    transparent 6px,
+    rgba(255, 255, 255, 0.03) 6px,
+    rgba(255, 255, 255, 0.03) 12px
+  );
+  pointer-events: none;
+}
+
+.featured {
+  border-color: var(--accent-border);
+  box-shadow: 0 0 0 1px var(--accent-border), 0 8px 22px rgba(0, 0, 0, 0.3);
+}
+
+.featuredBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  background: var(--accent-muted);
+  border: 1px solid var(--accent-border);
+  border-radius: 6px;
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  align-self: flex-start;
+}
