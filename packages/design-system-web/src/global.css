@@ -24,8 +24,14 @@
   --accent-glow: rgba(255, 107, 26, 0.45);
   /* semantic */
   --success: #2EE0A0;
+  --success-muted: rgba(46, 224, 160, 0.14);
+  --success-border: rgba(46, 224, 160, 0.32);
   --warning: #FFB020;
+  --warning-muted: rgba(255, 176, 32, 0.14);
+  --warning-border: rgba(255, 176, 32, 0.32);
   --danger: #FF5757;
+  --danger-muted: rgba(255, 87, 87, 0.10);
+  --danger-border: rgba(255, 87, 87, 0.32);
   --info: #3B8EEA;
   /* fonts */
   --font-display: 'Bebas Neue', sans-serif;

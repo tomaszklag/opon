@@ -66,6 +66,30 @@
   background: var(--surface-hover);
 }
 
+.danger {
+  background: var(--danger);
+  color: var(--text-primary);
+  border-color: var(--danger);
+}
+
+.danger:hover:not(:disabled) {
+  background: #ff3d3d;
+  border-color: #ff3d3d;
+  box-shadow: 0 0 16px var(--danger-muted);
+}
+
+.link {
+  background: transparent;
+  color: var(--accent);
+  border-color: transparent;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.link:hover:not(:disabled) {
+  color: var(--accent-hover);
+}
+
 /* Sizes */
 .sm {
   height: 32px;
@@ -88,6 +112,23 @@
 
 .fullWidth {
   width: 100%;
+}
+
+.iconOnly {
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.iconOnly.sm {
+  width: 32px;
+}
+
+.iconOnly.md {
+  width: 44px;
+}
+
+.iconOnly.lg {
+  width: 52px;
 }
 
 .spinner {

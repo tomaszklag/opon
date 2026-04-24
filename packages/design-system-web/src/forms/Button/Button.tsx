@@ -2,7 +2,7 @@
 import React from 'react';
 import styles from './Button.module.css';
 
-export type ButtonVariant = 'primary' | 'secondary' | 'ghost';
+export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'link';
 export type ButtonSize = 'sm' | 'md' | 'lg';
 
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
@@ -10,6 +10,7 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
   size?: ButtonSize;
   loading?: boolean;
   fullWidth?: boolean;
+  iconOnly?: boolean;
 }
 
 export function Button({
@@ -17,6 +18,7 @@ export function Button({
   size = 'md',
   loading = false,
   fullWidth = false,
+  iconOnly = false,
   disabled,
   children,
   className,
@@ -27,6 +29,7 @@ export function Button({
     styles[variant],
     styles[size],
     fullWidth ? styles.fullWidth : null,
+    iconOnly ? styles.iconOnly : null,
     className,
   ]
     .filter(Boolean)

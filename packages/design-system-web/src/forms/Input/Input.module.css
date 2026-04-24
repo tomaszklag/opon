@@ -56,6 +56,40 @@
   box-shadow: 0 0 0 3px rgba(255, 87, 87, 0.16);
 }
 
+.inputWrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.prefix {
+  position: absolute;
+  left: var(--space-3);
+  display: flex;
+  align-items: center;
+  color: var(--text-muted);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.suffix {
+  position: absolute;
+  right: var(--space-3);
+  display: flex;
+  align-items: center;
+  color: var(--text-muted);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.hasPrefix {
+  padding-left: 36px;
+}
+
+.hasSuffix {
+  padding-right: 36px;
+}
+
 .hint {
   font-size: 12px;
   color: var(--text-muted);
