@@ -12,14 +12,18 @@ export interface BottomSheetProps {
 
 export function BottomSheet({ isOpen, onClose, title, children, className }: BottomSheetProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const prevFocusRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     const dialog = dialogRef.current;
     if (!dialog) return;
     if (isOpen) {
-      dialog.showModal();
+      prevFocusRef.current = document.activeElement as HTMLElement;
+      if (!dialog.open) dialog.showModal();
     } else {
-      dialog.close();
+      if (dialog.open) dialog.close();
+      prevFocusRef.current?.focus();
+      prevFocusRef.current = null;
     }
   }, [isOpen]);
 

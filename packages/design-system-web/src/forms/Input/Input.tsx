@@ -11,24 +11,17 @@ export interface InputProps extends Omit<React.InputHTMLAttributes<HTMLInputElem
   suffix?: React.ReactNode;
 }
 
-export function Input({
-  label,
-  error,
-  hint,
-  success,
-  id,
-  className,
-  required,
-  prefix,
-  suffix,
-  ...props
-}: InputProps) {
+export const Input = React.forwardRef<HTMLInputElement, InputProps>(function Input(
+  { label, error, hint, success, id, className, required, prefix, suffix, ...props },
+  ref,
+) {
   const inputId = id ?? (label ? `input-${label.toLowerCase().replace(/\s+/g, '-')}` : undefined);
   const errorId = error && inputId ? `${inputId}-error` : undefined;
   const hintId = hint && inputId ? `${inputId}-hint` : undefined;
 
   const inputEl = (
     <input
+      ref={ref}
       id={inputId}
       className={[
         styles.input,
@@ -89,4 +82,6 @@ export function Input({
       )}
     </div>
   );
-}
+});
+
+Input.displayName = 'Input';

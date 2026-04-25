@@ -53,6 +53,26 @@
   color: var(--text-on-accent);
 }
 
+.input:indeterminate + .box {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--text-on-accent);
+}
+
+.dash {
+  display: none;
+  width: 12px;
+  height: 2px;
+}
+
+.input:indeterminate + .box .check {
+  display: none;
+}
+
+.input:indeterminate + .box .dash {
+  display: block;
+}
+
 .input:focus-visible + .box {
   outline: 2px solid var(--accent);
   outline-offset: 2px;

@@ -1,5 +1,5 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useId, useState } from 'react';
 import styles from './StarRating.module.css';
 
 export interface StarRatingProps {
@@ -52,6 +52,7 @@ export function StarRating({
   size = 'md',
   className,
 }: StarRatingProps) {
+  const uid = useId();
   const [hovered, setHovered] = useState<number | null>(null);
   const interactive = Boolean(onChange) && !readOnly;
   const displayValue = hovered ?? value;
@@ -78,7 +79,7 @@ export function StarRating({
             >
               <input
                 type="radio"
-                name="star-rating"
+                name={uid}
                 value={starValue}
                 checked={value === starValue}
                 onChange={() => onChange?.(starValue)}

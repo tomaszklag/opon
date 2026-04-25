@@ -29,11 +29,11 @@ export function Toaster({ position = 'bottom-center', ...props }: ToasterDisplay
         },
         success: {
           iconTheme: { primary: '#2EE0A0', secondary: '#14171D' },
-          style: { borderColor: 'rgba(46, 224, 160, 0.28)' },
+          style: { borderColor: 'var(--success-border)' },
         },
         error: {
           iconTheme: { primary: '#FF5757', secondary: '#14171D' },
-          style: { borderColor: 'rgba(255, 87, 87, 0.28)' },
+          style: { borderColor: 'var(--danger-border)' },
         },
       }}
       {...props}
@@ -52,7 +52,7 @@ function error(message: string, opts?: ToastOptions) {
 function info(message: string, opts?: ToastOptions) {
   return hotToast(message, {
     icon: 'ℹ️',
-    style: { borderColor: 'rgba(59, 142, 234, 0.28)' },
+    style: { borderColor: 'var(--info-border)' },
     ...opts,
   });
 }

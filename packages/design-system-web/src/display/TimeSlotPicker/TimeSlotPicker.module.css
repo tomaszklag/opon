@@ -44,6 +44,12 @@
   gap: 8px;
 }
 
+@media (max-width: 480px) {
+  .grid {
+    grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+  }
+}
+
 .slot {
   position: relative;
   padding: 12px 8px;

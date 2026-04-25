@@ -232,3 +232,10 @@
 .chevron {
   color: var(--text-muted);
 }
+
+@media (max-width: 480px) {
+  .metaRow {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+}

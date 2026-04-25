@@ -9,19 +9,22 @@ export interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextArea
   maxLength?: number;
 }
 
-export function Textarea({
-  label,
-  error,
-  hint,
-  id,
-  className,
-  required,
-  maxLength,
-  value,
-  defaultValue,
-  onChange,
-  ...props
-}: TextareaProps) {
+export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(function Textarea(
+  {
+    label,
+    error,
+    hint,
+    id,
+    className,
+    required,
+    maxLength,
+    value,
+    defaultValue,
+    onChange,
+    ...props
+  },
+  ref,
+) {
   const [charCount, setCharCount] = useState(() => {
     if (value !== undefined) return String(value).length;
     if (defaultValue !== undefined) return String(defaultValue).length;
@@ -54,6 +57,7 @@ export function Textarea({
         </label>
       )}
       <textarea
+        ref={ref}
         id={textareaId}
         className={[styles.textarea, error ? styles.error : null, className]
           .filter(Boolean)
@@ -88,4 +92,6 @@ export function Textarea({
       </div>
     </div>
   );
-}
+});
+
+Textarea.displayName = 'Textarea';

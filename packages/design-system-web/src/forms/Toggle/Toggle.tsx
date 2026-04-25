@@ -9,12 +9,14 @@ export interface ToggleProps extends Omit<
   label?: string;
   description?: string;
   size?: 'sm' | 'md';
+  error?: boolean;
 }
 
 export function Toggle({
   label,
   description,
   size = 'md',
+  error,
   id,
   disabled,
   className,
@@ -34,7 +36,9 @@ export function Toggle({
           {...props}
         />
         <span
-          className={[styles.track, styles[size], className].filter(Boolean).join(' ')}
+          className={[styles.track, styles[size], error ? styles.error : null, className]
+            .filter(Boolean)
+            .join(' ')}
           aria-hidden="true"
         >
           <span className={styles.dot} />

@@ -1,3 +1,25 @@
+/* Status wrapper — only rendered when status prop is present */
+.root {
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+.root::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid var(--bg);
+}
+
+.root[data-status="online"]::after  { background: var(--success); }
+.root[data-status="offline"]::after { background: var(--border-strong); }
+.root[data-status="busy"]::after    { background: var(--warning); }
+
 .avatar {
   display: inline-flex;
   align-items: center;

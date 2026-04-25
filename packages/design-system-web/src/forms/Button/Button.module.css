@@ -73,8 +73,8 @@
 }
 
 .danger:hover:not(:disabled) {
-  background: #ff3d3d;
-  border-color: #ff3d3d;
+  background: var(--danger-hover);
+  border-color: var(--danger-hover);
   box-shadow: 0 0 16px var(--danger-muted);
 }
 

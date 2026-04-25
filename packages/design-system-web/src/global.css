@@ -14,7 +14,7 @@
   /* text */
   --text-primary: #F5F4EF;
   --text-secondary: #9EA2AD;
-  --text-muted: #60646F;
+  --text-muted: #8A8E9A;
   --text-on-accent: #0A0B0E;
   /* accent — amber */
   --accent: #FF6B1A;
@@ -30,9 +30,12 @@
   --warning-muted: rgba(255, 176, 32, 0.14);
   --warning-border: rgba(255, 176, 32, 0.32);
   --danger: #FF5757;
+  --danger-hover: #FF7070;
   --danger-muted: rgba(255, 87, 87, 0.10);
   --danger-border: rgba(255, 87, 87, 0.32);
   --info: #3B8EEA;
+  --info-muted: rgba(59, 142, 234, 0.14);
+  --info-border: rgba(59, 142, 234, 0.32);
   /* fonts */
   --font-display: 'Bebas Neue', sans-serif;
   --font-body: 'Archivo', system-ui, sans-serif;
@@ -101,6 +104,9 @@
   /* transitions */
   --transition-fast: 0.12s ease;
   --transition-base: 0.18s ease;
+  --transition-slow: 0.28s ease;
+  /* breakpoints — wartości do użycia bezpośrednio w @media (CSS vars nie działają w @media) */
+  /* xs: 360px | sm: 480px | md: 768px | lg: 1024px | xl: 1280px */
 }
 
 *,

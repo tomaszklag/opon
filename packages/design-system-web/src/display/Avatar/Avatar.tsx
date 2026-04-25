@@ -2,12 +2,14 @@ import React from 'react';
 import styles from './Avatar.module.css';
 
 export type AvatarSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl';
+export type AvatarStatus = 'online' | 'offline' | 'busy';
 
 export interface AvatarProps {
   src?: string;
   alt?: string;
   name?: string;
   size?: AvatarSize;
+  status?: AvatarStatus;
   className?: string;
 }
 
@@ -17,12 +19,11 @@ function getInitials(name: string): string {
   return ((parts[0]?.[0] ?? '') + (parts[parts.length - 1]?.[0] ?? '')).toUpperCase();
 }
 
-export function Avatar({ src, alt, name, size = 'md', className }: AvatarProps) {
+export function Avatar({ src, alt, name, size = 'md', status, className }: AvatarProps) {
   const initials = name ? getInitials(name) : null;
-
   const hasImg = Boolean(src);
 
-  return (
+  const inner = (
     <span
       className={[styles.avatar, styles[size], className].filter(Boolean).join(' ')}
       aria-label={!hasImg ? (alt ?? name) : undefined}
@@ -45,6 +46,14 @@ export function Avatar({ src, alt, name, size = 'md', className }: AvatarProps) 
           />
         </svg>
       )}
+    </span>
+  );
+
+  if (!status) return inner;
+
+  return (
+    <span className={[styles.root, styles[size]].join(' ')} data-status={status}>
+      {inner}
     </span>
   );
 }

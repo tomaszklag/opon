@@ -16,17 +16,10 @@ export interface SelectProps extends Omit<React.SelectHTMLAttributes<HTMLSelectE
   placeholder?: string;
 }
 
-export function Select({
-  label,
-  error,
-  hint,
-  options,
-  placeholder,
-  id,
-  className,
-  required,
-  ...props
-}: SelectProps) {
+export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(function Select(
+  { label, error, hint, options, placeholder, id, className, required, ...props },
+  ref,
+) {
   const selectId = id ?? (label ? `select-${label.toLowerCase().replace(/\s+/g, '-')}` : undefined);
   const errorId = error && selectId ? `${selectId}-error` : undefined;
   const hintId = hint && selectId ? `${selectId}-hint` : undefined;
@@ -46,6 +39,7 @@ export function Select({
       )}
       <div className={styles.selectWrapper}>
         <select
+          ref={ref}
           id={selectId}
           className={[styles.select, error ? styles.error : null, className]
             .filter(Boolean)
@@ -90,4 +84,6 @@ export function Select({
       )}
     </div>
   );
-}
+});
+
+Select.displayName = 'Select';
