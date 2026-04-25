@@ -6,6 +6,9 @@ export function setupSwagger(app: INestApplication): void {
     .setTitle('Opony API')
     .setVersion('0.1.0')
     .addTag('health')
+    .addTag('auth')
+    .addCookieAuth('access_token')
+    .addCookieAuth('refresh_token')
     .build();
 
   const document = SwaggerModule.createDocument(app, config);

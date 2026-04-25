@@ -1,0 +1,163 @@
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Post,
+  Req,
+  Res,
+  UnauthorizedException,
+} from '@nestjs/common';
+import { ApiCookieAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { randomUUID } from 'crypto';
+import { Request, Response } from 'express';
+import { AuthService } from './auth.service';
+import { CurrentUser } from './decorators/current-user.decorator';
+import { Public } from './decorators/public.decorator';
+import { RequestOtpDto } from './dto/request-otp.dto';
+import { VerifyOtpDto } from './dto/verify-otp.dto';
+import { OtpService } from './otp.service';
+import { JwtPayload } from './types/jwt-payload.interface';
+
+@ApiTags('auth')
+@Controller('v1/auth')
+export class AuthController {
+  constructor(
+    private readonly authService: AuthService,
+    private readonly otpService: OtpService,
+  ) {}
+
+  // ── POST /v1/auth/request-otp ──────────────────────────────────────────────
+
+  @Public()
+  @Post('request-otp')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Wyślij kod OTP na podany numer telefonu' })
+  @ApiResponse({ status: 200, description: 'Kod wysłany' })
+  @ApiResponse({ status: 429, description: 'Zbyt wiele prób' })
+  async requestOtp(@Body() dto: RequestOtpDto): Promise<{ message: string; expiresIn: number }> {
+    await this.otpService.requestOtp(dto.phone);
+    return { message: 'Kod OTP wysłany', expiresIn: 300 };
+  }
+
+  // ── POST /v1/auth/verify-otp ───────────────────────────────────────────────
+
+  @Public()
+  @Post('verify-otp')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Zweryfikuj kod OTP i zaloguj użytkownika' })
+  @ApiResponse({ status: 200, description: 'Zalogowano — tokeny ustawione w cookies' })
+  @ApiResponse({ status: 401, description: 'Nieprawidłowy lub wygasły kod' })
+  async verifyOtp(
+    @Body() dto: VerifyOtpDto,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<{ message: string; role: string; providerId?: string }> {
+    const valid = await this.otpService.verifyOtp(dto.phone, dto.code);
+    if (!valid) throw new UnauthorizedException('Nieprawidłowy lub wygasły kod OTP.');
+
+    const user = await this.authService.findOrCreateUser(dto.phone);
+
+    const jti = randomUUID();
+    const payload: JwtPayload = {
+      sub: user.id,
+      phone: user.phone,
+      role: user.role,
+      ...(user.providerId ? { providerId: user.providerId, status: user.status } : {}),
+    };
+
+    const { accessToken, refreshToken } = this.authService.issueTokens(payload, jti);
+
+    await this.authService.createSession(user.id, jti, refreshToken, {
+      userAgent: req.headers['user-agent'],
+      ipAddress: req.ip,
+    });
+
+    this.authService.setAuthCookies(res, accessToken, refreshToken);
+
+    return {
+      message: 'Zalogowano',
+      role: user.role,
+      ...(user.providerId ? { providerId: user.providerId } : {}),
+    };
+  }
+
+  // ── POST /v1/auth/refresh ──────────────────────────────────────────────────
+
+  @Public()
+  @Post('refresh')
+  @HttpCode(HttpStatus.OK)
+  @ApiCookieAuth('refresh_token')
+  @ApiOperation({ summary: 'Odśwież access token używając refresh cookie' })
+  @ApiResponse({ status: 200, description: 'Tokeny zrotowane' })
+  @ApiResponse({ status: 401, description: 'Brak, nieprawidłowy lub skradziony refresh token' })
+  async refresh(
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<{ message: string }> {
+    const oldRefreshToken = req.cookies?.['refresh_token'] as string | undefined;
+    if (!oldRefreshToken) throw new UnauthorizedException('Brak refresh token.');
+
+    const payload = this.authService.verifyRefreshToken(oldRefreshToken);
+    if (!payload.jti) throw new UnauthorizedException('Sesja nieważna — zaloguj się ponownie.');
+
+    // Upewnij się że użytkownik nadal istnieje i jest aktywny — nigdy nie twórz nowego
+    const user = await this.authService.findUser(payload.phone);
+
+    const newJti = randomUUID();
+    const newPayload: JwtPayload = {
+      sub: user.id,
+      phone: user.phone,
+      role: user.role,
+      ...(user.providerId ? { providerId: user.providerId, status: user.status } : {}),
+    };
+
+    const { accessToken, refreshToken: newRefreshToken } = this.authService.issueTokens(
+      newPayload,
+      newJti,
+    );
+
+    // Rotacja: unieważnij starą sesję, utwórz nową (transakcja w serwisie)
+    await this.authService.rotateSession(
+      payload.jti,
+      user.id,
+      oldRefreshToken,
+      newJti,
+      newRefreshToken,
+      { userAgent: req.headers['user-agent'], ipAddress: req.ip },
+    );
+
+    this.authService.setAuthCookies(res, accessToken, newRefreshToken);
+    return { message: 'Token odświeżony' };
+  }
+
+  // ── POST /v1/auth/logout ───────────────────────────────────────────────────
+
+  @Post('logout')
+  @HttpCode(HttpStatus.OK)
+  @ApiCookieAuth('access_token')
+  @ApiOperation({ summary: 'Wyloguj użytkownika — unieważnia sesję i usuwa cookies' })
+  @ApiResponse({ status: 200, description: 'Wylogowano' })
+  async logout(
+    @CurrentUser() user: JwtPayload,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<{ message: string }> {
+    if (user.jti) {
+      await this.authService.revokeSession(user.jti);
+    }
+    this.authService.clearAuthCookies(res);
+    return { message: 'Wylogowano' };
+  }
+
+  // ── GET /v1/auth/me ────────────────────────────────────────────────────────
+
+  @Get('me')
+  @ApiCookieAuth('access_token')
+  @ApiOperation({ summary: 'Dane zalogowanego użytkownika' })
+  @ApiResponse({ status: 200, description: 'Profil użytkownika z JWT' })
+  @ApiResponse({ status: 401, description: 'Nieautoryzowany' })
+  me(@CurrentUser() user: JwtPayload): JwtPayload {
+    return user;
+  }
+}

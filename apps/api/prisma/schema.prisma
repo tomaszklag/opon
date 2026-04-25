@@ -83,6 +83,7 @@ model User {
   reviews      Review[]     @relation("ClientReviews")
   consentLogs  ConsentLog[]
   auditLogs    AuditLog[]
+  sessions     Session[]
 
   @@map("users")
 }
@@ -303,10 +304,12 @@ model OtpToken {
   id        String    @id @default(uuid())
   phone     String    @db.VarChar(20)
   codeHash  String    @db.VarChar(200)
+  createdAt DateTime  @default(now())
   expiresAt DateTime
   usedAt    DateTime?
   attempts  Int       @default(0)
 
+  @@index([phone, createdAt])
   @@index([phone, expiresAt])
   @@map("otp_tokens")
 }
@@ -366,4 +369,26 @@ model AuditLog {
   @@index([entity, entityId])
   @@index([actorId])
   @@map("audit_logs")
+}
+
+// ──────────────────────────────────────────────
+// SESSION — refresh-token rotation z detekcją kradzieży
+// ──────────────────────────────────────────────
+
+model Session {
+  id         String    @id                       // = jti z JWT
+  userId     String
+  tokenHash  String    @unique @db.VarChar(64)   // SHA-256(refreshToken) hex
+  userAgent  String?   @db.VarChar(500)
+  ipAddress  String?   @db.VarChar(45)
+  createdAt  DateTime  @default(now())
+  lastUsedAt DateTime  @default(now())
+  expiresAt  DateTime
+  revokedAt  DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, revokedAt])
+  @@map("sessions")
 }
