@@ -1,0 +1,80 @@
+/* Design tokens — industrial dark theme */
+:root {
+  --bg: #0a0b0e;
+  --bg-surface: #14171d;
+  --bg-elevated: #1b1e26;
+  --border: #262a34;
+  --border-strong: #363b47;
+  --text: #f5f4ef;
+  --text-muted: #60646f;
+  --text-secondary: #9ea2ad;
+  --accent: #ff6b1a;
+  --accent-hover: #ff8039;
+  --accent-muted: rgba(255, 107, 26, 0.14);
+  --accent-border: rgba(255, 107, 26, 0.32);
+  --accent-glow: rgba(255, 107, 26, 0.45);
+  --success: #2ee0a0;
+  --success-muted: rgba(46, 224, 160, 0.14);
+  --success-border: rgba(46, 224, 160, 0.32);
+  --warning: #ffb020;
+  --warning-muted: rgba(255, 176, 32, 0.14);
+  --warning-border: rgba(255, 176, 32, 0.32);
+  --danger: #ff5757;
+  --danger-hover: #ff7070;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body, 'Archivo'), system-ui, -apple-system, sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  color: var(--accent-hover);
+}
+
+input,
+button,
+select,
+textarea {
+  font: inherit;
+}
+
+/* Utility */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.font-display {
+  font-family: var(--font-display, 'Bebas Neue'), sans-serif;
+}
+
+.font-mono {
+  font-family: var(--font-mono, 'JetBrains Mono'), monospace;
+}

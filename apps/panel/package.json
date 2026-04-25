@@ -10,6 +10,7 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
+    "@opony/design-system-web": "workspace:*",
     "@sentry/nextjs": "^8.0.0",
     "next": "^14.2.18",
     "react": "^18.3.1",

@@ -5,7 +5,9 @@ import { AuthModule } from './auth/auth.module';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { HealthModule } from './health/health.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { PricingTiersModule } from './pricing-tiers/pricing-tiers.module';
 import { ProvidersModule } from './providers/providers.module';
+import { WorkingHoursModule } from './working-hours/working-hours.module';
 
 @Module({
   imports: [
@@ -14,6 +16,8 @@ import { ProvidersModule } from './providers/providers.module';
     HealthModule,
     AuthModule,
     ProvidersModule,
+    PricingTiersModule,
+    WorkingHoursModule,
   ],
   providers: [
     // Globalny guard — wszystkie endpointy wymagają JWT, chyba że @Public()

@@ -2,9 +2,9 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { ProviderStatus, UserRole } from '@prisma/client';
-import { createHash, timingSafeEqual } from 'crypto';
+import { createHash } from 'crypto';
 import { Response } from 'express';
-import { PrismaService } from '../prisma/prisma.service';
+import { AuthRepository } from './auth.repository';
 import { JwtPayload } from './types/jwt-payload.interface';
 
 const ACCESS_TOKEN_TTL = 15 * 60; // 15 min [s]
@@ -26,7 +26,7 @@ type SessionMeta = {
 @Injectable()
 export class AuthService {
   constructor(
-    private readonly prisma: PrismaService,
+    private readonly authRepository: AuthRepository,
     private readonly jwt: JwtService,
     private readonly config: ConfigService,
   ) {}
@@ -35,21 +35,17 @@ export class AuthService {
 
   /** Szuka lub tworzy użytkownika po numerze telefonu. Używane przy verify-otp. */
   async findOrCreateUser(phone: string): Promise<UserWithProvider> {
-    let user = await this.prisma.user.findUnique({ where: { phone } });
-
+    let user = await this.authRepository.findUserByPhone(phone);
     if (!user) {
-      user = await this.prisma.user.create({
-        data: { phone, role: UserRole.CLIENT },
-      });
+      user = await this.authRepository.createUser(phone);
     }
-
     this.assertUserActive(user);
     return this.buildUserWithProvider(user);
   }
 
   /** Szuka istniejącego użytkownika — nigdy nie tworzy. Używane przy refresh. */
   async findUser(phone: string): Promise<UserWithProvider> {
-    const user = await this.prisma.user.findUnique({ where: { phone } });
+    const user = await this.authRepository.findUserByPhone(phone);
     if (!user) throw new UnauthorizedException('Użytkownik nie istnieje.');
     this.assertUserActive(user);
     return this.buildUserWithProvider(user);
@@ -89,10 +85,6 @@ export class AuthService {
 
   // ── Sesje ──────────────────────────────────────────────────────────────────
 
-  /**
-   * Tworzy nową sesję. id sesji = jti (UUID pre-wygenerowany przez kontroler),
-   * przechowujemy SHA-256 refresh tokenu — nigdy plaintext.
-   */
   async createSession(
     userId: string,
     jti: string,
@@ -101,16 +93,9 @@ export class AuthService {
   ): Promise<void> {
     const tokenHash = createHash('sha256').update(refreshToken).digest('hex');
     const expiresAt = new Date(Date.now() + REFRESH_TOKEN_TTL * 1000);
-    await this.prisma.session.create({
-      data: { id: jti, userId, tokenHash, expiresAt, ...meta },
-    });
+    await this.authRepository.createSession({ id: jti, userId, tokenHash, expiresAt, ...meta });
   }
 
-  /**
-   * Rotacja sesji: unieważnia starą, tworzy nową w jednej transakcji.
-   * Wykrywa ponowne użycie tokenu (token reuse): jeśli sesja już odwołana →
-   * unieważnia WSZYSTKIE aktywne sesje użytkownika (zakładamy kradzież tokenu).
-   */
   async rotateSession(
     jti: string,
     userId: string,
@@ -119,66 +104,33 @@ export class AuthService {
     newToken: string,
     meta?: SessionMeta,
   ): Promise<void> {
-    await this.prisma.$transaction(async (tx) => {
-      const session = await tx.session.findUnique({ where: { id: jti } });
-
-      if (!session || session.userId !== userId) {
-        throw new UnauthorizedException('Sesja nie istnieje.');
-      }
-
-      if (session.expiresAt < new Date()) {
-        throw new UnauthorizedException('Sesja wygasła.');
-      }
-
-      if (session.revokedAt) {
-        // Token reuse detected — nuclear option: revoke all active sessions for this user.
-        // Zakładamy kradzież tokenu — zmuszamy wszystkie urządzenia do re-login.
-        await tx.session.updateMany({
-          where: { userId, revokedAt: null },
-          data: { revokedAt: new Date() },
-        });
-        throw new UnauthorizedException(
-          'Wykryto ponowne użycie tokenu. Wszystkie sesje zostały unieważnione.',
-        );
-      }
-
-      // timingSafeEqual zapobiega timing attack przy porównaniu hashów
-      const incomingHash = createHash('sha256').update(incomingToken).digest('hex');
-      const hashesMatch = timingSafeEqual(
-        Buffer.from(incomingHash, 'hex'),
-        Buffer.from(session.tokenHash, 'hex'),
-      );
-      if (!hashesMatch) {
-        await tx.session.updateMany({
-          where: { userId, revokedAt: null },
-          data: { revokedAt: new Date() },
-        });
-        throw new UnauthorizedException('Wykryto podejrzaną aktywność. Zaloguj się ponownie.');
-      }
-
-      const newHash = createHash('sha256').update(newToken).digest('hex');
-      const expiresAt = new Date(Date.now() + REFRESH_TOKEN_TTL * 1000);
-      const now = new Date();
-
-      // Atomic: revoke old session and create new one.
-      // Warunek revokedAt: null w updateMany gwarantuje że race condition (dwa równoległe
-      // refresh z tym samym tokenem) wykryje się przy następnym żądaniu jako token reuse.
-      await tx.session.update({
-        where: { id: jti },
-        data: { revokedAt: now, lastUsedAt: now },
-      });
-      await tx.session.create({
-        data: { id: newJti, userId, tokenHash: newHash, expiresAt, lastUsedAt: now, ...meta },
-      });
+    const result = await this.authRepository.rotateSession({
+      jti,
+      userId,
+      incomingToken,
+      newJti,
+      newToken,
+      ...meta,
     });
+
+    if (!result.ok) {
+      switch (result.reason) {
+        case 'NOT_FOUND':
+          throw new UnauthorizedException('Sesja nie istnieje.');
+        case 'EXPIRED':
+          throw new UnauthorizedException('Sesja wygasła.');
+        case 'REUSED':
+          throw new UnauthorizedException(
+            'Wykryto ponowne użycie tokenu. Wszystkie sesje zostały unieważnione.',
+          );
+        case 'HASH_MISMATCH':
+          throw new UnauthorizedException('Wykryto podejrzaną aktywność. Zaloguj się ponownie.');
+      }
+    }
   }
 
-  /** Unieważnia konkretną sesję (logout z jednego urządzenia). */
   async revokeSession(jti: string): Promise<void> {
-    await this.prisma.session.updateMany({
-      where: { id: jti, revokedAt: null },
-      data: { revokedAt: new Date() },
-    });
+    await this.authRepository.revokeSession(jti);
   }
 
   // ── Cookies ────────────────────────────────────────────────────────────────
@@ -190,7 +142,6 @@ export class AuthService {
       httpOnly: true,
       secure: isProd,
       sameSite: 'lax' as const,
-      // W prod: .opony.app pokrywa wszystkie subdomeny (same-site w sensie eTLD+1)
       domain: isProd ? '.opony.app' : undefined,
     };
 
@@ -202,7 +153,7 @@ export class AuthService {
     res.cookie('refresh_token', refreshToken, {
       ...base,
       maxAge: REFRESH_TOKEN_TTL * 1000,
-      path: '/v1/auth/refresh', // ogranicza wysyłanie cookie tylko do tego endpointu
+      path: '/v1/auth/refresh',
     });
   }
 
@@ -230,11 +181,7 @@ export class AuthService {
     phone: string;
     role: UserRole;
   }): Promise<UserWithProvider> {
-    const provider = await this.prisma.provider.findUnique({
-      where: { ownerId: user.id },
-      select: { id: true, status: true },
-    });
-
+    const provider = await this.authRepository.findProviderByOwnerId(user.id);
     return {
       id: user.id,
       phone: user.phone,

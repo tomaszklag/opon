@@ -223,6 +223,9 @@ importers:
 
   apps/panel:
     dependencies:
+      '@opony/design-system-web':
+        specifier: workspace:*
+        version: link:../../packages/design-system-web
       '@sentry/nextjs':
         specifier: ^8.0.0
         version: 8.55.1(@opentelemetry/context-async-hooks@1.30.1(@opentelemetry/api@1.9.1))(@opentelemetry/core@1.30.1(@opentelemetry/api@1.9.1))(@opentelemetry/instrumentation@0.57.2(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@1.30.1(@opentelemetry/api@1.9.1))(next@14.2.35(@opentelemetry/api@1.9.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react@18.3.1)(webpack@5.97.1)
