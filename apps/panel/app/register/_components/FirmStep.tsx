@@ -1,3 +1,4 @@
+import { Input, PhoneInput, Select, Textarea, Button } from '@opony/design-system-web';
 import { type FirmData, VOIVODESHIPS } from '../../../lib/hooks/use-register-flow';
 import styles from '../register.module.css';
 
@@ -12,6 +13,8 @@ interface Props {
   setPostalCode: (val: string) => void;
 }
 
+const voivodeshipOptions = VOIVODESHIPS.map((v) => ({ value: v, label: v }));
+
 export function FirmStep({ data, error, onSubmit, setField, setNip, setPostalCode }: Props) {
   return (
     <>
@@ -20,129 +23,96 @@ export function FirmStep({ data, error, onSubmit, setField, setNip, setPostalCod
 
       <form onSubmit={onSubmit} className={styles.form}>
         <div className={styles.row}>
-          <div className={styles.field}>
-            <label className={styles.label}>Nazwa firmy *</label>
-            <input
-              className={styles.input}
-              value={data.name}
-              onChange={setField('name')}
-              placeholder="Wulkanizacja Jan Kowalski"
-              required
-              maxLength={200}
-            />
-          </div>
-          <div className={styles.field}>
-            <label className={styles.label}>NIP *</label>
-            <input
-              className={styles.input}
-              value={data.nip}
-              onChange={(e) => setNip(e.target.value)}
-              placeholder="1234567890"
-              pattern="\d{10}"
-              title="10 cyfr bez myślników"
-              required
-            />
-          </div>
-        </div>
-
-        <div className={styles.row}>
-          <div className={styles.field}>
-            <label className={styles.label}>Telefon kontaktowy *</label>
-            <input
-              className={styles.input}
-              type="tel"
-              value={data.phone}
-              onChange={setField('phone')}
-              placeholder="+48600000000"
-              pattern="^\+48\d{9}$"
-              title="Format: +48 i 9 cyfr"
-              required
-            />
-          </div>
-          <div className={styles.field}>
-            <label className={styles.label}>E-mail (opcjonalnie)</label>
-            <input
-              className={styles.input}
-              type="email"
-              value={data.email}
-              onChange={setField('email')}
-              placeholder="kontakt@firma.pl"
-            />
-          </div>
-        </div>
-
-        <div className={styles.field}>
-          <label className={styles.label}>Ulica i numer *</label>
-          <input
-            className={styles.input}
-            value={data.street}
-            onChange={setField('street')}
-            placeholder="ul. Przykładowa 12"
+          <Input
+            label="Nazwa firmy"
+            value={data.name}
+            onChange={setField('name')}
+            placeholder="Wulkanizacja Jan Kowalski"
             required
             maxLength={200}
           />
-        </div>
-
-        <div className={styles.row}>
-          <div className={styles.field}>
-            <label className={styles.label}>Miasto *</label>
-            <input
-              className={styles.input}
-              value={data.city}
-              onChange={setField('city')}
-              placeholder="Warszawa"
-              required
-              maxLength={100}
-            />
-          </div>
-          <div className={styles.field}>
-            <label className={styles.label}>Kod pocztowy *</label>
-            <input
-              className={styles.input}
-              value={data.postalCode}
-              onChange={(e) => setPostalCode(e.target.value)}
-              placeholder="00-000"
-              pattern="\d{2}-\d{3}"
-              title="Format: 00-000"
-              required
-            />
-          </div>
-        </div>
-
-        <div className={styles.field}>
-          <label className={styles.label}>Województwo *</label>
-          <select
-            className={styles.select}
-            value={data.voivodeship}
-            onChange={setField('voivodeship')}
+          <Input
+            label="NIP"
+            value={data.nip}
+            onChange={(e) => setNip(e.target.value)}
+            placeholder="1234567890"
+            pattern="\d{10}"
+            title="10 cyfr bez myślników"
             required
-          >
-            <option value="">Wybierz województwo</option>
-            {VOIVODESHIPS.map((v) => (
-              <option key={v} value={v}>
-                {v}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className={styles.field}>
-          <label className={styles.label}>Opis (opcjonalnie)</label>
-          <textarea
-            className={styles.textarea}
-            value={data.description}
-            onChange={setField('description')}
-            placeholder="Krótki opis usług, specjalizacji, sprzętu..."
-            rows={3}
-            maxLength={3000}
           />
         </div>
 
+        <div className={styles.row}>
+          <PhoneInput
+            label="Telefon kontaktowy"
+            value={data.phone.replace(/^\+48/, '')}
+            onChange={(e) =>
+              setField('phone')({ ...e, target: { ...e.target, value: '+48' + e.target.value } })
+            }
+            placeholder="600 000 000"
+            required
+          />
+          <Input
+            label="E-mail (opcjonalnie)"
+            type="email"
+            value={data.email}
+            onChange={setField('email')}
+            placeholder="kontakt@firma.pl"
+          />
+        </div>
+
+        <Input
+          label="Ulica i numer"
+          value={data.street}
+          onChange={setField('street')}
+          placeholder="ul. Przykładowa 12"
+          required
+          maxLength={200}
+        />
+
+        <div className={styles.row}>
+          <Input
+            label="Miasto"
+            value={data.city}
+            onChange={setField('city')}
+            placeholder="Warszawa"
+            required
+            maxLength={100}
+          />
+          <Input
+            label="Kod pocztowy"
+            value={data.postalCode}
+            onChange={(e) => setPostalCode(e.target.value)}
+            placeholder="00-000"
+            pattern="\d{2}-\d{3}"
+            title="Format: 00-000"
+            required
+          />
+        </div>
+
+        <Select
+          label="Województwo"
+          options={voivodeshipOptions}
+          placeholder="Wybierz województwo"
+          value={data.voivodeship}
+          onChange={setField('voivodeship')}
+          required
+        />
+
+        <Textarea
+          label="Opis (opcjonalnie)"
+          value={data.description}
+          onChange={setField('description')}
+          placeholder="Krótki opis usług, specjalizacji, sprzętu..."
+          rows={3}
+          maxLength={3000}
+        />
+
         {error && <p className={styles.error}>{error}</p>}
 
-        <button type="submit" className={styles.btn}>
+        <Button type="submit" variant="primary" fullWidth>
           Dalej →
-        </button>
+        </Button>
       </form>
     </>
   );

@@ -1,3 +1,4 @@
+import { Button } from '@opony/design-system-web';
 import styles from '../profile.module.css';
 
 interface Props {
@@ -12,9 +13,14 @@ export function ProfileActionBar({ isDirty, saved, isSubmitting, onSubmit }: Pro
     <div className={styles.actionBar}>
       {isDirty && !saved && <span className={styles.dirtyChip}>Niezapisane zmiany</span>}
       {saved && <span className={styles.savedChip}>Zapisano</span>}
-      <button className={styles.saveBtn} onClick={onSubmit} disabled={isSubmitting || !isDirty}>
-        {isSubmitting ? 'Zapisywanie…' : 'Zapisz zmiany'}
-      </button>
+      <Button
+        variant="primary"
+        onClick={onSubmit}
+        disabled={isSubmitting || !isDirty}
+        loading={isSubmitting}
+      >
+        Zapisz zmiany
+      </Button>
     </div>
   );
 }

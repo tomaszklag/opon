@@ -1,3 +1,4 @@
+import { Input } from '@opony/design-system-web';
 import { type UseFormRegister, type FieldErrors } from 'react-hook-form';
 import { type ProviderFormValues } from '../../../../lib/schemas/provider.schema';
 import styles from '../profile.module.css';
@@ -16,37 +17,21 @@ export function ContactSection({ register, errors }: Props) {
       </header>
 
       <div className={[styles.fieldRow, styles.fieldRowTwo].join(' ')}>
-        <div className={styles.field}>
-          <label className={styles.label} htmlFor="f-phone">
-            Telefon
-          </label>
-          <input
-            id="f-phone"
-            className={[styles.input, errors.phone ? styles.inputError : ''].join(' ')}
-            type="tel"
-            placeholder="+48600000000"
-            {...register('phone')}
-          />
-          {errors.phone ? (
-            <span className={styles.fieldError}>{errors.phone.message}</span>
-          ) : (
-            <span className={styles.fieldHint}>Format: +48 i numer, bez spacji</span>
-          )}
-        </div>
-
-        <div className={styles.field}>
-          <label className={styles.label} htmlFor="f-email">
-            E-mail kontaktowy
-          </label>
-          <input
-            id="f-email"
-            className={[styles.input, errors.email ? styles.inputError : ''].join(' ')}
-            type="email"
-            placeholder="kontakt@firma.pl"
-            {...register('email')}
-          />
-          {errors.email && <span className={styles.fieldError}>{errors.email.message}</span>}
-        </div>
+        <Input
+          label="Telefon"
+          type="tel"
+          placeholder="+48600000000"
+          hint={errors.phone ? undefined : 'Format: +48 i numer, bez spacji'}
+          error={errors.phone?.message}
+          {...register('phone')}
+        />
+        <Input
+          label="E-mail kontaktowy"
+          type="email"
+          placeholder="kontakt@firma.pl"
+          error={errors.email?.message}
+          {...register('email')}
+        />
       </div>
     </section>
   );

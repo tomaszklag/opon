@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { requestOtp, verifyOtp, getMe } from '../../api-data-access/auth';
 import { ApiError } from '../api';
@@ -14,15 +14,12 @@ export function useLoginFlow() {
 
   const [step, setStep] = useState<Step>('phone');
   const [digits, setDigits] = useState('');
-  const [cells, setCells] = useState(['', '', '', '', '', '']);
+  const [code, setCode] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [countdown, setCountdown] = useState(0);
 
-  const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
-
   const phone = '+48' + digits;
-  const code = cells.join('');
   const mins = Math.floor(countdown / 60);
   const secs = countdown % 60;
   const timerLabel = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
@@ -54,7 +51,6 @@ export function useLoginFlow() {
       await requestOtp({ phone });
       setStep('otp');
       setCountdown(300);
-      setTimeout(() => otpRefs.current[0]?.focus(), 100);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Błąd sieci. Spróbuj ponownie.');
     } finally {
@@ -73,8 +69,7 @@ export function useLoginFlow() {
       router.replace(res.providerId ? '/dashboard' : '/register');
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Błąd weryfikacji.');
-      setCells(['', '', '', '', '', '']);
-      setTimeout(() => otpRefs.current[0]?.focus(), 50);
+      setCode('');
     } finally {
       setLoading(false);
     }
@@ -93,54 +88,27 @@ export function useLoginFlow() {
     }
   }
 
-  function handleCellChange(idx: number, val: string) {
-    const digit = val.replace(/\D/g, '').slice(-1);
-    const next = [...cells];
-    next[idx] = digit;
-    setCells(next);
-    if (digit && idx < 5) otpRefs.current[idx + 1]?.focus();
-  }
-
-  function handleCellKeyDown(idx: number, e: React.KeyboardEvent<HTMLInputElement>) {
-    if (e.key === 'Backspace' && !cells[idx] && idx > 0) {
-      otpRefs.current[idx - 1]?.focus();
-    }
-  }
-
-  function handleCellPaste(e: React.ClipboardEvent<HTMLInputElement>) {
-    e.preventDefault();
-    const text = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
-    const next = Array(6).fill('') as string[];
-    for (let i = 0; i < text.length; i++) next[i] = text[i] ?? '';
-    setCells(next);
-    otpRefs.current[Math.min(text.length, 5)]?.focus();
-  }
-
   function goToPhone() {
     setStep('phone');
-    setCells(['', '', '', '', '', '']);
+    setCode('');
     setError('');
   }
 
   return {
     step,
     digits,
-    cells,
+    code,
     error,
     loading,
     countdown,
-    otpRefs,
     phone,
-    code,
     timerLabel,
     authLoading: status === 'loading',
     handleDigitsChange,
     handlePhoneSubmit,
     handleOtpSubmit,
     handleResend,
-    handleCellChange,
-    handleCellKeyDown,
-    handleCellPaste,
+    setCode,
     goToPhone,
   };
 }

@@ -1,3 +1,4 @@
+import { Input, Textarea } from '@opony/design-system-web';
 import { type UseFormRegister, type FieldErrors } from 'react-hook-form';
 import { type ProviderFormValues } from '../../../../lib/schemas/provider.schema';
 import { IconLock } from '../../../../components/icons';
@@ -21,19 +22,13 @@ export function IdentitySection({ register, errors, description, nip }: Props) {
       </header>
 
       <div className={[styles.fieldRow, styles.fieldRowTwo].join(' ')}>
-        <div className={styles.field}>
-          <label className={styles.label} htmlFor="f-name">
-            Nazwa wyświetlana <span className={styles.req}>*</span>
-          </label>
-          <input
-            id="f-name"
-            className={[styles.input, errors.name ? styles.inputError : ''].join(' ')}
-            type="text"
-            maxLength={200}
-            {...register('name')}
-          />
-          {errors.name && <span className={styles.fieldError}>{errors.name.message}</span>}
-        </div>
+        <Input
+          label="Nazwa wyświetlana"
+          error={errors.name?.message}
+          maxLength={200}
+          required
+          {...register('name')}
+        />
 
         <div className={styles.field}>
           <span className={styles.label}>NIP</span>
@@ -45,24 +40,14 @@ export function IdentitySection({ register, errors, description, nip }: Props) {
         </div>
       </div>
 
-      <div className={styles.field}>
-        <label className={styles.label} htmlFor="f-desc">
-          Opis warsztatu
-        </label>
-        <textarea
-          id="f-desc"
-          className={[styles.textarea, errors.description ? styles.inputError : ''].join(' ')}
-          rows={4}
-          maxLength={DESC_MAX}
-          {...register('description')}
-        />
-        <div className={styles.charCounter}>
-          <strong>{description.length}</strong> / {DESC_MAX}
-        </div>
-        {errors.description && (
-          <span className={styles.fieldError}>{errors.description.message}</span>
-        )}
-      </div>
+      <Textarea
+        label="Opis warsztatu"
+        error={errors.description?.message}
+        value={description}
+        rows={4}
+        maxLength={DESC_MAX}
+        {...register('description')}
+      />
     </section>
   );
 }

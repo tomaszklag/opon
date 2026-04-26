@@ -34,18 +34,14 @@ export default function LoginPage() {
             />
           ) : (
             <OtpStep
-              cells={flow.cells}
+              code={flow.code}
               error={flow.error}
               loading={flow.loading}
-              code={flow.code}
               countdown={flow.countdown}
               timerLabel={flow.timerLabel}
               phone={flow.phone}
-              otpRefs={flow.otpRefs}
               onSubmit={flow.handleOtpSubmit}
-              onCellChange={flow.handleCellChange}
-              onCellKeyDown={flow.handleCellKeyDown}
-              onCellPaste={flow.handleCellPaste}
+              onCodeChange={flow.setCode}
               onResend={flow.handleResend}
               onGoToPhone={flow.goToPhone}
             />

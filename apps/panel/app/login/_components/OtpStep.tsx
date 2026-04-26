@@ -1,37 +1,29 @@
-import { type MutableRefObject } from 'react';
+import { OTPInput, Button } from '@opony/design-system-web';
 import { IconArrowRight } from '../../../components/icons';
 import styles from '../login.module.css';
 
 interface Props {
-  cells: string[];
+  code: string;
   error: string;
   loading: boolean;
-  code: string;
   countdown: number;
   timerLabel: string;
   phone: string;
-  otpRefs: MutableRefObject<(HTMLInputElement | null)[]>;
   onSubmit: (e: React.FormEvent) => void;
-  onCellChange: (idx: number, val: string) => void;
-  onCellKeyDown: (idx: number, e: React.KeyboardEvent<HTMLInputElement>) => void;
-  onCellPaste: (e: React.ClipboardEvent<HTMLInputElement>) => void;
+  onCodeChange: (val: string) => void;
   onResend: () => void;
   onGoToPhone: () => void;
 }
 
 export function OtpStep({
-  cells,
+  code,
   error,
   loading,
-  code,
   countdown,
   timerLabel,
   phone,
-  otpRefs,
   onSubmit,
-  onCellChange,
-  onCellKeyDown,
-  onCellPaste,
+  onCodeChange,
   onResend,
   onGoToPhone,
 }: Props) {
@@ -52,38 +44,21 @@ export function OtpStep({
         <strong>{phone}</strong>. Kod jest ważny przez 5 minut.
       </p>
 
-      <div className={styles.otpGrid} role="group" aria-label="Kod weryfikacyjny — 6 cyfr">
-        {cells.map((val, idx) => (
-          <input
-            key={idx}
-            ref={(el) => {
-              otpRefs.current[idx] = el;
-            }}
-            className={[styles.otpCell, val ? styles.otpCellFilled : ''].join(' ')}
-            type="text"
-            inputMode="numeric"
-            maxLength={1}
-            value={val}
-            onChange={(e) => onCellChange(idx, e.target.value)}
-            onKeyDown={(e) => onCellKeyDown(idx, e)}
-            onPaste={idx === 0 ? onCellPaste : undefined}
-            autoComplete={idx === 0 ? 'one-time-code' : 'off'}
-            aria-label={`Cyfra ${idx + 1} z 6`}
-          />
-        ))}
-      </div>
+      <OTPInput length={6} value={code} onChange={onCodeChange} error={!!error} autoFocus />
 
       {error && <p className={styles.errorMsg}>{error}</p>}
 
-      <button
+      <Button
         type="submit"
-        className={styles.ctaPrimary}
-        disabled={loading || code.length !== 6}
-        aria-disabled={loading || code.length !== 6}
+        variant="primary"
+        fullWidth
+        loading={loading}
+        disabled={code.length !== 6}
+        className={styles.ctaBtn}
       >
-        {loading ? 'Weryfikacja…' : 'ZALOGUJ SIĘ'}
+        ZALOGUJ SIĘ
         {!loading && <IconArrowRight className={styles.arr} />}
-      </button>
+      </Button>
 
       <div className={styles.timerRow}>
         {countdown > 0 ? (
@@ -92,13 +67,13 @@ export function OtpStep({
             {timerLabel}
           </span>
         ) : (
-          <button type="button" className={styles.linkBtn} onClick={onResend} disabled={loading}>
+          <Button type="button" variant="ghost" size="sm" onClick={onResend} disabled={loading}>
             Wyślij ponownie
-          </button>
+          </Button>
         )}
-        <button type="button" className={styles.linkBtn} onClick={onGoToPhone}>
+        <Button type="button" variant="ghost" size="sm" onClick={onGoToPhone}>
           Zmień numer
-        </button>
+        </Button>
       </div>
     </form>
   );

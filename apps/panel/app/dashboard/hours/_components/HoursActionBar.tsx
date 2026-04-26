@@ -1,3 +1,4 @@
+import { Button } from '@opony/design-system-web';
 import styles from '../hours.module.css';
 
 interface Props {
@@ -10,9 +11,9 @@ export function HoursActionBar({ saved, saving, onSave }: Props) {
   return (
     <div className={styles.actionBar}>
       {saved && <span className={styles.savedChip}>Zapisano</span>}
-      <button className={styles.saveBtn} onClick={onSave} disabled={saving}>
-        {saving ? 'Zapisywanie…' : 'Zapisz zmiany'}
-      </button>
+      <Button variant="primary" size="sm" onClick={onSave} loading={saving}>
+        Zapisz zmiany
+      </Button>
     </div>
   );
 }

@@ -1,3 +1,4 @@
+import { Input } from '@opony/design-system-web';
 import { type UseFormRegister, type FieldErrors } from 'react-hook-form';
 import { type ProviderFormValues } from '../../../../lib/schemas/provider.schema';
 import styles from '../profile.module.css';
@@ -37,23 +38,14 @@ export function LocationSection({ register, errors, cityCenterLat, cityCenterLng
         </div>
       </div>
 
-      <div className={styles.field}>
-        <label className={styles.label} htmlFor="f-logo">
-          URL logo
-        </label>
-        <input
-          id="f-logo"
-          className={[styles.input, errors.logoUrl ? styles.inputError : ''].join(' ')}
-          type="url"
-          placeholder="https://example.com/logo.png"
-          {...register('logoUrl')}
-        />
-        {errors.logoUrl ? (
-          <span className={styles.fieldError}>{errors.logoUrl.message}</span>
-        ) : (
-          <span className={styles.fieldHint}>Publiczny URL obrazka PNG/JPG, min 200×200 px</span>
-        )}
-      </div>
+      <Input
+        label="URL logo"
+        type="url"
+        placeholder="https://example.com/logo.png"
+        hint={errors.logoUrl ? undefined : 'Publiczny URL obrazka PNG/JPG, min 200×200 px'}
+        error={errors.logoUrl?.message}
+        {...register('logoUrl')}
+      />
     </section>
   );
 }

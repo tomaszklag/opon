@@ -1,3 +1,4 @@
+import { Button } from '@opony/design-system-web';
 import { type FirmData } from '../../../lib/hooks/use-register-flow';
 import styles from '../register.module.css';
 
@@ -60,12 +61,12 @@ export function ConfirmStep({ data, error, loading, onSubmit, onGoBack }: Props)
       {error && <p className={styles.error}>{error}</p>}
 
       <form onSubmit={onSubmit} className={styles.actions}>
-        <button type="button" className={styles.btnSecondary} onClick={onGoBack} disabled={loading}>
+        <Button type="button" variant="secondary" onClick={onGoBack} disabled={loading}>
           ← Wróć i edytuj
-        </button>
-        <button type="submit" className={styles.btn} disabled={loading}>
-          {loading ? 'Rejestrowanie…' : 'Zarejestruj firmę'}
-        </button>
+        </Button>
+        <Button type="submit" variant="primary" loading={loading}>
+          Zarejestruj firmę
+        </Button>
       </form>
     </>
   );
