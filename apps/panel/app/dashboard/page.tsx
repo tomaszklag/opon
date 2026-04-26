@@ -1,54 +1,15 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
-import { api, ApiError } from '../../lib/api';
-import { useAuth } from '../../lib/auth';
-import { IconLockOutline } from '../../components/icons';
+import { useDashboard, STATUS_LABEL } from '../../lib/hooks/use-dashboard';
+import { StatusBanners } from './_components/StatusBanners';
+import { StatCard } from './_components/StatCard';
+import { ActionTile } from './_components/ActionTile';
 import styles from './dashboard.module.css';
 
-type ProviderStatus = 'PENDING' | 'APPROVED' | 'SUSPENDED';
-
-interface Provider {
-  id: string;
-  name: string;
-  status: ProviderStatus;
-  city: string;
-  voivodeship: string;
-  phone: string;
-  email?: string;
-  nip: string;
-}
-
-const STATUS_LABEL: Record<ProviderStatus, string> = {
-  PENDING: 'Oczekuje na weryfikację',
-  APPROVED: 'Aktywna',
-  SUSPENDED: 'Zawieszona',
-};
-
 export default function DashboardPage() {
-  const router = useRouter();
-  const { status } = useAuth();
+  const { provider, loading, authLoading } = useDashboard();
 
-  const [provider, setProvider] = useState<Provider | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    if (status === 'unauthenticated') router.replace('/login');
-  }, [status, router]);
-
-  useEffect(() => {
-    if (status !== 'authenticated') return;
-    api
-      .get<Provider>('/v1/providers/me')
-      .then(setProvider)
-      .catch((err) => {
-        if (err instanceof ApiError && err.status === 404) router.replace('/register');
-      })
-      .finally(() => setLoading(false));
-  }, [status, router]);
-
-  if (status === 'loading' || loading) {
+  if (authLoading || loading) {
     return (
       <div className={styles.loadingScreen}>
         <div className={styles.spinner} />
@@ -58,20 +19,11 @@ export default function DashboardPage() {
 
   if (!provider) return null;
 
+  const locked = provider.status !== 'APPROVED';
+
   return (
     <div className={styles.page}>
-      {provider.status === 'PENDING' && (
-        <div className={styles.pendingBanner}>
-          <strong>Firma oczekuje na weryfikację.</strong> Nasz zespół sprawdzi dane w ciągu 24
-          godzin. Po zatwierdzeniu Twoja firma pojawi się w wynikach wyszukiwania.
-        </div>
-      )}
-      {provider.status === 'SUSPENDED' && (
-        <div className={styles.suspendedBanner}>
-          <strong>Konto zawieszone.</strong> Skontaktuj się z nami pod adresem kontakt@opony.app,
-          aby wyjaśnić sytuację.
-        </div>
-      )}
+      <StatusBanners status={provider.status} />
 
       <div className={styles.statsGrid}>
         <StatCard label="NIP" value={provider.nip} />
@@ -85,19 +37,19 @@ export default function DashboardPage() {
           title="Godziny pracy"
           description="Ustaw dni i godziny, w których przyjmujesz klientów"
           href="/dashboard/hours"
-          locked={provider.status !== 'APPROVED'}
+          locked={locked}
         />
         <ActionTile
           title="Cennik"
           description="Zdefiniuj ceny wymiany opon według rozmiaru felgi"
           href="/dashboard/pricing"
-          locked={provider.status !== 'APPROVED'}
+          locked={locked}
         />
         <ActionTile
           title="Rezerwacje"
           description="Przeglądaj nadchodzące wizyty klientów"
           href="/dashboard/bookings"
-          locked={provider.status !== 'APPROVED'}
+          locked={locked}
         />
         <ActionTile
           title="Profil firmy"
@@ -107,42 +59,5 @@ export default function DashboardPage() {
         />
       </div>
     </div>
-  );
-}
-
-function StatCard({ label, value }: { label: string; value: string }) {
-  return (
-    <div className={styles.statCard}>
-      <div className={styles.statLabel}>{label}</div>
-      <div className={styles.statValue}>{value}</div>
-    </div>
-  );
-}
-
-function ActionTile({
-  title,
-  description,
-  href,
-  locked,
-}: {
-  title: string;
-  description: string;
-  href: string;
-  locked: boolean;
-}) {
-  const router = useRouter();
-  return (
-    <button
-      className={`${styles.actionTile} ${locked ? styles.actionTileLocked : ''}`}
-      onClick={() => !locked && router.push(href)}
-      disabled={locked}
-      title={locked ? 'Dostępne po zatwierdzeniu konta' : undefined}
-    >
-      <div className={styles.actionContent}>
-        <div className={styles.actionTitle}>{title}</div>
-        <div className={styles.actionDesc}>{description}</div>
-      </div>
-      {locked && <IconLockOutline className={styles.lockIcon} width="13" height="13" />}
-    </button>
   );
 }
