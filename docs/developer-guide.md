@@ -361,7 +361,59 @@ Wzorce do naśladowania: [use-pricing-tiers.ts](../apps/panel/lib/hooks/use-pric
 
 ---
 
-## 8. Linting i formatowanie
+## 8. Dodawanie nowej ikony SVG
+
+Wszystkie ikony SVG są w jednym pliku: `apps/panel/components/icons.tsx`.
+
+**Nie wolno** umieszczać inline SVG w stronach ani komponentach.
+
+### Jak dodać nową ikonę
+
+```ts
+// apps/panel/components/icons.tsx
+export function IconCalendar(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      {...props}           // ← zawsze na końcu, umożliwia override width/height/className
+    >
+      <rect x="3" y="4" width="18" height="18" rx="2" />
+      <line x1="16" y1="2" x2="16" y2="6" />
+      <line x1="8" y1="2" x2="8" y2="6" />
+      <line x1="3" y1="10" x2="21" y2="10" />
+    </svg>
+  );
+}
+```
+
+### Jak użyć w komponencie
+
+```tsx
+import { IconCalendar } from '../../../components/icons';
+
+// rozmiar przez props
+<IconCalendar width="16" height="16" />
+
+// rozmiar przez CSS class
+<IconCalendar className={styles.icon} />
+```
+
+**Checklist nowej ikony:**
+
+- [ ] Dodana do `apps/panel/components/icons.tsx` jako named export
+- [ ] `{...props}` na końcu atrybutów SVG
+- [ ] `aria-hidden="true"` obecne
+- [ ] Brak hardcoded `width`/`height` w definicji (tylko przez props)
+
+---
+
+## 10. Linting i formatowanie
 
 ```bash
 pnpm lint            # ESLint na całym monorepo (auto-fix)
@@ -377,7 +429,7 @@ Jeśli commit się nie udaje przez hook — nie używaj `--no-verify`. Napraw pr
 
 ---
 
-## 9. Testowanie
+## 11. Testowanie
 
 ```bash
 pnpm test            # Vitest — unit + integration (wszystkie apps)
@@ -392,7 +444,7 @@ MSW mockuje API w testach FE i w dev (`NEXT_PUBLIC_API_MOCK=true`). Handlery: `a
 
 ---
 
-## 10. Przydatne one-linery
+## 12. Przydatne one-linery
 
 ```bash
 # Sprawdź czy wszystkie endpointy mają Response DTO w Swagger

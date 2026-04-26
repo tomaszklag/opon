@@ -1455,6 +1455,27 @@ export function useLoginFlow() {
 | `form.reset(values)` po załadowaniu i po zapisie | Ręczne synchronizowanie `isDirty`                       |
 | `zodResolver` dla formularzy pojedynczej encji   | `.optional().default('')` w schematach Zod              |
 
+### Ikony SVG — zasada obowiązkowa
+
+Wszystkie ikony SVG używane w panelu muszą być zdefiniowane jako komponenty React w jednym pliku:
+
+```
+apps/panel/components/icons.tsx   ← jedyne miejsce definicji ikon
+```
+
+**Zasady:**
+
+- Każda ikona to named export: `export function IconTrash(props: SVGProps<SVGSVGElement>) { ... }`
+- Rozmiar (`width`/`height`) i `className` przekazuje konsument przez props — ikona nie ma hardcoded wymiarów
+- `aria-hidden="true"` domyślnie w każdej ikonie (dekoracyjne)
+- Inline SVG bezpośrednio w `.tsx` stronach/komponentach jest **zabronione**
+
+| ✅ TAK                                                  | ❌ NIE                                                    |
+| ------------------------------------------------------- | --------------------------------------------------------- |
+| `import { IconTrash } from '../../../components/icons'` | `<svg viewBox="0 0 24 24">...</svg>` inline w page.tsx    |
+| `<IconTrash width="13" height="13" />`                  | Lokalne `const Icon = () => <svg>...</svg>` w komponencie |
+| Nowa ikona → dodaj do `components/icons.tsx`            | Kopiowanie ścieżek SVG między plikami                     |
+
 ---
 
 ## 10. Integracje zewnetrzne
