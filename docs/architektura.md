@@ -6,42 +6,42 @@
 
 ## 1. Stack technologiczny (MVP v0)
 
-| Warstwa | Technologia | Wersja | Uzasadnienie |
-|---|---|---|---|
-| Klient (mobile + web) | Expo SDK 50+ + React Native Web | Expo 50+ | **Jeden codebase iOS/Android/Web PWA** — v0 klient-only, v0.5/v1+ provider features w tej samej apce. Natywne apki day-1 via EAS build |
-| Provider portal | Next.js (App Router) | 14+ | **Osobny desktop-first portal pod `panel.opony.app`** — ciężki admin (onboarding, cennik, godziny, strefa, finanse, rezerwacje). Responsive do browser mobilnego jako fallback |
-| Landing | Next.js (Static Export) | 14+ | SEO (`opony.app`, `/nowy-sacz`), szybki load, zero kosztu SSR |
-| Backend API | NestJS (Node.js) | 10+ (Node 20+) | TypeScript end-to-end, Prisma ORM, Swagger auto-docs, Dependency Injection |
-| ORM | Prisma | 5+ | Type-safe queries, deklaratywne migrations, seeding |
-| Baza danych | PostgreSQL | 16 | Bez PostGIS w v0 — haversine w raw SQL wystarczy dla promienia. ACID, partial unique index |
-| SMS | Twilio (startup) → SMSAPI.pl (docelowy) | — | OTP, potwierdzenia, przypomnienia. Interface SmsService → swap via DI |
-| Email | Resend | — | Notyfikacje, potwierdzenia, raporty, alerty admina. Free tier 3k/mc |
-| Mapy | Google Maps JS API | — | Embed, geocoding, Places Autocomplete. $200/mc free credit |
-| Storage | AWS S3 | — | Zdjecia providerów, dokumenty, certyfikaty. Presigned URLs |
-| Monitoring | Sentry | — | Bledy + crashes, source maps, alerty |
-| Analytics | PostHog (free tier) | — | Funnele konwersji, retention. Self-serve |
-| Admin | Retool Cloud | — | CRUD na Postgres + REST API. Oszczednosc ~40+ SP |
-| CI/CD | GitHub Actions | — | lint → test → build → deploy. Trunk-based development |
-| Hosting | Railway (API + Postgres), Vercel (Next.js apps) | — | Zero DevOps, auto-scaling, preview deployments |
-| Monorepo | Turborepo + pnpm | pnpm 9+ | Parallel builds, shared packages, cache |
-| Testy | Vitest + Playwright + MSW | — | Unit/integration + E2E + API mocking |
-| Dokumentacja API | Swagger (NestJS plugin) + Storybook | — | Auto-generated z decoratorow, component library |
-| Design reference | Static HTML mockups | 38 ekranów | Source of truth dla FE — `/design/*.html` (industrial-dark, amber accent). Mapa w `plan-sprintow.md §12.Z`. Tokens ekstraktowane do `@opony/design-tokens` (patrz §7). ADR-008 |
+| Warstwa               | Technologia                                     | Wersja         | Uzasadnienie                                                                                                                                                                   |
+| --------------------- | ----------------------------------------------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Klient (mobile + web) | Expo SDK 50+ + React Native Web                 | Expo 50+       | **Jeden codebase iOS/Android/Web PWA** — v0 klient-only, v0.5/v1+ provider features w tej samej apce. Natywne apki day-1 via EAS build                                         |
+| Provider portal       | Next.js (App Router)                            | 14+            | **Osobny desktop-first portal pod `panel.opony.app`** — ciężki admin (onboarding, cennik, godziny, strefa, finanse, rezerwacje). Responsive do browser mobilnego jako fallback |
+| Landing               | Next.js (Static Export)                         | 14+            | SEO (`opony.app`, `/nowy-sacz`), szybki load, zero kosztu SSR                                                                                                                  |
+| Backend API           | NestJS (Node.js)                                | 10+ (Node 20+) | TypeScript end-to-end, Prisma ORM, Swagger auto-docs, Dependency Injection                                                                                                     |
+| ORM                   | Prisma                                          | 5+             | Type-safe queries, deklaratywne migrations, seeding                                                                                                                            |
+| Baza danych           | PostgreSQL                                      | 16             | Bez PostGIS w v0 — haversine w raw SQL wystarczy dla promienia. ACID, partial unique index                                                                                     |
+| SMS                   | Twilio (startup) → SMSAPI.pl (docelowy)         | —              | OTP, potwierdzenia, przypomnienia. Interface SmsService → swap via DI                                                                                                          |
+| Email                 | Resend                                          | —              | Notyfikacje, potwierdzenia, raporty, alerty admina. Free tier 3k/mc                                                                                                            |
+| Mapy                  | Google Maps JS API                              | —              | Embed, geocoding, Places Autocomplete. $200/mc free credit                                                                                                                     |
+| Storage               | AWS S3                                          | —              | Zdjecia providerów, dokumenty, certyfikaty. Presigned URLs                                                                                                                     |
+| Monitoring            | Sentry                                          | —              | Bledy + crashes, source maps, alerty                                                                                                                                           |
+| Analytics             | PostHog (free tier)                             | —              | Funnele konwersji, retention. Self-serve                                                                                                                                       |
+| Admin                 | Retool Cloud                                    | —              | CRUD na Postgres + REST API. Oszczednosc ~40+ SP                                                                                                                               |
+| CI/CD                 | GitHub Actions                                  | —              | lint → test → build → deploy. Trunk-based development                                                                                                                          |
+| Hosting               | Railway (API + Postgres), Vercel (Next.js apps) | —              | Zero DevOps, auto-scaling, preview deployments                                                                                                                                 |
+| Monorepo              | Turborepo + pnpm                                | pnpm 9+        | Parallel builds, shared packages, cache                                                                                                                                        |
+| Testy                 | Vitest + Playwright + MSW                       | —              | Unit/integration + E2E + API mocking                                                                                                                                           |
+| Dokumentacja API      | Swagger (NestJS plugin) + Storybook             | —              | Auto-generated z decoratorow, component library                                                                                                                                |
+| Design reference      | Static HTML mockups                             | 38 ekranów     | Source of truth dla FE — `/design/*.html` (industrial-dark, amber accent). Mapa w `plan-sprintow.md §12.Z`. Tokens ekstraktowane do `@opony/design-tokens` (patrz §7). ADR-008 |
 
 **Czego NIE używamy w v0 (świadomie):**
 
-| Technologia | Powod odrzucenia | Kiedy wejdzie |
-|---|---|---|
-| PWA (czyste Next.js) klient | Expo + RNW daje mobile + web z jednego codebase — natywne apki gratis | — (zrezygnowano na rzecz Expo RNW) |
-| PostGIS | Haversine wystarczy dla promienia | v1 (polygon stref) |
-| Redis | Row lock w Postgres wystarczy | v1 (cache slotów, sessions) |
-| WebSocket / SSE | Polling co 30s wystarczy dla ~200 rez/mc | v1 |
-| Mapbox | Google Maps ma $200/mc free credit | v1 (3+ miast) |
-| Przelewy24 (P24) | POC v0 bez płatności — aplikacja darmowa dla klientów i providerów | v0.5/v1 (BLIK + karty + marketplace split) |
-| Stripe | Aplikacja v0 bez płatności | v1 (karty zagraniczne, Apple/Google Pay) |
-| Auth0 / Clerk | Własny JWT = zero kosztu SaaS, pełna kontrola | nigdy (chyba ze compliance) |
-| CEPIK API | Reczne wpisanie rozmiaru opon w v0 | v1 (auto-fill z VIN) |
-| Push notifications (Expo Notifications) | SMS wystarczy w v0; Expo Push natywnie gotowe od v0.5 | v0.5 (accept PENDING w mobile) |
+| Technologia                             | Powod odrzucenia                                                      | Kiedy wejdzie                              |
+| --------------------------------------- | --------------------------------------------------------------------- | ------------------------------------------ |
+| PWA (czyste Next.js) klient             | Expo + RNW daje mobile + web z jednego codebase — natywne apki gratis | — (zrezygnowano na rzecz Expo RNW)         |
+| PostGIS                                 | Haversine wystarczy dla promienia                                     | v1 (polygon stref)                         |
+| Redis                                   | Row lock w Postgres wystarczy                                         | v1 (cache slotów, sessions)                |
+| WebSocket / SSE                         | Polling co 30s wystarczy dla ~200 rez/mc                              | v1                                         |
+| Mapbox                                  | Google Maps ma $200/mc free credit                                    | v1 (3+ miast)                              |
+| Przelewy24 (P24)                        | POC v0 bez płatności — aplikacja darmowa dla klientów i providerów    | v0.5/v1 (BLIK + karty + marketplace split) |
+| Stripe                                  | Aplikacja v0 bez płatności                                            | v1 (karty zagraniczne, Apple/Google Pay)   |
+| Auth0 / Clerk                           | Własny JWT = zero kosztu SaaS, pełna kontrola                         | nigdy (chyba ze compliance)                |
+| CEPIK API                               | Reczne wpisanie rozmiaru opon w v0                                    | v1 (auto-fill z VIN)                       |
+| Push notifications (Expo Notifications) | SMS wystarczy w v0; Expo Push natywnie gotowe od v0.5                 | v0.5 (accept PENDING w mobile)             |
 
 ---
 
@@ -124,26 +124,27 @@
 
 ### 2.3. Komunikacja między serwisami
 
-| From → To | Protocol | Auth | Uwagi |
-|---|---|---|---|
-| Client App (Expo) → API | REST/JSON (HTTPS) | Bearer JWT `role=CLIENT` (access 15 min) | Polling co 30s dla slotów dostępności. JWT w Expo SecureStore |
-| Provider Portal (Next.js) → API | REST/JSON (HTTPS) | Bearer JWT `role=PROVIDER` (access 15 min) | Guard wymaga `status=APPROVED`; 403 jeśli PENDING_APPROVAL |
-| Landing → API | Brak (statyczny) | — | Formularz waitlist → POST /v1/waitlist |
-| API → PostgreSQL | Prisma Client | Connection string | Connection pool (Railway managed) |
-| API → Twilio | HTTPS (Twilio SDK) | env TWILIO_SID + TWILIO_AUTH_TOKEN | Sender ID: „OPONY" |
-| API → S3 | AWS SDK v3 | env AWS_ACCESS_KEY_ID + AWS_SECRET_ACCESS_KEY | Presigned URLs (upload + download) |
-| API → Resend | HTTPS (Resend SDK) | env RESEND_API_KEY | Domena: opony.app (SPF/DKIM/DMARC) |
-| API → Google Maps | HTTPS | env GOOGLE_MAPS_API_KEY | Geocoding + Places Autocomplete (server-side) |
-| API → GUS/CEIDG | HTTPS REST | env GUS_API_KEY | Weryfikacja NIP przy onboardingu |
-| Twilio → API | Webhook POST /v1/webhooks/twilio | Twilio signature verification | Delivery reports SMS |
-| Retool → PostgreSQL | Direct connection (read-only user) | DB credentials | Dashboardy, raporty SQL |
-| Retool → API | REST/JSON | Admin JWT / API key | Akcje: approve/reject/suspend/ban |
+| From → To                       | Protocol                           | Auth                                          | Uwagi                                                         |
+| ------------------------------- | ---------------------------------- | --------------------------------------------- | ------------------------------------------------------------- |
+| Client App (Expo) → API         | REST/JSON (HTTPS)                  | Bearer JWT `role=CLIENT` (access 15 min)      | Polling co 30s dla slotów dostępności. JWT w Expo SecureStore |
+| Provider Portal (Next.js) → API | REST/JSON (HTTPS)                  | Bearer JWT `role=PROVIDER` (access 15 min)    | Guard wymaga `status=APPROVED`; 403 jeśli PENDING_APPROVAL    |
+| Landing → API                   | Brak (statyczny)                   | —                                             | Formularz waitlist → POST /v1/waitlist                        |
+| API → PostgreSQL                | Prisma Client                      | Connection string                             | Connection pool (Railway managed)                             |
+| API → Twilio                    | HTTPS (Twilio SDK)                 | env TWILIO_SID + TWILIO_AUTH_TOKEN            | Sender ID: „OPONY"                                            |
+| API → S3                        | AWS SDK v3                         | env AWS_ACCESS_KEY_ID + AWS_SECRET_ACCESS_KEY | Presigned URLs (upload + download)                            |
+| API → Resend                    | HTTPS (Resend SDK)                 | env RESEND_API_KEY                            | Domena: opony.app (SPF/DKIM/DMARC)                            |
+| API → Google Maps               | HTTPS                              | env GOOGLE_MAPS_API_KEY                       | Geocoding + Places Autocomplete (server-side)                 |
+| API → GUS/CEIDG                 | HTTPS REST                         | env GUS_API_KEY                               | Weryfikacja NIP przy onboardingu                              |
+| Twilio → API                    | Webhook POST /v1/webhooks/twilio   | Twilio signature verification                 | Delivery reports SMS                                          |
+| Retool → PostgreSQL             | Direct connection (read-only user) | DB credentials                                | Dashboardy, raporty SQL                                       |
+| Retool → API                    | REST/JSON                          | Admin JWT / API key                           | Akcje: approve/reject/suspend/ban                             |
 
 ### 2.4. Auth & role-based routing
 
 JWT access token zawiera `role: CLIENT | PROVIDER` + `status: APPROVED | PENDING_APPROVAL | SUSPENDED` (dla providerów).
 
 **Mobile app (Expo + RNW)** akceptuje oba role przy logowaniu:
+
 - `role=CLIENT` — pokazuje ekrany klienta (Home/Rezerwacje/Profil), brak dostępu do feature'ów providera
 - `role=PROVIDER` + `status=APPROVED` — w v0: ekran informacyjny „Zarządzaj warsztatem w panelu" + deep-link do `panel.opony.app`; w v0.5+: dodatkowa zakładka tabs „Dzień" z dashboardem (W:12.5)
 - `role=PROVIDER` + `status=PENDING_APPROVAL` — ekran blokady z info o czasie weryfikacji 24h (US-24)
@@ -153,12 +154,14 @@ JWT access token zawiera `role: CLIENT | PROVIDER` + `status: APPROVED | PENDING
 **Jeden numer telefonu = jedna rola w v0.** Wielorolowość (pracownik warsztatu ma też konto klienta na tym samym numerze) wymaga `UserRoleBinding[]` i jest scope'owana na v1+.
 
 **Deep-linking:**
+
 - `opony://panel` (iOS Universal Links + Android App Links) → otwiera `panel.opony.app/dashboard` w domyślnej przeglądarce (webview wewnątrz Expo apki)
 - `apple-app-site-association` i `assetlinks.json` hostowane na `app.opony.app/.well-known/` (konfiguracja Expo `app.json`)
 
 ### 2.5. CORS i subdomain scoping
 
 **API CORS origins (whitelista):**
+
 ```
 https://opony.app
 https://app.opony.app
@@ -170,11 +173,13 @@ http://localhost:3002   (Landing dev)
 ```
 
 **Token storage:**
+
 - Mobile (Expo native): `expo-secure-store` — szyfrowany keychain/keystore
 - Mobile (web export): `localStorage` z prefiks `opony_` (brak httpOnly cookies bo Expo+RNW = SPA)
 - Panel (Next.js): `httpOnly cookie` na `.opony.app` (scoping do subdomen)
 
 **Rate limits (API gateway):**
+
 - OTP: 3 req / 15 min / phone (US-01)
 - Login: 5 req / 15 min / IP
 - Public endpoints (provider listing): 100 req / min / IP
@@ -252,14 +257,14 @@ opony/
 
 ### 3.2. Opis pakietów
 
-| Pakiet | Sciezka | Odpowiedzialność |
-|---|---|---|
-| **shared-types** | `/packages/shared-types` | Współdzielone interfejsy TS i enumy (BookingStatus, ProviderStatus, UserRole, DTO types). Importowane przez api, mobile, panel, landing, api-client. |
-| **design-tokens** | `/packages/design-tokens` | JSON z tokenami designu (colors, spacing, radii, typography, shadows) — **single source of truth**. Build script syncuje do design-system-native i design-system-web. |
-| **design-system-native** | `/packages/design-system-native` | React Native StyleSheet komponenty (Button, Card, Chip, Input, Modal, BottomNav, Spinner, Toast, EmptyState) — dla `apps/mobile` (Expo + RNW). |
-| **design-system-web** | `/packages/design-system-web` | CSS / Tailwind komponenty (Button, Input, Badge, Card, Sidebar, DataTable, Modal, Form, Toast) — dla `apps/panel` (desktop-first) i `apps/landing`. Wizualnie 1:1 z design-system-native. |
-| **api-client** | `/packages/api-client` | Typed fetch wrapper generowany z OpenAPI spec (Swagger). Zapewnia type-safe wywolania API w mobile, panel i landing. |
-| **eslint-config** | `/packages/eslint-config` | Wspoldzielona konfiguracja ESLint + Prettier. |
+| Pakiet                   | Sciezka                          | Odpowiedzialność                                                                                                                                                                          |
+| ------------------------ | -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **shared-types**         | `/packages/shared-types`         | Współdzielone interfejsy TS i enumy (BookingStatus, ProviderStatus, UserRole, DTO types). Importowane przez api, mobile, panel, landing, api-client.                                      |
+| **design-tokens**        | `/packages/design-tokens`        | JSON z tokenami designu (colors, spacing, radii, typography, shadows) — **single source of truth**. Build script syncuje do design-system-native i design-system-web.                     |
+| **design-system-native** | `/packages/design-system-native` | React Native StyleSheet komponenty (Button, Card, Chip, Input, Modal, BottomNav, Spinner, Toast, EmptyState) — dla `apps/mobile` (Expo + RNW).                                            |
+| **design-system-web**    | `/packages/design-system-web`    | CSS / Tailwind komponenty (Button, Input, Badge, Card, Sidebar, DataTable, Modal, Form, Toast) — dla `apps/panel` (desktop-first) i `apps/landing`. Wizualnie 1:1 z design-system-native. |
+| **api-client**           | `/packages/api-client`           | Typed fetch wrapper generowany z OpenAPI spec (Swagger). Zapewnia type-safe wywolania API w mobile, panel i landing.                                                                      |
+| **eslint-config**        | `/packages/eslint-config`        | Wspoldzielona konfiguracja ESLint + Prettier.                                                                                                                                             |
 
 ---
 
@@ -267,12 +272,12 @@ opony/
 
 ### 4.1. Wymagania systemowe
 
-| Narzedzie | Wersja | Uwagi |
-|---|---|---|
-| Node.js | 20+ (LTS) | Wymagane przez NestJS 10 i Next.js 14 |
-| pnpm | 9+ | Monorepo workspace manager |
-| Docker Desktop | Latest | Dla Postgres 16 + Mailpit (lokalny email preview) |
-| Git | 2.40+ | — |
+| Narzedzie      | Wersja    | Uwagi                                             |
+| -------------- | --------- | ------------------------------------------------- |
+| Node.js        | 20+ (LTS) | Wymagane przez NestJS 10 i Next.js 14             |
+| pnpm           | 9+        | Monorepo workspace manager                        |
+| Docker Desktop | Latest    | Dla Postgres 16 + Mailpit (lokalny email preview) |
+| Git            | 2.40+     | —                                                 |
 
 ### 4.2. Pierwsze uruchomienie
 
@@ -299,14 +304,14 @@ pnpm dev
 
 ### 4.3. Dostep po uruchomieniu
 
-| Serwis | URL | Dane logowania |
-|---|---|---|
-| Client PWA | `http://localhost:3000` | Login: `+48 111 111 111` (test OTP: `123456`) |
-| Provider panel | `http://localhost:3001` | Login: `+48 222 222 222` (test OTP: `123456`) |
-| Landing | `http://localhost:3002` | — (publiczny) |
-| API Swagger | `http://localhost:4000/v1/docs` | — (publiczny w dev) |
-| Mailpit | `http://localhost:8025` | — (preview wszystkich emaili) |
-| PostgreSQL | `localhost:5432` | DB: `opony` / User: `opony` / Pass: `opony` |
+| Serwis         | URL                             | Dane logowania                                |
+| -------------- | ------------------------------- | --------------------------------------------- |
+| Client PWA     | `http://localhost:3000`         | Login: `+48 111 111 111` (test OTP: `123456`) |
+| Provider panel | `http://localhost:3001`         | Login: `+48 222 222 222` (test OTP: `123456`) |
+| Landing        | `http://localhost:3002`         | — (publiczny)                                 |
+| API Swagger    | `http://localhost:4000/v1/docs` | — (publiczny w dev)                           |
+| Mailpit        | `http://localhost:8025`         | — (preview wszystkich emaili)                 |
+| PostgreSQL     | `localhost:5432`                | DB: `opony` / User: `opony` / Pass: `opony`   |
 
 ### 4.4. Komendy Turborepo
 
@@ -325,27 +330,27 @@ pnpm generate:api-client    # Regeneruj typed fetch z OpenAPI
 
 ### 4.5. Zmienne środowiskowe (.env.example)
 
-| Zmienna | Opis | Wymagana | Przyklad |
-|---|---|---|---|
-| `DATABASE_URL` | Connection string do PostgreSQL | Tak | `postgresql://opony:opony@localhost:5432/opony` |
-| `JWT_SECRET` | Secret do podpisywania access tokenow | Tak | `super-secret-jwt-key-min-32-chars` |
-| `JWT_REFRESH_SECRET` | Secret do refresh tokenow | Tak | `super-secret-refresh-key-min-32-chars` |
-| `TWILIO_SID` | Twilio Account SID | Tak (prod) | `AC...` |
-| `TWILIO_AUTH_TOKEN` | Twilio Auth Token | Tak (prod) | `...` |
-| `TWILIO_PHONE` | Twilio phone number lub Sender ID | Tak (prod) | `OPONY` lub `+48...` |
-| `RESEND_API_KEY` | Resend API Key | Tak (prod) | `re_...` |
-| `AWS_S3_BUCKET` | Nazwa bucketu S3 | Tak (prod) | `opony-uploads-prod` |
-| `AWS_ACCESS_KEY_ID` | AWS Access Key | Tak (prod) | `AKIA...` |
-| `AWS_SECRET_ACCESS_KEY` | AWS Secret Key | Tak (prod) | `...` |
-| `AWS_REGION` | AWS Region | Tak | `eu-central-1` |
-| `SENTRY_DSN` | Sentry DSN (per projekt) | Tak (prod) | `https://...@sentry.io/...` |
-| `GOOGLE_MAPS_API_KEY` | Google Maps API Key (server-side) | Tak (prod) | `AIza...` |
-| `GUS_API_KEY` | Klucz API GUS BIR | Tak (prod) | `...` |
-| `NEXT_PUBLIC_API_URL` | URL backendu dla frontendow | Tak | `http://localhost:4000/v1` |
-| `NEXT_PUBLIC_API_MOCK` | Wlacz MSW mocking (true/false) | Nie | `true` |
-| `NEXT_PUBLIC_GOOGLE_MAPS_KEY` | Google Maps API Key (client-side) | Tak (prod) | `AIza...` |
-| `NEXT_PUBLIC_POSTHOG_KEY` | PostHog API Key | Nie | `phc_...` |
-| `NEXT_PUBLIC_SENTRY_DSN` | Sentry DSN (frontend) | Nie | `https://...@sentry.io/...` |
+| Zmienna                       | Opis                                  | Wymagana   | Przyklad                                        |
+| ----------------------------- | ------------------------------------- | ---------- | ----------------------------------------------- |
+| `DATABASE_URL`                | Connection string do PostgreSQL       | Tak        | `postgresql://opony:opony@localhost:5432/opony` |
+| `JWT_SECRET`                  | Secret do podpisywania access tokenow | Tak        | `super-secret-jwt-key-min-32-chars`             |
+| `JWT_REFRESH_SECRET`          | Secret do refresh tokenow             | Tak        | `super-secret-refresh-key-min-32-chars`         |
+| `TWILIO_SID`                  | Twilio Account SID                    | Tak (prod) | `AC...`                                         |
+| `TWILIO_AUTH_TOKEN`           | Twilio Auth Token                     | Tak (prod) | `...`                                           |
+| `TWILIO_PHONE`                | Twilio phone number lub Sender ID     | Tak (prod) | `OPONY` lub `+48...`                            |
+| `RESEND_API_KEY`              | Resend API Key                        | Tak (prod) | `re_...`                                        |
+| `AWS_S3_BUCKET`               | Nazwa bucketu S3                      | Tak (prod) | `opony-uploads-prod`                            |
+| `AWS_ACCESS_KEY_ID`           | AWS Access Key                        | Tak (prod) | `AKIA...`                                       |
+| `AWS_SECRET_ACCESS_KEY`       | AWS Secret Key                        | Tak (prod) | `...`                                           |
+| `AWS_REGION`                  | AWS Region                            | Tak        | `eu-central-1`                                  |
+| `SENTRY_DSN`                  | Sentry DSN (per projekt)              | Tak (prod) | `https://...@sentry.io/...`                     |
+| `GOOGLE_MAPS_API_KEY`         | Google Maps API Key (server-side)     | Tak (prod) | `AIza...`                                       |
+| `GUS_API_KEY`                 | Klucz API GUS BIR                     | Tak (prod) | `...`                                           |
+| `NEXT_PUBLIC_API_URL`         | URL backendu dla frontendow           | Tak        | `http://localhost:4000/v1`                      |
+| `NEXT_PUBLIC_API_MOCK`        | Wlacz MSW mocking (true/false)        | Nie        | `true`                                          |
+| `NEXT_PUBLIC_GOOGLE_MAPS_KEY` | Google Maps API Key (client-side)     | Tak (prod) | `AIza...`                                       |
+| `NEXT_PUBLIC_POSTHOG_KEY`     | PostHog API Key                       | Nie        | `phc_...`                                       |
+| `NEXT_PUBLIC_SENTRY_DSN`      | Sentry DSN (frontend)                 | Nie        | `https://...@sentry.io/...`                     |
 
 **Uwaga:** W trybie dev (`NEXT_PUBLIC_API_MOCK=true`) MSW przechwytuje requesty API — nie potrzebujesz prawdziwych kluczy Twilio/S3.
 
@@ -380,18 +385,18 @@ AppModule
 
 ### 5.2. Wzorce i konwencje
 
-| Wzorzec | Implementacja | Przyklad |
-|---|---|---|
-| **Dependency Injection** | NestJS IoC, interfejsy z `@Inject` token | `SmsService` → `TwilioSmsService` (swappable na `SmsApiPlService`) |
-| **Guards** | Custom decorators + CanActivate | `@RequireRole(CLIENT)`, `@RequireProviderOwner()`, `@Public()` |
-| **Interceptors** | NestJS interceptors | `AuditLogInterceptor` — każda zmiana Booking/Provider → `AuditLog` |
-| **Exception Filters** | `GlobalHttpExceptionFilter` | RFC 7807 Problem Details (`type`, `title`, `status`, `detail`, `instance`) |
-| **Validation (DTO)** | `class-validator` + `class-transformer` | `@IsNotEmpty()`, `@IsPhoneNumber('PL')`, `@IsUUID()` na każdym DTO |
-| **Business validation** | Zod schemas | Complex rules (np. walidacja slotu, adresu w strefie) |
-| **Cron jobs** | NestJS `@Cron` decorator + `ScheduleModule` | `@Cron('*/5 * * * *') markNoShows()` |
-| **Prisma usage** | PrismaService extends PrismaClient, `onModuleInit` | `$transaction` dla operacji atomowych, `$queryRaw` dla haversine |
-| **Naming** | `*.module.ts`, `*.controller.ts`, `*.service.ts`, `*.dto.ts`, `*.guard.ts` | Standardowa konwencja NestJS |
-| **Error codes** | Enum `ErrorCode` w `shared-types` | `SLOT_ALREADY_BOOKED`, `ADDRESS_OUTSIDE_ZONE`, `PROVIDER_NOT_APPROVED` |
+| Wzorzec                  | Implementacja                                                              | Przyklad                                                                   |
+| ------------------------ | -------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| **Dependency Injection** | NestJS IoC, interfejsy z `@Inject` token                                   | `SmsService` → `TwilioSmsService` (swappable na `SmsApiPlService`)         |
+| **Guards**               | Custom decorators + CanActivate                                            | `@RequireRole(CLIENT)`, `@RequireProviderOwner()`, `@Public()`             |
+| **Interceptors**         | NestJS interceptors                                                        | `AuditLogInterceptor` — każda zmiana Booking/Provider → `AuditLog`         |
+| **Exception Filters**    | `GlobalHttpExceptionFilter`                                                | RFC 7807 Problem Details (`type`, `title`, `status`, `detail`, `instance`) |
+| **Validation (DTO)**     | `class-validator` + `class-transformer`                                    | `@IsNotEmpty()`, `@IsPhoneNumber('PL')`, `@IsUUID()` na każdym DTO         |
+| **Business validation**  | Zod schemas                                                                | Complex rules (np. walidacja slotu, adresu w strefie)                      |
+| **Cron jobs**            | NestJS `@Cron` decorator + `ScheduleModule`                                | `@Cron('*/5 * * * *') markNoShows()`                                       |
+| **Prisma usage**         | PrismaService extends PrismaClient, `onModuleInit`                         | `$transaction` dla operacji atomowych, `$queryRaw` dla haversine           |
+| **Naming**               | `*.module.ts`, `*.controller.ts`, `*.service.ts`, `*.dto.ts`, `*.guard.ts` | Standardowa konwencja NestJS                                               |
+| **Error codes**          | Enum `ErrorCode` w `shared-types`                                          | `SLOT_ALREADY_BOOKED`, `ADDRESS_OUTSIDE_ZONE`, `PROVIDER_NOT_APPROVED`     |
 
 ### 5.3. Kluczowe problemy techniczne i rozwiązania
 
@@ -400,6 +405,7 @@ AppModule
 **Problem:** Dwoch klientow rezerwuje ten sam slot jednocześnie.
 
 **Rozwiązanie (3 warstwy):**
+
 1. **DB constraint:** Partial unique index `(providerId, startAt) WHERE status IN ('PENDING','CONFIRMED','IN_PROGRESS')`.
 2. **Application lock:** Prisma `$transaction` z `SELECT ... FOR UPDATE` na slotach providera.
 3. **Idempotency:** Naglowek `Idempotency-Key` — retry nie tworzy duplikatu.
@@ -435,6 +441,7 @@ ORDER BY distance_km ASC;
 #### 3. Generowanie slotów dostępnośći
 
 **Algorytm:**
+
 1. Pobierz `WorkingHours` dla danego dnia tygodnia.
 2. Generuj sloty co `slotMinutes` (np. 45 min) od `openTime` do `closeTime`.
 3. Odejmij `ScheduleException` (urlopy, swieta — nadpisuja WorkingHours).
@@ -448,6 +455,7 @@ ORDER BY distance_km ASC;
 **Problem:** Provider nie akceptuje rezerwacji PENDING w SLA (2h) → klient czeka w próżni.
 
 **Rozwiązanie:** Cron `bookingExpiryCron` co 10 min:
+
 - `Booking.status == PENDING AND createdAt < NOW() - INTERVAL '2 hours'`
 - → `Booking.status = CANCELLED_BY_SYSTEM`
 - → SMS do klienta („Provider nie odpowiedział — wybierz inny")
@@ -460,6 +468,7 @@ W v0 bez płatności nie ma race condition „zapłacił/nie zapłacił" — tim
 **Problem:** Klienci i providerzy potrzebuja logowania — jak najprościej?
 
 **Rozwiązanie:**
+
 - `OtpStrategy` — jeden flow SMS OTP dla wszystkich uzytkownikow (klientow i providerow).
 - Wspólny `JwtModule` — generuje JWT z polem `role` (CLIENT vs PROVIDER_OWNER).
 - Guard sprawdza `role` z JWT, nie sposob logowania.
@@ -521,6 +530,7 @@ W v0 bez płatności nie ma race condition „zapłacił/nie zapłacił" — tim
 ```
 
 **Reguly OTP:**
+
 - Kod ważny 5 min.
 - Max 3 proby weryfikacji per kod.
 - Max 3 kody / 15 min / numer telefonu (rate limit).
@@ -571,6 +581,7 @@ Providerzy logują się tak samo jak klienci — SMS OTP na telefon podany przy 
 ```
 
 **Reguly provider auth (identyczne z klientem):**
+
 - Kod OTP ważny 5 min. Max 3 proby weryfikacji per kod.
 - Max 3 kody / 15 min / numer telefonu (rate limit).
 - Login możliwy dla kazdego statusu providera, ale:
@@ -591,25 +602,26 @@ Providerzy logują się tak samo jak klienci — SMS OTP na telefon podany przy 
 }
 ```
 
-| Pole | Typ | Opis |
-|---|---|---|
-| `sub` | UUID | ID uzytkownika (User.id) |
-| `role` | enum | `CLIENT`, `PROVIDER_OWNER`, `ADMIN` — rola z `User.role` w DB |
-| `providerId` | UUID / null | ID firmy providera (tylko dla PROVIDER_OWNER) |
-| `iat` | timestamp | Issued at |
-| `exp` | timestamp | Expiration — access: +15 min, refresh: +30 dni |
+| Pole         | Typ         | Opis                                                          |
+| ------------ | ----------- | ------------------------------------------------------------- |
+| `sub`        | UUID        | ID uzytkownika (User.id)                                      |
+| `role`       | enum        | `CLIENT`, `PROVIDER_OWNER`, `ADMIN` — rola z `User.role` w DB |
+| `providerId` | UUID / null | ID firmy providera (tylko dla PROVIDER_OWNER)                 |
+| `iat`        | timestamp   | Issued at                                                     |
+| `exp`        | timestamp   | Expiration — access: +15 min, refresh: +30 dni                |
 
 ### 6.4. Guard logic
 
-| Decorator | Logika | Użycie |
-|---|---|---|
-| `@Public()` | Skip auth — endpoint publiczny | `GET /v1/providers`, `POST /v1/auth/otp/*` |
-| `@RequireRole(CLIENT)` | Sprawdz `role == CLIENT` z JWT | `POST /v1/bookings`, `GET /v1/me` |
-| `@RequireRole(PROVIDER_OWNER)` | Sprawdz `role == PROVIDER_OWNER` | `GET /v1/provider/me` |
-| `@RequireProviderOwner()` | `role == PROVIDER_OWNER` + `providerId != null` + `Provider.status == APPROVED` | `POST /v1/provider/me/bookings/:id/accept` |
-| `@RequireRole(ADMIN)` | Sprawdz `role == ADMIN` | `POST /v1/admin/providers/:id/approve` |
+| Decorator                      | Logika                                                                          | Użycie                                     |
+| ------------------------------ | ------------------------------------------------------------------------------- | ------------------------------------------ |
+| `@Public()`                    | Skip auth — endpoint publiczny                                                  | `GET /v1/providers`, `POST /v1/auth/otp/*` |
+| `@RequireRole(CLIENT)`         | Sprawdz `role == CLIENT` z JWT                                                  | `POST /v1/bookings`, `GET /v1/me`          |
+| `@RequireRole(PROVIDER_OWNER)` | Sprawdz `role == PROVIDER_OWNER`                                                | `GET /v1/provider/me`                      |
+| `@RequireProviderOwner()`      | `role == PROVIDER_OWNER` + `providerId != null` + `Provider.status == APPROVED` | `POST /v1/provider/me/bookings/:id/accept` |
+| `@RequireRole(ADMIN)`          | Sprawdz `role == ADMIN`                                                         | `POST /v1/admin/providers/:id/approve`     |
 
 **Kolejnosc middleware:**
+
 1. `JwtAuthGuard` — dekoduje token, ustawia `request.user`.
 2. `RolesGuard` — sprawdza `@RequireRole()` metadata.
 3. `ProviderOwnerGuard` — sprawdza `@RequireProviderOwner()` metadata.
@@ -680,31 +692,31 @@ Providerzy logują się tak samo jak klienci — SMS OTP na telefon podany przy 
 
 ### 7.2. Base components (10, z Sprint DS-0)
 
-| Komponent | Props | Użycie | Warianty |
-|---|---|---|---|
-| **Button** | `variant`, `size`, `disabled`, `loading`, `icon`, `fullWidth` | CTA, formularze, akcje | `primary`, `secondary`, `ghost`, `danger` |
-| **Input** | `label`, `error`, `hint`, `type`, `disabled`, `icon` | Formularze logowania, wyszukiwania, profilu | `text`, `password`, `tel`, `search` |
-| **Badge** | `variant`, `size`, `dot` | Status rezerwacji, status providera | kolory per status (patrz 7.3) |
-| **Card** | `padding`, `shadow`, `onClick`, `href` | Lista providerów, rezerwacje, cennik | `default`, `interactive`, `outlined` |
-| **Modal** | `isOpen`, `onClose`, `title`, `size` | Potwierdzenie anulowania, szczegóły | `sm`, `md`, `lg` |
-| **BottomTabBar** | `items`, `activeIndex` | Nawigacja klienta PWA (mobile) | — |
-| **SideMenu** | `items`, `activeItem`, `collapsed` | Nawigacja provider panel (desktop) | `expanded`, `collapsed` |
-| **Spinner** | `size`, `color` | Ladowanie danych, submit | `sm`, `md`, `lg` |
-| **Toast** | `message`, `variant`, `duration`, `onClose` | Potwierdzenia, bledy, info | `success`, `error`, `warning`, `info` |
-| **EmptyState** | `icon`, `title`, `description`, `action` | Brak rezerwacji, brak wynikow | — |
+| Komponent        | Props                                                         | Użycie                                      | Warianty                                  |
+| ---------------- | ------------------------------------------------------------- | ------------------------------------------- | ----------------------------------------- |
+| **Button**       | `variant`, `size`, `disabled`, `loading`, `icon`, `fullWidth` | CTA, formularze, akcje                      | `primary`, `secondary`, `ghost`, `danger` |
+| **Input**        | `label`, `error`, `hint`, `type`, `disabled`, `icon`          | Formularze logowania, wyszukiwania, profilu | `text`, `password`, `tel`, `search`       |
+| **Badge**        | `variant`, `size`, `dot`                                      | Status rezerwacji, status providera         | kolory per status (patrz 7.3)             |
+| **Card**         | `padding`, `shadow`, `onClick`, `href`                        | Lista providerów, rezerwacje, cennik        | `default`, `interactive`, `outlined`      |
+| **Modal**        | `isOpen`, `onClose`, `title`, `size`                          | Potwierdzenie anulowania, szczegóły         | `sm`, `md`, `lg`                          |
+| **BottomTabBar** | `items`, `activeIndex`                                        | Nawigacja klienta PWA (mobile)              | —                                         |
+| **SideMenu**     | `items`, `activeItem`, `collapsed`                            | Nawigacja provider panel (desktop)          | `expanded`, `collapsed`                   |
+| **Spinner**      | `size`, `color`                                               | Ladowanie danych, submit                    | `sm`, `md`, `lg`                          |
+| **Toast**        | `message`, `variant`, `duration`, `onClose`                   | Potwierdzenia, bledy, info                  | `success`, `error`, `warning`, `info`     |
+| **EmptyState**   | `icon`, `title`, `description`, `action`                      | Brak rezerwacji, brak wynikow               | —                                         |
 
 ### 7.3. Status Badge kolory
 
-| Status | Kolor | Token | Kontekst |
-|---|---|---|---|
-| `PENDING` | Zolty | `warning` | Rezerwacja oczekuje na akceptacje |
-| `CONFIRMED` | Zielony | `success` | Provider zaakceptowal |
-| `IN_PROGRESS` | Niebieski | `primary` | Usluga w trakcie |
-| `COMPLETED` | Szary | `neutral500` | Zakonczono |
-| `CANCELLED_BY_CLIENT` | Czerwony | `error` | Klient anulowal |
-| `CANCELLED_BY_PROVIDER` | Czerwony | `error` | Provider anulowal |
-| `NO_SHOW` | Szary | `neutral400` | Klient nie pojawil sie |
-| `REJECTED` | Czerwony | `error` | Provider odrzucil |
+| Status                  | Kolor     | Token        | Kontekst                          |
+| ----------------------- | --------- | ------------ | --------------------------------- |
+| `PENDING`               | Zolty     | `warning`    | Rezerwacja oczekuje na akceptacje |
+| `CONFIRMED`             | Zielony   | `success`    | Provider zaakceptowal             |
+| `IN_PROGRESS`           | Niebieski | `primary`    | Usluga w trakcie                  |
+| `COMPLETED`             | Szary     | `neutral500` | Zakonczono                        |
+| `CANCELLED_BY_CLIENT`   | Czerwony  | `error`      | Klient anulowal                   |
+| `CANCELLED_BY_PROVIDER` | Czerwony  | `error`      | Provider anulowal                 |
+| `NO_SHOW`               | Szary     | `neutral400` | Klient nie pojawil sie            |
+| `REJECTED`              | Czerwony  | `error`      | Provider odrzucil                 |
 
 ---
 
@@ -975,20 +987,21 @@ AuditLog {
 
 **Reguly przejsc:**
 
-| Z | Do | Kto | Warunki |
-|---|---|---|---|
-| — | PENDING | klient (create) | slot wolny, adres w strefie, klient nie zbanowany |
-| PENDING | CONFIRMED | provider (accept) | — |
-| PENDING | REJECTED | provider (reject) | powod wymagany |
-| PENDING | CANCELLED_BY_CLIENT | klient | > 2h przed startAt |
-| CONFIRMED | CANCELLED_BY_CLIENT | klient | > 2h przed startAt; ponizej → `noShowCount++` |
-| CONFIRMED | CANCELLED_BY_PROVIDER | provider | powod wymagany |
-| CONFIRMED | IN_PROGRESS | provider (start) | — |
-| IN_PROGRESS | COMPLETED | provider (complete) | — |
-| CONFIRMED | NO_SHOW | system (cron, co 5 min) | `startAt < NOW() - 30min` i brak `IN_PROGRESS` |
+| Z           | Do                    | Kto                     | Warunki                                           |
+| ----------- | --------------------- | ----------------------- | ------------------------------------------------- |
+| —           | PENDING               | klient (create)         | slot wolny, adres w strefie, klient nie zbanowany |
+| PENDING     | CONFIRMED             | provider (accept)       | —                                                 |
+| PENDING     | REJECTED              | provider (reject)       | powod wymagany                                    |
+| PENDING     | CANCELLED_BY_CLIENT   | klient                  | > 2h przed startAt                                |
+| CONFIRMED   | CANCELLED_BY_CLIENT   | klient                  | > 2h przed startAt; ponizej → `noShowCount++`     |
+| CONFIRMED   | CANCELLED_BY_PROVIDER | provider                | powod wymagany                                    |
+| CONFIRMED   | IN_PROGRESS           | provider (start)        | —                                                 |
+| IN_PROGRESS | COMPLETED             | provider (complete)     | —                                                 |
+| CONFIRMED   | NO_SHOW               | system (cron, co 5 min) | `startAt < NOW() - 30min` i brak `IN_PROGRESS`    |
 
 **Niezmienniki:**
-- Stan terminalny (COMPLETED, CANCELLED_*, NO_SHOW, REJECTED) → `status` i kluczowe pola sa immutable.
+
+- Stan terminalny (COMPLETED, CANCELLED\_\*, NO_SHOW, REJECTED) → `status` i kluczowe pola sa immutable.
 - Oceny (Review) dozwolone **wylacznie** dla `COMPLETED`.
 - `pricingTierId` + `basePricePln` zamrozone w momencie `create` — zmiana cennika przez providera nie wplywa na istniejace rezerwacje.
 
@@ -1056,12 +1069,12 @@ Automat suspendujacy: jesli provider ma w ostatnich 30 dniach > 3 `REJECTED/CANC
 
 ### 9.2. Auth (klient — SMS OTP)
 
-| Method | Path | Opis |
-|---|---|---|
-| POST | `/v1/auth/otp/request` | Body: `{phone}` → 204. Rate limit: 3/15 min/phone. |
-| POST | `/v1/auth/otp/verify` | Body: `{phone, code}` → `{accessToken, refreshToken, user, requiresConsent}` lub 401. |
-| POST | `/v1/auth/refresh` | Body: `{refreshToken}` → `{accessToken, refreshToken}`. |
-| POST | `/v1/auth/logout` | → 204. Unieważnia refresh. |
+| Method | Path                   | Opis                                                                                  |
+| ------ | ---------------------- | ------------------------------------------------------------------------------------- |
+| POST   | `/v1/auth/otp/request` | Body: `{phone}` → 204. Rate limit: 3/15 min/phone.                                    |
+| POST   | `/v1/auth/otp/verify`  | Body: `{phone, code}` → `{accessToken, refreshToken, user, requiresConsent}` lub 401. |
+| POST   | `/v1/auth/refresh`     | Body: `{refreshToken}` → `{accessToken, refreshToken}`.                               |
+| POST   | `/v1/auth/logout`      | → 204. Unieważnia refresh.                                                            |
 
 ### 9.2b. Auth (provider — SMS OTP)
 
@@ -1071,26 +1084,27 @@ Brak oddzielnych endpointów `/v1/provider/auth/*` — cały flow przez `/v1/aut
 
 ### 9.3. Profil klienta
 
-| Method | Path | Opis |
-|---|---|---|
-| GET | `/v1/me` | Zwraca `{id, phone, email, firstName, lastName, role}` |
-| PATCH | `/v1/me` | Body: `{firstName?, lastName?, email?}` |
-| POST | `/v1/me/consent` | Body: `{terms: true, privacy: true, marketing?: false}` → 201. Wymagane po pierwszym logowaniu. |
-| GET | `/v1/me/vehicles` | Lista pojazdów |
-| POST | `/v1/me/vehicles` | Body: `{nickname, tireSize}` → 201 |
-| PATCH | `/v1/me/vehicles/:id` | — |
-| DELETE | `/v1/me/vehicles/:id` | → 204 |
+| Method | Path                  | Opis                                                                                            |
+| ------ | --------------------- | ----------------------------------------------------------------------------------------------- |
+| GET    | `/v1/me`              | Zwraca `{id, phone, email, firstName, lastName, role}`                                          |
+| PATCH  | `/v1/me`              | Body: `{firstName?, lastName?, email?}`                                                         |
+| POST   | `/v1/me/consent`      | Body: `{terms: true, privacy: true, marketing?: false}` → 201. Wymagane po pierwszym logowaniu. |
+| GET    | `/v1/me/vehicles`     | Lista pojazdów                                                                                  |
+| POST   | `/v1/me/vehicles`     | Body: `{nickname, tireSize}` → 201                                                              |
+| PATCH  | `/v1/me/vehicles/:id` | —                                                                                               |
+| DELETE | `/v1/me/vehicles/:id` | → 204                                                                                           |
 
 ### 9.4. Katalog usługodawcow (publiczny — bez auth)
 
-| Method | Path | Opis |
-|---|---|---|
-| GET | `/v1/providers` | Query: `city, lat, lng, tireSize, date, sort=distance\|price\|rating, page`. Zwraca liste z obliczonym dystansem i najblizszym slotem. |
-| GET | `/v1/providers/:slug` | Szczegóły + cennik + godziny + top 3 opinie |
-| GET | `/v1/providers/:slug/reviews` | Paginowane opinie. Query: `?page=&sort=newest\|rating_desc` |
-| GET | `/v1/providers/:slug/availability` | Dostępność slotów. Query: `?from=2026-04-14&to=2026-04-20&tireSize=205/55R16&clientLat=&clientLng=` |
+| Method | Path                               | Opis                                                                                                                                   |
+| ------ | ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| GET    | `/v1/providers`                    | Query: `city, lat, lng, tireSize, date, sort=distance\|price\|rating, page`. Zwraca liste z obliczonym dystansem i najblizszym slotem. |
+| GET    | `/v1/providers/:slug`              | Szczegóły + cennik + godziny + top 3 opinie                                                                                            |
+| GET    | `/v1/providers/:slug/reviews`      | Paginowane opinie. Query: `?page=&sort=newest\|rating_desc`                                                                            |
+| GET    | `/v1/providers/:slug/availability` | Dostępność slotów. Query: `?from=2026-04-14&to=2026-04-20&tireSize=205/55R16&clientLat=&clientLng=`                                    |
 
 Response `GET /v1/providers/:slug/availability`:
+
 ```json
 {
   "providerId": "7d...",
@@ -1116,15 +1130,16 @@ Response `GET /v1/providers/:slug/availability`:
 
 ### 9.5. Rezerwacje (klient)
 
-| Method | Path | Opis |
-|---|---|---|
-| POST | `/v1/bookings` | Utwórz rezerwację (status=PENDING). Naglowek: `Idempotency-Key`. Zwraca `{booking}`. W v0 bez płatności — provider accept w 2h lub auto-cancel. |
-| GET | `/v1/me/bookings` | Query: `?status=upcoming\|past\|all&page=` |
-| GET | `/v1/bookings/:id` | Szczegóły (sprawdzenie ownership) |
-| POST | `/v1/bookings/:id/cancel` | Body: `{reason}` — klient anuluje |
-| POST | `/v1/bookings/:id/review` | Body: `{rating:1–5, comment}` — tylko COMPLETED |
+| Method | Path                      | Opis                                                                                                                                            |
+| ------ | ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| POST   | `/v1/bookings`            | Utwórz rezerwację (status=PENDING). Naglowek: `Idempotency-Key`. Zwraca `{booking}`. W v0 bez płatności — provider accept w 2h lub auto-cancel. |
+| GET    | `/v1/me/bookings`         | Query: `?status=upcoming\|past\|all&page=`                                                                                                      |
+| GET    | `/v1/bookings/:id`        | Szczegóły (sprawdzenie ownership)                                                                                                               |
+| POST   | `/v1/bookings/:id/cancel` | Body: `{reason}` — klient anuluje                                                                                                               |
+| POST   | `/v1/bookings/:id/review` | Body: `{rating:1–5, comment}` — tylko COMPLETED                                                                                                 |
 
 Request `POST /v1/bookings`:
+
 ```json
 {
   "providerId": "7d...",
@@ -1134,13 +1149,14 @@ Request `POST /v1/bookings`:
     "line": "ul. Lwowska 12",
     "city": "Nowy Sacz",
     "lat": 49.6178,
-    "lng": 20.6920
+    "lng": 20.692
   },
   "notes": "Prosze dzwonic przed przyjazdem"
 }
 ```
 
 Response (201):
+
 ```json
 {
   "id": "bk...",
@@ -1154,6 +1170,7 @@ Response (201):
 Mozliwe bledy: `409 SlotAlreadyBooked`, `422 AddressOutsideServiceZone`, `422 VehicleNotOwned`, `429 RateLimitExceeded`.
 
 **Flow rezerwacji (v0, bez płatności):**
+
 1. `POST /v1/bookings` → tworzy Booking (PENDING) + rezerwuje slot.
 2. Response zawiera `{booking}` → klient widzi „Oczekuje akceptacji providera".
 3. Provider dostaje SMS/push → akceptuje (CONFIRMED) lub odrzuca (REJECTED).
@@ -1161,6 +1178,7 @@ Mozliwe bledy: `409 SlotAlreadyBooked`, `422 AddressOutsideServiceZone`, `422 Ve
 5. Po wizycie — klient płaci providerowi offline (gotówka/przelew). Platforma zarabia 0% w pilocie.
 
 **v0 — brak endpointów płatności.** Aplikacja darmowa w pilocie (ADR-003). W v0.5+ wrócą endpointy:
+
 - `POST /v1/webhooks/p24`, `GET /v1/bookings/:id/payment` (status BLIK)
 - `GET /v1/provider/me/payouts[/:id]` (tygodniowe wypłaty)
 
@@ -1168,61 +1186,61 @@ Mozliwe bledy: `409 SlotAlreadyBooked`, `422 AddressOutsideServiceZone`, `422 Ve
 
 Wymaga `PROVIDER_OWNER` lub `PROVIDER_STAFF`.
 
-| Method | Path | Opis |
-|---|---|---|
-| GET | `/v1/provider/me` | Moja firma |
-| PATCH | `/v1/provider/me` | Edytuj (opis, strefa, centrum) |
-| GET / PUT | `/v1/provider/me/pricing` | Cennik (3 widelki) |
-| GET / PUT | `/v1/provider/me/working-hours` | Godziny (7 dni) |
-| GET / POST / DELETE | `/v1/provider/me/exceptions[/:id]` | Wyjatki |
-| GET / POST / DELETE | `/v1/provider/me/photos[/:id]` | Galeria |
-| GET | `/v1/provider/me/bookings` | Query: `?from=&to=&status=` |
-| POST | `/v1/provider/me/bookings/:id/accept` | PENDING → CONFIRMED |
-| POST | `/v1/provider/me/bookings/:id/reject` | Body: `{reason}` → REJECTED |
-| POST | `/v1/provider/me/bookings/:id/start` | CONFIRMED → IN_PROGRESS |
-| POST | `/v1/provider/me/bookings/:id/complete` | IN_PROGRESS → COMPLETED |
-| POST | `/v1/provider/me/bookings/:id/cancel` | Body: `{reason}` |
-| POST | `/v1/provider/me/bookings/:id/reschedule` | Body: `{newStartAt}` — propozycja zmiany |
-| POST | `/v1/provider/me/reviews/:id/reply` | Body: `{reply}` |
-| GET | `/v1/provider/me/stats` | Query: `?period=week\|month` — liczba rezerwacji, obrot, avgRating |
+| Method              | Path                                      | Opis                                                               |
+| ------------------- | ----------------------------------------- | ------------------------------------------------------------------ |
+| GET                 | `/v1/provider/me`                         | Moja firma                                                         |
+| PATCH               | `/v1/provider/me`                         | Edytuj (opis, strefa, centrum)                                     |
+| GET / PUT           | `/v1/provider/me/pricing`                 | Cennik (3 widelki)                                                 |
+| GET / PUT           | `/v1/provider/me/working-hours`           | Godziny (7 dni)                                                    |
+| GET / POST / DELETE | `/v1/provider/me/exceptions[/:id]`        | Wyjatki                                                            |
+| GET / POST / DELETE | `/v1/provider/me/photos[/:id]`            | Galeria                                                            |
+| GET                 | `/v1/provider/me/bookings`                | Query: `?from=&to=&status=`                                        |
+| POST                | `/v1/provider/me/bookings/:id/accept`     | PENDING → CONFIRMED                                                |
+| POST                | `/v1/provider/me/bookings/:id/reject`     | Body: `{reason}` → REJECTED                                        |
+| POST                | `/v1/provider/me/bookings/:id/start`      | CONFIRMED → IN_PROGRESS                                            |
+| POST                | `/v1/provider/me/bookings/:id/complete`   | IN_PROGRESS → COMPLETED                                            |
+| POST                | `/v1/provider/me/bookings/:id/cancel`     | Body: `{reason}`                                                   |
+| POST                | `/v1/provider/me/bookings/:id/reschedule` | Body: `{newStartAt}` — propozycja zmiany                           |
+| POST                | `/v1/provider/me/reviews/:id/reply`       | Body: `{reply}`                                                    |
+| GET                 | `/v1/provider/me/stats`                   | Query: `?period=week\|month` — liczba rezerwacji, obrot, avgRating |
 
 ### 9.7. Onboarding usługodawcy
 
-| Method | Path | Opis |
-|---|---|---|
-| POST | `/v1/provider/signup` | Body: `{companyName, nip, email, phone}` — tworzy User + Provider w `PENDING_NIP`. Email do komunikacji (Resend), nie do auth. |
-| POST | `/v1/provider/me/verify-nip` | Wywołuje GUS API; w sukcesie → `PENDING_DOCS` |
-| POST | `/v1/provider/me/docs` | Upload dokumentow (multipart); po uploadzie → `PENDING_APPROVAL` |
+| Method | Path                         | Opis                                                                                                                           |
+| ------ | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| POST   | `/v1/provider/signup`        | Body: `{companyName, nip, email, phone}` — tworzy User + Provider w `PENDING_NIP`. Email do komunikacji (Resend), nie do auth. |
+| POST   | `/v1/provider/me/verify-nip` | Wywołuje GUS API; w sukcesie → `PENDING_DOCS`                                                                                  |
+| POST   | `/v1/provider/me/docs`       | Upload dokumentow (multipart); po uploadzie → `PENDING_APPROVAL`                                                               |
 
 ### 9.8. Admin
 
 Wymaga `ADMIN`.
 
-| Method | Path | Opis |
-|---|---|---|
-| GET | `/v1/admin/providers` | Query: `?status=PENDING_APPROVAL` |
-| POST | `/v1/admin/providers/:id/approve` | → `APPROVED` |
-| POST | `/v1/admin/providers/:id/reject` | Body: `{reason}` |
-| POST | `/v1/admin/providers/:id/suspend` | Body: `{reason}` |
-| POST | `/v1/admin/providers/:id/reinstate` | → `APPROVED` |
-| GET | `/v1/admin/reviews` | Query: `?reported=true&hidden=false` |
-| POST | `/v1/admin/reviews/:id/hide` | Ukryj opinie |
-| GET | `/v1/admin/users/:id` | Profil + historia rezerwacji |
-| POST | `/v1/admin/users/:id/ban` | Zbanuj klienta |
-| GET | `/v1/admin/stats` | Globalny dashboard |
+| Method | Path                                | Opis                                 |
+| ------ | ----------------------------------- | ------------------------------------ |
+| GET    | `/v1/admin/providers`               | Query: `?status=PENDING_APPROVAL`    |
+| POST   | `/v1/admin/providers/:id/approve`   | → `APPROVED`                         |
+| POST   | `/v1/admin/providers/:id/reject`    | Body: `{reason}`                     |
+| POST   | `/v1/admin/providers/:id/suspend`   | Body: `{reason}`                     |
+| POST   | `/v1/admin/providers/:id/reinstate` | → `APPROVED`                         |
+| GET    | `/v1/admin/reviews`                 | Query: `?reported=true&hidden=false` |
+| POST   | `/v1/admin/reviews/:id/hide`        | Ukryj opinie                         |
+| GET    | `/v1/admin/users/:id`               | Profil + historia rezerwacji         |
+| POST   | `/v1/admin/users/:id/ban`           | Zbanuj klienta                       |
+| GET    | `/v1/admin/stats`                   | Globalny dashboard                   |
 
 ### 9.9. Zadania systemowe (cron, webhooks)
 
-| Zadanie | Cadencja | Dzialanie |
-|---|---|---|
-| `markNoShows` | co 5 min | `CONFIRMED` + `startAt < NOW()-30min` → `NO_SHOW` + `noShowCount++` |
-| `bookingExpiry` | co 10 min | `PENDING` + `createdAt < NOW()-2h` → `CANCELLED_BY_SYSTEM`, SMS do klienta, slot zwolniony (zastępuje paymentTimeout w v0) |
-| `otpCleanup` | co 15 min | Usun OTP z `expiresAt < NOW()` |
-| `updateProviderRatingCache` | co 1 h | Przelicza `Provider.avgRating` / `reviewCount` |
-| `autoSuspendProviders` | raz dziennie | Wykrywa providerów do zawieszenia |
-| `adminPendingAlert` | codziennie 9:00 | Email do admina z lista zalegych `PENDING_APPROVAL` (US-20) |
-| webhook: `sms-status` (Twilio) | event-driven | Logi dostarczenia SMS |
-| ~~`weeklyPayouts`~~ | — | W v0 brak — apka darmowa, bez rozliczeń (wróci w v0.5) |
+| Zadanie                        | Cadencja        | Dzialanie                                                                                                                  |
+| ------------------------------ | --------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `markNoShows`                  | co 5 min        | `CONFIRMED` + `startAt < NOW()-30min` → `NO_SHOW` + `noShowCount++`                                                        |
+| `bookingExpiry`                | co 10 min       | `PENDING` + `createdAt < NOW()-2h` → `CANCELLED_BY_SYSTEM`, SMS do klienta, slot zwolniony (zastępuje paymentTimeout w v0) |
+| `otpCleanup`                   | co 15 min       | Usun OTP z `expiresAt < NOW()`                                                                                             |
+| `updateProviderRatingCache`    | co 1 h          | Przelicza `Provider.avgRating` / `reviewCount`                                                                             |
+| `autoSuspendProviders`         | raz dziennie    | Wykrywa providerów do zawieszenia                                                                                          |
+| `adminPendingAlert`            | codziennie 9:00 | Email do admina z lista zalegych `PENDING_APPROVAL` (US-20)                                                                |
+| webhook: `sms-status` (Twilio) | event-driven    | Logi dostarczenia SMS                                                                                                      |
+| ~~`weeklyPayouts`~~            | —               | W v0 brak — apka darmowa, bez rozliczeń (wróci w v0.5)                                                                     |
 
 ### 9.10. Bezpieczenstwo i rate limiting
 
@@ -1236,6 +1254,132 @@ Wymaga `ADMIN`.
 
 ---
 
+## 9.A. Kontrakt typów API — warstwa `api-data-access` (OBOWIĄZKOWE)
+
+> **Zasada:** typy żądań i odpowiedzi API są zawsze generowane ze schematu OpenAPI — nigdy definiowane ręcznie we frontendzie. Złamanie tej zasady powoduje dryfowanie typów przy każdej zmianie BE.
+
+### 9.A.1. Jak działa pipeline
+
+```
+NestJS controller
+  └─ @ApiResponse({ type: XxxResponseDto })   ← deklaruje typ odpowiedzi w Swagger
+       └─ /v1/docs-json                        ← runtime Swagger JSON
+            └─ pnpm generate:api-client         ← openapi-typescript
+                 └─ packages/api-client/src/schema.d.ts   ← generated types
+                      └─ api-data-access/*.ts   ← aliasy komponentów schema
+                           └─ app pages / components       ← konsumenci
+```
+
+### 9.A.2. Obowiązki agenta BE (każdy nowy endpoint)
+
+**BEZWZGLĘDNIE WYMAGANE** — bez tego typy odpowiedzi nie trafią do schematu:
+
+1. Utwórz plik `src/<modul>/dto/<modul>-response.dto.ts` z klasą `XxxResponseDto`:
+   - Każde pole z `@ApiProperty()` lub `@ApiPropertyOptional()`
+   - Pola opcjonalne / nullable: `@ApiPropertyOptional({ type: String, nullable: true })`
+   - Pola numeryczne: zawsze `{ type: Number }` (inaczej Swagger nie inferencuje)
+   - Pola `Date | null`: `@ApiPropertyOptional({ type: String, format: 'date-time', nullable: true })`
+   - Wszystkie wymagane właściwości z `!` (definite assignment) — `id!: string`, nie `id: string`
+   - Pola enum: `@ApiProperty({ enum: PrismaEnumType })`
+
+2. W kontrolerze dodaj `@ApiResponse({ type: XxxResponseDto })` do **każdej** metody:
+
+   ```ts
+   @ApiResponse({ status: 200, type: ProviderResponseDto })
+   getMyProvider() { ... }
+
+   @ApiResponse({ status: 201, type: PricingTierResponseDto })
+   create() { ... }
+
+   @ApiResponse({ status: 200, type: [WorkingHoursResponseDto] })  // tablica
+   listMine() { ... }
+   ```
+
+3. Dla paginowanych list utwórz dedykowany `XxxPageResponseDto`:
+   ```ts
+   export class ProviderPageResponseDto {
+     @ApiProperty({ type: [ProviderResponseDto] }) data!: ProviderResponseDto[];
+     @ApiProperty({ type: Number }) total!: number;
+     @ApiProperty({ type: Number }) page!: number;
+     @ApiProperty({ type: Number }) limit!: number;
+   }
+   ```
+
+### 9.A.3. Obowiązki agenta FE (każda nowa strona / feature)
+
+Po zmianach w BE lub przy starcie pracy z nowym modułem:
+
+```bash
+# 1. Upewnij się, że API działa lokalnie
+pnpm --filter api dev
+
+# 2. Wygeneruj typy
+pnpm generate:api-client
+# (odpowiednik: packages/api-client/node_modules/.bin/openapi-typescript
+#   http://localhost:4000/v1/docs-json -o packages/api-client/src/schema.d.ts)
+```
+
+Typy w `api-data-access/*.ts` muszą być **aliasami schema**, nie ręcznymi definicjami:
+
+```ts
+// ✅ DOBRZE — alias do wygenerowanego schematu
+export type Provider = components['schemas']['ProviderResponseDto'];
+export type CreateProviderBody = components['schemas']['CreateProviderDto'];
+
+// ❌ ŹLE — ręczna definicja = dryfuje przy każdej zmianie BE
+export type Provider = {
+  id: string;
+  name: string;
+  city: string; // pole które nie istnieje w Prisma!
+};
+```
+
+### 9.A.4. Struktura `api-data-access/`
+
+Katalog `apps/panel/api-data-access/` (i analogicznie `apps/mobile/api-data-access/`) grupuje wywołania API tak jak kontrolery w BE — jeden plik per kontroler:
+
+```
+apps/panel/api-data-access/
+  auth.ts           ← /v1/auth/*
+  providers.ts      ← /v1/providers/me
+  pricing-tiers.ts  ← /v1/providers/me/pricing-tiers
+  working-hours.ts  ← /v1/providers/me/working-hours
+  bookings.ts       ← /v1/bookings (dodać w sprint 3)
+  reviews.ts        ← /v1/reviews (dodać w sprint 5)
+```
+
+Każdy plik eksportuje:
+
+- **typy żądań** — `export type XxxBody = components['schemas']['XxxDto']`
+- **typy odpowiedzi** — `export type Xxx = components['schemas']['XxxResponseDto']`
+- **funkcje** — `export function getXxx(): Promise<Xxx>`
+
+Funkcje używają wewnętrznego `api` helperp (`apps/panel/lib/api.ts`) — nie bezpośrednio fetch ani axios.
+
+### 9.A.5. Weryfikacja po każdym sprincie
+
+Agent BE musi zweryfikować przed PR:
+
+```bash
+# Sprawdź czy wszystkie nowe endpointy mają response type w Swagger
+curl -s http://localhost:4000/v1/docs-json | \
+  jq '.paths | to_entries[] | select(.value[].responses["200"].content == null) | .key'
+# Wynik powinien być pusty (lub zawierać tylko endpointy 204/logout)
+```
+
+Agent FE musi zweryfikować przed PR:
+
+```bash
+# TypeScript musi przechodzić bez błędów
+cd apps/panel && npx tsc --noEmit
+```
+
+### 9.A.6. Pola Prisma `Decimal`
+
+Pola Prisma typu `Decimal` (np. `priceSwapPln`, `avgRating`) w odpowiedzi JSON serializują się jako `number`. W DTO używaj `@ApiProperty({ type: Number })` — nie `Decimal`. We frontendzie typ to `number`.
+
+---
+
 ## 10. Integracje zewnetrzne
 
 ### 10.1. GUS BIR + CEIDG — weryfikacja NIP
@@ -1243,12 +1387,14 @@ Wymaga `ADMIN`.
 **GUS BIR (Baza Internetowa REGON)** — oficjalne publiczne API RP dla danych rejestrowych firm.
 
 **Użycie w aplikacji:**
+
 1. Provider wpisuje NIP (10 cyfr).
 2. Backend: call do GUS BIR → `{name, address, legalForm, pkd[], status}`.
 3. Walidacja: `status == AKTYWNY` i PKD zawiera 45.20.Z (naprawa pojazdów) lub 52.21.Z (wspomagajaca transport).
 4. Jesli OK → status providera `PENDING_NIP` → `PENDING_DOCS`.
 
 **Setup GUS BIR:**
+
 - Rejestracja klucza API (bezplatna, przez formularz na stronie GUS).
 - Limit zapytan: historycznie szeroki; zweryfikuj przed produkcja.
 - Response time: 1–5 s (synchroniczny).
@@ -1257,6 +1403,7 @@ Wymaga `ADMIN`.
 Wiekszosc mobilnych punktow w Nowym Saczu to jednoosobowe dzialalnosci (JDG). GUS BIR zwraca minimum danych dla JDG — pelne dane (REGON, adres, data rozpoczecia, status) sa w CEIDG.
 
 **Użycie CEIDG:**
+
 1. Jesli GUS BIR zwraca `legalForm == 'OSOBA FIZYCZNA'` lub niekompletne dane → secondary call do CEIDG API.
 2. CEIDG zwraca: pełna nazwa, adres korespondencyjny, status JDG, daty.
 3. Setup: rejestracja klucza API CEIDG (bezplatna). Format: REST JSON.
@@ -1268,6 +1415,7 @@ Wiekszosc mobilnych punktow w Nowym Saczu to jednoosobowe dzialalnosci (JDG). GU
 **Faza 1: Twilio Programmable Messaging (MVP v0 launch)**
 
 Konfiguracja:
+
 1. Konto Twilio + business verification (wymagane dla PL).
 2. Alfanumeryczny Sender ID „OPONY" (wymaga rejestracji operatorskiej w PL — 1–2 tyg.).
 3. SDK `twilio` (npm) w backendzie NestJS.
@@ -1278,23 +1426,27 @@ Koszty: ~0,30 PLN / SMS.
 **Faza 2: migracja do SMSAPI.pl (po ~1 000 wyslanych SMS-ow)**
 
 Dlaczego:
+
 - ~60% taniej: 0,07–0,14 PLN / SMS (zalezy od pakietu).
 - Lepsza deliverability w PL (polski operator, bezposrednie polaczenia z sieciami).
 - Alfanumeryczny Sender ID bez dodatkowej rejestracji (juz w ekosystemie PL).
 
 Konfiguracja:
+
 1. Konto SMSAPI + weryfikacja firmy.
 2. SDK `smsapi` (npm) lub REST API (prostsze).
 3. Webhook na delivery reports (analogiczny jak Twilio).
 4. Migracja: zamien serwis SMS w backendzie (interfejs abstrakcyjny `SmsService` → swap implementacji). ~1 dzien pracy.
 
 **Compliance (oba):**
+
 - OTP: krotkie, bez linku (antyphishing).
 - Transakcyjne (potwierdzenia, przypomnienia): zawsze dozwolone.
 - Marketing: opt-in wymagany, opt-out (`STOP` = reply-stop).
 - Retencja logow SMS: 12 mc, potem anonimizacja.
 
 **Architektura abstrakcji:**
+
 ```
 interface SmsService {
   send(to: string, body: string): Promise<SmsResult>
@@ -1304,6 +1456,7 @@ interface SmsService {
 class TwilioSmsService implements SmsService { ... }
 class SmsApiPlService implements SmsService { ... }
 ```
+
 Podmiana przez DI (NestJS module) — zero zmian w logice biznesowej.
 
 ### 10.3. Email transakcyjny — Resend
@@ -1311,6 +1464,7 @@ Podmiana przez DI (NestJS module) — zero zmian w logice biznesowej.
 **Użycie w v0:** potwierdzenia rezerwacji, notyfikacje providerow, raporty miesieczne, alerty admina.
 
 Konfiguracja:
+
 1. Konto Resend + weryfikacja domeny (`opony.app` → DNS records SPF/DKIM/DMARC).
 2. SDK `resend` (npm) w backendzie.
 3. Szablony email: plain-text + prosty HTML (potwierdzenie rez, notyfikacja providera, raport miesieczny, alert admina).
@@ -1324,6 +1478,7 @@ Alternatywa: Postmark (lepsze delivery analytics), SendGrid (wieksza skala).
 **Dlaczego Retool:** zamiast budowac własny admin za 40+ SP, w 2–3 dni tworzymy ekrany CRUD na istniejacej bazie Postgres.
 
 **Setup:**
+
 1. Konto Retool Cloud (latwiejszy niz self-hosted; w v0 dane nie sa tajemica panstwowa).
 2. Connection do Postgres (read-only user + zapisowy user dla akcji).
 3. Aplikacje:
@@ -1337,12 +1492,14 @@ Alternatywa: Postmark (lepsze delivery analytics), SendGrid (wieksza skala).
 **Koszt:** Team plan ~$12–24/user/mc (1 user w MVP).
 
 **Security:**
+
 - RBAC w Retool (tylko role admin).
 - Wszystkie akcje modyfikujace przez REST API (z audytem), nigdy direct SQL UPDATE.
 
 ### 10.5. Google Maps (MVP v0)
 
 **Użycie:**
+
 1. JS API (lista + mapa na PWA klienta) — `@googlemaps/js-api-loader`.
 2. Geocoding (zamiana adresu klienta na lat/lng przy rezerwacji).
 3. Places Autocomplete (autouzupelnianie adresu w formularzu rezerwacji).
@@ -1350,6 +1507,7 @@ Alternatywa: Postmark (lepsze delivery analytics), SendGrid (wieksza skala).
 5. Directions URL (deep-link „Nawiguj" dla B2B — bez API, zero kosztu).
 
 **Koszty (publiczne stawki, do zweryfikowania):**
+
 - Map loads: $200/mc free credit → pokrywa ~28k map loads.
 - Geocoding: ~$5 / 1000 requests.
 - Places Autocomplete: ~$2.83 / 1000 sessions.
@@ -1366,6 +1524,7 @@ Alternatywa: Postmark (lepsze delivery analytics), SendGrid (wieksza skala).
 **Decyzja:** POC v0 bez wbudowanych płatności. Aplikacja darmowa w pilocie Nowego Sącza — brak prowizji, brak BLIK, brak P24 integration.
 
 **Flow rezerwacji v0:**
+
 ```
 Klient klika "Zarezerwuj termin" → POST /v1/bookings → Booking PENDING
      → provider dostaje SMS/push
@@ -1377,6 +1536,7 @@ Klient klika "Zarezerwuj termin" → POST /v1/bookings → Booking PENDING
 ```
 
 **Implikacje:**
+
 - Zero kosztów per transakcja (brak fees P24).
 - Zero compliance PCI-DSS / KNF (zwykły marketplace informacyjny).
 - Brak cash flow z platformy (zamierzone w v0 — walidacja funnel + retention).
@@ -1389,6 +1549,7 @@ Decyzję A (miesięczne fakturowanie) vs B (P24 marketplace split) podejmujemy p
 ### 10.7. Sentry — monitoring bledow
 
 **Setup:**
+
 1. Projekty: `opony-api`, `opony-client-pwa`, `opony-provider-web`.
 2. SDK w kazdej apce + source maps upload w CI/CD.
 3. Alerty:
@@ -1413,6 +1574,7 @@ Decyzję A (miesięczne fakturowanie) vs B (P24 marketplace split) podejmujemy p
 ```
 
 **Kluczowe funnele do sledzenia w PostHog (v0):**
+
 1. `Landing → Signup (OTP) → Profile → Vehicle → First Booking` (klient).
 2. `Provider Signup → NIP verify → Docs upload → Approved → First Booking received` (provider).
 3. `Booking Created → Confirmed → Completed → Reviewed` (konwersja rezerwacji).
@@ -1454,7 +1616,7 @@ Decyzję A (miesięczne fakturowanie) vs B (P24 marketplace split) podejmujemy p
 ### ADR-004: POC v0 bez inline płatności (free pilot Nowy Sącz)
 
 - **Status:** Accepted (2026-04)
-- **Kontekst:** MVP v0 chce walidować *funnel i retention* (czy klienci rezerwują, czy providerzy przyjmują), nie monetyzację. Inline płatności (P24) dodają 3-5 dni lead time (P24 verification), ~16 SP kodu (Payment module, webhooks, refund, settlement, cronsy), KNF/compliance overhead, i zamrażają decyzję prowizja A vs B przed zobaczeniem jak zachowuje się rynek.
+- **Kontekst:** MVP v0 chce walidować _funnel i retention_ (czy klienci rezerwują, czy providerzy przyjmują), nie monetyzację. Inline płatności (P24) dodają 3-5 dni lead time (P24 verification), ~16 SP kodu (Payment module, webhooks, refund, settlement, cronsy), KNF/compliance overhead, i zamrażają decyzję prowizja A vs B przed zobaczeniem jak zachowuje się rynek.
 - **Decyzja:** POC v0 **bez wbudowanych płatności**. Aplikacja darmowa w pilocie Nowy Sącz — klient rezerwuje online, płaci providerowi offline (gotówka/przelew) po wizycie. Zero prowizji w v0 (spójne z GTM §17.4 „0% pierwszym 8 providerom przez 3 mc"). Platforma to **zwykły marketplace informacyjny** — brak regulacji KNF/KIP.
 - **Konsekwencje:**
   - (+) Eliminacja TASK-002 (P24 verification 3-5 dni lead time) — projekt startuje szybciej.
@@ -1585,6 +1747,7 @@ Decyzję A (miesięczne fakturowanie) vs B (P24 marketplace split) podejmujemy p
 MVP v0 validuje model biznesowy w Nowym Saczu. Po spełnieniu kryteriow sukcesu, architektura ewoluuje:
 
 **Kryteria przejścia do v1:**
+
 - \> 100 rezerwacji/mc w Nowym Saczu (~25/tydzien).
 - \> 12 aktywnych providerów (MAU >= 1 rez/mc).
 - NPS klientow > 30, < 15% no-show.
@@ -1592,17 +1755,17 @@ MVP v0 validuje model biznesowy w Nowym Saczu. Po spełnieniu kryteriow sukcesu,
 
 **Planowane zmiany v1:**
 
-| Obszar | MVP v0 | MVP v1 |
-|---|---|---|
+| Obszar            | MVP v0                        | MVP v1                                                                                                |
+| ----------------- | ----------------------------- | ----------------------------------------------------------------------------------------------------- |
 | Platforma klienta | Expo + RNW (mobile + web, v0) | Natywne apki published na App Store / Google Play (v1) + provider features w tej samej apce (v0.5/v1) |
-| Typ providera | Tylko mobilny | + Stacjonarny (warsztaty) |
-| Zasięg | 1 miasto (Nowy Sacz) | 3+ miast |
-| Strefa obsługi | Promien (haversine) | Polygon (PostGIS) |
-| Cache | Brak | Redis (sloty, sessions) |
-| Płatności | — (offline, brak inline) | v0.5: P24 (BLIK + karty + marketplace split lub invoicing NET 14) · v1: + Stripe fallback |
-| Sloty real-time | Polling 30s | WebSocket / SSE |
-| Powiadomienia | SMS + email | + Expo Notifications (native push) — możliwe już w v0.5 |
-| Mapy | Google Maps | + Mapbox (tańsze per load) |
-| Admin | Retool Cloud | Własny Next.js admin panel |
-| Profil pojazdu | Reczne wpisanie | Auto-fill z VIN (CEPIK API) |
-| Trasy mobilne | Reczna kolejnosc | Mapbox Optimization API (VRP) |
+| Typ providera     | Tylko mobilny                 | + Stacjonarny (warsztaty)                                                                             |
+| Zasięg            | 1 miasto (Nowy Sacz)          | 3+ miast                                                                                              |
+| Strefa obsługi    | Promien (haversine)           | Polygon (PostGIS)                                                                                     |
+| Cache             | Brak                          | Redis (sloty, sessions)                                                                               |
+| Płatności         | — (offline, brak inline)      | v0.5: P24 (BLIK + karty + marketplace split lub invoicing NET 14) · v1: + Stripe fallback             |
+| Sloty real-time   | Polling 30s                   | WebSocket / SSE                                                                                       |
+| Powiadomienia     | SMS + email                   | + Expo Notifications (native push) — możliwe już w v0.5                                               |
+| Mapy              | Google Maps                   | + Mapbox (tańsze per load)                                                                            |
+| Admin             | Retool Cloud                  | Własny Next.js admin panel                                                                            |
+| Profil pojazdu    | Reczne wpisanie               | Auto-fill z VIN (CEPIK API)                                                                           |
+| Trasy mobilne     | Reczna kolejnosc              | Mapbox Optimization API (VRP)                                                                         |
