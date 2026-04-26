@@ -1,108 +1,21 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
-import { useState } from 'react';
-import { api, ApiError } from '../../lib/api';
-import { useAuth } from '../../lib/auth';
+import { useRegisterFlow, VOIVODESHIPS } from '../../lib/hooks/use-register-flow';
 import styles from './register.module.css';
 
-type Step = 'firm' | 'confirm';
-
-interface FirmData {
-  name: string;
-  nip: string;
-  phone: string;
-  email: string;
-  street: string;
-  city: string;
-  postalCode: string;
-  voivodeship: string;
-  description: string;
-}
-
-const EMPTY: FirmData = {
-  name: '',
-  nip: '',
-  phone: '',
-  email: '',
-  street: '',
-  city: '',
-  postalCode: '',
-  voivodeship: '',
-  description: '',
-};
-
-const VOIVODESHIPS = [
-  'dolnośląskie',
-  'kujawsko-pomorskie',
-  'lubelskie',
-  'lubuskie',
-  'łódzkie',
-  'małopolskie',
-  'mazowieckie',
-  'opolskie',
-  'podkarpackie',
-  'podlaskie',
-  'pomorskie',
-  'śląskie',
-  'świętokrzyskie',
-  'warmińsko-mazurskie',
-  'wielkopolskie',
-  'zachodniopomorskie',
-];
-
 export default function RegisterPage() {
-  const router = useRouter();
-  const { refresh } = useAuth();
-
-  const [step, setStep] = useState<Step>('firm');
-  const [data, setData] = useState<FirmData>(EMPTY);
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
-
-  function set(field: keyof FirmData) {
-    return (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-      setData((prev) => ({ ...prev, [field]: e.target.value }));
-    };
-  }
-
-  function handleFirmNext(e: React.FormEvent) {
-    e.preventDefault();
-    setError('');
-    setStep('confirm');
-  }
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
-    try {
-      await api.post('/v1/providers', {
-        name: data.name,
-        nip: data.nip,
-        phone: data.phone,
-        email: data.email || undefined,
-        address: {
-          street: data.street,
-          city: data.city,
-          postalCode: data.postalCode,
-          voivodeship: data.voivodeship,
-        },
-        description: data.description || undefined,
-      });
-      await refresh();
-      router.replace('/dashboard');
-    } catch (err) {
-      if (err instanceof ApiError && err.isConflict) {
-        setError('Firma z tym NIPem już istnieje w systemie.');
-      } else {
-        setError(err instanceof ApiError ? err.message : 'Błąd rejestracji. Spróbuj ponownie.');
-      }
-      setStep('firm');
-    } finally {
-      setLoading(false);
-    }
-  }
+  const {
+    step,
+    data,
+    error,
+    loading,
+    setField,
+    setNip,
+    setPostalCode,
+    handleFirmNext,
+    handleSubmit,
+    goBack,
+  } = useRegisterFlow();
 
   return (
     <div className={styles.page}>
@@ -135,7 +48,7 @@ export default function RegisterPage() {
                   <input
                     className={styles.input}
                     value={data.name}
-                    onChange={set('name')}
+                    onChange={setField('name')}
                     placeholder="Wulkanizacja Jan Kowalski"
                     required
                     maxLength={200}
@@ -146,12 +59,7 @@ export default function RegisterPage() {
                   <input
                     className={styles.input}
                     value={data.nip}
-                    onChange={(e) =>
-                      setData((p) => ({
-                        ...p,
-                        nip: e.target.value.replace(/\D/g, '').slice(0, 10),
-                      }))
-                    }
+                    onChange={(e) => setNip(e.target.value)}
                     placeholder="1234567890"
                     pattern="\d{10}"
                     title="10 cyfr bez myślników"
@@ -167,7 +75,7 @@ export default function RegisterPage() {
                     className={styles.input}
                     type="tel"
                     value={data.phone}
-                    onChange={set('phone')}
+                    onChange={setField('phone')}
                     placeholder="+48600000000"
                     pattern="^\+48\d{9}$"
                     title="Format: +48 i 9 cyfr"
@@ -180,7 +88,7 @@ export default function RegisterPage() {
                     className={styles.input}
                     type="email"
                     value={data.email}
-                    onChange={set('email')}
+                    onChange={setField('email')}
                     placeholder="kontakt@firma.pl"
                   />
                 </div>
@@ -191,7 +99,7 @@ export default function RegisterPage() {
                 <input
                   className={styles.input}
                   value={data.street}
-                  onChange={set('street')}
+                  onChange={setField('street')}
                   placeholder="ul. Przykładowa 12"
                   required
                   maxLength={200}
@@ -204,7 +112,7 @@ export default function RegisterPage() {
                   <input
                     className={styles.input}
                     value={data.city}
-                    onChange={set('city')}
+                    onChange={setField('city')}
                     placeholder="Warszawa"
                     required
                     maxLength={100}
@@ -215,10 +123,7 @@ export default function RegisterPage() {
                   <input
                     className={styles.input}
                     value={data.postalCode}
-                    onChange={(e) => {
-                      const v = e.target.value.replace(/[^\d-]/g, '').slice(0, 6);
-                      setData((p) => ({ ...p, postalCode: v }));
-                    }}
+                    onChange={(e) => setPostalCode(e.target.value)}
                     placeholder="00-000"
                     pattern="\d{2}-\d{3}"
                     title="Format: 00-000"
@@ -232,7 +137,7 @@ export default function RegisterPage() {
                 <select
                   className={styles.select}
                   value={data.voivodeship}
-                  onChange={set('voivodeship')}
+                  onChange={setField('voivodeship')}
                   required
                 >
                   <option value="">Wybierz województwo</option>
@@ -249,7 +154,7 @@ export default function RegisterPage() {
                 <textarea
                   className={styles.textarea}
                   value={data.description}
-                  onChange={set('description')}
+                  onChange={setField('description')}
                   placeholder="Krótki opis usług, specjalizacji, sprzętu..."
                   rows={3}
                   maxLength={3000}
@@ -316,7 +221,7 @@ export default function RegisterPage() {
               <button
                 type="button"
                 className={styles.btnSecondary}
-                onClick={() => setStep('firm')}
+                onClick={goBack}
                 disabled={loading}
               >
                 ← Wróć i edytuj
