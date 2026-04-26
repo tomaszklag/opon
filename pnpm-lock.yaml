@@ -223,6 +223,9 @@ importers:
 
   apps/panel:
     dependencies:
+      '@opony/api-client':
+        specifier: workspace:*
+        version: link:../../packages/api-client
       '@opony/design-system-web':
         specifier: workspace:*
         version: link:../../packages/design-system-web

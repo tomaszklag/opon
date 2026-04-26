@@ -2,23 +2,10 @@
 
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { api, ApiError } from '../../../lib/api';
+import { getProvider, updateProvider, type Provider } from '../../../api-data-access/providers';
+import { ApiError } from '../../../lib/api';
 import { useAuth } from '../../../lib/auth';
 import styles from './profile.module.css';
-
-type Provider = {
-  id: string;
-  name: string;
-  nip: string;
-  status: string;
-  city: string;
-  voivodeship: string;
-  phone: string;
-  email: string | null;
-  description: string | null;
-  logoUrl: string | null;
-  serviceRadiusKm: number | null;
-};
 
 type FormState = {
   name: string;
@@ -77,8 +64,7 @@ export default function ProfilePage() {
 
   useEffect(() => {
     if (status !== 'authenticated') return;
-    api
-      .get<Provider>('/v1/providers/me')
+    getProvider()
       .then((p) => {
         setProvider(p);
         const f = providerToForm(p);
@@ -119,7 +105,7 @@ export default function ProfilePage() {
     setApiError(null);
     setSaving(true);
     try {
-      const updated = await api.patch<Provider>('/v1/providers/me', {
+      const updated = await updateProvider({
         name: form.name.trim(),
         description: form.description || undefined,
         phone: form.phone || undefined,

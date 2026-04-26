@@ -14,6 +14,7 @@
   --accent-border: rgba(255, 107, 26, 0.32);
   --accent-glow: rgba(255, 107, 26, 0.45);
   --text-on-accent: #0a0b0e;
+  --hairline: rgba(255, 255, 255, 0.06);
   --success: #2ee0a0;
   --success-muted: rgba(46, 224, 160, 0.14);
   --success-border: rgba(46, 224, 160, 0.32);

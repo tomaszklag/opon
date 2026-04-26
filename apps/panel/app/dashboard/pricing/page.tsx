@@ -2,17 +2,16 @@
 
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { api, ApiError } from '../../../lib/api';
+import {
+  getPricingTiers,
+  createPricingTier,
+  updatePricingTier,
+  deletePricingTier,
+  type PricingTier,
+} from '../../../api-data-access/pricing-tiers';
+import { ApiError } from '../../../lib/api';
 import { useAuth } from '../../../lib/auth';
 import styles from './pricing.module.css';
-
-type Tier = {
-  id: string;
-  rimSizeMin: number;
-  rimSizeMax: number;
-  priceSwapPln: number;
-  priceBalancingPerWheelPln: number | null;
-};
 
 type TierDraft = {
   id?: string;
@@ -23,7 +22,7 @@ type TierDraft = {
   priceBalancingPerWheelPln: number;
 };
 
-function tierToDraft(t: Tier): TierDraft {
+function tierToDraft(t: PricingTier): TierDraft {
   const balPln = t.priceBalancingPerWheelPln ?? 0;
   return {
     id: t.id,
@@ -68,8 +67,7 @@ export default function PricingPage() {
 
   useEffect(() => {
     if (status !== 'authenticated') return;
-    api
-      .get<Tier[]>('/v1/providers/me/pricing-tiers')
+    getPricingTiers()
       .then((tiers) =>
         setDrafts(tiers.sort((a, b) => a.rimSizeMin - b.rimSizeMin).map(tierToDraft)),
       )
@@ -113,11 +111,11 @@ export default function PricingPage() {
     setErrors([]);
     setSaving(true);
     try {
-      await Promise.all(deletedIds.map((id) => api.del(`/v1/providers/me/pricing-tiers/${id}`)));
+      await Promise.all(deletedIds.map((id) => deletePricingTier(id)));
       setDeletedIds([]);
 
       if (showAddForm) {
-        const created = await api.post<Tier>('/v1/providers/me/pricing-tiers', {
+        const created = await createPricingTier({
           rimSizeMin: newTier.rimSizeMin,
           rimSizeMax: newTier.rimSizeMax,
           priceSwapPln: newTier.priceSwapPln,
@@ -136,7 +134,7 @@ export default function PricingPage() {
         drafts
           .filter((d) => d.id)
           .map((d) =>
-            api.patch(`/v1/providers/me/pricing-tiers/${d.id}`, {
+            updatePricingTier(d.id!, {
               priceSwapPln: d.priceSwapPln,
               priceBalancingPerWheelPln: d.balancingEnabled ? d.priceBalancingPerWheelPln : 0,
             }),

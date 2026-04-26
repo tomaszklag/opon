@@ -9,6 +9,7 @@
   },
   "scripts": {
     "dev": "turbo dev",
+    "dev-stop": "powershell -ExecutionPolicy Bypass -NoProfile -File scripts/dev-stop.ps1",
     "build": "turbo build",
     "lint": "turbo lint",
     "type-check": "turbo type-check",

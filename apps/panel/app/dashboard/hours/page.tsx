@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
-import { api } from '../../../lib/api';
+import { getWorkingHours, saveWorkingHours } from '../../../api-data-access/working-hours';
 import { useAuth } from '../../../lib/auth';
 import styles from './hours.module.css';
 
@@ -77,13 +77,19 @@ export default function HoursPage() {
 
   useEffect(() => {
     if (status !== 'authenticated') return;
-    api
-      .get<DayEntry[]>('/v1/providers/me/working-hours')
+    getWorkingHours()
       .then((serverDays) => {
         setDays(
           DISPLAY_ORDER.map((dow) => {
             const found = serverDays.find((d) => d.dayOfWeek === dow);
-            return found ?? defaultDay(dow);
+            if (!found) return defaultDay(dow);
+            return {
+              dayOfWeek: found.dayOfWeek,
+              isClosed: found.isClosed,
+              openTime: found.openTime ?? (dow === 6 ? '09:00' : '08:00'),
+              closeTime: found.closeTime ?? (dow === 6 ? '14:00' : '18:00'),
+              slotMinutes: found.slotMinutes,
+            };
           }),
         );
       })
@@ -126,12 +132,12 @@ export default function HoursPage() {
     if (!validate()) return;
     setSaving(true);
     try {
-      await api.put('/v1/providers/me/working-hours', { days });
+      await saveWorkingHours({ days });
       setSaved(true);
       if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
       savedTimerRef.current = setTimeout(() => setSaved(false), 3000);
     } catch {
-      // no-op — API errors are visible in network tab during development
+      // no-op
     } finally {
       setSaving(false);
     }
