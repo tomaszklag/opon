@@ -23,7 +23,7 @@ function providerToForm(p: Provider): FormState {
   return {
     name: p.name,
     description: p.description ?? '',
-    phone: p.phone,
+    phone: p.phone ?? '',
     email: p.email ?? '',
     logoUrl: p.logoUrl ?? '',
   };
@@ -274,12 +274,16 @@ export default function ProfilePage() {
 
             <div className={styles.metaRow}>
               <div className={styles.metaPill}>
-                <span className={styles.metaPillLabel}>Miasto</span>
-                <span className={styles.metaPillVal}>{provider.city}</span>
+                <span className={styles.metaPillLabel}>Lat</span>
+                <span className={styles.metaPillVal}>
+                  {provider.cityCenterLat != null ? provider.cityCenterLat.toFixed(4) : '—'}
+                </span>
               </div>
               <div className={styles.metaPill}>
-                <span className={styles.metaPillLabel}>Województwo</span>
-                <span className={styles.metaPillVal}>{provider.voivodeship}</span>
+                <span className={styles.metaPillLabel}>Lng</span>
+                <span className={styles.metaPillVal}>
+                  {provider.cityCenterLng != null ? provider.cityCenterLng.toFixed(4) : '—'}
+                </span>
               </div>
               <div className={styles.metaPill}>
                 <span className={styles.metaPillLabel}>Status konta</span>
@@ -334,7 +338,9 @@ export default function ProfilePage() {
                   {form.name || <span className={styles.previewPlaceholder}>Nazwa firmy</span>}
                 </span>
                 <span className={styles.previewLocation}>
-                  {provider.city}, {provider.voivodeship}
+                  {provider.cityCenterLat != null && provider.cityCenterLng != null
+                    ? `${provider.cityCenterLat.toFixed(4)}, ${provider.cityCenterLng.toFixed(4)}`
+                    : '—'}
                 </span>
                 {form.description && (
                   <p className={styles.previewDesc}>

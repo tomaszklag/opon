@@ -1,21 +1,9 @@
 import { api } from '../lib/api';
 import type { components } from '@opony/api-client';
 
+export type Provider = components['schemas']['ProviderResponseDto'];
 export type UpdateProviderBody = components['schemas']['UpdateProviderDto'];
-
-export type Provider = {
-  id: string;
-  name: string;
-  nip: string;
-  status: string;
-  city: string;
-  voivodeship: string;
-  phone: string;
-  email: string | null;
-  description: string | null;
-  logoUrl: string | null;
-  serviceRadiusKm: number | null;
-};
+export type CreateProviderBody = components['schemas']['CreateProviderDto'];
 
 export function getProvider(): Promise<Provider> {
   return api.get<Provider>('/v1/providers/me');

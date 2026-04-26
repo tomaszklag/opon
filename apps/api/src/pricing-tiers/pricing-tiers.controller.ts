@@ -16,6 +16,7 @@ import { Public } from '../auth/decorators/public.decorator';
 import { JwtPayload } from '../auth/types/jwt-payload.interface';
 import { ProvidersService } from '../providers/providers.service';
 import { CreatePricingTierDto } from './dto/create-pricing-tier.dto';
+import { PricingTierResponseDto } from './dto/pricing-tier-response.dto';
 import { UpdatePricingTierDto } from './dto/update-pricing-tier.dto';
 import { PricingTiersService } from './pricing-tiers.service';
 
@@ -32,6 +33,7 @@ export class PricingTiersController {
   @Get('me/pricing-tiers')
   @ApiCookieAuth('access_token')
   @ApiOperation({ summary: 'Lista moich tierów cenowych' })
+  @ApiResponse({ status: 200, type: [PricingTierResponseDto] })
   async listMine(@CurrentUser() user: JwtPayload) {
     const provider = await this.providersService.getMyProvider(user.sub);
     return this.service.listByProvider(provider.id);
@@ -43,6 +45,7 @@ export class PricingTiersController {
   @HttpCode(HttpStatus.CREATED)
   @ApiCookieAuth('access_token')
   @ApiOperation({ summary: 'Dodaj tier cenowy' })
+  @ApiResponse({ status: 201, type: PricingTierResponseDto })
   @ApiResponse({ status: 409, description: 'Przedział felg już istnieje' })
   async create(@CurrentUser() user: JwtPayload, @Body() dto: CreatePricingTierDto) {
     const provider = await this.providersService.getMyProvider(user.sub);
@@ -54,6 +57,7 @@ export class PricingTiersController {
   @Patch('me/pricing-tiers/:id')
   @ApiCookieAuth('access_token')
   @ApiOperation({ summary: 'Zaktualizuj tier cenowy' })
+  @ApiResponse({ status: 200, type: PricingTierResponseDto })
   async update(
     @CurrentUser() user: JwtPayload,
     @Param('id', ParseUUIDPipe) id: string,
@@ -79,6 +83,7 @@ export class PricingTiersController {
   @Public()
   @Get(':providerId/pricing-tiers')
   @ApiOperation({ summary: 'Lista tierów cenowych firmy (publiczne)' })
+  @ApiResponse({ status: 200, type: [PricingTierResponseDto] })
   listByProvider(@Param('providerId', ParseUUIDPipe) providerId: string) {
     return this.service.listByProvider(providerId);
   }

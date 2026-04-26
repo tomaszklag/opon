@@ -270,6 +270,28 @@ export interface components {
        */
       code: string;
     };
+    VerifyOtpResponseDto: {
+      message: string;
+      /** @enum {string} */
+      role: 'CLIENT' | 'PROVIDER_OWNER' | 'PROVIDER_STAFF' | 'ADMIN';
+      providerId?: string;
+    };
+    AuthMeResponseDto: {
+      sub: string;
+      phone: string;
+      /** @enum {string} */
+      role: 'CLIENT' | 'PROVIDER_OWNER' | 'PROVIDER_STAFF' | 'ADMIN';
+      jti?: string;
+      providerId?: string;
+      /** @enum {string} */
+      status?:
+        | 'PENDING_NIP'
+        | 'PENDING_DOCS'
+        | 'PENDING_APPROVAL'
+        | 'APPROVED'
+        | 'SUSPENDED'
+        | 'REJECTED';
+    };
     CreateProviderDto: {
       /** @example Opony Express Sp. z o.o. */
       name: string;
@@ -285,6 +307,44 @@ export interface components {
       /** @example kontakt@firma.pl */
       email?: string;
     };
+    ProviderResponseDto: {
+      id: string;
+      name: string;
+      slug?: string | null;
+      nip: string;
+      /** @enum {string} */
+      type: 'MOBILE' | 'STATIONARY';
+      /** @enum {string} */
+      status:
+        | 'PENDING_NIP'
+        | 'PENDING_DOCS'
+        | 'PENDING_APPROVAL'
+        | 'APPROVED'
+        | 'SUSPENDED'
+        | 'REJECTED';
+      description?: string | null;
+      logoUrl?: string | null;
+      phone?: string | null;
+      email?: string | null;
+      ownerId: string;
+      cityCenterLat?: number | null;
+      cityCenterLng?: number | null;
+      serviceRadiusKm: number;
+      avgRating: number;
+      reviewCount: number;
+      /** Format: date-time */
+      createdAt: string;
+      /** Format: date-time */
+      approvedAt?: string | null;
+      /** Format: date-time */
+      updatedAt: string;
+    };
+    ProviderPageResponseDto: {
+      data: components['schemas']['ProviderResponseDto'][];
+      total: number;
+      page: number;
+      limit: number;
+    };
     UpdateProviderDto: {
       name?: string;
       description?: string;
@@ -297,6 +357,16 @@ export interface components {
       /** @description Długość geogr. centrum operacji (mobilni) */
       cityCenterLng?: number;
       serviceRadiusKm?: number;
+    };
+    PricingTierResponseDto: {
+      id: string;
+      providerId: string;
+      rimSizeMin: number;
+      rimSizeMax: number;
+      priceSwapPln: number;
+      priceBalancingPerWheelPln?: number | null;
+      travelFeeFirstKmPln: number;
+      travelFeeExtraKmPln: number;
     };
     CreatePricingTierDto: {
       /**
@@ -335,6 +405,15 @@ export interface components {
       priceBalancingPerWheelPln?: number;
       travelFeeFirstKmPln?: number;
       travelFeeExtraKmPln?: number;
+    };
+    WorkingHoursResponseDto: {
+      id: string;
+      providerId: string;
+      dayOfWeek: number;
+      isClosed: boolean;
+      openTime?: string | null;
+      closeTime?: string | null;
+      slotMinutes: number;
     };
     WorkingHoursDayDto: {
       /**
@@ -426,12 +505,13 @@ export interface operations {
       };
     };
     responses: {
-      /** @description Zalogowano — tokeny ustawione w cookies */
       200: {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          'application/json': components['schemas']['VerifyOtpResponseDto'];
+        };
       };
       /** @description Nieprawidłowy lub wygasły kod */
       401: {
@@ -494,12 +574,13 @@ export interface operations {
     };
     requestBody?: never;
     responses: {
-      /** @description Profil użytkownika z JWT */
       200: {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          'application/json': components['schemas']['AuthMeResponseDto'];
+        };
       };
       /** @description Nieautoryzowany */
       401: {
@@ -523,12 +604,13 @@ export interface operations {
     };
     requestBody?: never;
     responses: {
-      /** @description Paginated lista firm */
       200: {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          'application/json': components['schemas']['ProviderPageResponseDto'];
+        };
       };
     };
   };
@@ -545,12 +627,13 @@ export interface operations {
       };
     };
     responses: {
-      /** @description Firma zarejestrowana */
       201: {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          'application/json': components['schemas']['ProviderResponseDto'];
+        };
       };
       /** @description Firma już istnieje lub NIP zajęty */
       409: {
@@ -570,12 +653,13 @@ export interface operations {
     };
     requestBody?: never;
     responses: {
-      /** @description Dane firmy zalogowanego użytkownika */
       200: {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          'application/json': components['schemas']['ProviderResponseDto'];
+        };
       };
       /** @description Brak zarejestrowanej firmy */
       404: {
@@ -599,12 +683,13 @@ export interface operations {
       };
     };
     responses: {
-      /** @description Firma zaktualizowana */
       200: {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          'application/json': components['schemas']['ProviderResponseDto'];
+        };
       };
       /** @description Brak zarejestrowanej firmy */
       404: {
@@ -626,12 +711,13 @@ export interface operations {
     };
     requestBody?: never;
     responses: {
-      /** @description Dane firmy */
       200: {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          'application/json': components['schemas']['ProviderResponseDto'];
+        };
       };
       /** @description Firma nie jest zatwierdzona */
       403: {
@@ -662,7 +748,9 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          'application/json': components['schemas']['PricingTierResponseDto'][];
+        };
       };
     };
   };
@@ -679,6 +767,14 @@ export interface operations {
       };
     };
     responses: {
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PricingTierResponseDto'];
+        };
+      };
       /** @description Przedział felg już istnieje */
       409: {
         headers: {
@@ -726,7 +822,9 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          'application/json': components['schemas']['PricingTierResponseDto'];
+        };
       };
     };
   };
@@ -745,7 +843,9 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          'application/json': components['schemas']['PricingTierResponseDto'][];
+        };
       };
     };
   };
@@ -762,7 +862,9 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          'application/json': components['schemas']['WorkingHoursResponseDto'][];
+        };
       };
     };
   };
@@ -783,7 +885,9 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          'application/json': components['schemas']['WorkingHoursResponseDto'][];
+        };
       };
     };
   };
@@ -802,7 +906,9 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          'application/json': components['schemas']['WorkingHoursResponseDto'][];
+        };
       };
     };
   };

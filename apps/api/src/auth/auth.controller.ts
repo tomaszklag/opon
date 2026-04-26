@@ -15,8 +15,10 @@ import { Request, Response } from 'express';
 import { AuthService } from './auth.service';
 import { CurrentUser } from './decorators/current-user.decorator';
 import { Public } from './decorators/public.decorator';
+import { AuthMeResponseDto } from './dto/auth-me-response.dto';
 import { RequestOtpDto } from './dto/request-otp.dto';
 import { VerifyOtpDto } from './dto/verify-otp.dto';
+import { VerifyOtpResponseDto } from './dto/verify-otp-response.dto';
 import { OtpService } from './otp.service';
 import { JwtPayload } from './types/jwt-payload.interface';
 
@@ -47,7 +49,7 @@ export class AuthController {
   @Post('verify-otp')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Zweryfikuj kod OTP i zaloguj użytkownika' })
-  @ApiResponse({ status: 200, description: 'Zalogowano — tokeny ustawione w cookies' })
+  @ApiResponse({ status: 200, type: VerifyOtpResponseDto })
   @ApiResponse({ status: 401, description: 'Nieprawidłowy lub wygasły kod' })
   async verifyOtp(
     @Body() dto: VerifyOtpDto,
@@ -155,7 +157,7 @@ export class AuthController {
   @Get('me')
   @ApiCookieAuth('access_token')
   @ApiOperation({ summary: 'Dane zalogowanego użytkownika' })
-  @ApiResponse({ status: 200, description: 'Profil użytkownika z JWT' })
+  @ApiResponse({ status: 200, type: AuthMeResponseDto })
   @ApiResponse({ status: 401, description: 'Nieautoryzowany' })
   me(@CurrentUser() user: JwtPayload): JwtPayload {
     return user;

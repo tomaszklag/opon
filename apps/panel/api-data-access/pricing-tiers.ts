@@ -1,16 +1,9 @@
 import { api } from '../lib/api';
 import type { components } from '@opony/api-client';
 
+export type PricingTier = components['schemas']['PricingTierResponseDto'];
 export type CreatePricingTierBody = components['schemas']['CreatePricingTierDto'];
 export type UpdatePricingTierBody = components['schemas']['UpdatePricingTierDto'];
-
-export type PricingTier = {
-  id: string;
-  rimSizeMin: number;
-  rimSizeMax: number;
-  priceSwapPln: number;
-  priceBalancingPerWheelPln: number | null;
-};
 
 export function getPricingTiers(): Promise<PricingTier[]> {
   return api.get<PricingTier[]>('/v1/providers/me/pricing-tiers');
