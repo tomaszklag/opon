@@ -1455,6 +1455,35 @@ export function useLoginFlow() {
 | `form.reset(values)` po załadowaniu i po zapisie | Ręczne synchronizowanie `isDirty`                       |
 | `zodResolver` dla formularzy pojedynczej encji   | `.optional().default('')` w schematach Zod              |
 
+### Komponenty DS — zasada obowiązkowa
+
+Wszystkie interaktywne elementy UI w `apps/panel` muszą pochodzić z `@opony/design-system-web`. Każda strona w pliku HTML designu (`design/b2b-*.html`, sekcja „DS Components") wskazuje jakich komponentów należy użyć.
+
+```ts
+import {
+  Input,
+  PhoneInput,
+  OTPInput,
+  Button,
+  Toggle,
+  Select,
+  Textarea,
+} from '@opony/design-system-web';
+```
+
+| ✅ TAK                                                        | ❌ NIE                                               |
+| ------------------------------------------------------------- | ---------------------------------------------------- |
+| `<Button variant="primary" loading={saving}>Zapisz</Button>`  | `<button className={styles.saveBtn}>Zapisz</button>` |
+| `<Input label="Telefon" error={err} {...register('phone')}/>` | `<input className={styles.input} />`                 |
+| `<Toggle checked={val} onChange={...} />`                     | `<button role="switch" className={styles.toggle}>`   |
+| `<Select options={opts} value={v} onChange={...} />`          | `<select className={styles.select}>`                 |
+| `<PhoneInput label="..." value={v} onChange={...} />`         | Własny div z flagą i `<input type="tel">`            |
+| `<OTPInput length={6} value={code} onChange={setCode} />`     | Ręczna siatka 6× `<input maxLength={1}>`             |
+
+DS `Input` i `Textarea` są `forwardRef` — działają bezpośrednio z RHF `{...register('field')}`.
+
+**Jeśli jakiś komponent DS brakuje lub nie działa** → dodaj/popraw w `packages/design-system-web/src/`, nie omijaj przez natywny HTML.
+
 ### Ikony SVG — zasada obowiązkowa
 
 Wszystkie ikony SVG używane w panelu muszą być zdefiniowane jako komponenty React w jednym pliku:

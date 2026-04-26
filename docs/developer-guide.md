@@ -262,7 +262,42 @@ Design reference dla każdego ekranu panelu: `design/b2b-*.html`. Mapa ekran ↔
 
 ---
 
-## 7. Dodawanie nowego formularza FE — wzorzec
+## 7. Komponenty UI — zawsze z Design System
+
+Każdy interaktywny element w `apps/panel` musi używać komponentu z `@opony/design-system-web`. Design w `design/b2b-*.html` (sekcja „DS Components") wskazuje jakich komponentów użyć na danej stronie.
+
+```ts
+import {
+  Input,
+  PhoneInput,
+  OTPInput,
+  Button,
+  Toggle,
+  Select,
+  Textarea,
+  Spinner,
+} from '@opony/design-system-web';
+```
+
+### Najczęstsze zamienniki
+
+| Zamiast                                   | Użyj                                           |
+| ----------------------------------------- | ---------------------------------------------- |
+| `<input type="text" />`                   | `<Input label="..." error={...} />`            |
+| `<input type="tel" />`                    | `<PhoneInput label="..." />`                   |
+| `<textarea />`                            | `<Textarea label="..." maxLength={N} />`       |
+| `<select><option>...</option></select>`   | `<Select options={[{value,label}]} />`         |
+| `<button className={styles.saveBtn}>`     | `<Button variant="primary" loading={saving}>`  |
+| `<button role="switch">` (toggle)         | `<Toggle checked={val} onChange={...} />`      |
+| Siatka 6× `<input maxLength={1}>` dla OTP | `<OTPInput length={6} value={v} onChange={f}>` |
+
+DS `Input` i `Textarea` są `forwardRef` → działają bezpośrednio z `{...register('field')}` z RHF.
+
+Jeśli brakuje komponentu w DS lub nie obsługuje wymaganego stanu → **dodaj/popraw w `packages/design-system-web/`**, nie używaj natywnego HTML jako obejścia.
+
+---
+
+## 8. Dodawanie nowego formularza FE — wzorzec
 
 Każdy formularz w `apps/panel` musi mieć logikę w hooku. Strona to czysty render.
 
