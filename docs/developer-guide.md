@@ -231,13 +231,32 @@ Husky + lint-staged uruchamia ESLint i Prettier automatycznie przed każdym comm
         export type Xxx = components['schemas']['XxxResponseDto'];
         export function getXxx(): Promise<Xxx> { ... }
 
-2. Strona Next.js
+2. Hook stanu / formularza
+   └─ apps/panel/lib/hooks/use-<modul>.ts  ← cała logika, zero JSX
+        export function useMyFeature() { ... }
+
+3. Komponenty strony
+   └─ apps/panel/app/dashboard/<modul>/_components/utils.ts     ← stałe + helpery
+   └─ apps/panel/app/dashboard/<modul>/_components/MyActionBar.tsx
+   └─ apps/panel/app/dashboard/<modul>/_components/MySection.tsx
+   └─ apps/panel/app/dashboard/<modul>/_components/<inne>.tsx
+
+4. Strona Next.js (~50 linii — tylko orchestracja)
    └─ apps/panel/app/dashboard/<modul>/page.tsx
    └─ apps/panel/app/dashboard/<modul>/<modul>.module.css
 
-3. Zweryfikuj TypeScript
-   └─ cd apps/panel && npx tsc --noEmit
+5. Zweryfikuj TypeScript
+   └─ pnpm --filter panel exec tsc --noEmit
 ```
+
+**Obowiązkowy podział:**
+
+- `page.tsx` importuje **jeden hook** i **N komponentów** — żadnej logiki, żadnych helperów inline, żadnych inline SVG
+- Komponenty specyficzne dla strony idą do `_components/` (podkreślnik → Next.js nie traktuje jako route)
+- Stałe i czyste funkcje (np. `DAY_META`, `parseTime`) do `_components/utils.ts`
+- Komponenty wielokrotnego użytku (np. `Spinner`, `Badge`) do `apps/panel/components/`
+
+Pełna specyfikacja wzorca: `architektura.md §9.C`.
 
 Design reference dla każdego ekranu panelu: `design/b2b-*.html`. Mapa ekran ↔ task w `plan-sprintow.md §12.Z`.
 

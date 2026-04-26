@@ -1478,6 +1478,90 @@ apps/panel/components/icons.tsx   ← jedyne miejsce definicji ikon
 
 ---
 
+## 9.C. Podział strony na komponenty — zasada obowiązkowa
+
+> **Zasada:** Każda strona (`page.tsx`) musi być cienkim orchestratorem — importuje jeden hook i N komponentów. Żadnej logiki, żadnych helperów, żadnych inline SVG bezpośrednio w `page.tsx`.
+
+### Struktura
+
+```
+app/dashboard/<modul>/
+  page.tsx                  ← ~50 linii: import hook + import komponentów + return JSX
+  <modul>.module.css
+  _components/              ← Next.js: podkreślnik ukrywa folder przed routerem
+    utils.ts                ← stałe i czyste funkcje (DAY_META, parseTime, rimLabel…)
+    <ModulActionBar>.tsx    ← pasek akcji (save button, status chip)
+    <MainSection>.tsx       ← główna sekcja formularza / lista
+    <RowComponent>.tsx      ← wiersz listy (jeśli sekcja iteruje po kolekcji)
+    <PreviewPanel>.tsx      ← podgląd dla klienta / aside
+```
+
+**Wzorce do naśladowania (zaimplementowane):**
+
+| Strona               | `_components/`                                                                              |
+| -------------------- | ------------------------------------------------------------------------------------------- |
+| `pricing/page.tsx`   | PricingActionBar, TierList, TierRow, NewTierForm, PricingInfoNote, PricingPreview, utils.ts |
+| `hours/page.tsx`     | HoursActionBar, DayList, DayRow, WeekTimeline, utils.ts                                     |
+| `profile/page.tsx`   | ProfileActionBar, IdentitySection, ContactSection, LocationSection, ProfilePreview          |
+| `dashboard/page.tsx` | StatusBanners, StatCard, ActionTile                                                         |
+| `login/page.tsx`     | PhoneStep, OtpStep, LoginFooter, LoginHero                                                  |
+| `register/page.tsx`  | StepsIndicator, FirmStep, ConfirmStep                                                       |
+
+### Jak wygląda page.tsx po podziale
+
+```tsx
+'use client';
+
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
+import { useMyFeature } from '../../../lib/hooks/use-my-feature';
+import { useAuth } from '../../../lib/auth';
+import { MyActionBar } from './_components/MyActionBar';
+import { MySection } from './_components/MySection';
+import { MyPreview } from './_components/MyPreview';
+import styles from './my-feature.module.css';
+
+export default function MyFeaturePage() {
+  const router = useRouter();
+  const { status } = useAuth();
+  const { data, loading, saving, saved, update, save } = useMyFeature();
+
+  useEffect(() => {
+    if (status === 'unauthenticated') router.replace('/login');
+  }, [status, router]);
+
+  if (status === 'loading' || loading) {
+    return (
+      <div className={styles.loadingWrap}>
+        <div className={styles.spinner} />
+      </div>
+    );
+  }
+
+  return (
+    <div className={styles.page}>
+      <MyActionBar saved={saved} saving={saving} onSave={save} />
+      <div className={styles.content}>
+        <MySection data={data} onUpdate={update} />
+        <MyPreview data={data} />
+      </div>
+    </div>
+  );
+}
+```
+
+### Zasady obowiązkowe dla agentów
+
+| ✅ TAK                                                     | ❌ NIE                                           |
+| ---------------------------------------------------------- | ------------------------------------------------ |
+| Komponenty specyficzne dla strony w `_components/`         | Cały JSX bezpośrednio w `page.tsx`               |
+| Stałe i helpery w `_components/utils.ts`                   | `const DAY_META = ...` na górze `page.tsx`       |
+| `page.tsx` ≤ ~80 linii                                     | `page.tsx` > 150 linii                           |
+| Props zamiast bezpośredniego dostępu do hooka z komponentu | Komponent wywołuje `useMyFeature()` samodzielnie |
+| Jeden hook na stronę (`use-my-feature.ts`) w `lib/hooks/`  | Logika bezpośrednio w `page.tsx`                 |
+
+---
+
 ## 10. Integracje zewnetrzne
 
 ### 10.1. GUS BIR + CEIDG — weryfikacja NIP
