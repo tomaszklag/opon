@@ -13,6 +13,7 @@
   --accent-muted: rgba(255, 107, 26, 0.14);
   --accent-border: rgba(255, 107, 26, 0.32);
   --accent-glow: rgba(255, 107, 26, 0.45);
+  --text-on-accent: #0a0b0e;
   --success: #2ee0a0;
   --success-muted: rgba(46, 224, 160, 0.14);
   --success-border: rgba(46, 224, 160, 0.32);
