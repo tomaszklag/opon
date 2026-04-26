@@ -1,129 +1,33 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
-import { getProvider, updateProvider, type Provider } from '../../../api-data-access/providers';
-import { ApiError } from '../../../lib/api';
+import { useEffect } from 'react';
+import { useProviderForm } from '../../../lib/hooks/use-provider-form';
 import { useAuth } from '../../../lib/auth';
 import styles from './profile.module.css';
 
-type FormState = {
-  name: string;
-  description: string;
-  phone: string;
-  email: string;
-  logoUrl: string;
-};
-
-const PHONE_RE = /^\+\d{7,15}$/;
 const DESC_MAX = 3000;
-const NAME_MAX = 200;
-
-function providerToForm(p: Provider): FormState {
-  return {
-    name: p.name,
-    description: p.description ?? '',
-    phone: p.phone ?? '',
-    email: p.email ?? '',
-    logoUrl: p.logoUrl ?? '',
-  };
-}
-
-function isDirty(form: FormState, original: FormState): boolean {
-  return (Object.keys(form) as (keyof FormState)[]).some((k) => form[k] !== original[k]);
-}
 
 export default function ProfilePage() {
   const router = useRouter();
   const { status } = useAuth();
+  const { form, provider, loading, saved, apiError, onSubmit, isDirty, isSubmitting } =
+    useProviderForm();
+  const {
+    register,
+    watch,
+    formState: { errors },
+  } = form;
 
-  const [provider, setProvider] = useState<Provider | null>(null);
-  const [form, setForm] = useState<FormState>({
-    name: '',
-    description: '',
-    phone: '',
-    email: '',
-    logoUrl: '',
-  });
-  const [original, setOriginal] = useState<FormState>({
-    name: '',
-    description: '',
-    phone: '',
-    email: '',
-    logoUrl: '',
-  });
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
-  const [errors, setErrors] = useState<Partial<Record<keyof FormState, string>>>({});
-  const [apiError, setApiError] = useState<string | null>(null);
+  const name = watch('name');
+  const logoUrl = watch('logoUrl');
+  const description = watch('description');
+  const phone = watch('phone');
+  const email = watch('email');
 
   useEffect(() => {
     if (status === 'unauthenticated') router.replace('/login');
   }, [status, router]);
-
-  useEffect(() => {
-    if (status !== 'authenticated') return;
-    getProvider()
-      .then((p) => {
-        setProvider(p);
-        const f = providerToForm(p);
-        setForm(f);
-        setOriginal(f);
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, [status]);
-
-  function patch(field: keyof FormState, value: string) {
-    setForm((prev) => ({ ...prev, [field]: value }));
-    setErrors((prev) => {
-      const next = { ...prev };
-      delete next[field];
-      return next;
-    });
-    setSaved(false);
-  }
-
-  function validate(): boolean {
-    const errs: Partial<Record<keyof FormState, string>> = {};
-    if (!form.name.trim()) errs.name = 'Nazwa jest wymagana';
-    else if (form.name.length > NAME_MAX) errs.name = `Maksymalnie ${NAME_MAX} znaków`;
-    if (form.description.length > DESC_MAX) errs.description = `Maksymalnie ${DESC_MAX} znaków`;
-    if (form.phone && !PHONE_RE.test(form.phone))
-      errs.phone = 'Format: +48600000000 (+ i 7–15 cyfr)';
-    if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email))
-      errs.email = 'Nieprawidłowy adres e-mail';
-    if (form.logoUrl && !/^https?:\/\/.+/.test(form.logoUrl))
-      errs.logoUrl = 'Podaj pełny URL (https://...)';
-    setErrors(errs);
-    return Object.keys(errs).length === 0;
-  }
-
-  async function handleSave() {
-    if (!validate()) return;
-    setApiError(null);
-    setSaving(true);
-    try {
-      const updated = await updateProvider({
-        name: form.name.trim(),
-        description: form.description || undefined,
-        phone: form.phone || undefined,
-        email: form.email || undefined,
-        logoUrl: form.logoUrl || undefined,
-      });
-      setProvider(updated);
-      const f = providerToForm(updated);
-      setForm(f);
-      setOriginal(f);
-      setSaved(true);
-      setTimeout(() => setSaved(false), 3000);
-    } catch (err) {
-      if (err instanceof ApiError) setApiError(err.message);
-    } finally {
-      setSaving(false);
-    }
-  }
 
   if (status === 'loading' || loading) {
     return (
@@ -135,15 +39,13 @@ export default function ProfilePage() {
 
   if (!provider) return null;
 
-  const dirty = isDirty(form, original);
-
   return (
     <div className={styles.page}>
       <div className={styles.actionBar}>
-        {dirty && !saved && <span className={styles.dirtyChip}>Niezapisane zmiany</span>}
+        {isDirty && !saved && <span className={styles.dirtyChip}>Niezapisane zmiany</span>}
         {saved && <span className={styles.savedChip}>Zapisano</span>}
-        <button className={styles.saveBtn} onClick={handleSave} disabled={saving || !dirty}>
-          {saving ? 'Zapisywanie…' : 'Zapisz zmiany'}
+        <button className={styles.saveBtn} onClick={onSubmit} disabled={isSubmitting || !isDirty}>
+          {isSubmitting ? 'Zapisywanie…' : 'Zapisz zmiany'}
         </button>
       </div>
 
@@ -174,11 +76,10 @@ export default function ProfilePage() {
                   id="f-name"
                   className={[styles.input, errors.name ? styles.inputError : ''].join(' ')}
                   type="text"
-                  value={form.name}
-                  maxLength={NAME_MAX}
-                  onChange={(e) => patch('name', e.target.value)}
+                  maxLength={200}
+                  {...register('name')}
                 />
-                {errors.name && <span className={styles.fieldError}>{errors.name}</span>}
+                {errors.name && <span className={styles.fieldError}>{errors.name.message}</span>}
               </div>
 
               <div className={styles.field}>
@@ -209,14 +110,13 @@ export default function ProfilePage() {
                 className={[styles.textarea, errors.description ? styles.inputError : ''].join(' ')}
                 rows={4}
                 maxLength={DESC_MAX}
-                value={form.description}
-                onChange={(e) => patch('description', e.target.value)}
+                {...register('description')}
               />
               <div className={styles.charCounter}>
-                <strong>{form.description.length}</strong> / {DESC_MAX}
+                <strong>{(description ?? '').length}</strong> / {DESC_MAX}
               </div>
               {errors.description && (
-                <span className={styles.fieldError}>{errors.description}</span>
+                <span className={styles.fieldError}>{errors.description.message}</span>
               )}
             </div>
           </section>
@@ -237,12 +137,11 @@ export default function ProfilePage() {
                   id="f-phone"
                   className={[styles.input, errors.phone ? styles.inputError : ''].join(' ')}
                   type="tel"
-                  value={form.phone}
                   placeholder="+48600000000"
-                  onChange={(e) => patch('phone', e.target.value)}
+                  {...register('phone')}
                 />
                 {errors.phone ? (
-                  <span className={styles.fieldError}>{errors.phone}</span>
+                  <span className={styles.fieldError}>{errors.phone.message}</span>
                 ) : (
                   <span className={styles.fieldHint}>Format: +48 i numer, bez spacji</span>
                 )}
@@ -256,11 +155,10 @@ export default function ProfilePage() {
                   id="f-email"
                   className={[styles.input, errors.email ? styles.inputError : ''].join(' ')}
                   type="email"
-                  value={form.email}
                   placeholder="kontakt@firma.pl"
-                  onChange={(e) => patch('email', e.target.value)}
+                  {...register('email')}
                 />
-                {errors.email && <span className={styles.fieldError}>{errors.email}</span>}
+                {errors.email && <span className={styles.fieldError}>{errors.email.message}</span>}
               </div>
             </div>
           </section>
@@ -299,12 +197,11 @@ export default function ProfilePage() {
                 id="f-logo"
                 className={[styles.input, errors.logoUrl ? styles.inputError : ''].join(' ')}
                 type="url"
-                value={form.logoUrl}
                 placeholder="https://example.com/logo.png"
-                onChange={(e) => patch('logoUrl', e.target.value)}
+                {...register('logoUrl')}
               />
               {errors.logoUrl ? (
-                <span className={styles.fieldError}>{errors.logoUrl}</span>
+                <span className={styles.fieldError}>{errors.logoUrl.message}</span>
               ) : (
                 <span className={styles.fieldHint}>
                   Publiczny URL obrazka PNG/JPG, min 200×200 px
@@ -324,34 +221,32 @@ export default function ProfilePage() {
 
             <div className={styles.previewCard}>
               <div className={styles.previewAvatar}>
-                {form.logoUrl ? (
+                {logoUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={form.logoUrl} alt="" className={styles.previewAvatarImg} />
+                  <img src={logoUrl} alt="" className={styles.previewAvatarImg} />
                 ) : (
                   <span className={styles.previewAvatarInitials}>
-                    {form.name.slice(0, 2).toUpperCase() || 'WW'}
+                    {(name ?? '').slice(0, 2).toUpperCase() || 'WW'}
                   </span>
                 )}
               </div>
               <div className={styles.previewCardBody}>
                 <span className={styles.previewName}>
-                  {form.name || <span className={styles.previewPlaceholder}>Nazwa firmy</span>}
+                  {name || <span className={styles.previewPlaceholder}>Nazwa firmy</span>}
                 </span>
                 <span className={styles.previewLocation}>
                   {provider.cityCenterLat != null && provider.cityCenterLng != null
                     ? `${provider.cityCenterLat.toFixed(4)}, ${provider.cityCenterLng.toFixed(4)}`
                     : '—'}
                 </span>
-                {form.description && (
+                {description && (
                   <p className={styles.previewDesc}>
-                    {form.description.length > 120
-                      ? form.description.slice(0, 120) + '…'
-                      : form.description}
+                    {description.length > 120 ? description.slice(0, 120) + '…' : description}
                   </p>
                 )}
                 <div className={styles.previewContact}>
-                  {form.phone && <span>{form.phone}</span>}
-                  {form.email && <span>{form.email}</span>}
+                  {phone && <span>{phone}</span>}
+                  {email && <span>{email}</span>}
                 </div>
               </div>
             </div>

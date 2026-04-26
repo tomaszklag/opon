@@ -1,23 +1,10 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useEffect, useRef, useState } from 'react';
-import { getWorkingHours, saveWorkingHours } from '../../../api-data-access/working-hours';
+import { useEffect } from 'react';
+import { useWorkingHours, DISPLAY_ORDER } from '../../../lib/hooks/use-working-hours';
 import { useAuth } from '../../../lib/auth';
 import styles from './hours.module.css';
-
-type DayEntry = {
-  dayOfWeek: number;
-  isClosed: boolean;
-  openTime: string;
-  closeTime: string;
-  slotMinutes: number;
-};
-
-function parseTime(time: string): [number, number] {
-  const parts = time.split(':');
-  return [parseInt(parts[0] ?? '0', 10), parseInt(parts[1] ?? '0', 10)];
-}
 
 const DAY_META: Record<number, { abbr: string; full: string }> = {
   0: { abbr: 'NDZ', full: 'Niedziela' },
@@ -29,17 +16,11 @@ const DAY_META: Record<number, { abbr: string; full: string }> = {
   6: { abbr: 'SOB', full: 'Sobota' },
 };
 
-const DISPLAY_ORDER = [1, 2, 3, 4, 5, 6, 0];
 const SLOT_OPTIONS = [15, 30, 45, 60, 90];
 
-function defaultDay(dayOfWeek: number): DayEntry {
-  return {
-    dayOfWeek,
-    isClosed: dayOfWeek === 0,
-    openTime: dayOfWeek === 6 ? '09:00' : '08:00',
-    closeTime: dayOfWeek === 6 ? '14:00' : '18:00',
-    slotMinutes: 45,
-  };
+function parseTime(time: string): [number, number] {
+  const parts = time.split(':');
+  return [parseInt(parts[0] ?? '0', 10), parseInt(parts[1] ?? '0', 10)];
 }
 
 function computeSlots(openTime: string, closeTime: string, slotMinutes: number): number {
@@ -63,85 +44,11 @@ function formatDuration(openTime: string, closeTime: string): string {
 export default function HoursPage() {
   const router = useRouter();
   const { status } = useAuth();
-
-  const [days, setDays] = useState<DayEntry[]>(() => DISPLAY_ORDER.map(defaultDay));
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
-  const [errors, setErrors] = useState<Record<number, string>>({});
-  const savedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { days, loading, saving, saved, errors, updateDay, save } = useWorkingHours();
 
   useEffect(() => {
     if (status === 'unauthenticated') router.replace('/login');
   }, [status, router]);
-
-  useEffect(() => {
-    if (status !== 'authenticated') return;
-    getWorkingHours()
-      .then((serverDays) => {
-        setDays(
-          DISPLAY_ORDER.map((dow) => {
-            const found = serverDays.find((d) => d.dayOfWeek === dow);
-            if (!found) return defaultDay(dow);
-            return {
-              dayOfWeek: found.dayOfWeek,
-              isClosed: found.isClosed,
-              openTime: found.openTime ?? (dow === 6 ? '09:00' : '08:00'),
-              closeTime: found.closeTime ?? (dow === 6 ? '14:00' : '18:00'),
-              slotMinutes: found.slotMinutes,
-            };
-          }),
-        );
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, [status]);
-
-  function updateDay(dayOfWeek: number, patch: Partial<DayEntry>) {
-    setDays((prev) => prev.map((d) => (d.dayOfWeek === dayOfWeek ? { ...d, ...patch } : d)));
-    setErrors((prev) => {
-      const next = { ...prev };
-      delete next[dayOfWeek];
-      return next;
-    });
-  }
-
-  function validate(): boolean {
-    const errs: Record<number, string> = {};
-    for (const day of days) {
-      if (day.isClosed) continue;
-      if (!day.openTime) {
-        errs[day.dayOfWeek] = 'Podaj godzinę otwarcia';
-        continue;
-      }
-      if (!day.closeTime) {
-        errs[day.dayOfWeek] = 'Podaj godzinę zamknięcia';
-        continue;
-      }
-      const [oh, om] = parseTime(day.openTime);
-      const [ch, cm] = parseTime(day.closeTime);
-      if (oh * 60 + om >= ch * 60 + cm) {
-        errs[day.dayOfWeek] = 'Godzina otwarcia musi być przed godziną zamknięcia';
-      }
-    }
-    setErrors(errs);
-    return Object.keys(errs).length === 0;
-  }
-
-  async function handleSave() {
-    if (!validate()) return;
-    setSaving(true);
-    try {
-      await saveWorkingHours({ days });
-      setSaved(true);
-      if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
-      savedTimerRef.current = setTimeout(() => setSaved(false), 3000);
-    } catch {
-      // no-op
-    } finally {
-      setSaving(false);
-    }
-  }
 
   if (status === 'loading' || loading) {
     return (
@@ -157,7 +64,7 @@ export default function HoursPage() {
     <div className={styles.page}>
       <div className={styles.actionBar}>
         {saved && <span className={styles.savedChip}>Zapisano</span>}
-        <button className={styles.saveBtn} onClick={handleSave} disabled={saving}>
+        <button className={styles.saveBtn} onClick={save} disabled={saving}>
           {saving ? 'Zapisywanie…' : 'Zapisz zmiany'}
         </button>
       </div>
