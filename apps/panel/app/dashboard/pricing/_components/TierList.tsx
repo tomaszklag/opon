@@ -1,0 +1,65 @@
+import { type TierDraft } from '../../../../lib/hooks/use-pricing-tiers';
+import { TierRow } from './TierRow';
+import { NewTierForm } from './NewTierForm';
+import styles from '../pricing.module.css';
+
+interface Props {
+  drafts: TierDraft[];
+  showAddForm: boolean;
+  newTier: TierDraft;
+  setNewTier: React.Dispatch<React.SetStateAction<TierDraft>>;
+  errors: string[];
+  onUpdate: (idx: number, patch: Partial<TierDraft>) => void;
+  onDelete: (idx: number) => void;
+  onCancelAdd: () => void;
+}
+
+export function TierList({
+  drafts,
+  showAddForm,
+  newTier,
+  setNewTier,
+  errors,
+  onUpdate,
+  onDelete,
+  onCancelAdd,
+}: Props) {
+  return (
+    <>
+      <section className={styles.secCard}>
+        <div className={styles.secHead}>
+          <h2 className={styles.secTitle}>Wymiana 4 opon</h2>
+          <span className={styles.secSub}>Cena za komplet · PLN</span>
+        </div>
+
+        {drafts.length === 0 && !showAddForm && (
+          <p className={styles.emptyState}>
+            Brak zdefiniowanych przedziałów. Kliknij &bdquo;Dodaj przedział&rdquo; aby rozpocząć.
+          </p>
+        )}
+
+        {drafts.map((d, idx) => (
+          <TierRow
+            key={d.id ?? `draft-${idx}`}
+            draft={d}
+            idx={idx}
+            onUpdate={onUpdate}
+            onDelete={onDelete}
+          />
+        ))}
+
+        {showAddForm && (
+          <NewTierForm newTier={newTier} setNewTier={setNewTier} onCancel={onCancelAdd} />
+        )}
+      </section>
+
+      {errors.length > 0 && (
+        <ul className={styles.errorList}>
+          {errors.map((e, i) => (
+            <li key={i}>{e}</li>
+          ))}
+        </ul>
+      )}
+    </>
+  );
+}
