@@ -1380,6 +1380,83 @@ Pola Prisma typu `Decimal` (np. `priceSwapPln`, `avgRating`) w odpowiedzi JSON s
 
 ---
 
+## 9.B. Warstwa formularzy — wzorzec obowiązkowy
+
+> **Zasada:** Każdy formularz w `apps/panel` musi mieć logikę wydzieloną do dedykowanego hooka. Strona/komponent zawiera wyłącznie JSX.
+
+### Struktura
+
+```
+apps/panel/
+  lib/
+    schemas/          ← walidacja Zod (jeden plik na domenę)
+      provider.schema.ts
+      pricing.schema.ts
+    hooks/            ← logika formularzy / stanu (jeden plik na domenę)
+      use-provider-form.ts    ← React Hook Form + zodResolver
+      use-pricing-tiers.ts   ← własny useState (lista/kolekcja)
+      use-working-hours.ts   ← własny useState (lista/kolekcja)
+      use-login-flow.ts      ← własny useState (state machine)
+  app/
+    dashboard/
+      profile/page.tsx   ← tylko JSX, importuje useProviderForm()
+      pricing/page.tsx   ← tylko JSX, importuje usePricingTiers()
+      hours/page.tsx     ← tylko JSX, importuje useWorkingHours()
+    login/page.tsx       ← tylko JSX, importuje useLoginFlow()
+```
+
+### Kiedy używać React Hook Form (RHF)
+
+Formularz **jednej encji** (jeden obiekt → jeden endpoint PATCH/PUT):
+
+```ts
+// lib/schemas/provider.schema.ts
+export const providerSchema = z.object({
+  name: z.string().min(1, 'Wymagane'),
+  email: z.string().refine((v) => v === '' || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v), 'Nieprawidłowy e-mail'),
+});
+export type ProviderFormValues = z.infer<typeof providerSchema>;
+
+// lib/hooks/use-provider-form.ts
+export function useProviderForm() {
+  const form = useForm<ProviderFormValues>({ resolver: zodResolver(providerSchema), defaultValues: { ... } });
+  const { reset } = form;
+  useEffect(() => { getProvider().then((p) => { setProvider(p); reset(providerToValues(p)); }); }, [reset]);
+  async function onSubmit(data: ProviderFormValues) { await updateProvider(data); reset(data); }
+  return { form, onSubmit: form.handleSubmit(onSubmit), isDirty: form.formState.isDirty, ... };
+}
+```
+
+**Reguły Zod dla pól opcjonalnych:** używaj `.refine()` zamiast `.optional().default('')` — unikasz rozbieżności input/output type z zodResolver.
+
+### Kiedy używać własnego hooka (useState)
+
+- Formularz zarządza **listą/kolekcją** (pricing tiers, working hours)
+- Formularz jest **state machine** z wieloma krokami (login flow, multi-step wizard)
+- Potrzeba **niestandardowej obsługi ref** (OTP grid z focus management)
+
+```ts
+// Przykład: use-login-flow.ts
+export function useLoginFlow() {
+  const [step, setStep] = useState<'phone' | 'otp'>('phone');
+  const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
+  // ... handlers
+  return { step, otpRefs, handlePhoneSubmit, handleOtpSubmit, ... };
+}
+```
+
+### Zasady obowiązkowe dla agentów
+
+| ✅ TAK                                           | ❌ NIE                                                  |
+| ------------------------------------------------ | ------------------------------------------------------- |
+| Schemat Zod w `lib/schemas/`                     | Walidacja inline w komponencie                          |
+| Hook w `lib/hooks/`                              | `useState` dla pól formularza bezpośrednio w `page.tsx` |
+| Strona importuje jeden hook                      | Strona wywołuje API bezpośrednio                        |
+| `form.reset(values)` po załadowaniu i po zapisie | Ręczne synchronizowanie `isDirty`                       |
+| `zodResolver` dla formularzy pojedynczej encji   | `.optional().default('')` w schematach Zod              |
+
+---
+
 ## 10. Integracje zewnetrzne
 
 ### 10.1. GUS BIR + CEIDG — weryfikacja NIP

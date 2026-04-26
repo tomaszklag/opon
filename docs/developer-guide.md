@@ -243,7 +243,125 @@ Design reference dla każdego ekranu panelu: `design/b2b-*.html`. Mapa ekran ↔
 
 ---
 
-## 7. Linting i formatowanie
+## 7. Dodawanie nowego formularza FE — wzorzec
+
+Każdy formularz w `apps/panel` musi mieć logikę w hooku. Strona to czysty render.
+
+### 7.1. Formularz jednej encji → React Hook Form + Zod
+
+```bash
+# 1. Utwórz schemat
+touch apps/panel/lib/schemas/my-feature.schema.ts
+
+# 2. Utwórz hook
+touch apps/panel/lib/hooks/use-my-feature-form.ts
+```
+
+**Schemat** (`lib/schemas/my-feature.schema.ts`):
+
+```ts
+import { z } from 'zod';
+
+export const mySchema = z.object({
+  name: z.string().min(1, 'Wymagane'),
+  // Dla pól opcjonalnych — refine zamiast .optional().default(''):
+  website: z.string().refine((v) => v === '' || /^https?:\/\/.+/.test(v), 'Nieprawidłowy URL'),
+});
+
+export type MyFormValues = z.infer<typeof mySchema>;
+```
+
+**Hook** (`lib/hooks/use-my-feature-form.ts`):
+
+```ts
+'use client';
+import { useEffect, useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { mySchema, type MyFormValues } from '../schemas/my-feature.schema';
+import { getMyEntity, updateMyEntity } from '../../api-data-access/my-entity';
+
+export function useMyFeatureForm() {
+  const [entity, setEntity] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [saved, setSaved] = useState(false);
+  const form = useForm<MyFormValues>({
+    resolver: zodResolver(mySchema),
+    defaultValues: { name: '', website: '' },
+  });
+  const { reset } = form;
+
+  useEffect(() => {
+    getMyEntity()
+      .then((e) => {
+        setEntity(e);
+        reset({ name: e.name, website: e.website ?? '' });
+      })
+      .finally(() => setLoading(false));
+  }, [reset]);
+
+  async function onSubmit(data: MyFormValues) {
+    await updateMyEntity(data);
+    reset(data); // synchronizuje isDirty
+    setSaved(true);
+    setTimeout(() => setSaved(false), 3000);
+  }
+
+  return {
+    form,
+    entity,
+    loading,
+    saved,
+    onSubmit: form.handleSubmit(onSubmit),
+    isDirty: form.formState.isDirty,
+    isSubmitting: form.formState.isSubmitting,
+  };
+}
+```
+
+**Strona** (`app/dashboard/my-feature/page.tsx`):
+
+```tsx
+'use client';
+import { useMyFeatureForm } from '../../../lib/hooks/use-my-feature-form';
+
+export default function MyFeaturePage() {
+  const { form, loading, saved, onSubmit, isDirty, isSubmitting } = useMyFeatureForm();
+  const {
+    register,
+    formState: { errors },
+  } = form;
+
+  if (loading) return <div>Ładowanie…</div>;
+  return (
+    <form onSubmit={onSubmit}>
+      <input {...register('name')} />
+      {errors.name && <span>{errors.name.message}</span>}
+      <button disabled={!isDirty || isSubmitting}>Zapisz</button>
+    </form>
+  );
+}
+```
+
+### 7.2. Formularz listy / state machine → własny hook useState
+
+Używaj gdy zarządzasz kolekcją (np. pricing tiers, working hours) lub state machine (np. login flow z krokami):
+
+```ts
+// lib/hooks/use-my-list.ts
+export function useMyList() {
+  const [items, setItems] = useState<Item[]>([]);
+  const [loading, setLoading] = useState(true);
+  // CRUD + validate + save
+  return { items, loading, updateItem, deleteItem, save };
+}
+```
+
+Wzorce do naśladowania: [use-pricing-tiers.ts](../apps/panel/lib/hooks/use-pricing-tiers.ts), [use-working-hours.ts](../apps/panel/lib/hooks/use-working-hours.ts), [use-login-flow.ts](../apps/panel/lib/hooks/use-login-flow.ts)
+
+---
+
+## 8. Linting i formatowanie
 
 ```bash
 pnpm lint            # ESLint na całym monorepo (auto-fix)
@@ -259,7 +377,7 @@ Jeśli commit się nie udaje przez hook — nie używaj `--no-verify`. Napraw pr
 
 ---
 
-## 8. Testowanie
+## 9. Testowanie
 
 ```bash
 pnpm test            # Vitest — unit + integration (wszystkie apps)
@@ -274,7 +392,7 @@ MSW mockuje API w testach FE i w dev (`NEXT_PUBLIC_API_MOCK=true`). Handlery: `a
 
 ---
 
-## 9. Przydatne one-linery
+## 10. Przydatne one-linery
 
 ```bash
 # Sprawdź czy wszystkie endpointy mają Response DTO w Swagger
