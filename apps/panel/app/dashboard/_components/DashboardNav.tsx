@@ -4,6 +4,13 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { api, ApiError } from '../../../lib/api';
 import { useAuth } from '../../../lib/auth';
+import {
+  IconDashboard,
+  IconBookings,
+  IconPricing,
+  IconHours,
+  IconProfile,
+} from '../../../components/icons';
 import styles from './DashboardNav.module.css';
 
 type ProviderStatus = 'PENDING' | 'APPROVED' | 'SUSPENDED';
@@ -32,90 +39,6 @@ const PAGE_TITLE: Record<string, string> = {
   '/dashboard/bookings': 'Rezerwacje',
   '/dashboard/profile': 'Profil firmy',
 };
-
-// ── SVG icons ──────────────────────────────────────────────────────────────
-
-const IconDashboard = () => (
-  <svg
-    width="15"
-    height="15"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2.2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden="true"
-  >
-    <rect x="3" y="3" width="7" height="9" rx="1" />
-    <rect x="14" y="3" width="7" height="5" rx="1" />
-    <rect x="14" y="12" width="7" height="9" rx="1" />
-    <rect x="3" y="16" width="7" height="5" rx="1" />
-  </svg>
-);
-const IconBookings = () => (
-  <svg
-    width="15"
-    height="15"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2.2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden="true"
-  >
-    <path d="M9 11H5a2 2 0 0 0-2 2v7h18v-7a2 2 0 0 0-2-2h-4M9 11V5a3 3 0 0 1 6 0v6M9 11h6" />
-  </svg>
-);
-const IconPricing = () => (
-  <svg
-    width="15"
-    height="15"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2.2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden="true"
-  >
-    <line x1="12" y1="1" x2="12" y2="23" />
-    <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
-  </svg>
-);
-const IconHours = () => (
-  <svg
-    width="15"
-    height="15"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2.2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden="true"
-  >
-    <circle cx="12" cy="12" r="9" />
-    <path d="M12 7v5l3 2" />
-  </svg>
-);
-const IconProfile = () => (
-  <svg
-    width="15"
-    height="15"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2.2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden="true"
-  >
-    <circle cx="12" cy="12" r="3" />
-    <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
-  </svg>
-);
 
 // ── Component ──────────────────────────────────────────────────────────────
 
@@ -173,14 +96,14 @@ export default function DashboardNav() {
             href="/dashboard"
             className={`${styles.navItem} ${isActive('/dashboard') ? styles.navActive : ''}`}
           >
-            <IconDashboard />
+            <IconDashboard width="15" height="15" />
             Dashboard
           </a>
           <a
             href="/dashboard/bookings"
             className={`${styles.navItem} ${isActive('/dashboard/bookings') ? styles.navActive : ''}`}
           >
-            <IconBookings />
+            <IconBookings width="15" height="15" />
             Rezerwacje
           </a>
 
@@ -189,14 +112,14 @@ export default function DashboardNav() {
             href="/dashboard/pricing"
             className={`${styles.navItem} ${isActive('/dashboard/pricing') ? styles.navActive : ''}`}
           >
-            <IconPricing />
+            <IconPricing width="15" height="15" />
             Cennik
           </a>
           <a
             href="/dashboard/hours"
             className={`${styles.navItem} ${isActive('/dashboard/hours') ? styles.navActive : ''}`}
           >
-            <IconHours />
+            <IconHours width="15" height="15" />
             Godziny pracy
           </a>
 
@@ -205,7 +128,7 @@ export default function DashboardNav() {
             href="/dashboard/profile"
             className={`${styles.navItem} ${isActive('/dashboard/profile') ? styles.navActive : ''}`}
           >
-            <IconProfile />
+            <IconProfile width="15" height="15" />
             Profil firmy
           </a>
         </nav>

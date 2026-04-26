@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { useProviderForm } from '../../../lib/hooks/use-provider-form';
 import { useAuth } from '../../../lib/auth';
+import { IconLock } from '../../../components/icons';
 import styles from './profile.module.css';
 
 const DESC_MAX = 3000;
@@ -85,16 +86,7 @@ export default function ProfilePage() {
               <div className={styles.field}>
                 <span className={styles.label}>NIP</span>
                 <div className={styles.lockedInput}>
-                  <svg
-                    width="13"
-                    height="13"
-                    viewBox="0 0 16 16"
-                    fill="currentColor"
-                    aria-hidden="true"
-                    className={styles.lockIco}
-                  >
-                    <path d="M4.5 7V5.5a3.5 3.5 0 0 1 7 0V7h.5a1 1 0 0 1 1 1v5.5a1 1 0 0 1-1 1h-8a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1h.5Zm1.5 0h4V5.5a2 2 0 0 0-4 0V7Z" />
-                  </svg>
+                  <IconLock width="13" height="13" className={styles.lockIco} />
                   <span className={styles.lockedVal}>{provider.nip}</span>
                   <span className={styles.lockedTag}>Niezmienialny</span>
                 </div>

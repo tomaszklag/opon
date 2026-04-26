@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { api, ApiError } from '../../lib/api';
 import { useAuth } from '../../lib/auth';
+import { IconLockOutline } from '../../components/icons';
 import styles from './dashboard.module.css';
 
 type ProviderStatus = 'PENDING' | 'APPROVED' | 'SUSPENDED';
@@ -141,23 +142,7 @@ function ActionTile({
         <div className={styles.actionTitle}>{title}</div>
         <div className={styles.actionDesc}>{description}</div>
       </div>
-      {locked && (
-        <svg
-          className={styles.lockIcon}
-          width="13"
-          height="13"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          aria-hidden="true"
-        >
-          <rect x="3" y="11" width="18" height="11" rx="2" />
-          <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-        </svg>
-      )}
+      {locked && <IconLockOutline className={styles.lockIcon} width="13" height="13" />}
     </button>
   );
 }

@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { usePricingTiers } from '../../../lib/hooks/use-pricing-tiers';
 import { useAuth } from '../../../lib/auth';
+import { IconTrash, IconInfo } from '../../../components/icons';
 import styles from './pricing.module.css';
 
 function rimLabel(min: number, max: number): string {
@@ -137,18 +138,7 @@ export default function PricingPage() {
                   onClick={() => deleteDraft(idx)}
                   aria-label={`Usuń tier ${rimLabel(d.rimSizeMin, d.rimSizeMax)}`}
                 >
-                  <svg
-                    width="13"
-                    height="13"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2.2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
-                  </svg>
+                  <IconTrash width="13" height="13" />
                 </button>
               </div>
             ))}
@@ -214,21 +204,7 @@ export default function PricingPage() {
           )}
 
           <div className={styles.infoNote}>
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-            >
-              <circle cx="12" cy="12" r="9" />
-              <path d="M12 8v5" />
-              <circle cx="12" cy="16" r="0.5" fill="currentColor" />
-            </svg>
+            <IconInfo width="14" height="14" />
             <p>
               <strong>Zmiana cen wpływa tylko na nowe rezerwacje.</strong> Istniejące rezerwacje
               zachowują ceny sprzed zmiany. W okresie pilotażowym platforma nie pobiera prowizji.

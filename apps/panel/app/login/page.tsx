@@ -1,6 +1,7 @@
 'use client';
 
 import { useLoginFlow } from '../../lib/hooks/use-login-flow';
+import { IconArrowRight, IconHelp, IconLock, IconShield } from '../../components/icons';
 import styles from './login.module.css';
 
 export default function LoginPage() {
@@ -92,19 +93,7 @@ export default function LoginPage() {
                 aria-disabled={loading || digits.length !== 9}
               >
                 {loading ? 'Wysyłanie…' : 'WYŚLIJ KOD SMS'}
-                {!loading && (
-                  <svg
-                    className={styles.arr}
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2.5"
-                    aria-hidden="true"
-                  >
-                    <line x1="5" y1="12" x2="19" y2="12" />
-                    <polyline points="12 5 19 12 12 19" />
-                  </svg>
-                )}
+                {!loading && <IconArrowRight className={styles.arr} />}
               </button>
 
               <div className={styles.altLinkRow}>
@@ -112,17 +101,7 @@ export default function LoginPage() {
                   Nie masz jeszcze konta? <a href="/register">Załóż warsztat</a>
                 </span>
                 <a className={styles.helpLink} href="#">
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    aria-hidden="true"
-                  >
-                    <circle cx="12" cy="12" r="10" />
-                    <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
-                    <line x1="12" y1="17" x2="12.01" y2="17" />
-                  </svg>
+                  <IconHelp />
                   Problem z logowaniem?
                 </a>
               </div>
@@ -174,19 +153,7 @@ export default function LoginPage() {
                 aria-disabled={loading || code.length !== 6}
               >
                 {loading ? 'Weryfikacja…' : 'ZALOGUJ SIĘ'}
-                {!loading && (
-                  <svg
-                    className={styles.arr}
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2.5"
-                    aria-hidden="true"
-                  >
-                    <line x1="5" y1="12" x2="19" y2="12" />
-                    <polyline points="12 5 19 12 12 19" />
-                  </svg>
-                )}
+                {!loading && <IconArrowRight className={styles.arr} />}
               </button>
 
               <div className={styles.timerRow}>
@@ -223,27 +190,11 @@ export default function LoginPage() {
           </div>
           <div className={styles.trustCluster}>
             <span className={styles.trustBadge}>
-              <svg
-                className={styles.badgeIco}
-                viewBox="0 0 16 16"
-                fill="currentColor"
-                aria-hidden="true"
-              >
-                <path d="M4.5 7V5.5a3.5 3.5 0 0 1 7 0V7h.5a1 1 0 0 1 1 1v5.5a1 1 0 0 1-1 1h-8a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1h.5Z" />
-              </svg>
+              <IconLock className={styles.badgeIco} />
               TLS 1.3
             </span>
             <span className={styles.trustBadge}>
-              <svg
-                className={styles.badgeIco}
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.5"
-                aria-hidden="true"
-              >
-                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-              </svg>
+              <IconShield className={styles.badgeIco} />
               RODO
             </span>
           </div>
