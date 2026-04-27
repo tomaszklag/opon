@@ -30,7 +30,7 @@
 .sidebar {
   width: 220px;
   flex-shrink: 0;
-  background: var(--bg-surface);
+  background: var(--surface);
   border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
@@ -52,7 +52,7 @@
   font-size: 22px;
   letter-spacing: 3px;
   line-height: 1;
-  color: var(--text);
+  color: var(--text-primary);
 }
 
 .sidebarTag {
@@ -105,8 +105,8 @@
 }
 
 .navItem:hover {
-  background: var(--bg-elevated);
-  color: var(--text);
+  background: var(--surface-raised);
+  color: var(--text-primary);
 }
 
 .navItem svg {
@@ -170,7 +170,7 @@
 .userPhone {
   font-size: 12px;
   font-weight: 700;
-  color: var(--text);
+  color: var(--text-primary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -221,7 +221,7 @@
   padding: 0 28px;
   gap: 14px;
   flex-shrink: 0;
-  background: var(--bg-surface);
+  background: var(--surface);
 }
 
 .breadcrumb {
@@ -242,7 +242,7 @@
 }
 
 .breadcrumbCurrent {
-  color: var(--text);
+  color: var(--text-primary);
 }
 
 .topbarSpacer {
@@ -252,7 +252,7 @@
 .topbarFirmName {
   font-size: 13px;
   font-weight: 700;
-  color: var(--text);
+  color: var(--text-primary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -329,7 +329,7 @@
 }
 
 .statCard {
-  background: var(--bg-surface);
+  background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   padding: 14px 16px;
@@ -348,7 +348,7 @@
   font-family: var(--font-mono, monospace);
   font-size: 14px;
   font-weight: 700;
-  color: var(--text);
+  color: var(--text-primary);
 }
 
 /* ── Actions grid ── */
@@ -363,7 +363,7 @@
   align-items: flex-start;
   gap: 14px;
   padding: 18px;
-  background: var(--bg-surface);
+  background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   cursor: pointer;
@@ -375,7 +375,7 @@
 
 .actionTile:hover:not(:disabled) {
   border-color: var(--border-strong);
-  background: var(--bg-elevated);
+  background: var(--surface-raised);
 }
 
 .actionTileLocked {
@@ -397,7 +397,7 @@
 .actionTitle {
   font-size: 14px;
   font-weight: 700;
-  color: var(--text);
+  color: var(--text-primary);
   margin-bottom: 4px;
 }
 

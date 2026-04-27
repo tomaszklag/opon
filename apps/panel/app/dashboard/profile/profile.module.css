@@ -12,7 +12,7 @@
   gap: 10px;
   padding: 10px 28px;
   border-bottom: 1px solid var(--border);
-  background: var(--bg-surface);
+  background: var(--surface);
   flex-shrink: 0;
 }
 
@@ -107,7 +107,7 @@
   font-size: 38px;
   letter-spacing: 2px;
   line-height: 1;
-  color: var(--text);
+  color: var(--text-primary);
 }
 
 .pageSub {
@@ -128,7 +128,7 @@
 
 /* ── Section ── */
 .section {
-  background: var(--bg-surface);
+  background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 14px;
   padding: 18px;
@@ -160,7 +160,7 @@
   font-family: var(--font-display, 'Bebas Neue'), sans-serif;
   font-size: 20px;
   letter-spacing: 2px;
-  color: var(--text);
+  color: var(--text-primary);
   line-height: 1;
 }
 
@@ -213,7 +213,7 @@
   border-radius: 8px;
   padding: 10px 12px;
   font-size: 13px;
-  color: var(--text);
+  color: var(--text-primary);
   outline: none;
   transition: border-color 0.12s, background 0.12s, box-shadow 0.12s;
 }
@@ -221,7 +221,7 @@
 .input:focus,
 .textarea:focus {
   border-color: var(--accent-border);
-  background: var(--bg-elevated);
+  background: var(--surface-raised);
   box-shadow: 0 0 0 3px var(--accent-muted);
 }
 
@@ -280,7 +280,7 @@
 }
 
 .lockedVal {
-  color: var(--text);
+  color: var(--text-primary);
   font-weight: 700;
   letter-spacing: 0.5px;
   flex: 1;
@@ -289,7 +289,7 @@
 .lockedTag {
   font-size: 9px;
   padding: 2px 6px;
-  background: var(--bg-surface);
+  background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 4px;
   color: var(--text-muted);
@@ -327,7 +327,7 @@
   font-family: var(--font-mono, monospace);
   font-size: 12px;
   font-weight: 700;
-  color: var(--text);
+  color: var(--text-primary);
   letter-spacing: 0.3px;
 }
 
@@ -338,7 +338,7 @@
 }
 
 .previewPanel {
-  background: var(--bg-surface);
+  background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 14px;
   padding: 16px;
@@ -370,7 +370,7 @@
   font-family: var(--font-display, 'Bebas Neue'), sans-serif;
   font-size: 18px;
   letter-spacing: 1.8px;
-  color: var(--text);
+  color: var(--text-primary);
   line-height: 1;
 }
 
@@ -428,7 +428,7 @@
   font-family: var(--font-display, 'Bebas Neue'), sans-serif;
   font-size: 20px;
   letter-spacing: 1.5px;
-  color: var(--text);
+  color: var(--text-primary);
   line-height: 1;
 }
 

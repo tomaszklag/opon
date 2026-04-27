@@ -12,7 +12,7 @@
   gap: 12px;
   padding: 10px 28px;
   border-bottom: 1px solid var(--border);
-  background: var(--bg-surface);
+  background: var(--surface);
   flex-shrink: 0;
 }
 
@@ -94,7 +94,7 @@
   font-size: 38px;
   letter-spacing: 2px;
   line-height: 1;
-  color: var(--text);
+  color: var(--text-primary);
 }
 
 .pageSub {
@@ -105,7 +105,7 @@
 
 /* ── Section card ── */
 .secCard {
-  background: var(--bg-surface);
+  background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 14px;
   padding: 18px;
@@ -138,7 +138,7 @@
   font-family: var(--font-display, 'Bebas Neue'), sans-serif;
   font-size: 20px;
   letter-spacing: 2px;
-  color: var(--text);
+  color: var(--text-primary);
   line-height: 1;
 }
 
@@ -197,7 +197,7 @@
   font-family: var(--font-display, 'Bebas Neue'), sans-serif;
   font-size: 20px;
   letter-spacing: 1.5px;
-  color: var(--text);
+  color: var(--text-primary);
   line-height: 1;
 }
 
@@ -261,7 +261,7 @@
 .timeInput {
   display: inline-flex;
   align-items: center;
-  background: var(--bg-elevated);
+  background: var(--surface-raised);
   border: 1px solid var(--border-strong);
   border-radius: 8px;
   padding: 7px 10px;
@@ -284,7 +284,7 @@
   background: transparent;
   border: none;
   outline: none;
-  color: var(--text);
+  color: var(--text-primary);
   font-family: var(--font-mono, monospace);
   font-weight: 700;
   font-size: 13px;
@@ -304,11 +304,11 @@
 .slotSelect {
   appearance: none;
   -webkit-appearance: none;
-  background: var(--bg-elevated);
+  background: var(--surface-raised);
   border: 1px solid var(--border-strong);
   border-radius: 8px;
   padding: 7px 12px;
-  color: var(--text);
+  color: var(--text-primary);
   font-family: var(--font-mono, monospace);
   font-size: 13px;
   font-weight: 700;
@@ -349,7 +349,7 @@
   font-family: var(--font-mono, monospace);
   font-size: 13px;
   font-weight: 700;
-  color: var(--text);
+  color: var(--text-primary);
   letter-spacing: 0.3px;
 }
 
@@ -378,7 +378,7 @@
 }
 
 .previewPanel {
-  background: var(--bg-surface);
+  background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 14px;
   padding: 16px;
@@ -410,7 +410,7 @@
   font-family: var(--font-display, 'Bebas Neue'), sans-serif;
   font-size: 18px;
   letter-spacing: 1.8px;
-  color: var(--text);
+  color: var(--text-primary);
   line-height: 1;
 }
 
@@ -477,7 +477,7 @@
   font-family: var(--font-mono, monospace);
   font-size: 10px;
   font-weight: 700;
-  color: var(--text);
+  color: var(--text-primary);
   letter-spacing: 0.3px;
   white-space: nowrap;
   min-width: 95px;

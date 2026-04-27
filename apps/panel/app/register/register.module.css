@@ -10,7 +10,7 @@
 .card {
   width: 100%;
   max-width: 600px;
-  background: var(--bg-surface);
+  background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   padding: 40px 36px;
@@ -41,7 +41,7 @@
 }
 
 .stepActive {
-  color: var(--text);
+  color: var(--text-primary);
   font-weight: 600;
 }
 
@@ -58,7 +58,7 @@
   width: 24px;
   height: 24px;
   border-radius: 50%;
-  background: var(--bg-elevated);
+  background: var(--surface-raised);
   border: 1px solid var(--border);
   display: flex;
   align-items: center;
@@ -84,7 +84,7 @@
 .title {
   font-size: 22px;
   font-weight: 600;
-  color: var(--text);
+  color: var(--text-primary);
   margin-bottom: 6px;
 }
 
@@ -131,10 +131,10 @@
 .textarea {
   width: 100%;
   padding: 10px 12px;
-  background: var(--bg-elevated);
+  background: var(--surface-raised);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  color: var(--text);
+  color: var(--text-primary);
   font-size: 14px;
   outline: none;
   transition: border-color 0.15s;
@@ -162,8 +162,8 @@
 }
 
 .select option {
-  background: var(--bg-elevated);
-  color: var(--text);
+  background: var(--surface-raised);
+  color: var(--text-primary);
 }
 
 .textarea {
@@ -205,7 +205,7 @@
 
 /* Step 2 — summary */
 .summary {
-  background: var(--bg-elevated);
+  background: var(--surface-raised);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   padding: 16px;
@@ -228,7 +228,7 @@
 }
 
 .summaryValue {
-  color: var(--text);
+  color: var(--text-primary);
   word-break: break-word;
 }
 
@@ -250,8 +250,8 @@
 
 .btnSecondary {
   padding: 12px 16px;
-  background: var(--bg-elevated);
-  color: var(--text);
+  background: var(--surface-raised);
+  color: var(--text-primary);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   font-size: 14px;

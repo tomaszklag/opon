@@ -27,7 +27,7 @@
   font-size: 30px;
   letter-spacing: 3.5px;
   line-height: 1;
-  color: var(--text);
+  color: var(--text-primary);
   display: inline-flex;
   align-items: baseline;
   gap: 4px;
@@ -48,7 +48,7 @@
   font-size: 10px;
   padding: 3px 7px;
   border-radius: 5px;
-  background: var(--bg-surface);
+  background: var(--surface);
   border: 1px solid var(--border);
   color: var(--text-muted);
   letter-spacing: 1.5px;
@@ -109,7 +109,7 @@
   font-size: 56px;
   letter-spacing: 2.5px;
   line-height: 0.95;
-  color: var(--text);
+  color: var(--text-primary);
   margin-top: -4px;
 }
 
@@ -122,7 +122,7 @@
 }
 
 .subtitle strong {
-  color: var(--text);
+  color: var(--text-primary);
   font-weight: 700;
 }
 
@@ -164,7 +164,7 @@
 
 .phonePrefix {
   padding: 14px;
-  background: var(--bg-surface);
+  background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 10px;
   display: inline-flex;
@@ -186,20 +186,20 @@
   font-family: var(--font-mono, monospace);
   font-size: 15px;
   font-weight: 700;
-  color: var(--text);
+  color: var(--text-primary);
   letter-spacing: 0.5px;
 }
 
 .phoneField {
   width: 100%;
-  background: var(--bg-surface);
+  background: var(--surface);
   border: 1px solid var(--accent-border);
   border-radius: 10px;
   padding: 14px 16px;
   font-family: var(--font-mono, monospace);
   font-size: 18px;
   letter-spacing: 2px;
-  color: var(--text);
+  color: var(--text-primary);
   outline: none;
   box-shadow: 0 0 0 3px var(--accent-muted);
   transition: border-color 0.14s, box-shadow 0.14s;
@@ -323,14 +323,14 @@
 
 .otpCell {
   aspect-ratio: 1;
-  background: var(--bg-elevated);
+  background: var(--surface-raised);
   border: 1px solid var(--border-strong);
   border-radius: 10px;
   text-align: center;
   font-family: var(--font-mono, monospace);
   font-size: 22px;
   font-weight: 700;
-  color: var(--text);
+  color: var(--text-primary);
   outline: none;
   transition: border-color 0.14s, box-shadow 0.14s;
   padding: 0;
@@ -363,7 +363,7 @@
   align-items: center;
   gap: 5px;
   padding: 4px 10px;
-  background: var(--bg-surface);
+  background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 6px;
   font-family: var(--font-mono, monospace);
@@ -393,7 +393,7 @@
 }
 
 .linkBtn:hover:not(:disabled) {
-  color: var(--text);
+  color: var(--text-primary);
 }
 
 .linkBtn:disabled {
@@ -429,7 +429,7 @@
 }
 
 .legalRow a:hover {
-  color: var(--text);
+  color: var(--text-primary);
 }
 
 .legalSep {
@@ -450,7 +450,7 @@
   gap: 5px;
   padding: 4px 8px;
   border-radius: 5px;
-  background: var(--bg-surface);
+  background: var(--surface);
   border: 1px solid var(--border);
   font-family: var(--font-mono, monospace);
   font-size: 9px;
@@ -529,7 +529,7 @@
   font-family: var(--font-display, 'Bebas Neue'), sans-serif;
   font-size: 17px;
   letter-spacing: 1.5px;
-  color: var(--text);
+  color: var(--text-primary);
   line-height: 1;
   margin-bottom: 8px;
 }
@@ -543,7 +543,7 @@
 
 .otpPreviewSub strong {
   font-family: var(--font-mono, monospace);
-  color: var(--text);
+  color: var(--text-primary);
   font-weight: 700;
 }
 
@@ -564,7 +564,7 @@
   font-family: var(--font-mono, monospace);
   font-size: 16px;
   font-weight: 700;
-  color: var(--text);
+  color: var(--text-primary);
 }
 
 .otpCellFilled {
@@ -594,7 +594,7 @@
   align-items: center;
   gap: 5px;
   padding: 3px 7px;
-  background: var(--bg-surface);
+  background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 4px;
   color: var(--accent);
@@ -640,7 +640,7 @@
   font-size: 62px;
   line-height: 0.95;
   letter-spacing: 2.5px;
-  color: var(--text);
+  color: var(--text-primary);
 }
 
 .heroEm {
@@ -667,7 +667,7 @@
   font-size: 42px;
   letter-spacing: 2px;
   line-height: 0.9;
-  color: var(--text);
+  color: var(--text-primary);
 }
 
 .statEm {
@@ -692,7 +692,7 @@
 
 /* ── Quote card ── */
 .quoteCard {
-  background: var(--bg-surface);
+  background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 14px;
   padding: 20px 22px;
@@ -713,7 +713,7 @@
 .quoteText {
   font-size: 14px;
   line-height: 1.55;
-  color: var(--text);
+  color: var(--text-primary);
   margin-bottom: 14px;
   font-style: italic;
 }
@@ -748,7 +748,7 @@
 .quoteName {
   font-size: 12px;
   font-weight: 700;
-  color: var(--text);
+  color: var(--text-primary);
 }
 
 .quoteRole {

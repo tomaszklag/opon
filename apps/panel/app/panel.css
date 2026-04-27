@@ -1,15 +1,4 @@
-/*
- * panel.css — panel-specific overrides only.
- * Design tokens come from @opony/design-system-web/global.css (imported first in layout.tsx).
- *
- * Aliases — panel module CSS files use these names for backward compatibility.
- * Over time, migrate module files to use DS token names directly.
- */
-:root {
-  --bg-surface:  var(--surface);        /* legacy alias → --surface  */
-  --bg-elevated: var(--surface-raised); /* legacy alias → --surface-raised */
-  --text:        var(--text-primary);   /* legacy alias → --text-primary */
-}
+/* panel.css — panel-specific overrides. Tokens from @opony/design-system-web/global.css. */
 
 /* Base */
 html,
