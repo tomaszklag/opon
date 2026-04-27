@@ -99,7 +99,7 @@ export function useLoginFlow() {
     setClientRoleError(false);
     setLoading(true);
     try {
-      const res = await verifyOtp({ phone, code });
+      await verifyOtp({ phone, code });
       const user = await getMe();
 
       if (user.role === 'CLIENT') {
@@ -109,14 +109,7 @@ export function useLoginFlow() {
       }
 
       login(user);
-
-      if (!res.providerId) {
-        router.replace('/register');
-      } else if (user.status !== 'APPROVED') {
-        router.replace('/onboarding/weryfikacja');
-      } else {
-        router.replace('/dashboard');
-      }
+      router.replace(canonicalRoute(user));
     } catch (err) {
       if (err instanceof ApiError && err.isTooManyRequests) {
         // Too many wrong OTP attempts — back to phone step with rate limit

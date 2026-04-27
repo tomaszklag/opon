@@ -5,8 +5,10 @@ interface Props {
   status: ProviderStatus;
 }
 
+const PENDING_STATUSES: ProviderStatus[] = ['PENDING_NIP', 'PENDING_DOCS', 'PENDING_APPROVAL'];
+
 export function StatusBanners({ status }: Props) {
-  if (status === 'PENDING') {
+  if (PENDING_STATUSES.includes(status)) {
     return (
       <div className={styles.pendingBanner}>
         <strong>Firma oczekuje na weryfikację.</strong> Nasz zespół sprawdzi dane w ciągu 24 godzin.
@@ -20,6 +22,15 @@ export function StatusBanners({ status }: Props) {
       <div className={styles.suspendedBanner}>
         <strong>Konto zawieszone.</strong> Skontaktuj się z nami pod adresem kontakt@opony.app, aby
         wyjaśnić sytuację.
+      </div>
+    );
+  }
+
+  if (status === 'REJECTED') {
+    return (
+      <div className={styles.suspendedBanner}>
+        <strong>Rejestracja odrzucona.</strong> Skontaktuj się z nami pod adresem kontakt@opony.app,
+        aby wyjaśnić sytuację.
       </div>
     );
   }

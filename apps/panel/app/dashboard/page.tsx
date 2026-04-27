@@ -27,8 +27,8 @@ export default function DashboardPage() {
 
       <div className={styles.statsGrid}>
         <StatCard label="NIP" value={provider.nip} />
-        <StatCard label="Telefon" value={provider.phone} />
-        <StatCard label="Miasto" value={`${provider.city}, ${provider.voivodeship}`} />
+        <StatCard label="Telefon" value={provider.phone ?? '—'} />
+        <StatCard label="Typ" value={provider.type === 'MOBILE' ? 'Mobilny' : 'Stacjonarny'} />
         <StatCard label="Status" value={STATUS_LABEL[provider.status]} />
       </div>
 

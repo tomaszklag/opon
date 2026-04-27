@@ -2,49 +2,49 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { api, ApiError } from '../api';
+import { getProvider, type Provider } from '../../api-data-access/providers';
+import { ApiError } from '../api';
+import { canonicalRoute } from '../auth-routing';
 import { useAuth } from '../auth';
 
-export type ProviderStatus = 'PENDING' | 'APPROVED' | 'SUSPENDED';
-
-export interface DashboardProvider {
-  id: string;
-  name: string;
-  status: ProviderStatus;
-  city: string;
-  voivodeship: string;
-  phone: string;
-  email?: string;
-  nip: string;
-}
+export type ProviderStatus = Provider['status'];
 
 export const STATUS_LABEL: Record<ProviderStatus, string> = {
-  PENDING: 'Oczekuje na weryfikację',
+  PENDING_NIP: 'Oczekuje na NIP',
+  PENDING_DOCS: 'Oczekuje na dokumenty',
+  PENDING_APPROVAL: 'Oczekuje na weryfikację',
   APPROVED: 'Aktywna',
   SUSPENDED: 'Zawieszona',
+  REJECTED: 'Odrzucona',
 };
 
 export function useDashboard() {
   const router = useRouter();
-  const { status } = useAuth();
+  const auth = useAuth();
+  const user = auth.status === 'authenticated' ? auth.user : null;
 
-  const [provider, setProvider] = useState<DashboardProvider | null>(null);
+  const [provider, setProvider] = useState<Provider | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (status === 'unauthenticated') router.replace('/login');
-  }, [status, router]);
+    if (auth.status === 'loading') return;
+    const target = canonicalRoute(user);
+    if (target !== '/dashboard') {
+      router.replace(target);
+    }
+  }, [user, auth.status, router]);
 
   useEffect(() => {
-    if (status !== 'authenticated') return;
-    api
-      .get<DashboardProvider>('/v1/providers/me')
+    if (auth.status !== 'authenticated') return;
+    getProvider()
       .then(setProvider)
       .catch((err) => {
-        if (err instanceof ApiError && err.status === 404) router.replace('/register');
+        if (err instanceof ApiError && err.status === 404) {
+          router.replace('/register');
+        }
       })
       .finally(() => setLoading(false));
-  }, [status, router]);
+  }, [auth.status, router]);
 
-  return { provider, loading, authLoading: status === 'loading' };
+  return { provider, loading, authLoading: auth.status === 'loading' };
 }
