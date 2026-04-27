@@ -25,7 +25,7 @@ export function FirmStep({ flow }: Props) {
     control,
     register,
     watch,
-    formState: { errors, isSubmitting, isValid },
+    formState: { errors, isSubmitting },
   } = form;
 
   const consentTerms = watch('consentTerms');
@@ -108,8 +108,12 @@ export function FirmStep({ flow }: Props) {
             </span>
             <div className={styles.consentCol}>
               <div className={styles.consentTitleRow}>
-                <span className={styles.consentTitle}>Regulamin platformy Opony.app</span>
-                <span className={`${styles.consentBadge} ${styles.consentBadgeReq}`}>Wymagane</span>
+                <span className={styles.consentTitle}>
+                  Regulamin platformy Opony.app
+                  <span className={styles.consentReqStar} aria-hidden="true">
+                    *
+                  </span>
+                </span>
               </div>
               <p className={styles.consentDesc}>
                 <strong style={{ color: 'var(--accent)' }}>
@@ -145,8 +149,12 @@ export function FirmStep({ flow }: Props) {
             </span>
             <div className={styles.consentCol}>
               <div className={styles.consentTitleRow}>
-                <span className={styles.consentTitle}>Polityka prywatności (RODO)</span>
-                <span className={`${styles.consentBadge} ${styles.consentBadgeReq}`}>Wymagane</span>
+                <span className={styles.consentTitle}>
+                  Polityka prywatności (RODO)
+                  <span className={styles.consentReqStar} aria-hidden="true">
+                    *
+                  </span>
+                </span>
               </div>
               <p className={styles.consentDesc}>
                 Przetwarzanie danych klientów zgodnie z RODO, retencja, bezpieczeństwo, eksport /
@@ -307,7 +315,7 @@ export function FirmStep({ flow }: Props) {
           type="submit"
           variant="primary"
           loading={isSubmitting}
-          disabled={!isValid}
+          disabled={isSubmitting}
           className={styles.ctaBtn}
         >
           Dalej

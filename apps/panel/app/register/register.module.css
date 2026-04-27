@@ -389,6 +389,11 @@
   color: var(--text-primary);
 }
 
+.consentReqStar {
+  color: var(--accent);
+  margin-left: 2px;
+}
+
 .consentBadge {
   font-size: 9px;
   font-weight: 800;

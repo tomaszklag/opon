@@ -30,7 +30,6 @@ export function useRegisterFlow() {
       nip: '',
       phone: '',
       email: '',
-      iban: '',
     },
   });
 
@@ -81,7 +80,7 @@ export function useRegisterFlow() {
 
   function toggleConsent(field: 'consentTerms' | 'consentRodo' | 'consentMarketing') {
     form.setValue(field, !form.getValues(field), {
-      shouldValidate: form.formState.isSubmitted,
+      shouldValidate: true,
     });
   }
 
