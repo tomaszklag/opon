@@ -2,7 +2,23 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
 
 type ApiOptions = Omit<RequestInit, 'body'> & { body?: unknown };
 
-async function request<T>(path: string, options: ApiOptions = {}): Promise<T> {
+let refreshing: Promise<boolean> | null = null;
+
+async function tryRefresh(): Promise<boolean> {
+  if (refreshing) return refreshing;
+  refreshing = fetch(`${API_URL}/v1/auth/refresh`, {
+    method: 'POST',
+    credentials: 'include',
+  })
+    .then((r) => r.ok)
+    .catch(() => false)
+    .finally(() => {
+      refreshing = null;
+    });
+  return refreshing;
+}
+
+async function request<T>(path: string, options: ApiOptions = {}, retry = true): Promise<T> {
   const { body, ...rest } = options;
 
   const res = await fetch(`${API_URL}${path}`, {
@@ -14,6 +30,11 @@ async function request<T>(path: string, options: ApiOptions = {}): Promise<T> {
     },
     ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
   });
+
+  if (res.status === 401 && retry) {
+    const ok = await tryRefresh();
+    if (ok) return request<T>(path, options, false);
+  }
 
   if (!res.ok) {
     const error = await res.json().catch(() => ({ message: 'Błąd sieci' }));

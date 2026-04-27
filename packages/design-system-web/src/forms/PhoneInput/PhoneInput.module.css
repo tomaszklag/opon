@@ -79,6 +79,7 @@
   font-weight: var(--font-semibold);
   letter-spacing: 2px;
   color: var(--text-primary);
+  caret-color: var(--accent);
   outline: none;
   width: 100%;
   transition: border-color var(--transition-base), box-shadow var(--transition-base);

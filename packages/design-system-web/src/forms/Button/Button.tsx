@@ -35,8 +35,15 @@ export function Button({
     .filter(Boolean)
     .join(' ');
 
+  const isDisabled = disabled || loading;
   return (
-    <button className={cls} disabled={disabled || loading} aria-busy={loading} {...props}>
+    <button
+      className={cls}
+      disabled={isDisabled}
+      aria-disabled={isDisabled || undefined}
+      aria-busy={loading}
+      {...props}
+    >
       {loading && (
         <svg
           className={styles.spinner}

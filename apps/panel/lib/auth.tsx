@@ -5,11 +5,20 @@ import { api, ApiError } from './api';
 
 export type UserRole = 'CLIENT' | 'PROVIDER_OWNER' | 'PROVIDER_STAFF' | 'ADMIN';
 
+export type ProviderStatus =
+  | 'PENDING_NIP'
+  | 'PENDING_DOCS'
+  | 'PENDING_APPROVAL'
+  | 'APPROVED'
+  | 'SUSPENDED'
+  | 'REJECTED';
+
 export type AuthUser = {
   sub: string;
   phone: string;
   role: UserRole;
   providerId?: string;
+  status?: ProviderStatus;
   jti?: string;
 };
 

@@ -105,7 +105,14 @@ export function useLoginFlow() {
       }
 
       login(user);
-      router.replace(res.providerId ? '/dashboard' : '/register');
+
+      if (!res.providerId) {
+        router.replace('/register');
+      } else if (user.status !== 'APPROVED') {
+        router.replace('/onboarding/weryfikacja');
+      } else {
+        router.replace('/dashboard');
+      }
     } catch (err) {
       if (err instanceof ApiError && err.isTooManyRequests) {
         // Too many wrong OTP attempts — back to phone step with rate limit
