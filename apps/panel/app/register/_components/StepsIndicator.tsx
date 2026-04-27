@@ -1,21 +1,53 @@
 import styles from '../register.module.css';
 
+const STEPS = ['Firma', 'Zdjęcia', 'Weryfikacja'];
+
 interface Props {
-  step: 'firm' | 'confirm';
+  currentStep?: 1 | 2 | 3;
 }
 
-export function StepsIndicator({ step }: Props) {
+export function StepsIndicator({ currentStep = 1 }: Props) {
   return (
-    <div className={styles.steps}>
-      <div className={`${styles.step} ${step === 'firm' ? styles.stepActive : styles.stepDone}`}>
-        <span className={styles.stepNum}>1</span>
-        <span>Dane firmy</span>
-      </div>
-      <div className={styles.stepLine} />
-      <div className={`${styles.step} ${step === 'confirm' ? styles.stepActive : ''}`}>
-        <span className={styles.stepNum}>2</span>
-        <span>Potwierdzenie</span>
-      </div>
+    <div
+      className={styles.stepperBar}
+      role="progressbar"
+      aria-valuemin={1}
+      aria-valuemax={3}
+      aria-valuenow={currentStep}
+      aria-label={`Krok ${currentStep} z 3: ${STEPS[currentStep - 1]}`}
+    >
+      {STEPS.flatMap((label, i) => {
+        const stepNum = i + 1;
+        const isActive = stepNum === currentStep;
+        const isDone = stepNum < currentStep;
+        const stepClass = [
+          styles.step,
+          isActive ? styles.stepActive : '',
+          isDone ? styles.stepDone : '',
+        ]
+          .filter(Boolean)
+          .join(' ');
+
+        const elements = [];
+
+        if (i > 0) {
+          elements.push(
+            <span
+              key={`connector-${i}`}
+              className={`${styles.stepConnector} ${isDone ? styles.stepConnectorDone : ''}`}
+            />,
+          );
+        }
+
+        elements.push(
+          <div key={label} className={stepClass}>
+            <span className={styles.stepNum}>{stepNum}</span>
+            <span className={styles.stepLabel}>{label}</span>
+          </div>,
+        );
+
+        return elements;
+      })}
     </div>
   );
 }

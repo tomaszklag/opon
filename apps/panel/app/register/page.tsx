@@ -1,39 +1,52 @@
 'use client';
 
+import Link from 'next/link';
 import { useRegisterFlow } from '../../lib/hooks/use-register-flow';
+import { useAuthGuard } from '../../lib/hooks/use-auth-guard';
 import { StepsIndicator } from './_components/StepsIndicator';
 import { FirmStep } from './_components/FirmStep';
-import { ConfirmStep } from './_components/ConfirmStep';
 import styles from './register.module.css';
 
 export default function RegisterPage() {
+  const { isLoading: authLoading } = useAuthGuard('/register');
   const flow = useRegisterFlow();
+
+  if (authLoading) {
+    return (
+      <div className={styles.page}>
+        <div className={styles.loadingWrap}>
+          <span className={styles.loadingSpinner} />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={styles.page}>
-      <div className={styles.card}>
-        <div className={styles.logo}>opony.app</div>
+      {/* Top strip */}
+      <header className={styles.topStrip}>
+        <Link className={styles.brand} href="/">
+          <span className={styles.brandWordmark}>
+            OPONY
+            <span className={styles.brandDot} />
+          </span>
+          <span className={styles.panelTag}>PANEL</span>
+        </Link>
+        <span className={styles.topStripSpacer} />
+        <span className={styles.loginLink}>
+          Masz już konto?
+          <Link className={styles.loginLinkAnchor} href="/login">
+            Zaloguj się →
+          </Link>
+        </span>
+      </header>
 
-        <StepsIndicator step={flow.step} />
+      {/* Stepper */}
+      <StepsIndicator currentStep={1} />
 
-        {flow.step === 'firm' ? (
-          <FirmStep
-            data={flow.data}
-            error={flow.error}
-            onSubmit={flow.handleFirmNext}
-            setField={flow.setField}
-            setNip={flow.setNip}
-            setPostalCode={flow.setPostalCode}
-          />
-        ) : (
-          <ConfirmStep
-            data={flow.data}
-            error={flow.error}
-            loading={flow.loading}
-            onSubmit={flow.handleSubmit}
-            onGoBack={flow.goBack}
-          />
-        )}
+      {/* Form scroll area */}
+      <div className={styles.formScroll}>
+        <FirmStep flow={flow} />
       </div>
     </div>
   );
