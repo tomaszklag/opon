@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { requestOtp, verifyOtp, getMe } from '../../api-data-access/auth';
 import { ApiError } from '../api';
 import { useAuth } from '../auth';
+import { canonicalRoute } from '../auth-routing';
 
 type Step = 'phone' | 'otp';
 type PhoneHint = 'none' | 'recognized' | 'not-registered';
@@ -17,7 +18,9 @@ function formatCountdown(secs: number): string {
 
 export function useLoginFlow() {
   const router = useRouter();
-  const { status, login } = useAuth();
+  const auth = useAuth();
+  const { status, login } = auth;
+  const user = auth.status === 'authenticated' ? auth.user : null;
 
   const [step, setStep] = useState<Step>('phone');
   const [digits, setDigits] = useState('');
@@ -41,8 +44,9 @@ export function useLoginFlow() {
   const isRateLimited = rateLimitCountdown > 0;
 
   useEffect(() => {
-    if (status === 'authenticated') router.replace('/dashboard');
-  }, [status, router]);
+    if (!user) return;
+    router.replace(canonicalRoute(user));
+  }, [user, router]);
 
   useEffect(() => {
     if (otpCountdown <= 0) return;

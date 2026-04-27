@@ -2,8 +2,9 @@
 
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { api, ApiError } from '../../../lib/api';
+import { api } from '../../../lib/api';
 import { useAuth } from '../../../lib/auth';
+import { useAuthGuard } from '../../../lib/hooks/use-auth-guard';
 import {
   IconDashboard,
   IconBookings,
@@ -45,30 +46,18 @@ const PAGE_TITLE: Record<string, string> = {
 export default function DashboardNav() {
   const pathname = usePathname();
   const router = useRouter();
-  const auth = useAuth();
-  const { status, logout } = auth;
-  const user = auth.status === 'authenticated' ? auth.user : null;
+  const { logout } = useAuth();
+  const { user } = useAuthGuard('/dashboard');
 
   const [provider, setProvider] = useState<ProviderMini | null>(null);
 
   useEffect(() => {
-    if (status === 'unauthenticated') {
-      router.replace('/login');
-      return;
-    }
-    if (status !== 'authenticated') return;
-
+    if (!user) return;
     api
       .get<ProviderMini>('/v1/providers/me')
-      .catch((err) => {
-        if (err instanceof ApiError && err.status === 404) {
-          router.replace('/register');
-        }
-      })
-      .then((p) => {
-        if (p) setProvider(p);
-      });
-  }, [status, router]);
+      .then((p) => setProvider(p))
+      .catch(() => {});
+  }, [user]);
 
   async function handleLogout() {
     await logout();

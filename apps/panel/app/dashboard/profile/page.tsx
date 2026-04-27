@@ -1,9 +1,7 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
 import { useProviderForm } from '../../../lib/hooks/use-provider-form';
-import { useAuth } from '../../../lib/auth';
+import { useAuthGuard } from '../../../lib/hooks/use-auth-guard';
 import { ProfileActionBar } from './_components/ProfileActionBar';
 import { IdentitySection } from './_components/IdentitySection';
 import { ContactSection } from './_components/ContactSection';
@@ -12,8 +10,7 @@ import { ProfilePreview } from './_components/ProfilePreview';
 import styles from './profile.module.css';
 
 export default function ProfilePage() {
-  const router = useRouter();
-  const { status } = useAuth();
+  const { isLoading: authLoading } = useAuthGuard('/dashboard');
   const { form, provider, loading, saved, apiError, onSubmit, isDirty, isSubmitting } =
     useProviderForm();
   const {
@@ -28,11 +25,7 @@ export default function ProfilePage() {
   const phone = watch('phone') ?? '';
   const email = watch('email') ?? '';
 
-  useEffect(() => {
-    if (status === 'unauthenticated') router.replace('/login');
-  }, [status, router]);
-
-  if (status === 'loading' || loading) {
+  if (authLoading || loading) {
     return (
       <div className={styles.loadingWrap}>
         <div className={styles.spinner} />

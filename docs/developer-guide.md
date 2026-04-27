@@ -507,17 +507,22 @@ Mechanizm jest wbudowany w `request()` — **nie dodawaj własnej obsługi 401 w
 
 Równoległe requesty z 401 są koalescowane — wywołanie refresh wykonuje się tylko raz.
 
-### 9.3. Routing po poprawnym OTP — reguły
+### 9.3. Reguły routingu — `canonicalRoute`
 
-Po `verifyOtp` + `getMe()` routing zależy od dwóch pól:
+Jedyne źródło prawdy dla decyzji o przekierowaniu to funkcja w `lib/auth-routing.ts`:
 
+```ts
+canonicalRoute(user: AuthUser | null): '/login' | '/register' | '/onboarding/weryfikacja' | '/dashboard'
 ```
-providerId   status          → redirect
-──────────────────────────────────────────────
-undefined    (nieistotne)    → /register          ← nowe konto, brak warsztatu
-present      ≠ APPROVED      → /onboarding/weryfikacja  ← warsztat w weryfikacji
-present      APPROVED        → /dashboard
-```
+
+| `user`  | `providerId` | `status`     | Wynik                     |
+| ------- | ------------ | ------------ | ------------------------- |
+| `null`  | —            | —            | `/login`                  |
+| present | brak         | —            | `/register`               |
+| present | present      | ≠ `APPROVED` | `/onboarding/weryfikacja` |
+| present | present      | `APPROVED`   | `/dashboard`              |
+
+**Nigdy nie implementuj logiki przekierowań ręcznie.** Zawsze używaj `canonicalRoute`.
 
 Możliwe wartości `status` (`ProviderStatus`):
 
@@ -530,11 +535,33 @@ Możliwe wartości `status` (`ProviderStatus`):
 | `SUSPENDED`        | Zawieszony przez admina                    |
 | `REJECTED`         | Odrzucony — nie może korzystać z panelu    |
 
-Implementacja: `lib/hooks/use-login-flow.ts → handleOtpSubmit`.
-
 Typ w kodzie: `AuthUser.status?: ProviderStatus` z `lib/auth.tsx`.
 
-### 9.4. Rola = CLIENT
+### 9.4. Guardy — dwie warstwy
+
+Ochrona tras działa na dwóch poziomach:
+
+**Warstwa 1 — Middleware (`middleware.ts`, edge)**
+
+Sprawdza samo istnienie cookie `access_token`. Brak cookie → natychmiastowy redirect do `/login` zanim React w ogóle się uruchomi. Chroni: `/dashboard/**`, `/register/**`, `/onboarding/**`.
+
+Middleware **nie waliduje JWT** — tylko sprawdza obecność cookie. Faktyczna walidość tokenu jest weryfikowana przez backend przy każdym API request.
+
+**Warstwa 2 — Hook (`lib/hooks/use-auth-guard.ts`, client)**
+
+Obsługuje logikę biznesową po załadowaniu stanu auth. Każda chroniona strona wywołuje go na górze komponentu:
+
+```ts
+// Strona chroniona — zawsze tak, nigdy własny useEffect z router.replace
+const { isLoading } = useAuthGuard('/dashboard');
+if (isLoading) return <Spinner />;
+```
+
+Hook porównuje `canonicalRoute(user)` z przekazanym `pageRoute`. Jeśli się różnią → `router.replace(canonicalRoute(user))`.
+
+**Strona logowania** używa `canonicalRoute` bezpośrednio w `useLoginFlow` — przekierowuje zalogowanego użytkownika do jego kanonicznego celu.
+
+### 9.5. Rola = CLIENT
 
 Jeśli `user.role === 'CLIENT'` po OTP — to numer klienta (z mobilnej aplikacji), nie providera. Nie rób redirect — pokaż `clientRoleError` (komunikat w OtpStep: „To numer klienta. Aby otworzyć panel, zarejestruj warsztat.").
 

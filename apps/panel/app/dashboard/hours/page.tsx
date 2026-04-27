@@ -1,24 +1,17 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
 import { useWorkingHours } from '../../../lib/hooks/use-working-hours';
-import { useAuth } from '../../../lib/auth';
+import { useAuthGuard } from '../../../lib/hooks/use-auth-guard';
 import { HoursActionBar } from './_components/HoursActionBar';
 import { DayList } from './_components/DayList';
 import { WeekTimeline } from './_components/WeekTimeline';
 import styles from './hours.module.css';
 
 export default function HoursPage() {
-  const router = useRouter();
-  const { status } = useAuth();
+  const { isLoading: authLoading } = useAuthGuard('/dashboard');
   const { days, loading, saving, saved, errors, updateDay, save } = useWorkingHours();
 
-  useEffect(() => {
-    if (status === 'unauthenticated') router.replace('/login');
-  }, [status, router]);
-
-  if (status === 'loading' || loading) {
+  if (authLoading || loading) {
     return (
       <div className={styles.loadingWrap}>
         <div className={styles.spinner} />

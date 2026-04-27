@@ -758,3 +758,38 @@
   letter-spacing: 0.5px;
   text-transform: uppercase;
 }
+
+/* ============ RESPONSIVE ============ */
+
+/* Tablet + mobile: single column, hero hidden */
+@media (max-width: 1023px) {
+  .page {
+    grid-template-columns: 1fr;
+    height: auto;
+    min-height: 100dvh;
+    overflow: visible;
+  }
+
+  .heroSide {
+    display: none;
+  }
+
+  .formSide {
+    padding: 32px 40px 28px;
+  }
+}
+
+/* Mobile: tighter padding, smaller title */
+@media (max-width: 767px) {
+  .formSide {
+    padding: 24px 20px 20px;
+  }
+
+  .title {
+    font-size: 44px;
+  }
+
+  .formFrame {
+    padding: 20px 0;
+  }
+}

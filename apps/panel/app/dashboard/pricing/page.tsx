@@ -1,9 +1,7 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
 import { usePricingTiers } from '../../../lib/hooks/use-pricing-tiers';
-import { useAuth } from '../../../lib/auth';
+import { useAuthGuard } from '../../../lib/hooks/use-auth-guard';
 import { PricingActionBar } from './_components/PricingActionBar';
 import { TierList } from './_components/TierList';
 import { PricingInfoNote } from './_components/PricingInfoNote';
@@ -11,8 +9,7 @@ import { PricingPreview } from './_components/PricingPreview';
 import styles from './pricing.module.css';
 
 export default function PricingPage() {
-  const router = useRouter();
-  const { status } = useAuth();
+  const { isLoading: authLoading } = useAuthGuard('/dashboard');
   const {
     drafts,
     newTier,
@@ -30,11 +27,7 @@ export default function PricingPage() {
     save,
   } = usePricingTiers();
 
-  useEffect(() => {
-    if (status === 'unauthenticated') router.replace('/login');
-  }, [status, router]);
-
-  if (status === 'loading' || loading) {
+  if (authLoading || loading) {
     return (
       <div className={styles.loadingWrap}>
         <div className={styles.spinner} />
