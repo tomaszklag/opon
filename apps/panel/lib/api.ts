@@ -21,14 +21,15 @@ async function tryRefresh(): Promise<boolean> {
 async function request<T>(path: string, options: ApiOptions = {}, retry = true): Promise<T> {
   const { body, ...rest } = options;
 
+  const isFormData = typeof FormData !== 'undefined' && body instanceof FormData;
   const res = await fetch(`${API_URL}${path}`, {
     ...rest,
     credentials: 'include',
     headers: {
-      'Content-Type': 'application/json',
+      ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
       ...(rest.headers ?? {}),
     },
-    ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+    ...(body !== undefined ? { body: isFormData ? (body as FormData) : JSON.stringify(body) } : {}),
   });
 
   if (res.status === 401 && retry) {

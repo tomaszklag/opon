@@ -99,7 +99,7 @@ export function useRegisterFlow() {
         email: values.email,
       });
       await refresh();
-      router.replace('/onboarding/weryfikacja');
+      router.replace('/onboarding/zdjecia');
     } catch (err) {
       if (err instanceof ApiError && err.isConflict) {
         setApiError('Firma z tym NIPem już istnieje w systemie.');

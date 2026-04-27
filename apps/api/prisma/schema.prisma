@@ -148,13 +148,25 @@ model Provider {
 // PROVIDER PHOTO
 // ──────────────────────────────────────────────
 
-model ProviderPhoto {
-  id         String @id @default(uuid())
-  providerId String
-  url        String @db.VarChar(500)
-  order      Int    @default(0)
+enum PhotoType {
+  LOGO
+  VEHICLE
+  WORKSPACE
+  ADDITIONAL
+}
 
-  provider Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+model ProviderPhoto {
+  id           String    @id @default(uuid())
+  providerId   String
+  provider     Provider  @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  url          String    @db.VarChar(500)
+  storageKey   String    @db.VarChar(500)
+  type         PhotoType
+  isPrimary    Boolean   @default(false)
+  size         Int
+  mimeType     String    @db.VarChar(100)
+  originalName String    @db.VarChar(255)
+  createdAt    DateTime  @default(now())
 
   @@index([providerId])
   @@map("provider_photos")

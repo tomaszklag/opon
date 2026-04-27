@@ -66,6 +66,35 @@
   flex: 1;
 }
 
+/* ── Saving strip ── */
+.savingStrip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 24px;
+  background: var(--success-muted);
+  border-bottom: 1px solid var(--success-border);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--success);
+  letter-spacing: 0.01em;
+}
+
+.savingPulse {
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--success);
+  animation: savingPulse 1.4s ease-out infinite;
+}
+
+@keyframes savingPulse {
+  0%   { box-shadow: 0 0 0 0 var(--success); }
+  70%  { box-shadow: 0 0 0 6px transparent; }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+
 .loginLink {
   font-size: 13px;
   color: var(--text-secondary);

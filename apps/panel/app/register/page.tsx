@@ -47,6 +47,14 @@ export default function RegisterPage() {
         </span>
       </header>
 
+      {/* Saving strip */}
+      {flow.form.formState.isSubmitting && (
+        <div className={styles.savingStrip} role="status" aria-live="polite">
+          <span className={styles.savingPulse} aria-hidden="true" />
+          Szkic zapisany automatycznie
+        </div>
+      )}
+
       {/* Stepper */}
       <div className={styles.stepperBar}>
         <StepIndicator steps={REGISTER_STEPS} />

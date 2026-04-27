@@ -43,6 +43,9 @@ coverage/
 # Prisma
 apps/api/prisma/migrations/
 
+# Uploaded files (local disk storage, sprint 1)
+apps/api/uploads/
+
 # pnpm lockfile (keep) — but ignore lock from inner workspaces
 
 # Claude Code

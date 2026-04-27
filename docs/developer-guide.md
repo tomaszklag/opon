@@ -249,6 +249,10 @@ Husky + lint-staged uruchamia ESLint i Prettier automatycznie przed każdym comm
    └─ pnpm --filter panel exec tsc --noEmit
 ```
 
+**Nazewnictwo identyfikatorów — zawsze angielski:**
+
+Wszystkie nazwy w kodzie muszą być po angielsku: klasy CSS (`photoTile`, `savingStrip`), zmienne/funkcje/interfejsy TypeScript, nazwy plików (`use-photos-flow.ts`, `photos.module.css`). Wyjątek: segmenty URL (`/onboarding/zdjecia`) — to publiczne adresy, nie identyfikatory kodu.
+
 **Obowiązkowy podział:**
 
 - `page.tsx` importuje **jeden hook** i **N komponentów** — żadnej logiki, żadnych helperów inline, żadnych inline SVG
@@ -471,20 +475,32 @@ Mechanizm jest wbudowany w `request()` — **nie dodawaj własnej obsługi 401 w
 
 Równoległe requesty z 401 są koalescowane — wywołanie refresh wykonuje się tylko raz.
 
+**FormData (upload pliku):** `api.ts` automatycznie wykrywa ciało typu `FormData` i pomija `Content-Type: application/json` oraz `JSON.stringify`. Wystarczy przekazać `FormData` jako `body`:
+
+```ts
+const formData = new FormData();
+formData.append('file', file);
+formData.append('type', type);
+await api.post<ProviderPhoto>(PHOTOS_KEY, formData); // ← działa out-of-the-box
+```
+
+Nie twórz własnych wrapperów `fetchWithRefresh` ani nie ustawiaj `Content-Type: multipart/form-data` ręcznie — przeglądarka musi sama ustawić boundary.
+
 ### 9.3. Reguły routingu — `canonicalRoute`
 
 Jedyne źródło prawdy dla decyzji o przekierowaniu to funkcja w `lib/auth-routing.ts`:
 
 ```ts
-canonicalRoute(user: AuthUser | null): '/login' | '/register' | '/onboarding/weryfikacja' | '/dashboard'
+canonicalRoute(user: AuthUser | null): '/login' | '/register' | '/onboarding/zdjecia' | '/onboarding/weryfikacja' | '/dashboard'
 ```
 
-| `user`  | `providerId` | `status`     | Wynik                     |
-| ------- | ------------ | ------------ | ------------------------- |
-| `null`  | —            | —            | `/login`                  |
-| present | brak         | —            | `/register`               |
-| present | present      | ≠ `APPROVED` | `/onboarding/weryfikacja` |
-| present | present      | `APPROVED`   | `/dashboard`              |
+| `user`  | `providerId` | `status`                       | Wynik                     |
+| ------- | ------------ | ------------------------------ | ------------------------- |
+| `null`  | —            | —                              | `/login`                  |
+| present | brak         | —                              | `/register`               |
+| present | present      | `PENDING_DOCS`                 | `/onboarding/zdjecia`     |
+| present | present      | ≠ `APPROVED`, ≠ `PENDING_DOCS` | `/onboarding/weryfikacja` |
+| present | present      | `APPROVED`                     | `/dashboard`              |
 
 **Nigdy nie implementuj logiki przekierowań ręcznie.** Zawsze używaj `canonicalRoute`.
 
@@ -833,3 +849,193 @@ async getByNip(@Param('nip') nip: string) {
   return this.service.lookupByNip(nip);
 }
 ```
+
+---
+
+## 15. Pobieranie danych w FE — SWR
+
+Instalacja: `swr` jest już zależnością `apps/panel`. Nie instaluj `react-query` ani żadnej alternatywy.
+
+### 15.1. Wzorzec hooka
+
+```ts
+// lib/hooks/use-photos-flow.ts
+import useSWR from 'swr';
+import { api } from '../api';
+
+const PHOTOS_KEY = '/v1/providers/me/photos';
+
+export function usePhotosFlow() {
+  const { data: photos = [], error, isLoading, mutate } = useSWR<ProviderPhoto[]>(
+    PHOTOS_KEY,
+    (path) => api.get<ProviderPhoto[]>(path),
+    {
+      revalidateOnFocus: true,
+      revalidateOnReconnect: true,
+      dedupingInterval: 5000,
+    },
+  );
+  ...
+}
+```
+
+Klucz SWR (`PHOTOS_KEY`) to ścieżka API — SWR automatycznie deduplikuje requesty z tym samym kluczem w całej aplikacji.
+
+### 15.2. Mutacje optymistyczne
+
+Wzorzec: zmień lokalny cache natychmiast → wykonaj request → cofnij jeśli błąd.
+
+```ts
+// Operacja usuwania
+const remove = useCallback(
+  async (id: string) => {
+    // 1. Optymistycznie usuń z cache
+    await mutate((prev = []) => prev.filter((p) => p.id !== id), { revalidate: false });
+    try {
+      // 2. Faktyczny request
+      await api.del(`${PHOTOS_KEY}/${id}`);
+    } catch (err) {
+      // 3. Błąd → cofnij (refetch z serwera)
+      setError(err instanceof ApiError ? err.message : 'Błąd usuwania.');
+      await mutate();
+    }
+  },
+  [mutate],
+);
+
+// Operacja dodawania (POST zwraca nowy obiekt)
+const upload = useCallback(
+  async (file: File, type: PhotoType) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('type', type);
+    try {
+      const photo = await api.post<ProviderPhoto>(PHOTOS_KEY, formData);
+      await mutate((prev = []) => [...prev.filter((p) => p.type !== type), photo], {
+        revalidate: false,
+      });
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Błąd przesyłania.');
+      await mutate();
+    }
+  },
+  [mutate],
+);
+```
+
+### 15.3. Kiedy NIE używać SWR
+
+| Przypadek                                | Zamiast SWR użyj                               |
+| ---------------------------------------- | ---------------------------------------------- |
+| Dane wysyłane raz (submit formularza)    | `useState` + `api.post` w `onSubmit` hooka RHF |
+| State machine z timerami (OTP countdown) | czysty `useState` / `useReducer`               |
+| Dane globalne (sesja użytkownika)        | `AuthContext` z własnym fetch                  |
+
+SWR jest właściwy gdy: dane mogą się zmieniać w tle, wiele komponentów potrzebuje tych samych danych, albo po akcji użytkownika chcemy odświeżyć listę.
+
+---
+
+## 16. Upload plików — wzorzec NestJS
+
+### 16.1. Multer — konfiguracja dysku
+
+```typescript
+// photos.controller.ts
+import { FileInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import * as path from 'path';
+import * as fs from 'fs';
+
+const UPLOADS_ROOT = path.join(process.cwd(), 'uploads');
+
+@UseInterceptors(
+  FileInterceptor('file', {
+    storage: diskStorage({
+      destination: (_req, _file, cb) => {
+        // Ścieżka tymczasowa — serwis przenosi do właściwego katalogu po walidacji
+        const tmp = path.join(UPLOADS_ROOT, 'tmp');
+        fs.mkdirSync(tmp, { recursive: true });
+        cb(null, tmp);
+      },
+      filename: (_req, _file, cb) => cb(null, `${Date.now()}-${Math.random().toString(36).slice(2)}`),
+    }),
+    limits: { fileSize: 5 * 1024 * 1024 },  // 5 MB
+  }),
+)
+```
+
+### 16.2. Walidacja pliku — ParseFilePipe
+
+```typescript
+@Post()
+upload(
+  @UploadedFile(
+    new ParseFilePipe({
+      validators: [
+        new MaxFileSizeValidator({ maxSize: 5 * 1024 * 1024 }),
+        new FileTypeValidator({ fileType: /image\/(jpeg|png|webp)/ }),
+      ],
+    }),
+  )
+  file: Express.Multer.File,
+) { ... }
+```
+
+### 16.3. Czyszczenie pliku przy błędzie — try/finally w kontrolerze
+
+Multer zapisuje plik na dysk PRZED wykonaniem logiki kontrolera. Jeśli cokolwiek po tym rzuci wyjątek, plik zostaje osierocony. Kontroler musi go usunąć:
+
+```typescript
+@Post()
+async upload(@UploadedFile(...) file: Express.Multer.File, ...) {
+  try {
+    const provider = await this.providersService.findByUserId(userId);
+    if (!provider) throw new ForbiddenException();
+    return await this.photosService.upload(provider.id, file, body.type);
+  } catch (err) {
+    // Usuń plik jeśli serwis rzucił wyjątek po tym jak multer go zapisał
+    fs.unlink(file.path, () => {});
+    throw err;
+  }
+}
+```
+
+### 16.4. Relative storageKey — nie absolutne ścieżki
+
+Przechowuj w bazie **względny klucz**, nie absolutną ścieżkę OS:
+
+```typescript
+// ✅ TAK — przenośne między środowiskami
+const storageKey = `providers/${providerId}/${filename}`; // "providers/abc/1234.jpg"
+const url = `/uploads/${storageKey}`;
+
+// ❌ NIE — absolutna ścieżka jest unikalna dla maszyny
+const storageKey = file.path; // "C:\opony\apps\api\uploads\tmp\1234.jpg"
+```
+
+Serwis `deleteFile()` rozwiązuje klucz do absolutnej ścieżki przez `path.join(process.cwd(), 'uploads', storageKey)`. Dla wstecznej kompatybilności obsługuje też absolutne ścieżki (warunek `startsWith('/')` lub `/^[A-Za-z]:/.test()`).
+
+### 16.5. Bezpieczna zamiana (safe replace)
+
+Przy typach single-slot (logo, zdjęcie pojazdu) nowy plik zastępuje stary. Kolejność operacji:
+
+```
+1. Utwórz nowy rekord w DB  ← jeśli to rzuci, plik tymczasowy jest już czyszczony przez catch w kontrolerze
+2. Usuń stary plik z dysku  ← dopiero po udanym INSERT
+3. Usuń stary rekord z DB   ← błąd tutaj jest non-fatal (rekord-sierota, nie blokuje użytkownika)
+```
+
+Nigdy: usuń stary → utwórz nowy. Jeśli create się nie powiedzie, stary jest już skasowany.
+
+### 16.6. ServeStaticModule — serwowanie plików
+
+```typescript
+// app.module.ts
+ServeStaticModule.forRoot({
+  rootPath: path.join(process.cwd(), 'uploads'),
+  serveRoot: '/uploads',
+  serveStaticOptions: { index: false },
+}),
+```
+
+Katalog `apps/api/uploads/` jest w `.gitignore`. Na produkcji zastąp S3/CDN — zmień tylko `storageKey` i logikę `deleteFile`/`url` w serwisie.
