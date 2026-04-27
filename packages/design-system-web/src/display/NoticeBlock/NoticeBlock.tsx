@@ -7,6 +7,8 @@ export interface NoticeBlockProps {
   variant?: NoticeVariant;
   icon?: React.ReactNode;
   children: React.ReactNode;
+  /** Optional countdown chip, e.g. "03:21" — shown inline after content */
+  countdown?: string;
   className?: string;
 }
 
@@ -73,13 +75,22 @@ const defaultIcons: Record<NoticeVariant, React.ReactNode> = {
   ),
 };
 
-export function NoticeBlock({ variant = 'info', icon, children, className }: NoticeBlockProps) {
+export function NoticeBlock({
+  variant = 'info',
+  icon,
+  children,
+  countdown,
+  className,
+}: NoticeBlockProps) {
   return (
     <div className={[styles.block, styles[variant], className].filter(Boolean).join(' ')}>
       <span className={styles.icon} aria-hidden="true">
         {icon ?? defaultIcons[variant]}
       </span>
-      <div className={styles.content}>{children}</div>
+      <div className={styles.content}>
+        {children}
+        {countdown && <span className={styles.countdown}>{countdown}</span>}
+      </div>
     </div>
   );
 }

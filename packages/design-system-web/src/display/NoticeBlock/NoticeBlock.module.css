@@ -45,3 +45,12 @@
   color: var(--text-secondary);
 }
 .danger .icon { color: var(--danger); }
+
+.countdown {
+  display: inline-block;
+  margin-left: 6px;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  font-weight: var(--font-bold);
+  letter-spacing: 0.5px;
+}

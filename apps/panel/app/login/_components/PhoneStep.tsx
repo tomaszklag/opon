@@ -1,5 +1,4 @@
-import { PhoneInput } from '@opony/design-system-web';
-import { Button } from '@opony/design-system-web';
+import { PhoneInput, Button, NoticeBlock } from '@opony/design-system-web';
 import { IconArrowRight, IconHelp } from '../../../components/icons';
 import styles from '../login.module.css';
 
@@ -7,11 +6,23 @@ interface Props {
   digits: string;
   error: string;
   loading: boolean;
+  phoneHint: 'none' | 'recognized' | 'not-registered';
+  isRateLimited: boolean;
+  rateLimitTimerLabel: string;
   onSubmit: (e: React.FormEvent) => void;
   onDigitsChange: (val: string) => void;
 }
 
-export function PhoneStep({ digits, error, loading, onSubmit, onDigitsChange }: Props) {
+export function PhoneStep({
+  digits,
+  error,
+  loading,
+  phoneHint,
+  isRateLimited,
+  rateLimitTimerLabel,
+  onSubmit,
+  onDigitsChange,
+}: Props) {
   return (
     <form onSubmit={onSubmit} className={styles.formInner} noValidate>
       <div className={styles.kickerRow}>
@@ -32,19 +43,27 @@ export function PhoneStep({ digits, error, loading, onSubmit, onDigitsChange }: 
         label="Numer telefonu warsztatu"
         hint="Ten sam, co przy rejestracji"
         error={error || undefined}
+        notRegistered={phoneHint === 'not-registered'}
         value={digits}
         onChange={(e) => onDigitsChange(e.target.value)}
         placeholder="600 000 000"
         autoComplete="tel"
         autoFocus
+        disabled={isRateLimited}
       />
+
+      {isRateLimited && (
+        <NoticeBlock variant="warning" countdown={rateLimitTimerLabel}>
+          Zbyt wiele prób. Spróbuj za
+        </NoticeBlock>
+      )}
 
       <Button
         type="submit"
         variant="cta"
         fullWidth
         loading={loading}
-        disabled={digits.length !== 9}
+        disabled={digits.length !== 9 || isRateLimited}
       >
         WYŚLIJ KOD SMS
         {!loading && <IconArrowRight className={styles.arr} />}

@@ -29,6 +29,9 @@ export default function LoginPage() {
               digits={flow.digits}
               error={flow.error}
               loading={flow.loading}
+              phoneHint={flow.phoneHint}
+              isRateLimited={flow.isRateLimited}
+              rateLimitTimerLabel={flow.rateLimitTimerLabel}
               onSubmit={flow.handlePhoneSubmit}
               onDigitsChange={flow.handleDigitsChange}
             />
@@ -37,8 +40,11 @@ export default function LoginPage() {
               code={flow.code}
               error={flow.error}
               loading={flow.loading}
-              countdown={flow.countdown}
-              timerLabel={flow.timerLabel}
+              otpCountdown={flow.otpCountdown}
+              otpTimerLabel={flow.otpTimerLabel}
+              isRateLimited={flow.isRateLimited}
+              rateLimitTimerLabel={flow.rateLimitTimerLabel}
+              clientRoleError={flow.clientRoleError}
               phone={flow.phone}
               onSubmit={flow.handleOtpSubmit}
               onCodeChange={flow.setCode}

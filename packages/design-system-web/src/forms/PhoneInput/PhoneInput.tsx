@@ -7,8 +7,10 @@ export interface PhoneInputProps extends Omit<React.InputHTMLAttributes<HTMLInpu
   /** Short text shown to the right of the label, e.g. "Ten sam, co przy rejestracji" */
   hint?: string;
   error?: string;
-  /** When set, shows the "Numer rozpoznany · {recognizedName}" helper row */
+  /** Shows green "Numer rozpoznany · {name}" helper row */
   recognizedName?: string;
+  /** Shows amber "Nie mamy takiego numeru" pill with register link */
+  notRegistered?: boolean;
   countryCode?: string;
   className?: string;
 }
@@ -18,6 +20,7 @@ export function PhoneInput({
   hint,
   error,
   recognizedName,
+  notRegistered = false,
   countryCode = '+48',
   className,
   id,
@@ -77,6 +80,15 @@ export function PhoneInput({
             </svg>
           </span>
           Numer rozpoznany · {recognizedName}
+        </div>
+      )}
+
+      {!error && !recognizedName && notRegistered && (
+        <div className={styles.notRegisteredRow}>
+          Nie mamy takiego numeru —{' '}
+          <a href="/register" className={styles.notRegisteredLink}>
+            Załóż warsztat
+          </a>
         </div>
       )}
     </div>
