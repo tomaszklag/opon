@@ -487,6 +487,59 @@ import { IconCalendar } from '../../../components/icons';
 
 ---
 
+## 9. Auth & Sesja
+
+### 9.1. Model sesji
+
+JWT access token (15 min) + refresh token (30 dni) przechowywane w httpOnly cookie. Frontend nie widzi tokenów — cookie jest wysyłane automatycznie przez przeglądarkę (`credentials: 'include'` w każdym `fetch`).
+
+Po 30 dniach bez aktywności backend unieważnia refresh token → następny request zwróci 401 → użytkownik trafia na stronę logowania.
+
+### 9.2. Auto-refresh interceptor (`lib/api.ts`)
+
+`api.ts` automatycznie obsługuje wygasły access token:
+
+1. Request → 401 → wywołaj `POST /v1/auth/refresh`
+2. Refresh OK → ponów oryginalny request (jeden raz)
+3. Refresh 401 → rzuć oryginalny błąd (wylogowanie obsługuje `AuthProvider`)
+
+Mechanizm jest wbudowany w `request()` — **nie dodawaj własnej obsługi 401 w hookach**. Jeśli po całym flow dostajesz 401, znaczy że refresh token wygasł i użytkownik powinien się zalogować.
+
+Równoległe requesty z 401 są koalescowane — wywołanie refresh wykonuje się tylko raz.
+
+### 9.3. Routing po poprawnym OTP — reguły
+
+Po `verifyOtp` + `getMe()` routing zależy od dwóch pól:
+
+```
+providerId   status          → redirect
+──────────────────────────────────────────────
+undefined    (nieistotne)    → /register          ← nowe konto, brak warsztatu
+present      ≠ APPROVED      → /onboarding/weryfikacja  ← warsztat w weryfikacji
+present      APPROVED        → /dashboard
+```
+
+Możliwe wartości `status` (`ProviderStatus`):
+
+| Wartość            | Znaczenie                                  |
+| ------------------ | ------------------------------------------ |
+| `PENDING_NIP`      | Onboarding niezakończony — brak NIP        |
+| `PENDING_DOCS`     | Onboarding niezakończony — brak dokumentów |
+| `PENDING_APPROVAL` | Czeka na ręczną weryfikację przez admina   |
+| `APPROVED`         | Aktywny — dostęp do dashboardu             |
+| `SUSPENDED`        | Zawieszony przez admina                    |
+| `REJECTED`         | Odrzucony — nie może korzystać z panelu    |
+
+Implementacja: `lib/hooks/use-login-flow.ts → handleOtpSubmit`.
+
+Typ w kodzie: `AuthUser.status?: ProviderStatus` z `lib/auth.tsx`.
+
+### 9.4. Rola = CLIENT
+
+Jeśli `user.role === 'CLIENT'` po OTP — to numer klienta (z mobilnej aplikacji), nie providera. Nie rób redirect — pokaż `clientRoleError` (komunikat w OtpStep: „To numer klienta. Aby otworzyć panel, zarejestruj warsztat.").
+
+---
+
 ## 10. Linting i formatowanie
 
 ```bash
