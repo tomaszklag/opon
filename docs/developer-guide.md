@@ -306,8 +306,42 @@ Przykład: `StepIndicator` w DS istniał, ale miał błędny styl (full-width `<
 | `<p className={styles.error}>{msg}</p>`       | `<NoticeBlock variant="danger">{msg}</NoticeBlock>`  |
 | `<div className={styles.warning}>{msg}</div>` | `<NoticeBlock variant="warning">{msg}</NoticeBlock>` |
 | Własny wizard/stepper                         | `<StepIndicator steps={[{label, status}]} />`        |
+| `<label className={styles.label}>...</label>` | `<FieldLabel htmlFor="id" required>...</FieldLabel>` |
 
 DS `Input` i `Textarea` są `forwardRef` → działają bezpośrednio z `{...register('field')}` z RHF.
+
+### Reguła: tło inputów zawsze `var(--bg)`
+
+Wszystkie komponenty formularzy DS (`Input`, `Textarea`, `Select`, `PhoneInput`) używają `background: var(--bg)` — nie `var(--surface)` ani `var(--surface-raised)`. Tło `--surface-raised` jest zarezerwowane dla elementów unoszących się nad stroną (dropdowny, modale).
+
+### Reguła: stany złożone wymagają jawnej reguły CSS
+
+Jeśli element ma jednocześnie stan bazowy, hover i aktywny/zaznaczony, musisz zdefiniować **wszystkie kombinacje**:
+
+```css
+/* ✅ TAK — hover na zaznaczonym elemencie widoczny */
+.row {
+  background: var(--bg);
+}
+.row:hover {
+  background: var(--surface-hover);
+}
+.rowChecked {
+  background: rgba(255, 107, 26, 0.06);
+  border-color: var(--accent-border);
+}
+.rowChecked:hover {
+  background: var(--accent-muted);
+  border-color: var(--accent-border);
+}
+
+/* ❌ NIE — hover nadpisuje stan checked, użytkownik nie widzi zaznaczenia */
+.row:hover {
+  background: var(--surface-hover);
+} /* niszczy .rowChecked podczas hover */
+```
+
+Dotyczy to checkboxów, kart konsentów, wierszy tabeli z selekcją — wszędzie gdzie hover i selected mogą współistnieć.
 
 Jeśli brakuje komponentu w DS lub nie obsługuje wymaganego stanu → **dodaj/popraw w `packages/design-system-web/`**, nie używaj natywnego HTML jako obejścia.
 
@@ -617,6 +651,29 @@ export function useFooForm() {
 // Błąd API (po submit) → NoticeBlock z DS
 {apiError && <NoticeBlock variant="danger">{apiError}</NoticeBlock>}
 ```
+
+#### Disabled CTA do czasu wypełnienia formularza
+
+Gdy przycisk submit ma być zablokowany do chwili gdy formularz jest poprawny:
+
+```typescript
+// 1. useForm z mode: 'onChange' — bez tego isValid nigdy nie reaguje
+const form = useForm<FooValues>({
+  resolver: zodResolver(fooSchema),
+  mode: 'onChange',
+  defaultValues: { ... },
+});
+
+// 2. Przekaż isValid do komponentu
+const { formState: { isSubmitting, isValid } } = form;
+
+// 3. Button
+<Button type="submit" loading={isSubmitting} disabled={!isValid}>
+  Dalej
+</Button>
+```
+
+Bez `mode: 'onChange'` (domyślny tryb to `'onSubmit'`) pole `isValid` pozostaje `false` przez cały czas i przycisk jest zawsze zablokowany.
 
 #### Kiedy NIE używać react-hook-form
 

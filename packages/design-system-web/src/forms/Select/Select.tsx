@@ -1,5 +1,6 @@
 'use client';
 import React from 'react';
+import { FieldLabel } from '../FieldLabel/FieldLabel';
 import styles from './Select.module.css';
 
 export interface SelectOption {
@@ -27,15 +28,9 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(function 
   return (
     <div className={styles.wrapper}>
       {label && (
-        <label htmlFor={selectId} className={styles.label}>
+        <FieldLabel htmlFor={selectId} required={required}>
           {label}
-          {required && (
-            <span className={styles.required} aria-hidden="true">
-              {' '}
-              *
-            </span>
-          )}
-        </label>
+        </FieldLabel>
       )}
       <div className={styles.selectWrapper}>
         <select

@@ -1,10 +1,11 @@
 'use client';
-import React from 'react';
+import React, { useRef } from 'react';
+import { FieldLabel } from '../FieldLabel/FieldLabel';
+import { Input } from '../Input/Input';
 import styles from './PhoneInput.module.css';
 
 export interface PhoneInputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'type'> {
   label?: string;
-  /** Short text shown to the right of the label, e.g. "Ten sam, co przy rejestracji" */
   hint?: string;
   error?: string;
   /** Shows green "Numer rozpoznany · {name}" helper row */
@@ -13,6 +14,17 @@ export interface PhoneInputProps extends Omit<React.InputHTMLAttributes<HTMLInpu
   notRegistered?: boolean;
   countryCode?: string;
   className?: string;
+}
+
+function formatPhone(raw: string): string {
+  const digits = raw.replace(/\D/g, '').slice(0, 9);
+  return digits.replace(/(\d{3})(?=\d)/g, '$1 ');
+}
+
+function formattedCursor(rawCursor: number): number {
+  if (rawCursor > 6) return rawCursor + 2;
+  if (rawCursor > 3) return rawCursor + 1;
+  return rawCursor;
 }
 
 export function PhoneInput({
@@ -24,20 +36,43 @@ export function PhoneInput({
   countryCode = '+48',
   className,
   id,
+  required,
+  value,
+  onChange,
   ...props
 }: PhoneInputProps) {
   const inputId = id ?? 'phone-input';
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const rawDigits = String(value ?? '')
+    .replace(/\D/g, '')
+    .slice(0, 9);
+  const displayValue = formatPhone(rawDigits);
+
+  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const raw = e.target.value.replace(/\D/g, '').slice(0, 9);
+
+    // raw cursor position before spaces are counted
+    const cursorInDisplay = e.target.selectionStart ?? e.target.value.length;
+    const spacesBefore = (e.target.value.slice(0, cursorInDisplay).match(/ /g) ?? []).length;
+    const rawCursor = Math.min(cursorInDisplay - spacesBefore, raw.length);
+
+    onChange?.({ ...e, target: { ...e.target, value: raw } });
+
+    requestAnimationFrame(() => {
+      const el = inputRef.current;
+      if (!el) return;
+      const pos = Math.min(formattedCursor(rawCursor), formatPhone(raw).length);
+      el.setSelectionRange(pos, pos);
+    });
+  }
+
   return (
     <div className={[styles.field, className].filter(Boolean).join(' ')}>
-      {(label || hint) && (
-        <div className={styles.labelRow}>
-          {label && (
-            <label className={styles.label} htmlFor={inputId}>
-              {label}
-            </label>
-          )}
-          {hint && <span className={styles.labelHint}>{hint}</span>}
-        </div>
+      {label && (
+        <FieldLabel htmlFor={inputId} required={required}>
+          {label}
+        </FieldLabel>
       )}
 
       <div className={styles.phoneGrid}>
@@ -48,22 +83,20 @@ export function PhoneInput({
           </span>
           <span className={styles.prefixCode}>{countryCode}</span>
         </div>
-        <input
+        <Input
+          ref={inputRef}
           id={inputId}
           type="tel"
           inputMode="numeric"
-          className={[styles.input, error ? styles.inputError : null].filter(Boolean).join(' ')}
-          aria-invalid={error ? 'true' : undefined}
-          aria-describedby={error ? `${inputId}-error` : undefined}
+          value={displayValue}
+          onChange={handleChange}
+          error={error}
+          required={required}
           {...props}
         />
       </div>
 
-      {error && (
-        <span id={`${inputId}-error`} className={styles.errorText} role="alert">
-          {error}
-        </span>
-      )}
+      {hint && !error && !recognizedName && <p className={styles.hint}>{hint}</p>}
 
       {!error && recognizedName && (
         <div className={styles.helperRow}>

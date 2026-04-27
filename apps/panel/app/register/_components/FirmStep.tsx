@@ -23,7 +23,7 @@ export function FirmStep({ flow }: Props) {
     control,
     register,
     watch,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, isValid },
   } = form;
 
   const consentTerms = watch('consentTerms');
@@ -45,12 +45,6 @@ export function FirmStep({ flow }: Props) {
   ) : gusData ? (
     <IconCheck width={14} height={14} stroke="var(--success)" />
   ) : undefined;
-
-  const ibanPrefix = (
-    <span style={{ color: 'var(--accent)', fontFamily: 'var(--font-mono)', fontWeight: 700 }}>
-      PL
-    </span>
-  );
 
   return (
     <form onSubmit={handleSubmit} className={styles.formInner} noValidate>
@@ -244,11 +238,11 @@ export function FirmStep({ flow }: Props) {
         </div>
       </section>
 
-      {/* Section 03: Kontakt i wypłaty */}
+      {/* Section 03: Kontakt */}
       <section className={styles.section} aria-labelledby="sec-kontakt">
         <div className={styles.sectionHead}>
           <h2 className={styles.sectionTitle} id="sec-kontakt">
-            Kontakt i wypłaty
+            Kontakt
           </h2>
           <span className={styles.sectionNumber}>
             <strong className={styles.sectionNumberAccent}>03</strong> / 03
@@ -264,7 +258,7 @@ export function FirmStep({ flow }: Props) {
                 label="Telefon"
                 required
                 value={field.value}
-                onChange={(e) => field.onChange(e.target.value.replace(/\D/g, '').slice(0, 9))}
+                onChange={(e) => field.onChange(e.target.value)}
                 onBlur={field.onBlur}
                 error={fieldState.error?.message}
                 placeholder="501 234 789"
@@ -282,25 +276,6 @@ export function FirmStep({ flow }: Props) {
             hint="Wyślemy link weryfikacyjny. Raport tygodniowy + faktury."
           />
         </div>
-
-        <Controller
-          name="iban"
-          control={control}
-          render={({ field }) => (
-            <Input
-              label="Numer konta (IBAN)"
-              inputMode="numeric"
-              value={field.value ?? ''}
-              onChange={(e) => field.onChange(e.target.value.replace(/\D/g, '').slice(0, 26))}
-              onBlur={field.onBlur}
-              placeholder="12 3456 7890 1234 5678 9012 3456"
-              prefix={ibanPrefix}
-              hint="W pilotażu apka jest darmowa (0% prowizji) — klient płaci Tobie offline. IBAN wykorzystamy gdy uruchomimy rozliczenia online (planowane v0.5)."
-              maxLength={26}
-              className={styles.mono}
-            />
-          )}
-        />
       </section>
 
       {/* API error */}
@@ -312,7 +287,13 @@ export function FirmStep({ flow }: Props) {
           Po kliknięciu &bdquo;Dalej&rdquo; zapiszemy dane firmy. Na podany e-mail wyślemy link
           weryfikacyjny, a na numer telefonu — kod SMS do logowania.
         </p>
-        <Button type="submit" variant="primary" loading={isSubmitting} className={styles.ctaBtn}>
+        <Button
+          type="submit"
+          variant="primary"
+          loading={isSubmitting}
+          disabled={!isValid}
+          className={styles.ctaBtn}
+        >
           Dalej
           <IconArrowRight width={16} height={16} />
           <span className={styles.ctaBtnNext}>Zdjęcia</span>

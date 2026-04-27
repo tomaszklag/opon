@@ -22,6 +22,7 @@ export function useRegisterFlow() {
 
   const form = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
+    mode: 'onChange',
     defaultValues: {
       consentTerms: false,
       consentRodo: false,

@@ -1,5 +1,6 @@
 'use client';
 import React, { useState } from 'react';
+import { FieldLabel } from '../FieldLabel/FieldLabel';
 import styles from './Textarea.module.css';
 
 export interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
@@ -46,15 +47,9 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(fun
   return (
     <div className={styles.wrapper}>
       {label && (
-        <label htmlFor={textareaId} className={styles.label}>
+        <FieldLabel htmlFor={textareaId} required={required}>
           {label}
-          {required && (
-            <span className={styles.required} aria-hidden="true">
-              {' '}
-              *
-            </span>
-          )}
-        </label>
+        </FieldLabel>
       )}
       <textarea
         ref={ref}

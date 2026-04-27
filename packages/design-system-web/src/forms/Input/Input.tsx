@@ -1,5 +1,6 @@
 'use client';
 import React from 'react';
+import { FieldLabel } from '../FieldLabel/FieldLabel';
 import styles from './Input.module.css';
 
 export interface InputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'prefix'> {
@@ -43,15 +44,9 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(function Inp
   return (
     <div className={styles.wrapper}>
       {label && (
-        <label htmlFor={inputId} className={styles.label}>
+        <FieldLabel htmlFor={inputId} required={required}>
           {label}
-          {required && (
-            <span className={styles.required} aria-hidden="true">
-              {' '}
-              *
-            </span>
-          )}
-        </label>
+        </FieldLabel>
       )}
       {prefix || suffix ? (
         <div className={styles.inputWrap}>

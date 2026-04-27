@@ -2,6 +2,7 @@
 export * from './forms/Button';
 export * from './forms/Checkbox';
 export * from './forms/DropZone';
+export * from './forms/FieldLabel';
 export * from './forms/Input';
 export * from './forms/OTPInput';
 export * from './forms/PhoneInput';
