@@ -652,28 +652,66 @@ export function useFooForm() {
 {apiError && <NoticeBlock variant="danger">{apiError}</NoticeBlock>}
 ```
 
-#### Disabled CTA do czasu wypełnienia formularza
+#### CTA — tylko `isSubmitting`, nigdy `!isValid`
 
-Gdy przycisk submit ma być zablokowany do chwili gdy formularz jest poprawny:
+Nie blokuj przycisku submit na podstawie `isValid`. Użytkownik, który kliknie i zobaczy błędy walidacji przy polach, dowie się co poprawić. Gdy CTA jest disabled, nie wie dlaczego i co zrobić.
 
-```typescript
-// 1. useForm z mode: 'onChange' — bez tego isValid nigdy nie reaguje
-const form = useForm<FooValues>({
-  resolver: zodResolver(fooSchema),
-  mode: 'onChange',
-  defaultValues: { ... },
-});
+```tsx
+// ✅ TAK
+const { formState: { isSubmitting } } = form;
 
-// 2. Przekaż isValid do komponentu
-const { formState: { isSubmitting, isValid } } = form;
+<Button type="submit" loading={isSubmitting} disabled={isSubmitting}>
+  Dalej
+</Button>
 
-// 3. Button
-<Button type="submit" loading={isSubmitting} disabled={!isValid}>
+// ❌ NIE — użytkownik nie wie co musi wypełnić
+<Button type="submit" disabled={!isValid}>
   Dalej
 </Button>
 ```
 
-Bez `mode: 'onChange'` (domyślny tryb to `'onSubmit'`) pole `isValid` pozostaje `false` przez cały czas i przycisk jest zawsze zablokowany.
+RHF wywoła `onSubmit` dopiero gdy walidacja przejdzie — a przy niepowodzeniu `errors` zostaną ustawione i DS `Input` pokaże komunikaty przy każdym polu.
+
+#### Programatyczne pola (setValue) — zawsze `shouldValidate: true`
+
+Gdy pole jest kontrolowane przez `form.setValue` zamiast natywnego `onChange` (np. checkboxy custom, toggley, pola wypełniane automatycznie), dodaj `shouldValidate: true`. Bez tego RHF nie przelicza stanu walidacji i `errors` nigdy się nie pojawiają.
+
+```typescript
+// ✅ TAK
+form.setValue('consentTerms', true, { shouldValidate: true });
+
+// ❌ NIE — errors dla tego pola nigdy się nie pojawią po kliknięciu
+form.setValue('consentTerms', true);
+
+// ❌ NIE — shouldValidate: isSubmitted oznacza "tylko po pierwszym submit"
+form.setValue('consentTerms', true, { shouldValidate: form.formState.isSubmitted });
+```
+
+#### `defaultValues` musi być ściśle zgodne ze schematem
+
+Klucze w `defaultValues` muszą dokładnie odpowiadać polom Zod schematu — ani więcej, ani mniej. Dodatkowe klucze powodują błąd TS i mogą wprowadzać RHF w nieokreślony stan.
+
+```typescript
+// ✅ TAK — defaultValues pokrywa dokładnie pola schematu
+const form = useForm<RegisterValues>({
+  resolver: zodResolver(registerSchema),
+  defaultValues: {
+    nip: '',
+    email: '',
+    phone: '',
+  },
+});
+
+// ❌ NIE — 'iban' nie istnieje w schemacie → błąd TS + bałagan w formState
+defaultValues: {
+  nip: '',
+  email: '',
+  phone: '',
+  iban: '',   // pole usunięte ze schematu, nie usunięte z defaultValues
+}
+```
+
+Przy zmianie schematu (dodanie/usunięcie pola) zawsze aktualizuj `defaultValues` w tym samym commicie.
 
 #### Kiedy NIE używać react-hook-form
 
@@ -688,3 +726,110 @@ W tych przypadkach błąd po submit nadal trafia do `<NoticeBlock variant="dange
 - Eksportuj typ przez `z.infer<typeof schema>`: `export type FooValues = z.infer<typeof fooSchema>`
 - Komunikaty błędów po polsku, konkretne: `'NIP musi mieć dokładnie 10 cyfr'` nie `'Wymagane'`
 - Opcjonalne pola: `z.string().optional()` lub `z.string().max(n).optional()` — nie `z.string().nullable()`
+
+---
+
+## 14. Integracje z zewnętrznymi API
+
+### 14.1. Gdzie trzymać klucze API
+
+Klucze do zewnętrznych serwisów (CEIDG, Twilio, Resend, AWS) są wyłącznie w `apps/api/.env`. Ten plik jest w `.gitignore` — nigdy nie trafia do repozytorium.
+
+```
+# apps/api/.env  (gitignored, nigdy nie commituj)
+GUS_API_KEY=eyJraWQiOiJjZWlkZy...
+
+# .env.example  (commitowany, placeholder dla nowych devów)
+GUS_API_KEY=placeholder
+```
+
+W CI/CD (GitHub Actions) klucze dodaje się jako **Secrets** w ustawieniach repozytorium — nie w kodzie ani w `.env.example`.
+
+**Klucze nigdy nie mogą trafić do frontendu.** Zmienne `NEXT_PUBLIC_*` są widoczne w przeglądarce. Wszystkie wywołania do zewnętrznych API muszą przechodzić przez backend NestJS.
+
+### 14.2. Wzorzec modułu NestJS dla zewnętrznego API
+
+```
+apps/api/src/<serwis>/
+  <serwis>.module.ts      ← rejestruje kontroler i serwis
+  <serwis>.controller.ts  ← endpoint, walidacja wejścia, @Public() jeśli pre-auth
+  <serwis>.service.ts     ← logika wywołania, mapowanie odpowiedzi
+```
+
+Zarejestruj moduł w `AppModule`:
+
+```typescript
+// apps/api/src/app.module.ts
+import { GusModule } from './gus/gus.module';
+
+@Module({ imports: [..., GusModule] })
+export class AppModule {}
+```
+
+### 14.3. Serwis — pobieranie klucza i wywołanie fetch
+
+```typescript
+@Injectable()
+export class GusService {
+  private readonly apiKey: string;
+
+  constructor(config: ConfigService) {
+    // getOrThrow — crash przy starcie jeśli zmienna nie istnieje, lepsze niż cichy undefined
+    this.apiKey = config.getOrThrow<string>('GUS_API_KEY');
+  }
+
+  async lookupByNip(nip: string): Promise<GusResult> {
+    let response: Response;
+    try {
+      response = await fetch(`https://external-api.example.com/endpoint?nip=${nip}`, {
+        headers: { Authorization: `Bearer ${this.apiKey}` },
+      });
+    } catch {
+      // błąd sieci (timeout, DNS) — nie ujawniaj szczegółów
+      throw new InternalServerErrorException('Błąd połączenia z zewnętrznym serwisem.');
+    }
+
+    if (response.status === 404) throw new NotFoundException('Zasób nie znaleziony.');
+
+    if (response.status === 400) {
+      // parsuj kod błędu API i rzuć odpowiedni wyjątek NestJS
+      const body = (await response.json().catch(() => ({}))) as { code?: string };
+      if (body.code === 'NIEPOPRAWNY_NUMER_NIP') throw new NotFoundException('Nieprawidłowy NIP.');
+      throw new InternalServerErrorException('Błąd zapytania do zewnętrznego API.');
+    }
+
+    if (!response.ok) throw new InternalServerErrorException(`Błąd API: ${response.status}`);
+
+    const data = (await response.json()) as ExternalApiResponse;
+    return this.mapResponse(data);
+  }
+}
+```
+
+`fetch` jest dostępny natywnie od Node 18 — `@types/node@18+` daje typy. Nie dodawaj `axios` ani `node-fetch`.
+
+### 14.4. Endpoint pre-auth — dekorator @Public()
+
+Endpointy wywoływane przed logowaniem (np. weryfikacja NIP podczas rejestracji) muszą być oznaczone `@Public()`, bo globalny `JwtAuthGuard` blokuje wszystkie trasy domyślnie:
+
+```typescript
+import { Public } from '../auth/decorators/public.decorator';
+
+@Public()
+@Get(':nip')
+async getByNip(@Param('nip') nip: string) { ... }
+```
+
+### 14.5. Walidacja parametru przed wywołaniem API
+
+Waliduj format parametru w kontrolerze zanim sięgniesz do zewnętrznego API — oszczędzasz request i zwracasz czytelny błąd:
+
+```typescript
+@Get(':nip')
+async getByNip(@Param('nip') nip: string) {
+  if (!/^\d{10}$/.test(nip)) {
+    throw new BadRequestException('NIP musi mieć dokładnie 10 cyfr.');
+  }
+  return this.service.lookupByNip(nip);
+}
+```
