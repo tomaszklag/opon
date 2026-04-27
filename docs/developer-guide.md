@@ -295,6 +295,26 @@ DS `Input` i `Textarea` są `forwardRef` → działają bezpośrednio z `{...reg
 
 Jeśli brakuje komponentu w DS lub nie obsługuje wymaganego stanu → **dodaj/popraw w `packages/design-system-web/`**, nie używaj natywnego HTML jako obejścia.
 
+### Tokeny CSS — jeden źródłowy plik
+
+Wszystkie tokeny (kolory, spacing, radius, typography) są w:
+
+```
+packages/design-system-web/src/global.css   ← jedyne źródło prawdy
+```
+
+Plik `apps/panel/app/layout.tsx` importuje go jako pierwszy (`import '@opony/design-system-web/global.css'`).
+`panel.css` zawiera tylko: reset, link styles, font: inherit, utility classes, aliasy backward-compatible.
+
+**Nigdy nie redefiniuj tokenów w `panel.css`** — zmiany tokenów rób w `global.css`.
+
+| ✅ TAK                            | ❌ NIE                                     |
+| --------------------------------- | ------------------------------------------ |
+| Zmiana `--accent` w `global.css`  | `--accent: #xxx` w `panel.css` lub module  |
+| Nowy token dodany do `global.css` | Token zdefiniowany tylko w module.css      |
+| `var(--surface)` w CSS            | `var(--bg-surface)` — stara nazwa panelowa |
+| `var(--text-primary)` w CSS       | `var(--text)` — stara nazwa panelowa       |
+
 ---
 
 ## 8. Dodawanie nowego formularza FE — wzorzec
