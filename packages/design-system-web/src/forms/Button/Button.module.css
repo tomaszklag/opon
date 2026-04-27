@@ -90,6 +90,33 @@
   color: var(--accent-hover);
 }
 
+/* CTA variant — display font, persistent glow, used for primary call-to-action on auth screens */
+.cta {
+  background: var(--accent);
+  color: var(--text-on-accent);
+  border-color: var(--accent);
+  font-family: var(--font-display);
+  font-size: 19px;
+  letter-spacing: 3px;
+  border-radius: var(--radius-lg);
+  padding: 16px 18px;
+  height: auto;
+  box-shadow: 0 10px 30px rgba(255, 107, 26, 0.35);
+  line-height: 1;
+  transition: background 140ms, transform 80ms, box-shadow 140ms;
+}
+
+.cta:hover:not(:disabled) {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+  box-shadow: 0 12px 36px rgba(255, 107, 26, 0.5);
+}
+
+.cta:active:not(:disabled) {
+  transform: translateY(1px);
+  box-shadow: 0 6px 18px rgba(255, 107, 26, 0.3);
+}
+
 /* Sizes */
 .sm {
   height: 32px;

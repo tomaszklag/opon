@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Archivo, Bebas_Neue, JetBrains_Mono } from 'next/font/google';
 import { AuthProvider } from '../lib/auth';
+import '@opony/design-system-web/global.css';
 import './panel.css';
 
 const archivo = Archivo({

@@ -41,11 +41,10 @@ export function PhoneStep({ digits, error, loading, onSubmit, onDigitsChange }: 
 
       <Button
         type="submit"
-        variant="primary"
+        variant="cta"
         fullWidth
         loading={loading}
         disabled={digits.length !== 9}
-        className={styles.ctaBtn}
       >
         WYŚLIJ KOD SMS
         {!loading && <IconArrowRight className={styles.arr} />}

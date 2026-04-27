@@ -48,14 +48,7 @@ export function OtpStep({
 
       {error && <p className={styles.errorMsg}>{error}</p>}
 
-      <Button
-        type="submit"
-        variant="primary"
-        fullWidth
-        loading={loading}
-        disabled={code.length !== 6}
-        className={styles.ctaBtn}
-      >
+      <Button type="submit" variant="cta" fullWidth loading={loading} disabled={code.length !== 6}>
         ZALOGUJ SIĘ
         {!loading && <IconArrowRight className={styles.arr} />}
       </Button>
