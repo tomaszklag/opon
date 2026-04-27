@@ -227,41 +227,6 @@
   margin-top: -12px;
 }
 
-/* ── CTA primary ── */
-.ctaPrimary {
-  padding: 16px 18px;
-  background: var(--accent);
-  color: var(--text-on-accent);
-  border: none;
-  border-radius: 12px;
-  font-family: var(--font-display, 'Bebas Neue'), sans-serif;
-  font-size: 19px;
-  letter-spacing: 3px;
-  line-height: 1;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  box-shadow: 0 10px 30px rgba(255, 107, 26, 0.35);
-  transition: background 0.14s, transform 0.08s;
-  width: 100%;
-}
-
-.ctaPrimary:hover:not(:disabled) {
-  background: var(--accent-hover);
-}
-
-.ctaPrimary:active:not(:disabled) {
-  transform: translateY(1px);
-}
-
-.ctaPrimary:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-  box-shadow: none;
-}
-
 .arr {
   width: 18px;
   height: 18px;

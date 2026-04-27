@@ -19,6 +19,7 @@
   /* accent — amber */
   --accent: #FF6B1A;
   --accent-hover: #FF8039;
+  --accent-dark: #C73F0A;
   --accent-muted: rgba(255, 107, 26, 0.14);
   --accent-border: rgba(255, 107, 26, 0.32);
   --accent-glow: rgba(255, 107, 26, 0.45);

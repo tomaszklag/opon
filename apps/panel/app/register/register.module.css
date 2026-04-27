@@ -46,7 +46,7 @@
   background: var(--accent);
   border-radius: 50%;
   transform: translateY(-2px);
-  box-shadow: 0 0 10px rgba(255, 107, 26, 0.45);
+  box-shadow: 0 0 10px var(--accent-glow);
 }
 
 .panelTag {
@@ -54,8 +54,8 @@
   font-size: 9px;
   padding: 2px 6px;
   border-radius: 4px;
-  background: rgba(255, 107, 26, 0.14);
-  border: 1px solid rgba(255, 107, 26, 0.32);
+  background: var(--accent-muted);
+  border: 1px solid var(--accent-border);
   color: var(--accent);
   letter-spacing: 1.2px;
   text-transform: uppercase;
@@ -81,12 +81,12 @@
   margin-left: 6px;
   padding: 4px 8px;
   border-radius: 6px;
-  border: 1px solid rgba(255, 107, 26, 0.32);
+  border: 1px solid var(--accent-border);
   transition: background 120ms ease;
 }
 
 .loginLinkAnchor:hover {
-  background: rgba(255, 107, 26, 0.14);
+  background: var(--accent-muted);
 }
 
 /* ── Stepper ── */
@@ -135,7 +135,7 @@
   background: var(--accent);
   border-color: var(--accent);
   color: var(--text-on-accent);
-  box-shadow: 0 0 0 5px rgba(255, 107, 26, 0.14);
+  box-shadow: 0 0 0 5px var(--accent-muted);
 }
 
 .stepActive .stepLabel {
@@ -143,8 +143,8 @@
 }
 
 .stepDone .stepNum {
-  background: rgba(255, 107, 26, 0.14);
-  border-color: rgba(255, 107, 26, 0.32);
+  background: var(--accent-muted);
+  border-color: var(--accent-border);
   color: var(--accent);
 }
 
@@ -326,7 +326,7 @@
 
 .consentRowChecked {
   background: rgba(255, 107, 26, 0.06);
-  border-color: rgba(255, 107, 26, 0.32);
+  border-color: var(--accent-border);
 }
 
 .checkBox {
@@ -385,8 +385,8 @@
 }
 
 .consentBadgeReq {
-  background: rgba(255, 107, 26, 0.14);
-  border: 1px solid rgba(255, 107, 26, 0.32);
+  background: var(--accent-muted);
+  border: 1px solid var(--accent-border);
   color: var(--accent);
 }
 
@@ -457,12 +457,12 @@
 }
 
 .fieldInput:focus-within {
-  border-color: rgba(255, 107, 26, 0.32);
-  box-shadow: 0 0 0 3px rgba(255, 107, 26, 0.14);
+  border-color: var(--accent-border);
+  box-shadow: 0 0 0 3px var(--accent-muted);
 }
 
 .fieldInputSuccess {
-  border-color: rgba(46, 224, 160, 0.32);
+  border-color: var(--success-border);
 }
 
 .fieldInputSuccess:focus-within {
@@ -518,7 +518,7 @@
   padding: 0 12px;
   color: var(--success);
   border-left: 1px solid var(--border);
-  background: rgba(46, 224, 160, 0.14);
+  background: var(--success-muted);
   flex-shrink: 0;
 }
 
@@ -547,8 +547,8 @@
   flex-direction: column;
   gap: 8px;
   padding: 12px 14px;
-  background: rgba(46, 224, 160, 0.14);
-  border: 1px solid rgba(46, 224, 160, 0.32);
+  background: var(--success-muted);
+  border: 1px solid var(--success-border);
   border-radius: 10px;
   margin-top: 4px;
 }
@@ -607,7 +607,7 @@
 .gusPill {
   padding: 2px 7px;
   background: rgba(46, 224, 160, 0.18);
-  border: 1px solid rgba(46, 224, 160, 0.32);
+  border: 1px solid var(--success-border);
   border-radius: 4px;
   font-family: var(--font-mono, monospace);
   font-size: 10px;

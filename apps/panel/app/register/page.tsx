@@ -1,11 +1,17 @@
 'use client';
 
 import Link from 'next/link';
+import { StepIndicator } from '@opony/design-system-web';
 import { useRegisterFlow } from '../../lib/hooks/use-register-flow';
 import { useAuthGuard } from '../../lib/hooks/use-auth-guard';
-import { StepsIndicator } from './_components/StepsIndicator';
 import { FirmStep } from './_components/FirmStep';
 import styles from './register.module.css';
+
+const REGISTER_STEPS = [
+  { label: 'Firma', status: 'active' as const },
+  { label: 'Zdjęcia', status: 'upcoming' as const },
+  { label: 'Weryfikacja', status: 'upcoming' as const },
+];
 
 export default function RegisterPage() {
   const { isLoading: authLoading } = useAuthGuard('/register');
@@ -42,7 +48,9 @@ export default function RegisterPage() {
       </header>
 
       {/* Stepper */}
-      <StepsIndicator currentStep={1} />
+      <div className={styles.stepperBar}>
+        <StepIndicator steps={REGISTER_STEPS} />
+      </div>
 
       {/* Form scroll area */}
       <div className={styles.formScroll}>
