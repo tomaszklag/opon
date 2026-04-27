@@ -38,6 +38,7 @@ export function useRegisterFlow() {
   const [gusData, setGusData] = useState<GusData | null>(null);
   const [gusLoading, setGusLoading] = useState(false);
   const [gusError, setGusError] = useState('');
+  const [retryCount, setRetryCount] = useState(0);
   const abortRef = useRef<AbortController | null>(null);
 
   const nip = form.watch('nip');
@@ -75,7 +76,8 @@ export function useRegisterFlow() {
       });
 
     return () => ctrl.abort();
-  }, [nip]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nip, retryCount]);
 
   function toggleConsent(field: 'consentTerms' | 'consentRodo' | 'consentMarketing') {
     form.setValue(field, !form.getValues(field), {
@@ -114,6 +116,7 @@ export function useRegisterFlow() {
     gusData,
     gusLoading,
     gusError,
+    retry: () => setRetryCount((c) => c + 1),
     toggleConsent,
     handleSubmit: form.handleSubmit(onSubmit),
   };

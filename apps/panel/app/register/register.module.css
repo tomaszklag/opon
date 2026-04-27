@@ -512,6 +512,25 @@
   letter-spacing: 0.5px !important;
 }
 
+.retryBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  padding: 2px;
+  cursor: pointer;
+  color: var(--danger);
+  pointer-events: auto;
+  border-radius: 4px;
+  transition: color 120ms ease, background 120ms ease;
+}
+
+.retryBtn:hover {
+  color: #ff7777;
+  background: rgba(255, 87, 87, 0.1);
+}
+
 .fieldPrefix {
   display: inline-flex;
   align-items: center;

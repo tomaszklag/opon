@@ -8,6 +8,7 @@ import { PrismaModule } from './prisma/prisma.module';
 import { PricingTiersModule } from './pricing-tiers/pricing-tiers.module';
 import { ProvidersModule } from './providers/providers.module';
 import { WorkingHoursModule } from './working-hours/working-hours.module';
+import { GusModule } from './gus/gus.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { WorkingHoursModule } from './working-hours/working-hours.module';
     ProvidersModule,
     PricingTiersModule,
     WorkingHoursModule,
+    GusModule,
   ],
   providers: [
     // Globalny guard — wszystkie endpointy wymagają JWT, chyba że @Public()

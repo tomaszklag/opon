@@ -7,6 +7,7 @@ import {
   IconPricing,
   IconBriefcase,
   IconLockOutline,
+  IconRefresh,
 } from '../../../components/icons';
 import type { useRegisterFlow } from '../../../lib/hooks/use-register-flow';
 import styles from '../register.module.css';
@@ -18,7 +19,8 @@ interface Props {
 }
 
 export function FirmStep({ flow }: Props) {
-  const { form, apiError, gusData, gusLoading, gusError, toggleConsent, handleSubmit } = flow;
+  const { form, apiError, gusData, gusLoading, gusError, retry, toggleConsent, handleSubmit } =
+    flow;
   const {
     control,
     register,
@@ -44,6 +46,16 @@ export function FirmStep({ flow }: Props) {
     <Spinner size="sm" label="Weryfikuję NIP…" />
   ) : gusData ? (
     <IconCheck width={14} height={14} stroke="var(--success)" />
+  ) : gusError ? (
+    <button
+      type="button"
+      onClick={retry}
+      title="Spróbuj ponownie"
+      aria-label="Spróbuj ponownie"
+      className={styles.retryBtn}
+    >
+      <IconRefresh width={14} height={14} />
+    </button>
   ) : undefined;
 
   return (
@@ -210,7 +222,11 @@ export function FirmStep({ flow }: Props) {
                 success={!!gusData}
                 suffix={nipSuffix}
                 error={fieldState.error?.message || gusError || undefined}
-                hint="10 cyfr bez myślników. Dane firmy zostaną pobrane automatycznie z GUS / CEIDG."
+                hint={
+                  field.value.length < 10
+                    ? '10 cyfr bez myślników. Dane firmy zostaną pobrane automatycznie z GUS / CEIDG.'
+                    : undefined
+                }
                 className={styles.mono}
               />
             )}
