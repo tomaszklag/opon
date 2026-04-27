@@ -256,6 +256,13 @@ Husky + lint-staged uruchamia ESLint i Prettier automatycznie przed każdym comm
 - Stałe i czyste funkcje (np. `DAY_META`, `parseTime`) do `_components/utils.ts`
 - Komponenty wielokrotnego użytku (np. `Spinner`, `Badge`) do `apps/panel/components/`
 
+**Przed napisaniem nowego komponentu:**
+
+1. Sprawdź `packages/design-system-web/src/` czy odpowiednik już istnieje
+2. Jeśli istnieje ale wygląda inaczej niż design — popraw DS, nie twórz lokalnej kopii
+3. Jeśli brakuje w DS i będzie używany w ≥2 miejscach — dodaj do DS
+4. Ikony SVG zawsze przez `apps/panel/components/icons.tsx`, nigdy inline
+
 Pełna specyfikacja wzorca: `architektura.md §9.C`.
 
 Design reference dla każdego ekranu panelu: `design/b2b-*.html`. Mapa ekran ↔ task w `plan-sprintow.md §12.Z`.
@@ -279,17 +286,26 @@ import {
 } from '@opony/design-system-web';
 ```
 
+### Zasada: sprawdź DS zanim stworzysz własny komponent
+
+**Zanim napiszesz nowy komponent** — sprawdź `packages/design-system-web/src/`. Jeśli odpowiednik istnieje ale wizualnie nie zgadza się z designem → **napraw DS**, nie twórz lokalnego duplikatu. Lokalne kopie komponentów DS są niedopuszczalne.
+
+Przykład: `StepIndicator` w DS istniał, ale miał błędny styl (full-width `<ol>` zamiast kompaktowego paska). Właściwe rozwiązanie: zaktualizować DS, nie tworzyć `StepsIndicator.tsx` w panelu.
+
 ### Najczęstsze zamienniki
 
-| Zamiast                                   | Użyj                                           |
-| ----------------------------------------- | ---------------------------------------------- |
-| `<input type="text" />`                   | `<Input label="..." error={...} />`            |
-| `<input type="tel" />`                    | `<PhoneInput label="..." />`                   |
-| `<textarea />`                            | `<Textarea label="..." maxLength={N} />`       |
-| `<select><option>...</option></select>`   | `<Select options={[{value,label}]} />`         |
-| `<button className={styles.saveBtn}>`     | `<Button variant="primary" loading={saving}>`  |
-| `<button role="switch">` (toggle)         | `<Toggle checked={val} onChange={...} />`      |
-| Siatka 6× `<input maxLength={1}>` dla OTP | `<OTPInput length={6} value={v} onChange={f}>` |
+| Zamiast                                       | Użyj                                                 |
+| --------------------------------------------- | ---------------------------------------------------- |
+| `<input type="text" />`                       | `<Input label="..." error={...} />`                  |
+| `<input type="tel" />`                        | `<PhoneInput label="..." />`                         |
+| `<textarea />`                                | `<Textarea label="..." maxLength={N} />`             |
+| `<select><option>...</option></select>`       | `<Select options={[{value,label}]} />`               |
+| `<button className={styles.saveBtn}>`         | `<Button variant="primary" loading={saving}>`        |
+| `<button role="switch">` (toggle)             | `<Toggle checked={val} onChange={...} />`            |
+| Siatka 6× `<input maxLength={1}>` dla OTP     | `<OTPInput length={6} value={v} onChange={f}>`       |
+| `<p className={styles.error}>{msg}</p>`       | `<NoticeBlock variant="danger">{msg}</NoticeBlock>`  |
+| `<div className={styles.warning}>{msg}</div>` | `<NoticeBlock variant="warning">{msg}</NoticeBlock>` |
+| Własny wizard/stepper                         | `<StepIndicator steps={[{label, status}]} />`        |
 
 DS `Input` i `Textarea` są `forwardRef` → działają bezpośrednio z `{...register('field')}` z RHF.
 
@@ -315,123 +331,37 @@ Plik `apps/panel/app/layout.tsx` importuje go jako pierwszy (`import '@opony/des
 | `var(--surface)` w CSS            | `var(--bg-surface)` — stara nazwa panelowa |
 | `var(--text-primary)` w CSS       | `var(--text)` — stara nazwa panelowa       |
 
----
+### Reguła: żadnych hardcoded wartości kolorów w CSS module
 
-## 8. Dodawanie nowego formularza FE — wzorzec
+W plikach `*.module.css` **nie wolno** używać wartości hex ani rgba gdy istnieje odpowiedni token DS.
 
-Każdy formularz w `apps/panel` musi mieć logikę w hooku. Strona to czysty render.
+```css
+/* ✅ TAK */
+background: var(--accent-muted);
+border: 1px solid var(--accent-border);
+box-shadow: 0 0 10px var(--accent-glow);
+background: var(--success-muted);
+border-color: var(--danger-border);
 
-### 7.1. Formularz jednej encji → React Hook Form + Zod
-
-```bash
-# 1. Utwórz schemat
-touch apps/panel/lib/schemas/my-feature.schema.ts
-
-# 2. Utwórz hook
-touch apps/panel/lib/hooks/use-my-feature-form.ts
+/* ❌ NIE */
+background: rgba(255, 107, 26, 0.14); /* to jest --accent-muted */
+border: 1px solid rgba(255, 107, 26, 0.32); /* to jest --accent-border */
+box-shadow: 0 0 10px rgba(255, 107, 26, 0.45); /* to jest --accent-glow */
 ```
 
-**Schemat** (`lib/schemas/my-feature.schema.ts`):
+Dostępne tokeny kolorów w `global.css`:
 
-```ts
-import { z } from 'zod';
-
-export const mySchema = z.object({
-  name: z.string().min(1, 'Wymagane'),
-  // Dla pól opcjonalnych — refine zamiast .optional().default(''):
-  website: z.string().refine((v) => v === '' || /^https?:\/\/.+/.test(v), 'Nieprawidłowy URL'),
-});
-
-export type MyFormValues = z.infer<typeof mySchema>;
+```
+--accent, --accent-hover, --accent-dark
+--accent-muted      rgba(255,107,26, 0.14)
+--accent-border     rgba(255,107,26, 0.32)
+--accent-glow       rgba(255,107,26, 0.45)
+--success, --success-muted, --success-border
+--warning, --warning-muted, --warning-border
+--danger, --danger-muted, --danger-border
 ```
 
-**Hook** (`lib/hooks/use-my-feature-form.ts`):
-
-```ts
-'use client';
-import { useEffect, useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { mySchema, type MyFormValues } from '../schemas/my-feature.schema';
-import { getMyEntity, updateMyEntity } from '../../api-data-access/my-entity';
-
-export function useMyFeatureForm() {
-  const [entity, setEntity] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [saved, setSaved] = useState(false);
-  const form = useForm<MyFormValues>({
-    resolver: zodResolver(mySchema),
-    defaultValues: { name: '', website: '' },
-  });
-  const { reset } = form;
-
-  useEffect(() => {
-    getMyEntity()
-      .then((e) => {
-        setEntity(e);
-        reset({ name: e.name, website: e.website ?? '' });
-      })
-      .finally(() => setLoading(false));
-  }, [reset]);
-
-  async function onSubmit(data: MyFormValues) {
-    await updateMyEntity(data);
-    reset(data); // synchronizuje isDirty
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
-  }
-
-  return {
-    form,
-    entity,
-    loading,
-    saved,
-    onSubmit: form.handleSubmit(onSubmit),
-    isDirty: form.formState.isDirty,
-    isSubmitting: form.formState.isSubmitting,
-  };
-}
-```
-
-**Strona** (`app/dashboard/my-feature/page.tsx`):
-
-```tsx
-'use client';
-import { useMyFeatureForm } from '../../../lib/hooks/use-my-feature-form';
-
-export default function MyFeaturePage() {
-  const { form, loading, saved, onSubmit, isDirty, isSubmitting } = useMyFeatureForm();
-  const {
-    register,
-    formState: { errors },
-  } = form;
-
-  if (loading) return <div>Ładowanie…</div>;
-  return (
-    <form onSubmit={onSubmit}>
-      <input {...register('name')} />
-      {errors.name && <span>{errors.name.message}</span>}
-      <button disabled={!isDirty || isSubmitting}>Zapisz</button>
-    </form>
-  );
-}
-```
-
-### 7.2. Formularz listy / state machine → własny hook useState
-
-Używaj gdy zarządzasz kolekcją (np. pricing tiers, working hours) lub state machine (np. login flow z krokami):
-
-```ts
-// lib/hooks/use-my-list.ts
-export function useMyList() {
-  const [items, setItems] = useState<Item[]>([]);
-  const [loading, setLoading] = useState(true);
-  // CRUD + validate + save
-  return { items, loading, updateItem, deleteItem, save };
-}
-```
-
-Wzorce do naśladowania: [use-pricing-tiers.ts](../apps/panel/lib/hooks/use-pricing-tiers.ts), [use-working-hours.ts](../apps/panel/lib/hooks/use-working-hours.ts), [use-login-flow.ts](../apps/panel/lib/hooks/use-login-flow.ts)
+Wartości bez tokenu (np. specyficzne przezroczystości w gradientach tła) mogą pozostać hardcoded — ale to wyjątek, nie reguła.
 
 ---
 
@@ -615,3 +545,89 @@ cd apps/api && pnpm prisma db execute --stdin <<< "SELECT tablename FROM pg_tabl
 # Sprawdź bundle size panelu
 cd apps/panel && pnpm build && pnpm next build --debug 2>&1 | grep "First Load JS"
 ```
+
+---
+
+## 13. Formularze — walidacja i obsługa błędów
+
+### Obowiązujący wzorzec: react-hook-form + Zod
+
+Każdy formularz w `apps/panel` używa **react-hook-form** z **zodResolver** i schemą w `lib/schemas/`.
+
+```
+apps/panel/lib/schemas/
+  provider.schema.ts   ← profil firmy
+  register.schema.ts   ← rejestracja warsztatu
+  pricing.schema.ts    ← nowy tier cennikowy
+```
+
+#### Struktura hooka
+
+```typescript
+// lib/hooks/use-foo-form.ts
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm } from 'react-hook-form';
+import { fooSchema, type FooValues } from '../schemas/foo.schema';
+
+export function useFooForm() {
+  const form = useForm<FooValues>({
+    resolver: zodResolver(fooSchema),
+    defaultValues: { ... },
+  });
+
+  const [apiError, setApiError] = useState<string | null>(null);
+
+  async function onSubmit(values: FooValues) {
+    setApiError(null);
+    try {
+      await api.post('/v1/foo', values);
+    } catch (err) {
+      setApiError(err instanceof ApiError ? err.message : 'Błąd. Spróbuj ponownie.');
+    }
+  }
+
+  return {
+    form,
+    apiError,
+    onSubmit: form.handleSubmit(onSubmit),
+  };
+}
+```
+
+#### Użycie w komponencie
+
+```tsx
+// Pole z automatyczną transformacją (np. digits-only) → Controller
+<Controller
+  name="nip"
+  control={form.control}
+  render={({ field, fieldState }) => (
+    <Input
+      value={field.value}
+      onChange={(e) => field.onChange(e.target.value.replace(/\D/g, '').slice(0, 10))}
+      onBlur={field.onBlur}
+      error={fieldState.error?.message}
+    />
+  )}
+/>
+
+// Proste pole tekstowe → register
+<Input {...form.register('email')} error={form.formState.errors.email?.message} />
+
+// Błąd API (po submit) → NoticeBlock z DS
+{apiError && <NoticeBlock variant="danger">{apiError}</NoticeBlock>}
+```
+
+#### Kiedy NIE używać react-hook-form
+
+- **State machine z timerami** (`useLoginFlow`) — OTP flow, countdown, rate-limiting. Pojedyncza walidacja `digits.length !== 9` nie uzasadnia RHF.
+- **Table editor z walidacją per-wiersz** (`useWorkingHours`) — 7 dni × kilka pól, walidacja czysto w `validate(): Record<dayOfWeek, string>`. `useFieldArray` byłoby tu nadmiarowe.
+
+W tych przypadkach błąd po submit nadal trafia do `<NoticeBlock variant="danger">`, a błędy per-wiersz do `error` prop DS `Input`.
+
+#### Schematy — zasady
+
+- Jeden plik schema na domenę: `lib/schemas/<domena>.schema.ts`
+- Eksportuj typ przez `z.infer<typeof schema>`: `export type FooValues = z.infer<typeof fooSchema>`
+- Komunikaty błędów po polsku, konkretne: `'NIP musi mieć dokładnie 10 cyfr'` nie `'Wymagane'`
+- Opcjonalne pola: `z.string().optional()` lub `z.string().max(n).optional()` — nie `z.string().nullable()`

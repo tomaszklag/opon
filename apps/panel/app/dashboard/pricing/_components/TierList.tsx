@@ -1,4 +1,6 @@
+import { type UseFormReturn } from 'react-hook-form';
 import { type TierDraft } from '../../../../lib/hooks/use-pricing-tiers';
+import { type NewTierValues } from '../../../../lib/schemas/pricing.schema';
 import { TierRow } from './TierRow';
 import { NewTierForm } from './NewTierForm';
 import styles from '../pricing.module.css';
@@ -6,8 +8,7 @@ import styles from '../pricing.module.css';
 interface Props {
   drafts: TierDraft[];
   showAddForm: boolean;
-  newTier: TierDraft;
-  setNewTier: React.Dispatch<React.SetStateAction<TierDraft>>;
+  newTierForm: UseFormReturn<NewTierValues>;
   errors: string[];
   onUpdate: (idx: number, patch: Partial<TierDraft>) => void;
   onDelete: (idx: number) => void;
@@ -17,8 +18,7 @@ interface Props {
 export function TierList({
   drafts,
   showAddForm,
-  newTier,
-  setNewTier,
+  newTierForm,
   errors,
   onUpdate,
   onDelete,
@@ -48,9 +48,7 @@ export function TierList({
           />
         ))}
 
-        {showAddForm && (
-          <NewTierForm newTier={newTier} setNewTier={setNewTier} onCancel={onCancelAdd} />
-        )}
+        {showAddForm && <NewTierForm form={newTierForm} onCancel={onCancelAdd} />}
       </section>
 
       {errors.length > 0 && (

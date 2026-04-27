@@ -12,8 +12,7 @@ export default function PricingPage() {
   const { isLoading: authLoading } = useAuthGuard('/dashboard');
   const {
     drafts,
-    newTier,
-    setNewTier,
+    newTierForm,
     loading,
     saving,
     saved,
@@ -58,8 +57,7 @@ export default function PricingPage() {
           <TierList
             drafts={drafts}
             showAddForm={showAddForm}
-            newTier={newTier}
-            setNewTier={setNewTier}
+            newTierForm={newTierForm}
             errors={errors}
             onUpdate={updateDraft}
             onDelete={deleteDraft}

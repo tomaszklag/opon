@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm } from 'react-hook-form';
 import {
   createPricingTier,
   deletePricingTier,
@@ -9,6 +11,7 @@ import {
   type PricingTier,
 } from '../../api-data-access/pricing-tiers';
 import { ApiError } from '../api';
+import { newTierSchema, type NewTierValues } from '../schemas/pricing.schema';
 
 export type TierDraft = {
   id?: string;
@@ -19,7 +22,7 @@ export type TierDraft = {
   priceBalancingPerWheelPln: number;
 };
 
-export const DEFAULT_NEW_TIER: TierDraft = {
+const NEW_TIER_DEFAULTS: NewTierValues = {
   rimSizeMin: 13,
   rimSizeMax: 15,
   priceSwapPln: 0,
@@ -39,6 +42,16 @@ function tierToDraft(t: PricingTier): TierDraft {
   };
 }
 
+function validateDrafts(drafts: TierDraft[]): string[] {
+  const errs: string[] = [];
+  for (const d of drafts) {
+    if (d.rimSizeMin > d.rimSizeMax) errs.push(`Tier ${d.rimSizeMin}–${d.rimSizeMax}: min > max`);
+    if (d.priceSwapPln <= 0)
+      errs.push(`Tier ${d.rimSizeMin}–${d.rimSizeMax} cali: cena musi być > 0`);
+  }
+  return errs;
+}
+
 export function usePricingTiers() {
   const [drafts, setDrafts] = useState<TierDraft[]>([]);
   const [deletedIds, setDeletedIds] = useState<string[]>([]);
@@ -47,8 +60,12 @@ export function usePricingTiers() {
   const [saved, setSaved] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
-  const [newTier, setNewTier] = useState<TierDraft>({ ...DEFAULT_NEW_TIER });
   const [errors, setErrors] = useState<string[]>([]);
+
+  const newTierForm = useForm<NewTierValues>({
+    resolver: zodResolver(newTierSchema),
+    defaultValues: NEW_TIER_DEFAULTS,
+  });
 
   useEffect(() => {
     getPricingTiers()
@@ -73,36 +90,29 @@ export function usePricingTiers() {
 
   function openAddForm() {
     setShowAddForm(true);
-    setNewTier({ ...DEFAULT_NEW_TIER });
+    newTierForm.reset(NEW_TIER_DEFAULTS);
     setDirty(true);
   }
 
   function cancelAddForm() {
     setShowAddForm(false);
-    setNewTier({ ...DEFAULT_NEW_TIER });
-  }
-
-  function validate(): string[] {
-    const errs: string[] = [];
-    for (const d of drafts) {
-      if (d.rimSizeMin > d.rimSizeMax) errs.push(`Tier ${d.rimSizeMin}–${d.rimSizeMax}: min > max`);
-      if (d.priceSwapPln <= 0)
-        errs.push(`Tier ${d.rimSizeMin}–${d.rimSizeMax} cali: cena musi być > 0`);
-    }
-    if (showAddForm) {
-      if (newTier.rimSizeMin > newTier.rimSizeMax)
-        errs.push('Nowy tier: rozmiar min nie może być większy niż max');
-      if (newTier.priceSwapPln <= 0) errs.push('Nowy tier: cena wymiany musi być > 0');
-    }
-    return errs;
+    newTierForm.reset(NEW_TIER_DEFAULTS);
   }
 
   async function save() {
-    const errs = validate();
-    if (errs.length) {
-      setErrors(errs);
+    const draftErrs = validateDrafts(drafts);
+
+    if (showAddForm) {
+      const isNewTierValid = await newTierForm.trigger();
+      if (!isNewTierValid || draftErrs.length) {
+        setErrors(draftErrs);
+        return;
+      }
+    } else if (draftErrs.length) {
+      setErrors(draftErrs);
       return;
     }
+
     setErrors([]);
     setSaving(true);
     try {
@@ -110,19 +120,18 @@ export function usePricingTiers() {
       setDeletedIds([]);
 
       if (showAddForm) {
+        const values = newTierForm.getValues();
         const created = await createPricingTier({
-          rimSizeMin: newTier.rimSizeMin,
-          rimSizeMax: newTier.rimSizeMax,
-          priceSwapPln: newTier.priceSwapPln,
-          priceBalancingPerWheelPln: newTier.balancingEnabled
-            ? newTier.priceBalancingPerWheelPln
-            : 0,
+          rimSizeMin: values.rimSizeMin,
+          rimSizeMax: values.rimSizeMax,
+          priceSwapPln: values.priceSwapPln,
+          priceBalancingPerWheelPln: values.balancingEnabled ? values.priceBalancingPerWheelPln : 0,
         });
         setDrafts((prev) =>
           [...prev, tierToDraft(created)].sort((a, b) => a.rimSizeMin - b.rimSizeMin),
         );
         setShowAddForm(false);
-        setNewTier({ ...DEFAULT_NEW_TIER });
+        newTierForm.reset(NEW_TIER_DEFAULTS);
       }
 
       await Promise.all(
@@ -150,8 +159,7 @@ export function usePricingTiers() {
 
   return {
     drafts,
-    newTier,
-    setNewTier,
+    newTierForm,
     loading,
     saving,
     saved,

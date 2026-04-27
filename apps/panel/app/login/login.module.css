@@ -215,17 +215,6 @@
   box-shadow: 0 0 0 4px var(--accent-muted);
 }
 
-/* ── Error ── */
-.errorMsg {
-  font-size: 13px;
-  color: var(--danger);
-  padding: 10px 14px;
-  background: rgba(255, 87, 87, 0.08);
-  border: 1px solid rgba(255, 87, 87, 0.32);
-  border-radius: 8px;
-  font-weight: 600;
-  margin-top: -12px;
-}
 
 .arr {
   width: 18px;

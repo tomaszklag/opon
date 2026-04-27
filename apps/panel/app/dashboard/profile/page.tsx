@@ -1,5 +1,6 @@
 'use client';
 
+import { NoticeBlock } from '@opony/design-system-web';
 import { useProviderForm } from '../../../lib/hooks/use-provider-form';
 import { useAuthGuard } from '../../../lib/hooks/use-auth-guard';
 import { ProfileActionBar } from './_components/ProfileActionBar';
@@ -53,7 +54,7 @@ export default function ProfilePage() {
             </p>
           </header>
 
-          {apiError && <div className={styles.apiError}>{apiError}</div>}
+          {apiError && <NoticeBlock variant="danger">{apiError}</NoticeBlock>}
 
           <IdentitySection
             register={register}

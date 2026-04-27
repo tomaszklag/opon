@@ -52,7 +52,7 @@ export function OtpStep({
 
       <OTPInput length={6} value={code} onChange={onCodeChange} error={!!error} autoFocus />
 
-      {error && <p className={styles.errorMsg}>{error}</p>}
+      {error && <NoticeBlock variant="danger">{error}</NoticeBlock>}
 
       {clientRoleError && (
         <NoticeBlock variant="warning">

@@ -1,4 +1,5 @@
-import { Input, PhoneInput, Button, Spinner } from '@opony/design-system-web';
+import { Controller } from 'react-hook-form';
+import { Input, PhoneInput, Button, Spinner, NoticeBlock } from '@opony/design-system-web';
 import {
   IconCheck,
   IconChevronRight,
@@ -17,20 +18,17 @@ interface Props {
 }
 
 export function FirmStep({ flow }: Props) {
+  const { form, apiError, gusData, gusLoading, gusError, toggleConsent, handleSubmit } = flow;
   const {
-    data,
-    error,
-    loading,
-    gusData,
-    gusLoading,
-    gusError,
-    setNip,
-    setPhone,
-    setEmail,
-    setIban,
-    toggleConsent,
-    handleSubmit,
-  } = flow;
+    control,
+    register,
+    watch,
+    formState: { errors, isSubmitting },
+  } = form;
+
+  const consentTerms = watch('consentTerms');
+  const consentRodo = watch('consentRodo');
+  const consentMarketing = watch('consentMarketing');
 
   function handleConsentKey(
     e: React.KeyboardEvent,
@@ -92,16 +90,14 @@ export function FirmStep({ flow }: Props) {
         <div className={styles.consentList}>
           {/* Regulamin */}
           <div
-            className={`${styles.consentRow} ${styles.consentRowRequired} ${data.consentTerms ? styles.consentRowChecked : ''}`}
+            className={`${styles.consentRow} ${styles.consentRowRequired} ${consentTerms ? styles.consentRowChecked : ''} ${errors.consentTerms ? styles.consentRowError : ''}`}
             role="checkbox"
-            aria-checked={data.consentTerms}
+            aria-checked={consentTerms}
             tabIndex={0}
             onClick={() => toggleConsent('consentTerms')}
             onKeyDown={(e) => handleConsentKey(e, 'consentTerms')}
           >
-            <span
-              className={`${styles.checkBox} ${data.consentTerms ? styles.checkBoxChecked : ''}`}
-            >
+            <span className={`${styles.checkBox} ${consentTerms ? styles.checkBoxChecked : ''}`}>
               <IconCheck width={13} height={13} stroke="var(--text-on-accent)" />
             </span>
             <div className={styles.consentCol}>
@@ -123,21 +119,22 @@ export function FirmStep({ flow }: Props) {
               >
                 Przeczytaj regulamin <IconChevronRight width={8} height={8} />
               </a>
+              {errors.consentTerms && (
+                <span className={styles.consentFieldError}>{errors.consentTerms.message}</span>
+              )}
             </div>
           </div>
 
           {/* RODO */}
           <div
-            className={`${styles.consentRow} ${styles.consentRowRequired} ${data.consentRodo ? styles.consentRowChecked : ''}`}
+            className={`${styles.consentRow} ${styles.consentRowRequired} ${consentRodo ? styles.consentRowChecked : ''} ${errors.consentRodo ? styles.consentRowError : ''}`}
             role="checkbox"
-            aria-checked={data.consentRodo}
+            aria-checked={consentRodo}
             tabIndex={0}
             onClick={() => toggleConsent('consentRodo')}
             onKeyDown={(e) => handleConsentKey(e, 'consentRodo')}
           >
-            <span
-              className={`${styles.checkBox} ${data.consentRodo ? styles.checkBoxChecked : ''}`}
-            >
+            <span className={`${styles.checkBox} ${consentRodo ? styles.checkBoxChecked : ''}`}>
               <IconCheck width={13} height={13} stroke="var(--text-on-accent)" />
             </span>
             <div className={styles.consentCol}>
@@ -157,20 +154,23 @@ export function FirmStep({ flow }: Props) {
               >
                 Przeczytaj politykę <IconChevronRight width={8} height={8} />
               </a>
+              {errors.consentRodo && (
+                <span className={styles.consentFieldError}>{errors.consentRodo.message}</span>
+              )}
             </div>
           </div>
 
           {/* Komunikacja */}
           <div
-            className={`${styles.consentRow} ${data.consentMarketing ? styles.consentRowChecked : ''}`}
+            className={`${styles.consentRow} ${consentMarketing ? styles.consentRowChecked : ''}`}
             role="checkbox"
-            aria-checked={data.consentMarketing}
+            aria-checked={consentMarketing}
             tabIndex={0}
             onClick={() => toggleConsent('consentMarketing')}
             onKeyDown={(e) => handleConsentKey(e, 'consentMarketing')}
           >
             <span
-              className={`${styles.checkBox} ${data.consentMarketing ? styles.checkBoxChecked : ''}`}
+              className={`${styles.checkBox} ${consentMarketing ? styles.checkBoxChecked : ''}`}
             >
               <IconCheck width={13} height={13} stroke="var(--text-on-accent)" />
             </span>
@@ -201,18 +201,25 @@ export function FirmStep({ flow }: Props) {
         </div>
 
         <div>
-          <Input
-            label="NIP"
-            required
-            inputMode="numeric"
-            value={data.nip}
-            onChange={(e) => setNip(e.target.value)}
-            placeholder="1234567890"
-            success={!!gusData}
-            suffix={nipSuffix}
-            error={gusError || undefined}
-            hint="10 cyfr bez myślników. Dane firmy zostaną pobrane automatycznie z GUS / CEIDG."
-            className={styles.mono}
+          <Controller
+            name="nip"
+            control={control}
+            render={({ field, fieldState }) => (
+              <Input
+                label="NIP"
+                required
+                inputMode="numeric"
+                value={field.value}
+                onChange={(e) => field.onChange(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                onBlur={field.onBlur}
+                placeholder="1234567890"
+                success={!!gusData}
+                suffix={nipSuffix}
+                error={fieldState.error?.message || gusError || undefined}
+                hint="10 cyfr bez myślników. Dane firmy zostaną pobrane automatycznie z GUS / CEIDG."
+                className={styles.mono}
+              />
+            )}
           />
           {gusData && (
             <div className={styles.gusResult} role="region" aria-label="Dane z GUS">
@@ -249,40 +256,55 @@ export function FirmStep({ flow }: Props) {
         </div>
 
         <div className={styles.fieldGrid2}>
-          <PhoneInput
-            label="Telefon"
-            required
-            value={data.phone}
-            onChange={(e) => setPhone(e.target.value)}
-            placeholder="501 234 789"
-            hint="Używany do logowania (SMS OTP) i powiadomień o rezerwacjach."
+          <Controller
+            name="phone"
+            control={control}
+            render={({ field, fieldState }) => (
+              <PhoneInput
+                label="Telefon"
+                required
+                value={field.value}
+                onChange={(e) => field.onChange(e.target.value.replace(/\D/g, '').slice(0, 9))}
+                onBlur={field.onBlur}
+                error={fieldState.error?.message}
+                placeholder="501 234 789"
+                hint="Używany do logowania (SMS OTP) i powiadomień o rezerwacjach."
+              />
+            )}
           />
           <Input
             label="Email"
             type="email"
             required
-            value={data.email}
-            onChange={(e) => setEmail(e.target.value)}
+            {...register('email')}
+            error={errors.email?.message}
             placeholder="kontakt@firma.pl"
             hint="Wyślemy link weryfikacyjny. Raport tygodniowy + faktury."
           />
         </div>
 
-        <Input
-          label="Numer konta (IBAN)"
-          inputMode="numeric"
-          value={data.iban}
-          onChange={(e) => setIban(e.target.value)}
-          placeholder="12 3456 7890 1234 5678 9012 3456"
-          prefix={ibanPrefix}
-          hint="W pilotażu apka jest darmowa (0% prowizji) — klient płaci Tobie offline. IBAN wykorzystamy gdy uruchomimy rozliczenia online (planowane v0.5)."
-          maxLength={26}
-          className={styles.mono}
+        <Controller
+          name="iban"
+          control={control}
+          render={({ field }) => (
+            <Input
+              label="Numer konta (IBAN)"
+              inputMode="numeric"
+              value={field.value ?? ''}
+              onChange={(e) => field.onChange(e.target.value.replace(/\D/g, '').slice(0, 26))}
+              onBlur={field.onBlur}
+              placeholder="12 3456 7890 1234 5678 9012 3456"
+              prefix={ibanPrefix}
+              hint="W pilotażu apka jest darmowa (0% prowizji) — klient płaci Tobie offline. IBAN wykorzystamy gdy uruchomimy rozliczenia online (planowane v0.5)."
+              maxLength={26}
+              className={styles.mono}
+            />
+          )}
         />
       </section>
 
-      {/* Error */}
-      {error && <p className={styles.error}>{error}</p>}
+      {/* API error */}
+      {apiError && <NoticeBlock variant="danger">{apiError}</NoticeBlock>}
 
       {/* CTA */}
       <div className={styles.ctaRow}>
@@ -290,7 +312,7 @@ export function FirmStep({ flow }: Props) {
           Po kliknięciu &bdquo;Dalej&rdquo; zapiszemy dane firmy. Na podany e-mail wyślemy link
           weryfikacyjny, a na numer telefonu — kod SMS do logowania.
         </p>
-        <Button type="submit" variant="primary" loading={loading} className={styles.ctaBtn}>
+        <Button type="submit" variant="primary" loading={isSubmitting} className={styles.ctaBtn}>
           Dalej
           <IconArrowRight width={16} height={16} />
           <span className={styles.ctaBtnNext}>Zdjęcia</span>

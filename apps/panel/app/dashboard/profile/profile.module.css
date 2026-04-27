@@ -116,15 +116,6 @@
   color: var(--text-secondary);
 }
 
-.apiError {
-  padding: 10px 14px;
-  background: rgba(255, 87, 87, 0.06);
-  border: 1px solid var(--danger);
-  border-radius: 8px;
-  font-size: 13px;
-  color: var(--danger);
-  font-weight: 600;
-}
 
 /* ── Section ── */
 .section {
