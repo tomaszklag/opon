@@ -1,5 +1,6 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { Provider, ProviderStatus } from '@prisma/client';
+import { AppException, ErrorCode } from '../common/errors';
 import { EmailService } from '../email/email.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { AdminProviderListQueryDto } from './dto/admin-provider-list-query.dto';
@@ -37,9 +38,13 @@ export class AdminProvidersService {
 
   async approveProvider(id: string): Promise<Provider> {
     const provider = await this.prisma.provider.findUnique({ where: { id } });
-    if (!provider) throw new NotFoundException('Firma nie istnieje.');
+    if (!provider) throw new AppException(ErrorCode.PROVIDER_NOT_FOUND, 'Firma nie istnieje.', 404);
     if (provider.status !== ProviderStatus.PENDING_APPROVAL)
-      throw new BadRequestException('Firma nie jest w stanie oczekującym na weryfikację.');
+      throw new AppException(
+        ErrorCode.PROVIDER_NOT_PENDING_APPROVAL,
+        'Firma nie jest w stanie oczekującym na weryfikację.',
+        400,
+      );
     const [updated] = await this.prisma.$transaction([
       this.prisma.provider.update({
         where: { id },
@@ -58,9 +63,13 @@ export class AdminProvidersService {
 
   async rejectProvider(id: string, reason?: string): Promise<Provider> {
     const provider = await this.prisma.provider.findUnique({ where: { id } });
-    if (!provider) throw new NotFoundException('Firma nie istnieje.');
+    if (!provider) throw new AppException(ErrorCode.PROVIDER_NOT_FOUND, 'Firma nie istnieje.', 404);
     if (provider.status !== ProviderStatus.PENDING_APPROVAL)
-      throw new BadRequestException('Firma nie jest w stanie oczekującym na weryfikację.');
+      throw new AppException(
+        ErrorCode.PROVIDER_NOT_PENDING_APPROVAL,
+        'Firma nie jest w stanie oczekującym na weryfikację.',
+        400,
+      );
     const updated = await this.prisma.provider.update({
       where: { id },
       data: { status: ProviderStatus.REJECTED },

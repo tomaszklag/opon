@@ -149,7 +149,10 @@ export function usePricingTiers() {
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     } catch (err) {
-      if (err instanceof ApiError && err.status === 409) {
+      if (
+        err instanceof ApiError &&
+        (err.code === 'PRICING_TIER_RANGE_CONFLICT' || err.isConflict)
+      ) {
         setErrors(['Przedział felg już istnieje. Zmień zakres lub usuń istniejący tier.']);
       }
     } finally {

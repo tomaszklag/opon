@@ -1,11 +1,6 @@
-import {
-  BadRequestException,
-  ConflictException,
-  Injectable,
-  InternalServerErrorException,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { Provider, ProviderStatus } from '@prisma/client';
+import { AppException, ErrorCode } from '../common/errors';
 import { EmailService } from '../email/email.service';
 import { EmailVerificationService } from '../email/email-verification.service';
 import { CreateProviderDto } from './dto/create-provider.dto';
@@ -34,12 +29,20 @@ export class ProvidersService {
   async create(ownerId: string, dto: CreateProviderDto): Promise<Provider> {
     const existingByOwner = await this.repo.findByOwnerId(ownerId);
     if (existingByOwner) {
-      throw new ConflictException('Masz już zarejestrowaną firmę.');
+      throw new AppException(
+        ErrorCode.PROVIDER_ALREADY_EXISTS,
+        'Masz już zarejestrowaną firmę.',
+        409,
+      );
     }
 
     const existingByNip = await this.repo.findByNip(dto.nip);
     if (existingByNip) {
-      throw new ConflictException('Podany NIP jest już zarejestrowany w systemie.');
+      throw new AppException(
+        ErrorCode.PROVIDER_NIP_CONFLICT,
+        'Podany NIP jest już zarejestrowany w systemie.',
+        409,
+      );
     }
 
     try {
@@ -55,18 +58,27 @@ export class ProvidersService {
       }
       return createdProvider;
     } catch (err) {
+      if (err instanceof AppException) throw err;
       // Prisma P2025 = Record not found during update (np. user usunięty między requestami)
       if ((err as { code?: string }).code === 'P2025') {
-        throw new NotFoundException('Użytkownik nie istnieje.');
+        throw new AppException(ErrorCode.AUTH_USER_NOT_FOUND, 'Użytkownik nie istnieje.', 404);
       }
-      throw new InternalServerErrorException('Nie udało się zarejestrować firmy.');
+      throw new AppException(
+        ErrorCode.PROVIDER_CREATE_FAILED,
+        'Nie udało się zarejestrować firmy.',
+        500,
+      );
     }
   }
 
   async getMyProvider(ownerId: string): Promise<Provider> {
     const provider = await this.repo.findByOwnerId(ownerId);
     if (!provider) {
-      throw new NotFoundException('Nie masz zarejestrowanej firmy.');
+      throw new AppException(
+        ErrorCode.PROVIDER_OWNER_NOT_FOUND,
+        'Nie masz zarejestrowanej firmy.',
+        404,
+      );
     }
     return provider;
   }
@@ -74,7 +86,11 @@ export class ProvidersService {
   async updateMyProvider(ownerId: string, dto: UpdateProviderDto): Promise<Provider> {
     const provider = await this.repo.findByOwnerId(ownerId);
     if (!provider) {
-      throw new NotFoundException('Nie masz zarejestrowanej firmy.');
+      throw new AppException(
+        ErrorCode.PROVIDER_OWNER_NOT_FOUND,
+        'Nie masz zarejestrowanej firmy.',
+        404,
+      );
     }
     return this.repo.update(provider.id, dto);
   }
@@ -82,11 +98,17 @@ export class ProvidersService {
   async submitForApproval(ownerId: string): Promise<Provider> {
     const provider = await this.repo.findByOwnerId(ownerId);
     if (!provider) {
-      throw new NotFoundException('Nie masz zarejestrowanej firmy.');
+      throw new AppException(
+        ErrorCode.PROVIDER_OWNER_NOT_FOUND,
+        'Nie masz zarejestrowanej firmy.',
+        404,
+      );
     }
     if (provider.status !== ProviderStatus.PENDING_DOCS) {
-      throw new BadRequestException(
+      throw new AppException(
+        ErrorCode.PROVIDER_INVALID_STATUS,
         'Zgłoszenie zostało już wysłane lub firma jest w nieprawidłowym stanie.',
+        400,
       );
     }
     const updated = await this.repo.update(provider.id, {
@@ -102,7 +124,7 @@ export class ProvidersService {
   async getById(id: string): Promise<Provider> {
     const provider = await this.repo.findById(id);
     if (!provider) {
-      throw new NotFoundException('Firma nie istnieje.');
+      throw new AppException(ErrorCode.PROVIDER_NOT_FOUND, 'Firma nie istnieje.', 404);
     }
     return provider;
   }
@@ -110,8 +132,12 @@ export class ProvidersService {
   async getApprovedById(id: string): Promise<ProviderPublicView> {
     const provider = await this.getById(id);
     if (provider.status !== ProviderStatus.APPROVED) {
-      // Celowo NotFoundException (nie Forbidden) — nie ujawniamy istnienia niepublicznych firm
-      throw new NotFoundException('Firma nie istnieje lub nie jest dostępna.');
+      // Celowo NOT_FOUND (nie Forbidden) — nie ujawniamy istnienia niepublicznych firm
+      throw new AppException(
+        ErrorCode.PROVIDER_NOT_FOUND,
+        'Firma nie istnieje lub nie jest dostępna.',
+        404,
+      );
     }
     return this.toPublicView(provider);
   }

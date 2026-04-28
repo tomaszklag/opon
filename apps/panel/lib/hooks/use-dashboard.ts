@@ -39,7 +39,7 @@ export function useDashboard() {
     getProvider()
       .then(setProvider)
       .catch((err) => {
-        if (err instanceof ApiError && err.status === 404) {
+        if (err instanceof ApiError && (err.code === 'PROVIDER_NOT_FOUND' || err.status === 404)) {
           router.replace('/register');
         }
       })

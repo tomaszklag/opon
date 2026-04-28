@@ -1,7 +1,8 @@
-import { HttpException, HttpStatus, Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
 import { randomInt } from 'crypto';
+import { AppException, ErrorCode } from '../common/errors';
 import { OtpRepository } from './otp.repository';
 
 const OTP_TTL_SECONDS = 5 * 60; // 5 minut
@@ -44,9 +45,10 @@ export class OtpService {
     const count = await this.otpRepository.countRecent(phone, windowStart);
 
     if (count >= OTP_RATE_LIMIT_MAX) {
-      throw new HttpException(
+      throw new AppException(
+        ErrorCode.OTP_RATE_LIMIT_EXCEEDED,
         'Zbyt wiele prób. Spróbuj ponownie za 15 minut.',
-        HttpStatus.TOO_MANY_REQUESTS,
+        429,
       );
     }
   }

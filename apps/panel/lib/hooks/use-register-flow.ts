@@ -68,7 +68,7 @@ export function useRegisterFlow() {
       .catch((err: unknown) => {
         if (err instanceof DOMException && err.name === 'AbortError') return;
         setGusLoading(false);
-        if (err instanceof ApiError && err.status === 404) {
+        if (err instanceof ApiError && (err.code === 'GUS_NIP_NOT_FOUND' || err.status === 404)) {
           setGusError('NIP nie znaleziony w rejestrze GUS / CEIDG.');
         } else {
           setGusError('Błąd połączenia z GUS. Spróbuj ponownie.');
@@ -102,7 +102,7 @@ export function useRegisterFlow() {
       const freshUser = await refresh();
       router.replace(canonicalRoute(freshUser));
     } catch (err) {
-      if (err instanceof ApiError && err.isConflict) {
+      if (err instanceof ApiError && (err.code === 'PROVIDER_ALREADY_EXISTS' || err.isConflict)) {
         setApiError('Firma z tym NIPem już istnieje w systemie.');
       } else {
         setApiError(err instanceof ApiError ? err.message : 'Błąd rejestracji. Spróbuj ponownie.');

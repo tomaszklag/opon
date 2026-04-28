@@ -1,10 +1,6 @@
-import {
-  ConflictException,
-  ForbiddenException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { PricingTier } from '@prisma/client';
+import { AppException, ErrorCode } from '../common/errors';
 import { CreatePricingTierDto } from './dto/create-pricing-tier.dto';
 import { UpdatePricingTierDto } from './dto/update-pricing-tier.dto';
 import { PricingTiersRepository } from './pricing-tiers.repository';
@@ -19,7 +15,11 @@ export class PricingTiersService {
 
   async create(providerId: string, dto: CreatePricingTierDto): Promise<PricingTier> {
     if (dto.rimSizeMin > dto.rimSizeMax) {
-      throw new ConflictException('rimSizeMin musi być ≤ rimSizeMax.');
+      throw new AppException(
+        ErrorCode.PRICING_TIER_INVALID_RIM_RANGE,
+        'rimSizeMin musi być ≤ rimSizeMax.',
+        400,
+      );
     }
 
     const existing = await this.repo.findByProviderAndRange(
@@ -28,8 +28,10 @@ export class PricingTiersService {
       dto.rimSizeMax,
     );
     if (existing) {
-      throw new ConflictException(
+      throw new AppException(
+        ErrorCode.PRICING_TIER_RANGE_CONFLICT,
         `Przedział felg ${dto.rimSizeMin}–${dto.rimSizeMax}" już istnieje.`,
+        409,
       );
     }
 
@@ -50,15 +52,19 @@ export class PricingTiersService {
     dto: UpdatePricingTierDto,
   ): Promise<PricingTier> {
     const tier = await this.repo.findById(tierId);
-    if (!tier) throw new NotFoundException('Tier cenowy nie istnieje.');
-    if (tier.providerId !== providerId) throw new ForbiddenException('Brak dostępu.');
+    if (!tier)
+      throw new AppException(ErrorCode.PRICING_TIER_NOT_FOUND, 'Tier cenowy nie istnieje.', 404);
+    if (tier.providerId !== providerId)
+      throw new AppException(ErrorCode.PRICING_TIER_ACCESS_DENIED, 'Brak dostępu.', 403);
     return this.repo.update(tierId, dto);
   }
 
   async remove(tierId: string, providerId: string): Promise<void> {
     const tier = await this.repo.findById(tierId);
-    if (!tier) throw new NotFoundException('Tier cenowy nie istnieje.');
-    if (tier.providerId !== providerId) throw new ForbiddenException('Brak dostępu.');
+    if (!tier)
+      throw new AppException(ErrorCode.PRICING_TIER_NOT_FOUND, 'Tier cenowy nie istnieje.', 404);
+    if (tier.providerId !== providerId)
+      throw new AppException(ErrorCode.PRICING_TIER_ACCESS_DENIED, 'Brak dostępu.', 403);
     await this.repo.delete(tierId);
   }
 }

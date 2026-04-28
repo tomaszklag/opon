@@ -1,12 +1,8 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import {
-  BadRequestException,
-  ForbiddenException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { PhotoType as PrismaPhotoType, ProviderPhoto } from '@prisma/client';
+import { AppException, ErrorCode } from '../common/errors';
 import { PhotoType } from './dto/upload-photo.dto';
 import { PhotosRepository } from './photos.repository';
 
@@ -29,8 +25,10 @@ export class PhotosService {
     if (type === PhotoType.ADDITIONAL) {
       const count = await this.repo.countByProviderAndType(providerId, prismaType);
       if (count >= MAX_ADDITIONAL) {
-        throw new BadRequestException(
+        throw new AppException(
+          ErrorCode.PHOTO_ADDITIONAL_LIMIT_EXCEEDED,
           `Można dodać maksymalnie ${MAX_ADDITIONAL} zdjęć dodatkowych.`,
+          400,
         );
       }
     }
@@ -76,9 +74,9 @@ export class PhotosService {
 
   async remove(providerId: string, photoId: string): Promise<void> {
     const photo = await this.repo.findById(photoId);
-    if (!photo) throw new NotFoundException('Zdjęcie nie istnieje.');
+    if (!photo) throw new AppException(ErrorCode.PHOTO_NOT_FOUND, 'Zdjęcie nie istnieje.', 404);
     if (photo.providerId !== providerId)
-      throw new ForbiddenException('Brak dostępu do tego zdjęcia.');
+      throw new AppException(ErrorCode.PHOTO_ACCESS_DENIED, 'Brak dostępu do tego zdjęcia.', 403);
 
     await this.deleteFile(photo.storageKey);
     await this.repo.delete(photoId);
@@ -86,17 +84,17 @@ export class PhotosService {
 
   async rename(providerId: string, photoId: string, name: string): Promise<ProviderPhoto> {
     const photo = await this.repo.findById(photoId);
-    if (!photo) throw new NotFoundException('Zdjęcie nie istnieje.');
+    if (!photo) throw new AppException(ErrorCode.PHOTO_NOT_FOUND, 'Zdjęcie nie istnieje.', 404);
     if (photo.providerId !== providerId)
-      throw new ForbiddenException('Brak dostępu do tego zdjęcia.');
+      throw new AppException(ErrorCode.PHOTO_ACCESS_DENIED, 'Brak dostępu do tego zdjęcia.', 403);
     return this.repo.rename(photoId, name);
   }
 
   async setPrimary(providerId: string, photoId: string): Promise<ProviderPhoto> {
     const photo = await this.repo.findById(photoId);
-    if (!photo) throw new NotFoundException('Zdjęcie nie istnieje.');
+    if (!photo) throw new AppException(ErrorCode.PHOTO_NOT_FOUND, 'Zdjęcie nie istnieje.', 404);
     if (photo.providerId !== providerId)
-      throw new ForbiddenException('Brak dostępu do tego zdjęcia.');
+      throw new AppException(ErrorCode.PHOTO_ACCESS_DENIED, 'Brak dostępu do tego zdjęcia.', 403);
 
     return this.repo.setPrimary(providerId, photoId);
   }

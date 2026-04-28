@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Archivo, Bebas_Neue, JetBrains_Mono } from 'next/font/google';
 import { AuthProvider } from '../lib/auth';
+import { Toaster } from '@opony/design-system-web';
 import '@opony/design-system-web/global.css';
 import './panel.css';
 
@@ -36,6 +37,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     >
       <body>
         <AuthProvider>{children}</AuthProvider>
+        <Toaster />
       </body>
     </html>
   );

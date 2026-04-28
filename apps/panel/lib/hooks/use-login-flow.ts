@@ -81,7 +81,7 @@ export function useLoginFlow() {
       setStep('otp');
       setOtpCountdown(300);
     } catch (err) {
-      if (err instanceof ApiError && err.status === 404) {
+      if (err instanceof ApiError && (err.code === 'AUTH_USER_NOT_FOUND' || err.status === 404)) {
         setPhoneHint('not-registered');
       } else if (err instanceof ApiError && err.isTooManyRequests) {
         setRateLimitCountdown(600);

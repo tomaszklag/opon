@@ -1,5 +1,6 @@
-import { Injectable, NotFoundException, InternalServerErrorException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { AppException, ErrorCode } from '../common/errors';
 
 interface CeidgAdres {
   ulica?: string;
@@ -62,31 +63,32 @@ export class GusService {
           Accept: 'application/json',
         },
       });
-    } catch {
-      throw new InternalServerErrorException('Błąd połączenia z CEIDG.');
+    } catch (err) {
+      if (err instanceof AppException) throw err;
+      throw new AppException(ErrorCode.GUS_CONNECTION_ERROR, 'Błąd połączenia z CEIDG.', 502);
     }
 
     if (response.status === 204 || response.status === 404) {
-      throw new NotFoundException('NIP nie znaleziony w CEIDG.');
+      throw new AppException(ErrorCode.GUS_NIP_NOT_FOUND, 'NIP nie znaleziony w CEIDG.', 404);
     }
 
     if (response.status === 400) {
       const body = (await response.json().catch(() => ({}))) as { code?: string };
       if (body.code === 'NIEPOPRAWNY_NUMER_NIP') {
-        throw new NotFoundException('Nieprawidłowy numer NIP.');
+        throw new AppException(ErrorCode.GUS_INVALID_NIP, 'Nieprawidłowy numer NIP.', 422);
       }
-      throw new InternalServerErrorException('Błąd zapytania do CEIDG.');
+      throw new AppException(ErrorCode.GUS_REQUEST_ERROR, 'Błąd zapytania do CEIDG.', 502);
     }
 
     if (!response.ok) {
-      throw new InternalServerErrorException(`Błąd CEIDG: ${response.status}`);
+      throw new AppException(ErrorCode.GUS_REQUEST_ERROR, `Błąd CEIDG: ${response.status}`, 502);
     }
 
     const data = (await response.json()) as CeidgFirmaResponse;
     const firma = data.firma?.[0];
 
     if (!firma) {
-      throw new NotFoundException('NIP nie znaleziony w CEIDG.');
+      throw new AppException(ErrorCode.GUS_NIP_NOT_FOUND, 'NIP nie znaleziony w CEIDG.', 404);
     }
 
     return this.mapFirma(firma);

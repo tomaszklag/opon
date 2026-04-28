@@ -39,7 +39,8 @@ async function request<T>(path: string, options: ApiOptions = {}, retry = true):
 
   if (!res.ok) {
     const error = await res.json().catch(() => ({ message: 'Błąd sieci' }));
-    throw new ApiError(res.status, (error as { message?: string }).message ?? 'Nieznany błąd');
+    const parsed = error as { message?: string; code?: string };
+    throw new ApiError(res.status, parsed.message ?? 'Nieznany błąd', parsed.code);
   }
 
   // 204 No Content
@@ -52,6 +53,7 @@ export class ApiError extends Error {
   constructor(
     public readonly status: number,
     message: string,
+    public readonly code?: string,
   ) {
     super(message);
   }

@@ -1,9 +1,10 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { ProviderStatus, UserRole } from '@prisma/client';
 import { createHash } from 'crypto';
 import { Response } from 'express';
+import { AppException, ErrorCode } from '../common/errors';
 import { AuthRepository } from './auth.repository';
 import { JwtPayload } from './types/jwt-payload.interface';
 
@@ -46,7 +47,8 @@ export class AuthService {
   /** Szuka istniejącego użytkownika — nigdy nie tworzy. Używane przy refresh. */
   async findUser(phone: string): Promise<UserWithProvider> {
     const user = await this.authRepository.findUserByPhone(phone);
-    if (!user) throw new UnauthorizedException('Użytkownik nie istnieje.');
+    if (!user)
+      throw new AppException(ErrorCode.AUTH_USER_NOT_FOUND, 'Użytkownik nie istnieje.', 401);
     this.assertUserActive(user);
     return this.buildUserWithProvider(user);
   }
@@ -79,7 +81,11 @@ export class AuthService {
         secret: this.config.getOrThrow<string>('JWT_REFRESH_SECRET'),
       });
     } catch {
-      throw new UnauthorizedException('Nieprawidłowy lub wygasły refresh token.');
+      throw new AppException(
+        ErrorCode.AUTH_INVALID_REFRESH_TOKEN,
+        'Nieprawidłowy lub wygasły refresh token.',
+        401,
+      );
     }
   }
 
@@ -116,15 +122,21 @@ export class AuthService {
     if (!result.ok) {
       switch (result.reason) {
         case 'NOT_FOUND':
-          throw new UnauthorizedException('Sesja nie istnieje.');
+          throw new AppException(ErrorCode.AUTH_SESSION_NOT_FOUND, 'Sesja nie istnieje.', 401);
         case 'EXPIRED':
-          throw new UnauthorizedException('Sesja wygasła.');
+          throw new AppException(ErrorCode.AUTH_SESSION_EXPIRED, 'Sesja wygasła.', 401);
         case 'REUSED':
-          throw new UnauthorizedException(
+          throw new AppException(
+            ErrorCode.AUTH_TOKEN_REUSE_DETECTED,
             'Wykryto ponowne użycie tokenu. Wszystkie sesje zostały unieważnione.',
+            401,
           );
         case 'HASH_MISMATCH':
-          throw new UnauthorizedException('Wykryto podejrzaną aktywność. Zaloguj się ponownie.');
+          throw new AppException(
+            ErrorCode.AUTH_SUSPICIOUS_ACTIVITY,
+            'Wykryto podejrzaną aktywność. Zaloguj się ponownie.',
+            401,
+          );
       }
     }
   }
@@ -172,8 +184,10 @@ export class AuthService {
   // ── Prywatne ──────────────────────────────────────────────────────────────
 
   private assertUserActive(user: { isBanned: boolean; deletedAt: Date | null }): void {
-    if (user.deletedAt) throw new UnauthorizedException('Konto zostało usunięte.');
-    if (user.isBanned) throw new UnauthorizedException('Konto zablokowane.');
+    if (user.deletedAt)
+      throw new AppException(ErrorCode.AUTH_ACCOUNT_DELETED, 'Konto zostało usunięte.', 401);
+    if (user.isBanned)
+      throw new AppException(ErrorCode.AUTH_ACCOUNT_BANNED, 'Konto zablokowane.', 401);
   }
 
   private async buildUserWithProvider(user: {

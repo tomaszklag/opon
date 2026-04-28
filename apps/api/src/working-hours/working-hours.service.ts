@@ -1,5 +1,6 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { WorkingHours } from '@prisma/client';
+import { AppException, ErrorCode } from '../common/errors';
 import { WorkingHoursDayDto, UpsertWorkingHoursDto } from './dto/upsert-working-hours.dto';
 import { WorkingHoursRepository } from './working-hours.repository';
 
@@ -19,15 +20,19 @@ export class WorkingHoursService {
   private validateAndMap(day: WorkingHoursDayDto) {
     if (!day.isClosed) {
       if (!day.openTime || !day.closeTime) {
-        throw new BadRequestException(
+        throw new AppException(
+          ErrorCode.WORKING_HOURS_MISSING_TIMES,
           `Dzień ${day.dayOfWeek}: openTime i closeTime są wymagane gdy isClosed=false.`,
+          400,
         );
       }
       const open = this.parseTime(day.openTime);
       const close = this.parseTime(day.closeTime);
       if (open >= close) {
-        throw new BadRequestException(
+        throw new AppException(
+          ErrorCode.WORKING_HOURS_INVALID_TIME_RANGE,
           `Dzień ${day.dayOfWeek}: openTime musi być wcześniejsza niż closeTime.`,
+          400,
         );
       }
       return {
