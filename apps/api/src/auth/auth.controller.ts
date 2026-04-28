@@ -1,19 +1,9 @@
-import {
-  Body,
-  Controller,
-  Get,
-  HttpCode,
-  HttpStatus,
-  Post,
-  Query,
-  Req,
-  Res,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Post, Query, Req, Res } from '@nestjs/common';
 import { ApiCookieAuth, ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { ConfigService } from '@nestjs/config';
 import { randomUUID } from 'crypto';
 import { Request, Response } from 'express';
+import { AppException, ErrorCode } from '../common/errors';
 import { EmailVerificationService } from '../email/email-verification.service';
 import { AuthService } from './auth.service';
 import { CurrentUser } from './decorators/current-user.decorator';
@@ -64,7 +54,12 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ): Promise<{ message: string; role: string; providerId?: string }> {
     const valid = await this.otpService.verifyOtp(dto.phone, dto.code);
-    if (!valid) throw new UnauthorizedException('Nieprawidłowy lub wygasły kod OTP.');
+    if (!valid)
+      throw new AppException(
+        ErrorCode.OTP_INVALID_OR_EXPIRED,
+        'Nieprawidłowy lub wygasły kod OTP.',
+        401,
+      );
 
     const user = await this.authService.findOrCreateUser(dto.phone);
 
