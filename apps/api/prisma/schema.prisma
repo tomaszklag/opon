@@ -129,6 +129,7 @@ model Provider {
   reviewCount      Int            @default(0)
   bankAccountIban  String?        @db.VarChar(34)
   createdAt        DateTime       @default(now())
+  submittedAt      DateTime?
   approvedAt       DateTime?
   updatedAt        DateTime       @updatedAt
 

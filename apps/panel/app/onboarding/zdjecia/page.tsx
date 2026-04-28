@@ -6,6 +6,9 @@ import { useRouter } from 'next/navigation';
 import { StepIndicator, Heading, Text } from '@opony/design-system-web';
 import { Button, Spinner } from '@opony/design-system-web';
 import { useAuthGuard } from '../../../lib/hooks/use-auth-guard';
+import { useAuth } from '../../../lib/auth';
+import { canonicalRoute } from '../../../lib/auth-routing';
+import { submitProvider } from '../../../api-data-access/providers';
 import { usePhotosFlow } from '../../../lib/hooks/use-photos-flow';
 import type { PhotoType } from '../../../lib/hooks/use-photos-flow';
 import {
@@ -53,11 +56,13 @@ const REQUIRED_TILES: RequiredTileDef[] = [
 export default function PhotosPage() {
   const router = useRouter();
   const { isLoading: authLoading } = useAuthGuard('/onboarding/zdjecia');
+  const { refresh } = useAuth();
   const { photos, isLoading, uploading, error, upload, remove, rename, setPrimary, canProceed } =
     usePhotosFlow();
 
   const addInputRef = useRef<HTMLInputElement>(null);
   const [attempted, setAttempted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   function handleAddMore() {
     addInputRef.current?.click();
@@ -271,9 +276,23 @@ export default function PhotosPage() {
               <Button
                 type="button"
                 variant="primary"
-                onClick={() => {
+                loading={isSubmitting}
+                disabled={isSubmitting}
+                onClick={async () => {
                   setAttempted(true);
-                  if (canProceed) router.push('/onboarding/weryfikacja');
+                  if (!canProceed) return;
+                  setIsSubmitting(true);
+                  try {
+                    await submitProvider();
+                    const freshUser = await refresh();
+                    router.replace(canonicalRoute(freshUser));
+                  } catch {
+                    // submit może zwrócić 400 jeśli status już zmieniony — próbuj refresh
+                    const freshUser = await refresh();
+                    router.replace(canonicalRoute(freshUser));
+                  } finally {
+                    setIsSubmitting(false);
+                  }
                 }}
               >
                 Dalej

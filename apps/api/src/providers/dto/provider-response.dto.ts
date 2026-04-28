@@ -20,6 +20,8 @@ export class ProviderResponseDto {
   @ApiProperty({ type: Number }) reviewCount!: number;
   @ApiProperty() createdAt!: Date;
   @ApiPropertyOptional({ type: String, format: 'date-time', nullable: true })
+  submittedAt?: Date | null;
+  @ApiPropertyOptional({ type: String, format: 'date-time', nullable: true })
   approvedAt?: Date | null;
   @ApiProperty() updatedAt!: Date;
 }

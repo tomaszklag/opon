@@ -12,3 +12,7 @@ export function getProvider(): Promise<Provider> {
 export function updateProvider(body: UpdateProviderBody): Promise<Provider> {
   return api.patch<Provider>('/v1/providers/me', body);
 }
+
+export function submitProvider(): Promise<Provider> {
+  return api.post<Provider>('/v1/providers/me/submit', {});
+}

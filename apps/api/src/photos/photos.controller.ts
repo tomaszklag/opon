@@ -2,6 +2,7 @@ import { randomUUID } from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -42,6 +43,27 @@ export class PhotosController implements OnModuleInit {
 
   onModuleInit() {
     fs.mkdirSync(UPLOADS_ROOT, { recursive: true });
+  }
+
+  // ── POST /v1/providers/me/submit ────────────────────────────────────────
+
+  @Post('me/submit')
+  @HttpCode(HttpStatus.OK)
+  @ApiCookieAuth('access_token')
+  @ApiOperation({
+    summary: 'Wyślij zgłoszenie do weryfikacji — zmienia status na PENDING_APPROVAL',
+  })
+  @ApiResponse({ status: 200, type: Object })
+  @ApiResponse({ status: 400, description: 'Brakuje wymaganych zdjęć lub firma w złym stanie' })
+  async submitForApproval(@CurrentUser() user: JwtPayload) {
+    const provider = await this.providersService.getMyProvider(user.sub);
+    const photos = await this.photosService.findByProvider(provider.id);
+    const requiredTypes = ['LOGO', 'VEHICLE', 'WORKSPACE'];
+    const missing = requiredTypes.filter((type) => !photos.some((p) => p.type === type));
+    if (missing.length > 0) {
+      throw new BadRequestException(`Brakuje wymaganych zdjęć: ${missing.join(', ')}.`);
+    }
+    return this.providersService.submitForApproval(user.sub);
   }
 
   // ── POST /v1/providers/me/photos ─────────────────────────────────────────

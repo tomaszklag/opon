@@ -425,3 +425,58 @@ export function IconBan(props: SVGProps<SVGSVGElement>) {
     </svg>
   );
 }
+
+export function IconMail(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      {...props}
+    >
+      <rect x="3" y="5" width="18" height="14" rx="2" />
+      <path d="m3 5 9 8 9-8" />
+    </svg>
+  );
+}
+
+export function IconMobilePhone(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      {...props}
+    >
+      <rect x="5" y="2" width="14" height="20" rx="2" />
+      <path d="M12 18h.01" />
+    </svg>
+  );
+}
+
+export function IconHourglass(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      {...props}
+    >
+      <path d="M5 2h14M5 22h14" />
+      <path d="M7 2v4c0 2 2 4 5 6 3-2 5-4 5-6V2" />
+      <path d="M7 22v-4c0-2 2-4 5-6 3 2 5 4 5 6v4" />
+    </svg>
+  );
+}

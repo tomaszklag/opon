@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   InternalServerErrorException,
@@ -63,6 +64,22 @@ export class ProvidersService {
       throw new NotFoundException('Nie masz zarejestrowanej firmy.');
     }
     return this.repo.update(provider.id, dto);
+  }
+
+  async submitForApproval(ownerId: string): Promise<Provider> {
+    const provider = await this.repo.findByOwnerId(ownerId);
+    if (!provider) {
+      throw new NotFoundException('Nie masz zarejestrowanej firmy.');
+    }
+    if (provider.status !== ProviderStatus.PENDING_DOCS) {
+      throw new BadRequestException(
+        'Zgłoszenie zostało już wysłane lub firma jest w nieprawidłowym stanie.',
+      );
+    }
+    return this.repo.update(provider.id, {
+      status: ProviderStatus.PENDING_APPROVAL,
+      submittedAt: new Date(),
+    });
   }
 
   async getById(id: string): Promise<Provider> {
