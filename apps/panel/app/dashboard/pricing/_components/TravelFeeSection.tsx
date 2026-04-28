@@ -14,7 +14,9 @@ export function TravelFeeSection({ travelFee, onUpdate }: Props) {
         <Heading variant="section" as="h2" id="sec-travel" className={styles.secTitle}>
           Dopłaty za dojazd
         </Heading>
-        <span className={styles.secSub}>Mobilny punkt · strefy promieniowe</span>
+        <Text variant="body-sm" as="span" color="secondary">
+          Mobilny punkt · strefy promieniowe
+        </Text>
       </div>
 
       <div className={styles.addonRow}>

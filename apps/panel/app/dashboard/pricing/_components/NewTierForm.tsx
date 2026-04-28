@@ -1,5 +1,5 @@
 import { Controller, type UseFormReturn } from 'react-hook-form';
-import { Input, Button } from '@opony/design-system-web';
+import { Input, Button, Text } from '@opony/design-system-web';
 import { type NewTierValues } from '../../../../lib/schemas/pricing.schema';
 import styles from '../pricing.module.css';
 
@@ -17,7 +17,9 @@ export function NewTierForm({ form, onCancel }: Props) {
   return (
     <div className={[styles.tierRow, styles.tierRowNew].join(' ')}>
       <div className={styles.rimRangeInputs}>
-        <span className={styles.rimLabel}>Felga</span>
+        <Text variant="body-sm" as="span" color="muted" className={styles.rimLabel}>
+          Felga
+        </Text>
         <Controller
           name="rimSizeMin"
           control={control}
@@ -35,7 +37,9 @@ export function NewTierForm({ form, onCancel }: Props) {
             />
           )}
         />
-        <span className={styles.rimSep}>–</span>
+        <Text variant="body-sm" as="span" color="muted">
+          –
+        </Text>
         <Controller
           name="rimSizeMax"
           control={control}
@@ -53,7 +57,9 @@ export function NewTierForm({ form, onCancel }: Props) {
             />
           )}
         />
-        <span className={styles.rimUnit}>cali</span>
+        <Text variant="body-sm" as="span" color="muted">
+          cali
+        </Text>
       </div>
 
       <Controller

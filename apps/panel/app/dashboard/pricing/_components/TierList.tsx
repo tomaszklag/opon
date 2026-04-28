@@ -47,7 +47,9 @@ export function TierList({
           <Heading variant="section" as="h2" id="sec-swap" className={styles.secTitle}>
             Wymiana 4 opon
           </Heading>
-          <span className={styles.secSub}>3 widełki rozmiaru felgi · PLN za komplet</span>
+          <Text variant="body-sm" as="span" color="secondary">
+            3 widełki rozmiaru felgi · PLN za komplet
+          </Text>
         </div>
 
         {drafts.length === 0 && !showAddForm && (

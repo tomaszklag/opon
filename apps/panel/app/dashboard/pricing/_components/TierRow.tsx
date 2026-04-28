@@ -41,7 +41,11 @@ export function TierRow({
           <Text variant="label" as="span" weight="bold" className={styles.tierName}>
             {rimLabel(d.rimSizeMin, d.rimSizeMax)}
           </Text>
-          {popular && <span className={styles.popularBadge}>Najpopularniejsze · 68%</span>}
+          {popular && (
+            <Text variant="label" as="span" className={styles.popularBadge}>
+              Najpopularniejsze · 68%
+            </Text>
+          )}
         </div>
         {description && (
           <Text variant="nano" as="span" color="muted">
@@ -54,12 +58,12 @@ export function TierRow({
               rynek: {marketRef.priceMin}–{marketRef.priceMax} zł
             </Text>
             {delta === 'low' && (
-              <Text variant="nano" as="span" className={styles.deltaLow}>
+              <Text variant="nano" as="span" weight="bold" className={styles.deltaLow}>
                 · niższa
               </Text>
             )}
             {delta === 'high' && (
-              <Text variant="nano" as="span" className={styles.deltaHigh}>
+              <Text variant="nano" as="span" weight="bold" className={styles.deltaHigh}>
                 · powyżej rynku
               </Text>
             )}

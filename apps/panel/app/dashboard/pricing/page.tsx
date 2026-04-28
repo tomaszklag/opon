@@ -77,7 +77,9 @@ export default function PricingPage() {
                 Cennik
               </Heading>
               <div className={styles.pageSubRow}>
-                <span className={styles.liveChip}>Widoczny publicznie</span>
+                <Text variant="label" as="span" className={styles.liveChip}>
+                  Widoczny publicznie
+                </Text>
                 <Text variant="body-sm" as="span" color="secondary">
                   w profilu warsztatu — klient widzi te ceny przy wyszukiwaniu
                 </Text>

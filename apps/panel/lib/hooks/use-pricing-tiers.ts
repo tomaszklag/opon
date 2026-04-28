@@ -89,7 +89,9 @@ export function usePricingTiers() {
           setSavedTravelFee(tf);
         }
       })
-      .catch(() => {})
+      .catch(() => {
+        setErrors(['Błąd ładowania cennika. Odśwież stronę.']);
+      })
       .finally(() => setLoading(false));
   }, []);
 
@@ -201,6 +203,10 @@ export function usePricingTiers() {
         (err.code === 'PRICING_TIER_RANGE_CONFLICT' || err.isConflict)
       ) {
         setErrors(['Przedział felg już istnieje. Zmień zakres lub usuń istniejący tier.']);
+      } else {
+        setErrors([
+          err instanceof ApiError ? err.message : 'Błąd zapisu cennika. Spróbuj ponownie.',
+        ]);
       }
     } finally {
       setSaving(false);

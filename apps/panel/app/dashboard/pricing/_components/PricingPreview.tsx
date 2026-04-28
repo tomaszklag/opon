@@ -1,4 +1,4 @@
-import { Text, PricingTable, type PricingRow } from '@opony/design-system-web';
+import { Heading, Text, PricingTable, type PricingRow } from '@opony/design-system-web';
 import { type TierDraft } from '../../../../lib/hooks/use-pricing-tiers';
 import { rimLabel } from './utils';
 import styles from '../pricing.module.css';
@@ -24,8 +24,10 @@ export function PricingPreview({ drafts, globalBalancingEnabled, globalBalancing
     <aside className={styles.previewCol}>
       <div className={styles.previewPanel}>
         <div className={styles.previewHead}>
-          <span className={styles.previewTitle}>Podgląd dla klienta</span>
-          <Text variant="nano" as="span" className={styles.previewLiveBadge}>
+          <Heading variant="section" as="span">
+            Podgląd dla klienta
+          </Heading>
+          <Text variant="nano" as="span" color="secondary" className={styles.previewLiveBadge}>
             <span className={styles.previewLiveDot} />
             Live
           </Text>
@@ -51,13 +53,16 @@ export function PricingPreview({ drafts, globalBalancingEnabled, globalBalancing
             </div>
 
             {drafts.length === 0 ? (
-              <p className={styles.previewEmpty}>Brak tierów — dodaj pierwszy przedział</p>
+              <Text variant="body-sm" as="p" color="muted" className={styles.previewEmpty}>
+                Brak tierów — dodaj pierwszy przedział
+              </Text>
             ) : (
               <>
                 <Text
                   variant="nano"
                   as="p"
                   weight="extrabold"
+                  color="secondary"
                   className={styles.previewSectionLabel}
                 >
                   Cennik

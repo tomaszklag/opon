@@ -1,4 +1,4 @@
-import { Button } from '@opony/design-system-web';
+import { Button, Text } from '@opony/design-system-web';
 import styles from '../pricing.module.css';
 
 interface Props {
@@ -22,8 +22,16 @@ export function PricingActionBar({
 }: Props) {
   return (
     <div className={styles.actionBar}>
-      {dirty && !saved && <span className={styles.dirtyChip}>Niezapisane zmiany</span>}
-      {saved && <span className={styles.savedChip}>Zapisano</span>}
+      {dirty && !saved && (
+        <Text variant="label" as="span" className={styles.dirtyChip}>
+          Niezapisane zmiany
+        </Text>
+      )}
+      {saved && (
+        <Text variant="label" as="span" className={styles.savedChip}>
+          Zapisano
+        </Text>
+      )}
       <Button variant="secondary" size="sm" onClick={onOpenAddForm} disabled={showAddForm}>
         + Dodaj przedział
       </Button>

@@ -1,4 +1,4 @@
-import { Heading, Input, Text, Toggle } from '@opony/design-system-web';
+import { Button, Heading, Input, Text, Toggle } from '@opony/design-system-web';
 import { IconPlus } from '../../../../components/icons';
 import styles from '../pricing.module.css';
 
@@ -15,7 +15,9 @@ export function ServicesSection({ balancingEnabled, balancingPrice, onUpdate }: 
         <Heading variant="section" as="h2" id="sec-services" className={styles.secTitle}>
           Dodatkowe usługi
         </Heading>
-        <span className={styles.secSub}>Opcjonalne · klient dobiera przy rezerwacji</span>
+        <Text variant="body-sm" as="span" color="secondary">
+          Opcjonalne · klient dobiera przy rezerwacji
+        </Text>
       </div>
 
       <div className={styles.serviceRow}>
@@ -49,10 +51,10 @@ export function ServicesSection({ balancingEnabled, balancingPrice, onUpdate }: 
         )}
       </div>
 
-      <button className={styles.addServiceBtn} type="button" disabled>
+      <Button variant="ghost" size="sm" disabled className={styles.addServiceBtn}>
         <IconPlus width="12" height="12" />
         Dodaj usługę (np. sezonowy depozyt opon)
-      </button>
+      </Button>
     </section>
   );
 }
