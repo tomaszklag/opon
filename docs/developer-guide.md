@@ -305,6 +305,8 @@ import { Heading, Text } from '@opony/design-system-web';
 | `weight`  | `regular \| medium \| semibold \| bold \| extrabold`                            | Grubość — zamiast `font-weight:` w CSS                        |
 | `mono`    | `boolean`                                                                       | Czcionka mono (JetBrains Mono) — zamiast `font-family:` w CSS |
 
+> **Ograniczenie `TextColor`:** typ obejmuje wyłącznie `primary | secondary | muted | accent`. Dla `success`, `warning`, `danger` prop `color` nie istnieje — jedynym wyjątkiem od reguły „no color in CSS" jest właśnie ten przypadek: zachowaj `color: var(--success)` w CSS module dla danego elementu.
+
 #### Heading — warianty
 
 | Wariant      | Zastosowanie                                  |
@@ -513,6 +515,7 @@ box-shadow: 0 0 10px rgba(255, 107, 26, 0.45); /* to jest --accent-glow */
 Dostępne tokeny kolorów w `global.css`:
 
 ```
+--hairline          rgba(255,255,255,0.06)  ← subtelna linia/highlight na ciemnym tle
 --accent, --accent-hover, --accent-dark
 --accent-muted      rgba(255,107,26, 0.14)
 --accent-border     rgba(255,107,26, 0.32)
@@ -529,6 +532,26 @@ Dostępne tokeny kolorów w `global.css`:
 ```
 
 Wartości bez tokenu (np. specyficzne przezroczystości w gradientach tła) mogą pozostać hardcoded — ale to wyjątek, nie reguła.
+
+#### DS Input — `className` trafia na wewnętrzny `<input>`
+
+Prop `className` DS `Input` jest przekazywany na wewnętrzny element `<input>`, nie na wrapper. Używaj wyłącznie do nadpisywania geometrii dla inputów liczbowych:
+
+```css
+/* ✅ OK — szerokość i wyrównanie dla inputów liczbowych */
+.priceInputNum {
+  width: 68px;
+  text-align: right;
+  font-family: var(--font-mono);
+  font-weight: var(--font-bold);
+}
+
+/* ❌ NIE — typografia semantyczna (rozmiar, kolor) należy do DS Input */
+.priceInputNum {
+  font-size: 18px;
+  color: var(--accent);
+}
+```
 
 ---
 
@@ -1320,7 +1343,113 @@ SWR jest właściwy gdy: dane mogą się zmieniać w tle, wiele komponentów pot
 
 ---
 
-## 18. Upload plików — wzorzec NestJS
+## 18. Strony z edycją ręczną — dirty state i navigation guard
+
+Strony z ręcznym zapisem (przycisk „Zapisz", nie auto-save) wymagają trzech mechanizmów: śledzenia niezapisanych zmian, możliwości cofnięcia i blokady nawigacji.
+
+### Wzorzec dirty state + revert
+
+```typescript
+// lib/hooks/use-foo-editor.ts
+const [drafts, setDrafts] = useState<Draft[]>([]);
+const [savedDrafts, setSavedDrafts] = useState<Draft[]>([]); // snapshot po każdym save
+const [dirty, setDirty] = useState(false);
+
+function updateDraft(idx: number, patch: Partial<Draft>) {
+  setDrafts((prev) => prev.map((d, i) => (i === idx ? { ...d, ...patch } : d)));
+  setDirty(true);
+}
+
+function revert() {
+  setDrafts(savedDrafts); // przywróć snapshot
+  setDirty(false);
+  setErrors([]);
+}
+
+async function save() {
+  // ... zapis do API ...
+  setSavedDrafts(drafts); // aktualizuj snapshot
+  setDirty(false);
+}
+```
+
+**Reguła:** `savedDrafts` (i odpowiadające mu `savedXxx` dla każdego stanu edytora) są aktualizowane wyłącznie po udanym `save()`. `revert()` zawsze przywraca do ostatniego stanu z serwera.
+
+### Navigation guard — blokada wyjścia ze strony
+
+Każda strona z `dirty` state **musi** używać `useNavigationGuard`. Bez niego użytkownik straci zmiany klikając link w sidebarze.
+
+```typescript
+// page.tsx
+import { useNavigationGuard } from '../../../lib/hooks/use-navigation-guard';
+import { Modal } from '@opony/design-system-web';
+
+const { dirty } = useFooEditor();
+const { showModal, confirm, cancel } = useNavigationGuard(dirty);
+
+return (
+  <>
+    <Modal
+      isOpen={showModal}
+      onClose={cancel}
+      title="Niezapisane zmiany"
+      size="sm"
+      footer={
+        <>
+          <Button variant="ghost" size="sm" onClick={cancel}>Zostań na stronie</Button>
+          <Button variant="danger" size="sm" onClick={confirm}>Opuść bez zapisywania</Button>
+        </>
+      }
+    >
+      <Text variant="body-sm" as="p" color="secondary">
+        Masz niezapisane zmiany. Jeśli opuścisz tę stronę, zmiany zostaną utracone.
+      </Text>
+    </Modal>
+    {/* reszta strony */}
+  </>
+);
+```
+
+Hook `useNavigationGuard` obsługuje dwa scenariusze:
+
+- **Przeglądarka** (refresh, zamknięcie karty, bezpośredni URL) → `beforeunload`
+- **In-app** (klik w link/sidebar Next.js) → przechwytuje `window.history.pushState`
+
+Guard dezaktywuje się automatycznie gdy `isDirty = false` (po save lub revert).
+
+### Action bar — spójny wzorzec
+
+```tsx
+// _components/FooActionBar.tsx
+{
+  dirty && !saved && (
+    <Text variant="label" as="span" className={styles.dirtyChip}>
+      Niezapisane zmiany
+    </Text>
+  );
+}
+{
+  saved && (
+    <Text variant="label" as="span" className={styles.savedChip}>
+      Zapisano
+    </Text>
+  );
+}
+{
+  dirty && (
+    <Button variant="ghost" size="sm" onClick={onRevert}>
+      Cofnij
+    </Button>
+  );
+}
+<Button variant="primary" size="sm" onClick={onSave} loading={saving} disabled={!dirty}>
+  Zapisz
+</Button>;
+```
+
+---
+
+## 19. Upload plików — wzorzec NestJS
 
 ### 16.1. Multer — konfiguracja dysku
 
