@@ -4,7 +4,7 @@ Pełna dokumentacja developerska: **`docs/developer-guide.md`**. Przeczytaj go p
 
 ## Najważniejsze zasady (skrót)
 
-- **Tekst = DS komponent.** `<Heading>` lub `<Text>` z `@opony/design-system-web`. Nigdy `font-size/font-weight/line-height` w CSS module.
+- **Tekst = DS komponent.** `<Heading>` lub `<Text>` z `@opony/design-system-web`. Nigdy `font-size/font-weight/line-height/letter-spacing/font-family/color` w CSS module dla elementów tekstowych — zamiast tego użyj propsów `variant`, `weight`, `color`, `mono`.
 - **Komponenty UI = DS.** `Input`, `Button`, `Select`, `Spinner` itd. — nigdy natywne HTML jako obejście.
 - **Ikony = `apps/panel/components/icons.tsx`.** Nigdy inline SVG.
 - **Tokeny = `global.css`.** Jedyne źródło prawdy dla kolorów, spacing, typografii.

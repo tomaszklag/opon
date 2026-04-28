@@ -279,19 +279,31 @@ Każdy element UI w `apps/panel` musi używać komponentów z `@opony/design-sys
 
 ### Typografia — Heading i Text
 
-Każdy tekst w JSX musi używać `<Heading>` lub `<Text>`. **Nigdy** nie definiuj `font-size`, `font-weight`, `line-height`, `letter-spacing`, `font-family` w plikach CSS module — to wyłączna odpowiedzialność DS.
+Każdy tekst w JSX musi używać `<Heading>` lub `<Text>`. **Nigdy** nie definiuj `font-size`, `font-weight`, `line-height`, `letter-spacing`, `font-family` ani `color` w plikach CSS module dla elementów tekstowych — to wyłączna odpowiedzialność DS.
 
 ```tsx
 import { Heading, Text } from '@opony/design-system-web';
 
 // ✅ TAK
 <Heading variant="section">Tytuł sekcji</Heading>
-<Text variant="body-sm" as="span" weight="bold">Label</Text>
+<Text variant="body-sm" as="span" weight="bold" color="muted">Label</Text>
+<Text variant="nano" as="span" color="accent" mono>PRV-1234</Text>
 
 // ❌ NIE
-<h2 className={styles.title}>Tytuł</h2>    // jeśli .title definiuje font-*
+<h2 className={styles.title}>Tytuł</h2>         // .title definiuje font-*
 <span style={{ fontSize: '12px' }}>Label</span>
+<span className={styles.muted}>tekst</span>      // .muted ma color: var(--text-muted)
 ```
+
+#### Text — propsy
+
+| Prop      | Typ                                                                             | Opis                                                          |
+| --------- | ------------------------------------------------------------------------------- | ------------------------------------------------------------- |
+| `variant` | `body \| body-md \| body-sm \| caption \| label \| nano \| kicker \| kicker-sm` | Rozmiar i styl                                                |
+| `as`      | `p \| span \| div \| label \| li \| strong \| em`                               | Tag HTML (domyślnie `p`)                                      |
+| `color`   | `primary \| secondary \| muted \| accent`                                       | Kolor tekstu — zamiast `color:` w CSS                         |
+| `weight`  | `regular \| medium \| semibold \| bold \| extrabold`                            | Grubość — zamiast `font-weight:` w CSS                        |
+| `mono`    | `boolean`                                                                       | Czcionka mono (JetBrains Mono) — zamiast `font-family:` w CSS |
 
 #### Heading — warianty
 

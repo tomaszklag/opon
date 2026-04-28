@@ -19,6 +19,7 @@ export interface TextProps extends HTMLAttributes<HTMLElement> {
   as?: TextElement;
   color?: TextColor;
   weight?: TextWeight;
+  mono?: boolean;
 }
 
 const variantClass: Record<TextVariant, string> = {
@@ -51,6 +52,7 @@ export function Text({
   as: Tag = 'p',
   color,
   weight,
+  mono,
   className,
   children,
   ...props
@@ -60,6 +62,7 @@ export function Text({
     variantClass[variant],
     color ? colorClass[color] : undefined,
     weight ? weightClass[weight] : undefined,
+    mono ? (styles.mono as string) : undefined,
     className,
   ]
     .filter(Boolean)

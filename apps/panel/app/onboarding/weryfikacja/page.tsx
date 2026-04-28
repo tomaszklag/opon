@@ -112,15 +112,15 @@ export default function WeryfikacjaPage() {
           </Text>
         </Link>
         <span className={styles.topStripSpacer} />
-        <span className={styles.ticketId}>
+        <Text variant="body-sm" as="span" color="muted" className={styles.ticketId}>
           <span>Numer zgłoszenia:</span>
-          <strong className={styles.ticketNum}>
+          <Text as="strong" variant="kicker" color="primary" weight="bold">
             PRV<span className={styles.ticketHy}>-</span>
             {ref.part1}
             <span className={styles.ticketHy}>-</span>
             {ref.part2}
-          </strong>
-        </span>
+          </Text>
+        </Text>
       </header>
 
       <div className={styles.stepperBar}>
@@ -137,7 +137,7 @@ export default function WeryfikacjaPage() {
             <Heading variant="hero" as="h1" className={styles.heroTitle}>
               Zgłoszenie wysłane!
             </Heading>
-            <Text variant="body-md" as="p" className={styles.heroSub}>
+            <Text variant="body-md" as="p" color="secondary" className={styles.heroSub}>
               Sprawdzimy Twoje dane i&nbsp;zdjęcia w&nbsp;ciągu <strong>24 godzin</strong>.
               {provider?.phone && (
                 <>
@@ -155,10 +155,10 @@ export default function WeryfikacjaPage() {
             </Text>
             <div className={styles.etaPill}>
               <span className={styles.etaDot} aria-hidden="true" />
-              <Text variant="nano" as="span" className={styles.etaLabel}>
+              <Text variant="nano" as="span" color="muted">
                 Oczekiwana decyzja
               </Text>
-              <Text variant="nano" as="span" className={styles.etaValue}>
+              <Text variant="nano" as="span" color="accent" mono>
                 &lt;&nbsp;24&nbsp;h
               </Text>
             </div>
@@ -172,7 +172,7 @@ export default function WeryfikacjaPage() {
                 <Heading variant="subsection" as="h2" id="sec-timeline">
                   Status weryfikacji
                 </Heading>
-                <Text variant="nano" as="span" className={styles.panelSub}>
+                <Text variant="nano" as="span" color="muted" mono>
                   4 zdarzenia
                 </Text>
               </div>
@@ -185,7 +185,7 @@ export default function WeryfikacjaPage() {
                 <Heading variant="subsection" as="h2" id="sec-recap">
                   Co wysłano
                 </Heading>
-                <Text variant="nano" as="span" className={styles.panelSub}>
+                <Text variant="nano" as="span" color="muted" mono>
                   PRV<span className={styles.ticketHy}>-</span>
                   {ref.part1}
                   <span className={styles.ticketHy}>-</span>
@@ -200,13 +200,13 @@ export default function WeryfikacjaPage() {
                       <IconBriefcase width={14} height={14} />
                     </span>
                     <div className={styles.recapCol}>
-                      <Text variant="nano" as="span" className={styles.recapLabel}>
+                      <Text variant="nano" as="span" color="muted">
                         Firma
                       </Text>
-                      <Text variant="body-sm" as="span" className={styles.recapValue}>
+                      <Text variant="body-sm" as="span" weight="semibold" color="primary">
                         {provider.name}
                       </Text>
-                      <Text variant="nano" as="span" className={styles.recapSub}>
+                      <Text variant="nano" as="span" color="muted">
                         NIP {provider.nip} · {providerType}
                       </Text>
                     </div>
@@ -218,20 +218,16 @@ export default function WeryfikacjaPage() {
                         <IconMobilePhone width={14} height={14} />
                       </span>
                       <div className={styles.recapCol}>
-                        <Text variant="nano" as="span" className={styles.recapLabel}>
+                        <Text variant="nano" as="span" color="muted">
                           Kontakt
                         </Text>
                         {provider.phone && (
-                          <Text
-                            variant="body-sm"
-                            as="span"
-                            className={`${styles.recapValue} ${styles.recapMono}`}
-                          >
+                          <Text variant="kicker" as="span" weight="bold" color="primary">
                             {provider.phone}
                           </Text>
                         )}
                         {provider.email && (
-                          <Text variant="nano" as="span" className={styles.recapSub}>
+                          <Text variant="nano" as="span" color="muted">
                             {provider.email}
                           </Text>
                         )}
@@ -244,10 +240,10 @@ export default function WeryfikacjaPage() {
                       <IconCamera width={14} height={14} />
                     </span>
                     <div className={styles.recapCol}>
-                      <Text variant="nano" as="span" className={styles.recapLabel}>
+                      <Text variant="nano" as="span" color="muted">
                         Zdjęcia
                       </Text>
-                      <Text variant="body-sm" as="span" className={styles.recapValue}>
+                      <Text variant="body-sm" as="span" weight="semibold" color="primary">
                         {photos.length} / 10 przesłanych
                       </Text>
                       {photos.length > 0 && (
@@ -262,7 +258,15 @@ export default function WeryfikacjaPage() {
                             />
                           ))}
                           {extraCount > 0 && (
-                            <span className={styles.photosCount}>+{extraCount}</span>
+                            <Text
+                              variant="nano"
+                              weight="bold"
+                              as="span"
+                              mono
+                              className={styles.photosCount}
+                            >
+                              +{extraCount}
+                            </Text>
                           )}
                         </div>
                       )}
@@ -281,9 +285,11 @@ export default function WeryfikacjaPage() {
               </span>
               <Text variant="body-sm" as="p">
                 <strong>Wysłaliśmy email</strong> na{' '}
-                <em className={styles.mono}>{provider.email}</em> z&nbsp;linkiem weryfikacyjnym —
-                potwierdź adres, żeby nie zwlekać z&nbsp;aktywacją konta. Jeśli mail nie przyszedł
-                w&nbsp;ciągu 5 minut, sprawdź spam.
+                <Text as="em" weight="bold" color="primary" mono className={styles.mono}>
+                  {provider.email}
+                </Text>{' '}
+                z&nbsp;linkiem weryfikacyjnym — potwierdź adres, żeby nie zwlekać z&nbsp;aktywacją
+                konta. Jeśli mail nie przyszedł w&nbsp;ciągu 5 minut, sprawdź spam.
               </Text>
             </div>
           )}
@@ -308,13 +314,16 @@ export default function WeryfikacjaPage() {
                     variant="body-sm"
                     as="span"
                     weight="bold"
-                    className={styles.actionTitleAccent}
+                    color="accent"
+                    className={styles.actionTitle}
                   >
                     Zweryfikuj email
                   </Text>
-                  <span className={styles.actionBadge}>Wymagane</span>
+                  <Text variant="nano" weight="extrabold" as="span" className={styles.actionBadge}>
+                    Wymagane
+                  </Text>
                 </div>
-                <Text variant="nano" as="span" className={styles.actionSub}>
+                <Text variant="nano" as="span" color="secondary">
                   Kliknij link w&nbsp;mailu, który wysłaliśmy na {provider?.email ?? 'Twój adres'} —
                   przyspieszy to weryfikację.
                 </Text>
@@ -329,7 +338,7 @@ export default function WeryfikacjaPage() {
                     Przewodnik providera
                   </Text>
                 </div>
-                <Text variant="nano" as="span" className={styles.actionSub}>
+                <Text variant="nano" as="span" color="secondary">
                   Jak przygotować cennik, godziny, strefę obsługi — wszystko czego się dowiesz
                   w&nbsp;3 minuty.
                 </Text>
@@ -344,7 +353,7 @@ export default function WeryfikacjaPage() {
                     Dodaj kontakt
                   </Text>
                 </div>
-                <Text variant="nano" as="span" className={styles.actionSub}>
+                <Text variant="nano" as="span" color="secondary">
                   Zapisz +48&nbsp;500&nbsp;123&nbsp;456 jako &bdquo;Opony.app&rdquo; — SMSy
                   o&nbsp;rezerwacjach będą przychodzić z&nbsp;tego numeru.
                 </Text>
@@ -381,11 +390,11 @@ export default function WeryfikacjaPage() {
             <Text variant="body-sm" as="p" color="muted">
               Masz pytania podczas weryfikacji? Napisz na{' '}
               <a href="mailto:pomoc@opony.app" className={styles.helpLink}>
-                pomoc@opony.app
+                <strong>pomoc@opony.app</strong>
               </a>{' '}
               lub zadzwoń{' '}
               <a href="tel:+48500123456" className={styles.helpLink}>
-                +48 500 123 456
+                <strong>+48 500 123 456</strong>
               </a>{' '}
               w&nbsp;godz. Pn–Pt 9:00–17:00.
             </Text>

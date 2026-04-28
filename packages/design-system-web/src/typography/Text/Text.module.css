@@ -78,3 +78,7 @@
 .weightSemibold  { font-weight: var(--font-semibold); }
 .weightBold      { font-weight: var(--font-bold); }
 .weightExtrabold { font-weight: var(--font-extrabold); }
+
+/* ── Font family overrides ── */
+
+.mono { font-family: var(--font-mono, monospace); }
