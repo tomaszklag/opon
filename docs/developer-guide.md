@@ -735,7 +735,97 @@ Jeśli `user.role === 'CLIENT'` po OTP — to numer klienta (z mobilnej aplikacj
 
 ---
 
-## 10. Linting i formatowanie
+## 10. Obsługa błędów API
+
+### 10.1. Backend — AppException i ErrorCode
+
+Zamiast wbudowanych wyjątków NestJS (`BadRequestException`, `NotFoundException` itp.) używamy **wyłącznie** `AppException` z `apps/api/src/common/errors/`:
+
+```ts
+import { AppException, ErrorCode } from '../common/errors';
+
+// ✅ TAK
+throw new AppException(ErrorCode.PROVIDER_NOT_FOUND, 'Firma nie istnieje.', 404);
+throw new AppException(ErrorCode.GUS_NIP_NOT_FOUND, 'NIP nie znaleziony w CEIDG.', 404);
+throw new AppException(ErrorCode.PRICING_TIER_RANGE_CONFLICT, 'Przedział felg już zajęty.', 409);
+
+// ❌ NIE — nie używaj wbudowanych wyjątków NestJS w serwisach
+throw new NotFoundException('Firma nie istnieje.');
+throw new BadRequestException('Błąd walidacji.');
+throw new ConflictException('Już istnieje.');
+```
+
+Globalny `HttpExceptionFilter` (zarejestrowany w `main.ts`) gwarantuje jeden kształt każdej odpowiedzi błędu:
+
+```json
+{
+  "code": "PROVIDER_NOT_FOUND",
+  "message": "Firma nie istnieje.",
+  "statusCode": 404
+}
+```
+
+### 10.2. ErrorCode enum — wszystkie kody
+
+Plik: `apps/api/src/common/errors/error-code.enum.ts`
+
+| Prefiks            | Zakres                                                                                        |
+| ------------------ | --------------------------------------------------------------------------------------------- |
+| `AUTH_*`           | Sesja, token, użytkownik (`AUTH_USER_NOT_FOUND`, `AUTH_UNAUTHORIZED`, …)                      |
+| `OTP_*`            | Kod SMS (`OTP_INVALID_OR_EXPIRED`, `OTP_RATE_LIMIT_EXCEEDED`)                                 |
+| `PROVIDER_*`       | Firma, status (`PROVIDER_NOT_FOUND`, `PROVIDER_ALREADY_EXISTS`, `PROVIDER_INVALID_STATUS`, …) |
+| `GUS_*`            | Weryfikacja CEIDG (`GUS_NIP_NOT_FOUND`, `GUS_INVALID_NIP`, `GUS_CONNECTION_ERROR`)            |
+| `PHOTO_*`          | Zdjęcia (`PHOTO_NOT_FOUND`, `PHOTO_ACCESS_DENIED`, `PHOTO_ADDITIONAL_LIMIT_EXCEEDED`)         |
+| `PRICING_TIER_*`   | Cennik (`PRICING_TIER_NOT_FOUND`, `PRICING_TIER_RANGE_CONFLICT`, …)                           |
+| `WORKING_HOURS_*`  | Godziny pracy (`WORKING_HOURS_MISSING_TIMES`, `WORKING_HOURS_INVALID_TIME_RANGE`)             |
+| `VALIDATION_ERROR` | Błąd walidacji DTO (class-validator)                                                          |
+| `INTERNAL_ERROR`   | Nieokreślony błąd serwera                                                                     |
+
+**Gdy dodajesz nowy błąd:** dodaj kod do enum, użyj `AppException`. Nie twórz jednorazowych stringów.
+
+### 10.3. Frontend — ApiError.code i useErrorToast
+
+`ApiError` (w `lib/api.ts`) ma pole `code?: string` parsowane z `body.code`. Sprawdzaj kod **przed** fallbackiem na status HTTP:
+
+```ts
+// ✅ TAK — najpierw kod, potem status jako fallback
+if (err instanceof ApiError && (err.code === 'GUS_NIP_NOT_FOUND' || err.status === 404)) {
+  setGusError('NIP nie znaleziony w rejestrze GUS / CEIDG.');
+}
+
+if (err instanceof ApiError && (err.code === 'PROVIDER_ALREADY_EXISTS' || err.isConflict)) {
+  setApiError('Firma z tym NIPem już istnieje.');
+}
+
+// ❌ NIE — porównywanie message jest kruche (backend może zmienić tekst)
+if (err.message === 'Firma nie istnieje.') { ... }
+```
+
+Do wyświetlania błędów w toastach (poza formularzami) użyj hooka `useErrorToast`:
+
+```ts
+import { useErrorToast } from '../../lib/hooks/use-error-toast';
+
+const { showError } = useErrorToast();
+
+// Prosty toast z message z backendu
+showError(err);
+
+// Toast z własną wiadomością dla konkretnego kodu
+showError(err, {
+  codeMessages: {
+    PRICING_TIER_RANGE_CONFLICT: 'Ten przedział felg już istnieje.',
+    PHOTO_ADDITIONAL_LIMIT_EXCEEDED: 'Osiągnięto limit 10 zdjęć.',
+  },
+  defaultMessage: 'Błąd zapisu. Spróbuj ponownie.',
+});
+```
+
+`<Toaster />` jest zarejestrowany globalnie w `app/layout.tsx` — nie dodawaj go w poszczególnych stronach.
+
+---
+
+## 11. Linting i formatowanie
 
 ```bash
 pnpm lint            # ESLint na całym monorepo (auto-fix)
@@ -751,7 +841,7 @@ Jeśli commit się nie udaje przez hook — nie używaj `--no-verify`. Napraw pr
 
 ---
 
-## 11. Testowanie
+## 12. Testowanie
 
 ```bash
 pnpm test            # Vitest — unit + integration (wszystkie apps)
@@ -766,7 +856,7 @@ MSW mockuje API w testach FE i w dev (`NEXT_PUBLIC_API_MOCK=true`). Handlery: `a
 
 ---
 
-## 12. Przydatne one-linery
+## 13. Przydatne one-linery
 
 ```bash
 # Sprawdź czy wszystkie endpointy mają Response DTO w Swagger
@@ -786,7 +876,7 @@ cd apps/panel && pnpm build && pnpm next build --debug 2>&1 | grep "First Load J
 
 ---
 
-## 13. Formularze — walidacja i obsługa błędów
+## 14. Formularze — walidacja i obsługa błędów
 
 ### Obowiązujący wzorzec: react-hook-form + Zod
 
@@ -820,7 +910,12 @@ export function useFooForm() {
     try {
       await api.post('/v1/foo', values);
     } catch (err) {
-      setApiError(err instanceof ApiError ? err.message : 'Błąd. Spróbuj ponownie.');
+      // Sprawdź err.code dla konkretnych przypadków, fallback na err.message
+      if (err instanceof ApiError && err.code === 'FOO_CONFLICT') {
+        setApiError('Ten zasób już istnieje.');
+      } else {
+        setApiError(err instanceof ApiError ? err.message : 'Błąd. Spróbuj ponownie.');
+      }
     }
   }
 
@@ -933,7 +1028,7 @@ W tych przypadkach błąd po submit nadal trafia do `<NoticeBlock variant="dange
 
 ---
 
-## 14. Integracje z zewnętrznymi API
+## 15. Integracje z zewnętrznymi API
 
 ### 14.1. Gdzie trzymać klucze API
 
@@ -990,19 +1085,29 @@ export class GusService {
       });
     } catch {
       // błąd sieci (timeout, DNS) — nie ujawniaj szczegółów
-      throw new InternalServerErrorException('Błąd połączenia z zewnętrznym serwisem.');
+      throw new AppException(
+        ErrorCode.GUS_CONNECTION_ERROR,
+        'Błąd połączenia z zewnętrznym serwisem.',
+        502,
+      );
     }
 
-    if (response.status === 404) throw new NotFoundException('Zasób nie znaleziony.');
+    if (response.status === 404)
+      throw new AppException(ErrorCode.GUS_NIP_NOT_FOUND, 'NIP nie znaleziony w CEIDG.', 404);
 
     if (response.status === 400) {
-      // parsuj kod błędu API i rzuć odpowiedni wyjątek NestJS
       const body = (await response.json().catch(() => ({}))) as { code?: string };
-      if (body.code === 'NIEPOPRAWNY_NUMER_NIP') throw new NotFoundException('Nieprawidłowy NIP.');
-      throw new InternalServerErrorException('Błąd zapytania do zewnętrznego API.');
+      if (body.code === 'NIEPOPRAWNY_NUMER_NIP')
+        throw new AppException(ErrorCode.GUS_INVALID_NIP, 'Nieprawidłowy NIP.', 400);
+      throw new AppException(
+        ErrorCode.GUS_REQUEST_ERROR,
+        'Błąd zapytania do zewnętrznego API.',
+        502,
+      );
     }
 
-    if (!response.ok) throw new InternalServerErrorException(`Błąd API: ${response.status}`);
+    if (!response.ok)
+      throw new AppException(ErrorCode.GUS_CONNECTION_ERROR, `Błąd API: ${response.status}`, 502);
 
     const data = (await response.json()) as ExternalApiResponse;
     return this.mapResponse(data);
@@ -1032,7 +1137,7 @@ Waliduj format parametru w kontrolerze zanim sięgniesz do zewnętrznego API —
 @Get(':nip')
 async getByNip(@Param('nip') nip: string) {
   if (!/^\d{10}$/.test(nip)) {
-    throw new BadRequestException('NIP musi mieć dokładnie 10 cyfr.');
+    throw new AppException(ErrorCode.GUS_INVALID_NIP, 'NIP musi mieć dokładnie 10 cyfr.', 400);
   }
   return this.service.lookupByNip(nip);
 }
@@ -1040,7 +1145,7 @@ async getByNip(@Param('nip') nip: string) {
 
 ---
 
-## 15. System emaili
+## 16. System emaili
 
 ### 15.1. Architektura modułu
 
@@ -1132,7 +1237,7 @@ Flow weryfikacji możesz testować w Prisma Studio (`pnpm db:studio`): po `POST 
 
 ---
 
-## 16. Pobieranie danych w FE — SWR
+## 17. Pobieranie danych w FE — SWR
 
 Instalacja: `swr` jest już zależnością `apps/panel`. Nie instaluj `react-query` ani żadnej alternatywy.
 
@@ -1215,7 +1320,7 @@ SWR jest właściwy gdy: dane mogą się zmieniać w tle, wiele komponentów pot
 
 ---
 
-## 17. Upload plików — wzorzec NestJS
+## 18. Upload plików — wzorzec NestJS
 
 ### 16.1. Multer — konfiguracja dysku
 
