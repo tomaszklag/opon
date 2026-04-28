@@ -2,7 +2,7 @@
 
 import useSWR from 'swr';
 import Link from 'next/link';
-import { StepIndicator, Timeline, Button, Heading, Text } from '@opony/design-system-web';
+import { StepIndicator, Timeline, Heading, Text } from '@opony/design-system-web';
 import type { TimelineEvent } from '@opony/design-system-web';
 import { useAuthGuard } from '../../../lib/hooks/use-auth-guard';
 import { getProvider } from '../../../api-data-access/providers';
@@ -14,7 +14,6 @@ import {
   IconMobilePhone,
   IconBriefcase,
   IconCamera,
-  IconHome,
   IconDisplay,
 } from '../../../components/icons';
 import styles from './weryfikacja.module.css';
@@ -360,30 +359,6 @@ export default function WeryfikacjaPage() {
               </button>
             </div>
           </section>
-
-          {/* CTA ROW */}
-          <div className={styles.ctaRow}>
-            <Button
-              type="button"
-              variant="neutral"
-              onClick={() => {
-                window.location.href = 'https://opony.app';
-              }}
-            >
-              <IconHome width={14} height={14} />
-              Wróć na opony.app
-            </Button>
-            <Button
-              type="button"
-              variant="primary"
-              onClick={() => {
-                if (provider?.email) window.location.href = `mailto:${provider.email}`;
-              }}
-            >
-              <IconMail width={14} height={14} />
-              Sprawdź skrzynkę email
-            </Button>
-          </div>
 
           {/* HELP FOOTER */}
           <div className={styles.helpFoot}>

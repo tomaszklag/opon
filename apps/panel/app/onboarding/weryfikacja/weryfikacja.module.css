@@ -401,15 +401,6 @@
   flex-shrink: 0;
 }
 
-/* ── CTA row ── */
-.ctaRow {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  margin-top: 4px;
-}
-
 /* ── Help footer ── */
 .helpFoot {
   text-align: center;
