@@ -22,7 +22,7 @@ import styles from './weryfikacja.module.css';
 const STEPS = [
   { label: 'Firma', status: 'done' as const },
   { label: 'Zdjęcia', status: 'done' as const },
-  { label: 'Weryfikacja', status: 'done' as const },
+  { label: 'Weryfikacja', status: 'active' as const },
 ];
 
 function formatRefNumber(id: string): { part1: string; part2: string } {
