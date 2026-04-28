@@ -4,6 +4,7 @@ import type { components } from '@opony/api-client';
 export type PricingTier = components['schemas']['PricingTierResponseDto'];
 export type CreatePricingTierBody = components['schemas']['CreatePricingTierDto'];
 export type UpdatePricingTierBody = components['schemas']['UpdatePricingTierDto'];
+export type MarketPrice = components['schemas']['MarketPriceResponseDto'];
 
 export function getPricingTiers(): Promise<PricingTier[]> {
   return api.get<PricingTier[]>('/v1/providers/me/pricing-tiers');
@@ -19,4 +20,8 @@ export function updatePricingTier(id: string, body: UpdatePricingTierBody): Prom
 
 export function deletePricingTier(id: string): Promise<void> {
   return api.del(`/v1/providers/me/pricing-tiers/${id}`);
+}
+
+export function getMarketPrices(): Promise<MarketPrice[]> {
+  return api.get<MarketPrice[]>('/v1/providers/me/market-prices');
 }

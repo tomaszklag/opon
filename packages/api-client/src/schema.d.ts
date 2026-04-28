@@ -372,6 +372,13 @@ export interface components {
       travelFeeFirstKmPln: number;
       travelFeeExtraKmPln: number;
     };
+    MarketPriceResponseDto: {
+      /** @enum {string} */
+      category: 'small' | 'medium' | 'large';
+      priceMin: number;
+      priceMax: number;
+      providerCount: number;
+    };
     CreatePricingTierDto: {
       /**
        * @description Minimalny rozmiar felgi (cale)

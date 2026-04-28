@@ -16,6 +16,7 @@ import { Public } from '../auth/decorators/public.decorator';
 import { JwtPayload } from '../auth/types/jwt-payload.interface';
 import { ProvidersService } from '../providers/providers.service';
 import { CreatePricingTierDto } from './dto/create-pricing-tier.dto';
+import { MarketPriceResponseDto } from './dto/market-price-response.dto';
 import { PricingTierResponseDto } from './dto/pricing-tier-response.dto';
 import { UpdatePricingTierDto } from './dto/update-pricing-tier.dto';
 import { PricingTiersService } from './pricing-tiers.service';
@@ -27,6 +28,17 @@ export class PricingTiersController {
     private readonly service: PricingTiersService,
     private readonly providersService: ProvidersService,
   ) {}
+
+  // ── GET /v1/providers/me/market-prices ────────────────────────────────────
+
+  @Get('me/market-prices')
+  @ApiCookieAuth('access_token')
+  @ApiOperation({ summary: 'Ceny rynkowe sąsiednich dostawców w zasięgu bazy' })
+  @ApiResponse({ status: 200, type: [MarketPriceResponseDto] })
+  async getMarketPrices(@CurrentUser() user: JwtPayload) {
+    const provider = await this.providersService.getMyProvider(user.sub);
+    return this.service.getMarketPrices(provider);
+  }
 
   // ── GET /v1/providers/me/pricing-tiers ────────────────────────────────────
 

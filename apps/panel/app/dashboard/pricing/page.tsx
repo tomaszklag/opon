@@ -1,16 +1,20 @@
 'use client';
 
-import { Heading, Text } from '@opony/design-system-web';
+import { Heading, Text, Spinner, Button } from '@opony/design-system-web';
 import { usePricingTiers } from '../../../lib/hooks/use-pricing-tiers';
+import { useMarketPrices, getMarketRef } from '../../../lib/hooks/use-market-prices';
 import { useAuthGuard } from '../../../lib/hooks/use-auth-guard';
 import { PricingActionBar } from './_components/PricingActionBar';
 import { TierList } from './_components/TierList';
+import { TravelFeeSection } from './_components/TravelFeeSection';
+import { ServicesSection } from './_components/ServicesSection';
 import { PricingInfoNote } from './_components/PricingInfoNote';
 import { PricingPreview } from './_components/PricingPreview';
 import styles from './pricing.module.css';
 
 export default function PricingPage() {
   const { isLoading: authLoading } = useAuthGuard('/dashboard');
+  const marketPrices = useMarketPrices();
   const {
     drafts,
     newTierForm,
@@ -25,15 +29,33 @@ export default function PricingPage() {
     openAddForm,
     cancelAddForm,
     save,
+    revert,
+    travelFee,
+    updateTravelFee,
+    globalBalancingEnabled,
+    globalBalancingPrice,
+    updateGlobalBalancing,
   } = usePricingTiers();
 
   if (authLoading || loading) {
     return (
       <div className={styles.loadingWrap}>
-        <div className={styles.spinner} />
+        <Spinner size="md" label="Ładowanie cennika…" />
       </div>
     );
   }
+
+  function applyMarketPreset() {
+    drafts.forEach((d, idx) => {
+      const ref = getMarketRef(marketPrices, d.rimSizeMin, d.rimSizeMax);
+      if (ref) {
+        const avg = Math.round((ref.priceMin + ref.priceMax) / 2);
+        updateDraft(idx, { priceSwapPln: avg });
+      }
+    });
+  }
+
+  const hasMarketData = marketPrices.length > 0 && drafts.length > 0;
 
   return (
     <div className={styles.page}>
@@ -44,17 +66,28 @@ export default function PricingPage() {
         showAddForm={showAddForm}
         onOpenAddForm={openAddForm}
         onSave={save}
+        onRevert={revert}
       />
 
       <div className={styles.content}>
         <div className={styles.formCol}>
           <header className={styles.pageHero}>
-            <Heading variant="display" as="h1" className={styles.pageTitle}>
-              Cennik
-            </Heading>
-            <Text variant="body-md" as="p" className={styles.pageSub}>
-              Widoczny publicznie — klient widzi te ceny przy wyszukiwaniu warsztatu.
-            </Text>
+            <div>
+              <Heading variant="display" as="h1" className={styles.pageTitle}>
+                Cennik
+              </Heading>
+              <div className={styles.pageSubRow}>
+                <span className={styles.liveChip}>Widoczny publicznie</span>
+                <Text variant="body-sm" as="span" color="secondary">
+                  w profilu warsztatu — klient widzi te ceny przy wyszukiwaniu
+                </Text>
+              </div>
+            </div>
+            {hasMarketData && (
+              <Button variant="ghost" size="sm" onClick={applyMarketPreset}>
+                Użyj cen rynkowych okolicy
+              </Button>
+            )}
           </header>
 
           <TierList
@@ -62,15 +95,28 @@ export default function PricingPage() {
             showAddForm={showAddForm}
             newTierForm={newTierForm}
             errors={errors}
+            marketPrices={marketPrices}
             onUpdate={updateDraft}
             onDelete={deleteDraft}
             onCancelAdd={cancelAddForm}
           />
 
+          <TravelFeeSection travelFee={travelFee} onUpdate={updateTravelFee} />
+
+          <ServicesSection
+            balancingEnabled={globalBalancingEnabled}
+            balancingPrice={globalBalancingPrice}
+            onUpdate={updateGlobalBalancing}
+          />
+
           <PricingInfoNote />
         </div>
 
-        <PricingPreview drafts={drafts} />
+        <PricingPreview
+          drafts={drafts}
+          globalBalancingEnabled={globalBalancingEnabled}
+          globalBalancingPrice={globalBalancingPrice}
+        />
       </div>
     </div>
   );

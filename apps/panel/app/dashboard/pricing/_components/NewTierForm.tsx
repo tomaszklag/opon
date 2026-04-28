@@ -31,7 +31,7 @@ export function NewTierForm({ form, onCancel }: Props) {
               onBlur={field.onBlur}
               error={errors.rimSizeMin?.message ? ' ' : undefined}
               aria-label="Rozmiar felgi od"
-              className={styles.rimInputDs}
+              className={styles.rimInputNum}
             />
           )}
         />
@@ -49,7 +49,7 @@ export function NewTierForm({ form, onCancel }: Props) {
               onBlur={field.onBlur}
               error={errors.rimSizeMax?.message ? ' ' : undefined}
               aria-label="Rozmiar felgi do"
-              className={styles.rimInputDs}
+              className={styles.rimInputNum}
             />
           )}
         />
@@ -71,7 +71,7 @@ export function NewTierForm({ form, onCancel }: Props) {
             onBlur={field.onBlur}
             error={fieldState.error?.message ? ' ' : undefined}
             aria-label="Cena wymiany"
-            className={styles.priceInputDs}
+            className={styles.priceInputNum}
           />
         )}
       />

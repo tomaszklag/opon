@@ -38,4 +38,40 @@ export class PricingTiersRepository {
   delete(id: string): Promise<PricingTier> {
     return this.prisma.pricingTier.delete({ where: { id } });
   }
+
+  /**
+   * Finds pricing tiers of APPROVED providers within a radius (Haversine).
+   * Excludes the requesting provider so they don't see their own prices as "market".
+   */
+  findNearbyApprovedTiers(
+    lat: number,
+    lng: number,
+    radiusKm: number,
+    excludeProviderId: string,
+  ): Promise<
+    Array<{ providerId: string; rimSizeMin: number; rimSizeMax: number; priceSwapPln: number }>
+  > {
+    return this.prisma.$queryRaw`
+      SELECT
+        pt."providerId",
+        pt."rimSizeMin",
+        pt."rimSizeMax",
+        CAST(pt."priceSwapPln" AS FLOAT) AS "priceSwapPln"
+      FROM pricing_tiers pt
+      JOIN providers p ON p.id = pt."providerId"
+      WHERE p.status = 'APPROVED'
+        AND p.id != ${excludeProviderId}
+        AND p."cityCenterLat" IS NOT NULL
+        AND p."cityCenterLng" IS NOT NULL
+        AND (
+          6371 * acos(
+            GREATEST(-1, LEAST(1,
+              cos(radians(${lat})) * cos(radians(CAST(p."cityCenterLat" AS FLOAT)))
+              * cos(radians(CAST(p."cityCenterLng" AS FLOAT)) - radians(${lng}))
+              + sin(radians(${lat})) * sin(radians(CAST(p."cityCenterLat" AS FLOAT)))
+            ))
+          )
+        ) <= ${radiusKm}
+    `;
+  }
 }

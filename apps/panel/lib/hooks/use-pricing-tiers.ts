@@ -22,6 +22,8 @@ export type TierDraft = {
   priceBalancingPerWheelPln: number;
 };
 
+export type TravelFee = { zone1: number; zone2: number };
+
 const NEW_TIER_DEFAULTS: NewTierValues = {
   rimSizeMin: 13,
   rimSizeMax: 15,
@@ -54,6 +56,7 @@ function validateDrafts(drafts: TierDraft[]): string[] {
 
 export function usePricingTiers() {
   const [drafts, setDrafts] = useState<TierDraft[]>([]);
+  const [savedDrafts, setSavedDrafts] = useState<TierDraft[]>([]);
   const [deletedIds, setDeletedIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -61,6 +64,8 @@ export function usePricingTiers() {
   const [dirty, setDirty] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
+  const [travelFee, setTravelFee] = useState<TravelFee>({ zone1: 0, zone2: 0 });
+  const [savedTravelFee, setSavedTravelFee] = useState<TravelFee>({ zone1: 0, zone2: 0 });
 
   const newTierForm = useForm<NewTierValues>({
     resolver: zodResolver(newTierSchema),
@@ -69,9 +74,21 @@ export function usePricingTiers() {
 
   useEffect(() => {
     getPricingTiers()
-      .then((tiers) =>
-        setDrafts(tiers.sort((a, b) => a.rimSizeMin - b.rimSizeMin).map(tierToDraft)),
-      )
+      .then((tiers) => {
+        const sorted = tiers.sort((a, b) => a.rimSizeMin - b.rimSizeMin);
+        const fetchedDrafts = sorted.map(tierToDraft);
+        setDrafts(fetchedDrafts);
+        setSavedDrafts(fetchedDrafts);
+        const first = sorted[0];
+        if (first) {
+          const tf: TravelFee = {
+            zone1: Number(first.travelFeeFirstKmPln ?? 0),
+            zone2: Number(first.travelFeeExtraKmPln ?? 0),
+          };
+          setTravelFee(tf);
+          setSavedTravelFee(tf);
+        }
+      })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
@@ -97,6 +114,30 @@ export function usePricingTiers() {
   function cancelAddForm() {
     setShowAddForm(false);
     newTierForm.reset(NEW_TIER_DEFAULTS);
+  }
+
+  function updateTravelFee(zone1: number, zone2: number) {
+    setTravelFee({ zone1, zone2 });
+    setDirty(true);
+  }
+
+  // Syncs balancing to all tiers — UI shows a single global control
+  function updateGlobalBalancing(enabled: boolean, price: number) {
+    setDrafts((prev) =>
+      prev.map((d) => ({ ...d, balancingEnabled: enabled, priceBalancingPerWheelPln: price })),
+    );
+    setDirty(true);
+  }
+
+  function revert() {
+    setDrafts(savedDrafts);
+    setTravelFee(savedTravelFee);
+    setDeletedIds([]);
+    setShowAddForm(false);
+    newTierForm.reset(NEW_TIER_DEFAULTS);
+    setDirty(false);
+    setSaved(false);
+    setErrors([]);
   }
 
   async function save() {
@@ -126,6 +167,8 @@ export function usePricingTiers() {
           rimSizeMax: values.rimSizeMax,
           priceSwapPln: values.priceSwapPln,
           priceBalancingPerWheelPln: values.balancingEnabled ? values.priceBalancingPerWheelPln : 0,
+          travelFeeFirstKmPln: travelFee.zone1,
+          travelFeeExtraKmPln: travelFee.zone2,
         });
         setDrafts((prev) =>
           [...prev, tierToDraft(created)].sort((a, b) => a.rimSizeMin - b.rimSizeMin),
@@ -141,10 +184,14 @@ export function usePricingTiers() {
             updatePricingTier(d.id!, {
               priceSwapPln: d.priceSwapPln,
               priceBalancingPerWheelPln: d.balancingEnabled ? d.priceBalancingPerWheelPln : 0,
+              travelFeeFirstKmPln: travelFee.zone1,
+              travelFeeExtraKmPln: travelFee.zone2,
             }),
           ),
       );
 
+      setSavedDrafts(drafts);
+      setSavedTravelFee(travelFee);
       setDirty(false);
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
@@ -160,6 +207,9 @@ export function usePricingTiers() {
     }
   }
 
+  const globalBalancingEnabled = drafts[0]?.balancingEnabled ?? false;
+  const globalBalancingPrice = drafts[0]?.priceBalancingPerWheelPln ?? 20;
+
   return {
     drafts,
     newTierForm,
@@ -174,5 +224,11 @@ export function usePricingTiers() {
     openAddForm,
     cancelAddForm,
     save,
+    revert,
+    travelFee,
+    updateTravelFee,
+    globalBalancingEnabled,
+    globalBalancingPrice,
+    updateGlobalBalancing,
   };
 }

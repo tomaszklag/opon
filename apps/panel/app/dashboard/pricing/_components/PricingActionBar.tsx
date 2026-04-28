@@ -8,6 +8,7 @@ interface Props {
   showAddForm: boolean;
   onOpenAddForm: () => void;
   onSave: () => void;
+  onRevert: () => void;
 }
 
 export function PricingActionBar({
@@ -17,6 +18,7 @@ export function PricingActionBar({
   showAddForm,
   onOpenAddForm,
   onSave,
+  onRevert,
 }: Props) {
   return (
     <div className={styles.actionBar}>
@@ -25,6 +27,11 @@ export function PricingActionBar({
       <Button variant="secondary" size="sm" onClick={onOpenAddForm} disabled={showAddForm}>
         + Dodaj przedział
       </Button>
+      {dirty && (
+        <Button variant="ghost" size="sm" onClick={onRevert}>
+          Cofnij
+        </Button>
+      )}
       <Button
         variant="primary"
         size="sm"
