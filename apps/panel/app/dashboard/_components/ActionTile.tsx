@@ -1,4 +1,5 @@
 import { useRouter } from 'next/navigation';
+import { Text } from '@opony/design-system-web';
 import { IconLockOutline } from '../../../components/icons';
 import styles from '../dashboard.module.css';
 
@@ -20,8 +21,12 @@ export function ActionTile({ title, description, href, locked }: Props) {
       title={locked ? 'Dostępne po zatwierdzeniu konta' : undefined}
     >
       <div className={styles.actionContent}>
-        <div className={styles.actionTitle}>{title}</div>
-        <div className={styles.actionDesc}>{description}</div>
+        <Text variant="body" as="div" weight="bold" className={styles.actionTitle}>
+          {title}
+        </Text>
+        <Text variant="body-sm" as="div" color="secondary" className={styles.actionDesc}>
+          {description}
+        </Text>
       </div>
       {locked && <IconLockOutline className={styles.lockIcon} width="13" height="13" />}
     </button>

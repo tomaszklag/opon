@@ -84,6 +84,14 @@ export class PhotosService {
     await this.repo.delete(photoId);
   }
 
+  async rename(providerId: string, photoId: string, name: string): Promise<ProviderPhoto> {
+    const photo = await this.repo.findById(photoId);
+    if (!photo) throw new NotFoundException('Zdjęcie nie istnieje.');
+    if (photo.providerId !== providerId)
+      throw new ForbiddenException('Brak dostępu do tego zdjęcia.');
+    return this.repo.rename(photoId, name);
+  }
+
   async setPrimary(providerId: string, photoId: string): Promise<ProviderPhoto> {
     const photo = await this.repo.findById(photoId);
     if (!photo) throw new NotFoundException('Zdjęcie nie istnieje.');

@@ -1,6 +1,6 @@
 'use client';
 
-import { NoticeBlock } from '@opony/design-system-web';
+import { Heading, Text, NoticeBlock } from '@opony/design-system-web';
 import { useProviderForm } from '../../../lib/hooks/use-provider-form';
 import { useAuthGuard } from '../../../lib/hooks/use-auth-guard';
 import { ProfileActionBar } from './_components/ProfileActionBar';
@@ -48,10 +48,12 @@ export default function ProfilePage() {
       <div className={styles.content}>
         <div className={styles.formCol}>
           <header className={styles.pageHero}>
-            <h1 className={styles.pageTitle}>Profil firmy</h1>
-            <p className={styles.pageSub}>
+            <Heading variant="display" as="h1" className={styles.pageTitle}>
+              Profil firmy
+            </Heading>
+            <Text variant="body-md" as="p" className={styles.pageSub}>
               Dane widoczne publicznie w wynikach wyszukiwania i na karcie warsztatu.
-            </p>
+            </Text>
           </header>
 
           {apiError && <NoticeBlock variant="danger">{apiError}</NoticeBlock>}

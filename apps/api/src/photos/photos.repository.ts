@@ -43,6 +43,13 @@ export class PhotosRepository {
     return this.prisma.providerPhoto.delete({ where: { id } });
   }
 
+  rename(id: string, name: string): Promise<ProviderPhoto> {
+    return this.prisma.providerPhoto.update({
+      where: { id },
+      data: { originalName: name },
+    });
+  }
+
   async setPrimary(providerId: string, photoId: string): Promise<ProviderPhoto> {
     const [, updated] = await this.prisma.$transaction([
       // Odznacz wszystkie jako niepierwszoplanowe w ramach providera

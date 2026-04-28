@@ -1,4 +1,4 @@
-import { Input, Toggle, Button } from '@opony/design-system-web';
+import { Input, Toggle, Button, Text } from '@opony/design-system-web';
 import { type TierDraft } from '../../../../lib/hooks/use-pricing-tiers';
 import { IconTrash } from '../../../../components/icons';
 import { rimLabel } from './utils';
@@ -15,7 +15,9 @@ export function TierRow({ draft: d, idx, onUpdate, onDelete }: Props) {
   return (
     <div className={styles.tierRow}>
       <div className={styles.tierInfo}>
-        <span className={styles.tierName}>{rimLabel(d.rimSizeMin, d.rimSizeMax)}</span>
+        <Text variant="label" as="span" className={styles.tierName}>
+          {rimLabel(d.rimSizeMin, d.rimSizeMax)}
+        </Text>
       </div>
 
       <Input

@@ -1,0 +1,80 @@
+.text {
+  font-family: var(--font-body, 'Archivo'), system-ui, sans-serif;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+/* ── Variants ── */
+
+.body {
+  font-size: var(--text-base);
+  line-height: var(--leading-normal);
+  font-weight: var(--font-regular);
+}
+
+.bodyMd {
+  font-size: var(--text-md);
+  line-height: var(--leading-normal);
+  font-weight: var(--font-regular);
+}
+
+.bodySm {
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  font-weight: var(--font-regular);
+}
+
+.caption {
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  color: var(--text-muted);
+  font-weight: var(--font-regular);
+}
+
+/* uppercase label — dla tagów, sekcji nav, badges */
+.label {
+  font-size: var(--text-xs);
+  font-weight: var(--font-extrabold);
+  line-height: var(--leading-none);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+}
+
+/* micro label — 9px, dla bardzo małych badge'y i tagów UI */
+.nano {
+  font-size: var(--text-3xs);
+  font-weight: var(--font-extrabold);
+  line-height: var(--leading-none);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+}
+
+/* mono — dla numerów kroków, kodów, wartości technicznych */
+.kicker {
+  font-family: var(--font-mono, monospace);
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  letter-spacing: var(--tracking-wider);
+}
+
+/* mono micro — dla bardzo małych wartości mono */
+.kickerSm {
+  font-family: var(--font-mono, monospace);
+  font-size: var(--text-3xs);
+  line-height: var(--leading-normal);
+  letter-spacing: var(--tracking-wider);
+}
+
+/* ── Color overrides ── */
+
+.colorPrimary   { color: var(--text-primary); }
+.colorSecondary { color: var(--text-secondary); }
+.colorMuted     { color: var(--text-muted); }
+.colorAccent    { color: var(--accent); }
+
+/* ── Weight overrides ── */
+
+.weightMedium    { font-weight: var(--font-medium); }
+.weightSemibold  { font-weight: var(--font-semibold); }
+.weightBold      { font-weight: var(--font-bold); }
+.weightExtrabold { font-weight: var(--font-extrabold); }

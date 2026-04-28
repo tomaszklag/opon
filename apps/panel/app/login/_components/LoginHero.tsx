@@ -1,3 +1,4 @@
+import { Heading, Text } from '@opony/design-system-web';
 import styles from '../login.module.css';
 
 export function LoginHero() {
@@ -37,58 +38,68 @@ export function LoginHero() {
 
       <div className={styles.heroIntro}>
         <div className={styles.heroKicker}>Dla warsztatów — pilot Nowy Sącz</div>
-        <h2 className={styles.heroTitle}>
+        <Heading variant="hero" as="h2" className={styles.heroTitle}>
           ZARZĄDZAJ
           <br />
           REZERWACJAMI
           <br />Z <span className={styles.heroEm}>JEDNEGO</span>
           <br />
           MIEJSCA.
-        </h2>
+        </Heading>
       </div>
 
       <div className={styles.statsRow}>
         <div className={styles.statCol}>
-          <span className={styles.statVal}>
+          <Heading variant="display-xl" as="span" className={styles.statVal}>
             <span className={styles.statEm}>23</span>
-          </span>
-          <span className={styles.statLbl}>
+          </Heading>
+          <Text variant="body-sm" as="span" className={styles.statLbl}>
             Warsztatów
             <br />w Nowym Sączu
-          </span>
+          </Text>
         </div>
         <div className={styles.statCol}>
-          <span className={styles.statVal}>
-            1,2<span className={styles.statSmall}>k</span>
-          </span>
-          <span className={styles.statLbl}>
+          <Heading variant="display-xl" as="span" className={styles.statVal}>
+            1,2
+            <Text variant="caption" as="span" className={styles.statSmall}>
+              k
+            </Text>
+          </Heading>
+          <Text variant="body-sm" as="span" className={styles.statLbl}>
             Rezerwacji
             <br />
             miesięcznie
-          </span>
+          </Text>
         </div>
         <div className={styles.statCol}>
-          <span className={styles.statVal}>
-            4,8<span className={styles.statSmall}>/5</span>
-          </span>
-          <span className={styles.statLbl}>
+          <Heading variant="display-xl" as="span" className={styles.statVal}>
+            4,8
+            <Text variant="caption" as="span" className={styles.statSmall}>
+              /5
+            </Text>
+          </Heading>
+          <Text variant="body-sm" as="span" className={styles.statLbl}>
             Średnia ocen
             <br />w pilocie
-          </span>
+          </Text>
         </div>
       </div>
 
       <blockquote className={styles.quoteCard}>
-        <p className={styles.quoteText}>
+        <Text variant="body-sm" as="p" className={styles.quoteText}>
           {
             '„Zero telefonów przed sezonem. Klienci sami wybierają wolny slot, a ja rano otwieram pulpit i wiem co mnie czeka. Tego mi brakowało."'
           }
-        </p>
+        </Text>
         <div className={styles.quoteAuthor}>
           <div className={styles.quoteAvatar}>PK</div>
           <div className={styles.quoteInfo}>
-            <span className={styles.quoteName}>Paweł Kępa</span>
-            <span className={styles.quoteRole}>{'Wulkanizacja Kępa · N. Sącz · PILOT'}</span>
+            <Text variant="body-sm" as="span" weight="bold" className={styles.quoteName}>
+              Paweł Kępa
+            </Text>
+            <Text variant="kicker-sm" as="span" className={styles.quoteRole}>
+              {'Wulkanizacja Kępa · N. Sącz · PILOT'}
+            </Text>
           </div>
         </div>
       </blockquote>

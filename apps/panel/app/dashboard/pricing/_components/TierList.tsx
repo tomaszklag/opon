@@ -1,3 +1,4 @@
+import { Heading } from '@opony/design-system-web';
 import { type UseFormReturn } from 'react-hook-form';
 import { type TierDraft } from '../../../../lib/hooks/use-pricing-tiers';
 import { type NewTierValues } from '../../../../lib/schemas/pricing.schema';
@@ -28,7 +29,9 @@ export function TierList({
     <>
       <section className={styles.secCard}>
         <div className={styles.secHead}>
-          <h2 className={styles.secTitle}>Wymiana 4 opon</h2>
+          <Heading variant="section" as="h2" className={styles.secTitle}>
+            Wymiana 4 opon
+          </Heading>
           <span className={styles.secSub}>Cena za komplet · PLN</span>
         </div>
 

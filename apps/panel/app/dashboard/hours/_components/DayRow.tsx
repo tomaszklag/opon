@@ -1,4 +1,4 @@
-import { Input, Toggle, Select } from '@opony/design-system-web';
+import { Input, Toggle, Select, Text } from '@opony/design-system-web';
 import { type DayEntry } from '../../../../lib/hooks/use-working-hours';
 import { DAY_META, SLOT_OPTIONS, computeSlots, formatDuration } from './utils';
 import styles from '../hours.module.css';
@@ -25,7 +25,9 @@ export function DayRow({ day, isToday, error, onUpdate }: Props) {
       ].join(' ')}
     >
       <div className={styles.dayName}>
-        <span className={styles.dayAbbr}>{meta.abbr}</span>
+        <Text variant="label" as="span" className={styles.dayAbbr}>
+          {meta.abbr}
+        </Text>
         <span className={styles.dayFull}>{meta.full}</span>
         {isToday && <span className={styles.todayTag}>Dziś</span>}
       </div>
@@ -38,7 +40,9 @@ export function DayRow({ day, isToday, error, onUpdate }: Props) {
       />
 
       {day.isClosed ? (
-        <span className={styles.closedLabel}>Nieczynne</span>
+        <Text variant="nano" as="span" className={styles.closedLabel}>
+          Nieczynne
+        </Text>
       ) : (
         <>
           <Input
@@ -65,10 +69,16 @@ export function DayRow({ day, isToday, error, onUpdate }: Props) {
             className={styles.slotSelectDs}
           />
           <div className={styles.slotInfo}>
-            <span className={[styles.slotCount, isToday ? styles.slotCountAccent : ''].join(' ')}>
+            <Text
+              variant="nano"
+              as="span"
+              className={[styles.slotCount, isToday ? styles.slotCountAccent : ''].join(' ')}
+            >
               {slots} slotów
-            </span>
-            <span className={styles.slotHint}>{formatDuration(day.openTime, day.closeTime)}</span>
+            </Text>
+            <Text variant="caption" as="p" className={styles.slotHint}>
+              {formatDuration(day.openTime, day.closeTime)}
+            </Text>
           </div>
         </>
       )}

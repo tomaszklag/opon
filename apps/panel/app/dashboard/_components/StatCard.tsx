@@ -1,3 +1,4 @@
+import { Text } from '@opony/design-system-web';
 import styles from '../dashboard.module.css';
 
 interface Props {
@@ -8,8 +9,12 @@ interface Props {
 export function StatCard({ label, value }: Props) {
   return (
     <div className={styles.statCard}>
-      <div className={styles.statLabel}>{label}</div>
-      <div className={styles.statValue}>{value}</div>
+      <Text variant="label" as="div" className={styles.statLabel}>
+        {label}
+      </Text>
+      <Text variant="kicker" as="div" weight="bold" className={styles.statValue}>
+        {value}
+      </Text>
     </div>
   );
 }

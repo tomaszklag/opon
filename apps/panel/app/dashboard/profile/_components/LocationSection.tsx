@@ -1,4 +1,4 @@
-import { Input } from '@opony/design-system-web';
+import { Input, Heading } from '@opony/design-system-web';
 import { type UseFormRegister, type FieldErrors } from 'react-hook-form';
 import { type ProviderFormValues } from '../../../../lib/schemas/provider.schema';
 import styles from '../profile.module.css';
@@ -15,7 +15,9 @@ export function LocationSection({ register, errors, cityCenterLat, cityCenterLng
   return (
     <section className={styles.section}>
       <header className={styles.secHead}>
-        <h2 className={styles.secTitle}>Lokalizacja</h2>
+        <Heading variant="section" as="h2" className={styles.secTitle}>
+          Lokalizacja
+        </Heading>
         <span className={styles.secKicker}>Dane z rejestracji</span>
       </header>
 

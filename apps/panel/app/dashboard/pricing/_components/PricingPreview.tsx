@@ -1,3 +1,4 @@
+import { Text } from '@opony/design-system-web';
 import { type TierDraft } from '../../../../lib/hooks/use-pricing-tiers';
 import { rimLabel } from './utils';
 import styles from '../pricing.module.css';
@@ -14,10 +15,10 @@ export function PricingPreview({ drafts }: Props) {
       <div className={styles.previewPanel}>
         <div className={styles.previewHead}>
           <span className={styles.previewTitle}>Podgląd dla klienta</span>
-          <span className={styles.previewLiveBadge}>
+          <Text variant="nano" as="span" className={styles.previewLiveBadge}>
             <span className={styles.previewLiveDot} />
             Live
-          </span>
+          </Text>
         </div>
 
         {drafts.length === 0 ? (

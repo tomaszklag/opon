@@ -275,6 +275,64 @@ Design reference dla każdego ekranu panelu: `design/b2b-*.html`. Mapa ekran ↔
 
 ## 7. Komponenty UI — zawsze z Design System
 
+Każdy element UI w `apps/panel` musi używać komponentów z `@opony/design-system-web` — zarówno interaktywne formy, jak i **tekst**.
+
+### Typografia — Heading i Text
+
+Każdy tekst w JSX musi używać `<Heading>` lub `<Text>`. **Nigdy** nie definiuj `font-size`, `font-weight`, `line-height`, `letter-spacing`, `font-family` w plikach CSS module — to wyłączna odpowiedzialność DS.
+
+```tsx
+import { Heading, Text } from '@opony/design-system-web';
+
+// ✅ TAK
+<Heading variant="section">Tytuł sekcji</Heading>
+<Text variant="body-sm" as="span" weight="bold">Label</Text>
+
+// ❌ NIE
+<h2 className={styles.title}>Tytuł</h2>    // jeśli .title definiuje font-*
+<span style={{ fontSize: '12px' }}>Label</span>
+```
+
+#### Heading — warianty
+
+| Wariant      | Zastosowanie                                  |
+| ------------ | --------------------------------------------- |
+| `hero-xl`    | Największy nagłówek strony (62px Bebas Neue)  |
+| `hero`       | Hero sekcje (48px Bebas Neue)                 |
+| `display-xl` | Duże liczby, statystyki (42px Bebas Neue)     |
+| `display`    | Wyróżnione nagłówki ekranów (32px Bebas Neue) |
+| `section`    | Nagłówek sekcji — domyślny (24px Bebas Neue)  |
+| `subsection` | Podsekcja (18px Bebas Neue)                   |
+
+`as` akceptuje: `h1 h2 h3 h4 h5 h6 span div`
+
+#### Text — warianty
+
+| Wariant     | Zastosowanie                                    |
+| ----------- | ----------------------------------------------- |
+| `body`      | Tekst podstawowy (15px Archivo)                 |
+| `body-md`   | Powiększony body (17px)                         |
+| `body-sm`   | Mniejszy body, opisy (13px)                     |
+| `caption`   | Podpisy, muted (13px, auto-muted color)         |
+| `label`     | Uppercase tag, badge (10px extrabold)           |
+| `nano`      | Bardzo mały tag/badge (9px extrabold uppercase) |
+| `kicker`    | Mono wartości techniczne (13px JetBrains Mono)  |
+| `kicker-sm` | Mono mikro — rozmiary pliku, kody (9px Mono)    |
+
+`as` akceptuje: `p span div label li strong em`
+
+#### CSS Modules + noUncheckedIndexedAccess
+
+`tsconfig.base.json` ma `noUncheckedIndexedAccess: true` — `styles.foo` zwraca `string | undefined`. Przy budowaniu map wariantów w komponentach DS wymagany cast:
+
+```ts
+const variantClass: Record<Variant, string> = {
+  hero: styles.hero as string, // wymagane — bez cast błąd TS
+};
+```
+
+---
+
 Każdy interaktywny element w `apps/panel` musi używać komponentu z `@opony/design-system-web`. Design w `design/b2b-*.html` (sekcja „DS Components") wskazuje jakich komponentów użyć na danej stronie.
 
 ```ts

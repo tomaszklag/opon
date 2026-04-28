@@ -30,9 +30,9 @@
 
 .brandWordmark {
   font-family: var(--font-display, 'Bebas Neue'), sans-serif;
-  font-size: 28px;
-  letter-spacing: 3.5px;
-  line-height: 1;
+  font-size: var(--text-5xl);
+  letter-spacing: var(--tracking-display);
+  line-height: var(--leading-none);
   color: var(--text-primary);
   display: inline-flex;
   align-items: baseline;
@@ -50,16 +50,11 @@
 }
 
 .panelTag {
-  font-family: var(--font-mono, monospace);
-  font-size: 9px;
   padding: 2px 6px;
   border-radius: 4px;
   background: var(--accent-muted);
   border: 1px solid var(--accent-border);
   color: var(--accent);
-  letter-spacing: 1.2px;
-  text-transform: uppercase;
-  font-weight: 800;
 }
 
 .topStripSpacer {
@@ -74,10 +69,10 @@
   padding: 9px 24px;
   background: var(--success-muted);
   border-bottom: 1px solid var(--success-border);
-  font-size: 12px;
-  font-weight: 600;
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
   color: var(--success);
-  letter-spacing: 0.01em;
+  letter-spacing: var(--tracking-wide);
 }
 
 .savingPulse {
@@ -96,17 +91,16 @@
 }
 
 .loginLink {
-  font-size: 13px;
   color: var(--text-secondary);
 }
 
 .loginLinkAnchor {
   color: var(--accent);
   text-decoration: none;
-  font-weight: 800;
-  letter-spacing: 1.1px;
+  font-weight: var(--font-extrabold);
+  letter-spacing: var(--tracking-display);
   text-transform: uppercase;
-  font-size: 11px;
+  font-size: var(--text-xs);
   margin-left: 6px;
   padding: 4px 8px;
   border-radius: 6px;
@@ -145,17 +139,17 @@
   background: var(--bg);
   color: var(--text-muted);
   font-family: var(--font-mono, monospace);
-  font-size: 12px;
-  font-weight: 700;
+  font-size: var(--text-sm);
+  font-weight: var(--font-bold);
   display: inline-flex;
   align-items: center;
   justify-content: center;
 }
 
 .stepLabel {
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 1px;
+  font-size: var(--text-xs);
+  font-weight: var(--font-extrabold);
+  letter-spacing: var(--tracking-display);
   text-transform: uppercase;
   color: var(--text-muted);
 }
@@ -235,17 +229,11 @@
 }
 
 .heroTitle {
-  font-family: var(--font-display, 'Bebas Neue'), sans-serif;
-  font-size: 48px;
-  letter-spacing: 2.5px;
-  line-height: 1;
   color: var(--text-primary);
 }
 
 .heroSub {
-  font-size: 14px;
   color: var(--text-secondary);
-  line-height: 1.5;
   max-width: 500px;
 }
 
@@ -263,10 +251,7 @@
   border-radius: 5px;
   background: var(--surface);
   border: 1px solid var(--border);
-  font-size: 11px;
-  font-weight: 700;
   color: var(--text-secondary);
-  letter-spacing: 0.3px;
 }
 
 .factChip svg {
@@ -292,26 +277,19 @@
 }
 
 .sectionTitle {
-  font-family: var(--font-display, 'Bebas Neue'), sans-serif;
-  font-size: 20px;
-  letter-spacing: 2px;
   color: var(--text-primary);
-  line-height: 1;
 }
 
 .sectionNumber {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-family: var(--font-mono, monospace);
-  font-size: 10px;
   color: var(--text-muted);
-  letter-spacing: 1px;
 }
 
 .sectionNumberAccent {
   color: var(--accent);
-  font-weight: 700;
+  font-weight: var(--font-bold);
 }
 
 /* ── Consent list ── */
@@ -366,9 +344,9 @@
 }
 
 .consentFieldError {
-  font-size: 11px;
+  font-size: var(--text-xs);
   color: var(--danger);
-  font-weight: 600;
+  font-weight: var(--font-semibold);
   margin-top: 2px;
 }
 
@@ -413,8 +391,6 @@
 }
 
 .consentTitle {
-  font-size: 13px;
-  font-weight: 700;
   color: var(--text-primary);
 }
 
@@ -424,10 +400,6 @@
 }
 
 .consentBadge {
-  font-size: 9px;
-  font-weight: 800;
-  letter-spacing: 1.2px;
-  text-transform: uppercase;
   padding: 2px 6px;
   border-radius: 3px;
 }
@@ -445,19 +417,17 @@
 }
 
 .consentDesc {
-  font-size: 11px;
   color: var(--text-secondary);
-  line-height: 1.4;
   margin-top: 3px;
 }
 
 .consentLink {
   color: var(--accent);
-  font-weight: 700;
+  font-weight: var(--font-bold);
   text-decoration: none;
   text-transform: uppercase;
-  letter-spacing: 0.8px;
-  font-size: 10px;
+  letter-spacing: var(--tracking-widest);
+  font-size: var(--text-2xs);
   margin-top: 4px;
   display: inline-flex;
   align-items: center;
@@ -473,9 +443,9 @@
 
 .fieldLabel {
   font-family: var(--font-body, system-ui);
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 1.3px;
+  font-size: var(--text-2xs);
+  font-weight: var(--font-extrabold);
+  letter-spacing: var(--tracking-display);
   text-transform: uppercase;
   color: var(--text-muted);
 }
@@ -487,9 +457,9 @@
 
 .fieldLabelOptional {
   color: var(--text-muted);
-  font-weight: 600;
-  letter-spacing: 0.5px;
-  font-size: 9px;
+  font-weight: var(--font-semibold);
+  letter-spacing: var(--tracking-wider);
+  font-size: var(--text-3xs);
   text-transform: uppercase;
   margin-left: 6px;
 }
@@ -531,8 +501,8 @@
   padding: 12px 14px;
   color: var(--text-primary);
   font-family: var(--font-body, system-ui);
-  font-size: 14px;
-  font-weight: 500;
+  font-size: var(--text-md);
+  font-weight: var(--font-medium);
   caret-color: var(--accent);
 }
 
@@ -542,8 +512,8 @@
 
 .mono {
   font-family: var(--font-mono, monospace) !important;
-  font-weight: 600 !important;
-  letter-spacing: 0.5px !important;
+  font-weight: var(--font-semibold) !important;
+  letter-spacing: var(--tracking-wider) !important;
 }
 
 .retryBtn {
@@ -573,8 +543,8 @@
   background: var(--surface);
   border-right: 1px solid var(--border);
   font-family: var(--font-mono, monospace);
-  font-weight: 700;
-  font-size: 14px;
+  font-weight: var(--font-bold);
+  font-size: var(--text-md);
   color: var(--accent);
   flex-shrink: 0;
 }
@@ -599,9 +569,9 @@
 }
 
 .fieldHint {
-  font-size: 11px;
+  font-size: var(--text-xs);
   color: var(--text-muted);
-  line-height: 1.4;
+  line-height: var(--leading-cozy);
 }
 
 .fieldHintError {
@@ -625,9 +595,9 @@
   align-items: center;
   gap: 8px;
   font-family: var(--font-body, system-ui);
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 1.3px;
+  font-size: var(--text-2xs);
+  font-weight: var(--font-extrabold);
+  letter-spacing: var(--tracking-display);
   text-transform: uppercase;
   color: var(--success);
 }
@@ -637,8 +607,8 @@
   border-radius: 3px;
   background: var(--success);
   color: var(--bg);
-  font-size: 9px;
-  font-weight: 700;
+  font-size: var(--text-3xs);
+  font-weight: var(--font-bold);
 }
 
 .gusFields {
@@ -646,21 +616,21 @@
   grid-template-columns: auto 1fr;
   row-gap: 4px;
   column-gap: 14px;
-  font-size: 12px;
+  font-size: var(--text-sm);
 }
 
 .gusLabel {
   font-family: var(--font-body, system-ui);
-  font-size: 9px;
-  font-weight: 800;
-  letter-spacing: 1.1px;
+  font-size: var(--text-3xs);
+  font-weight: var(--font-extrabold);
+  letter-spacing: var(--tracking-display);
   text-transform: uppercase;
   color: var(--text-muted);
   padding-top: 2px;
 }
 
 .gusValue {
-  font-weight: 600;
+  font-weight: var(--font-semibold);
   color: var(--text-primary);
   font-family: var(--font-body, system-ui);
 }
@@ -677,10 +647,10 @@
   border: 1px solid var(--success-border);
   border-radius: 4px;
   font-family: var(--font-mono, monospace);
-  font-size: 10px;
+  font-size: var(--text-2xs);
   color: var(--success);
-  font-weight: 700;
-  letter-spacing: 0.3px;
+  font-weight: var(--font-bold);
+  letter-spacing: var(--tracking-wide);
 }
 
 /* ── Field 2-col grid ── */
@@ -694,8 +664,8 @@
 /* ── IBAN prefix ── */
 .ibanPrefix {
   font-family: var(--font-mono, monospace);
-  font-weight: 700;
-  font-size: 14px;
+  font-weight: var(--font-bold);
+  font-size: var(--text-md);
   color: var(--accent);
   padding-right: 8px;
   border-right: 1px solid var(--border-strong);
@@ -726,9 +696,7 @@
 }
 
 .ctaNote {
-  font-size: 11px;
   color: var(--text-muted);
-  line-height: 1.4;
   max-width: 380px;
 }
 
@@ -738,9 +706,9 @@
 
 .ctaBtnNext {
   opacity: 0.6;
-  font-weight: 600;
-  font-size: 11px;
-  letter-spacing: 1px;
+  font-weight: var(--font-semibold);
+  font-size: var(--text-xs);
+  letter-spacing: var(--tracking-display);
   text-transform: uppercase;
   margin-left: 4px;
 }
@@ -748,10 +716,8 @@
 
 /* ── Help footer ── */
 .helpFoot {
-  font-size: 11px;
   color: var(--text-muted);
   text-align: center;
-  line-height: 1.6;
   padding-bottom: 8px;
 }
 
@@ -759,7 +725,7 @@
   color: var(--text-secondary);
   text-decoration: underline;
   text-underline-offset: 2px;
-  font-weight: 600;
+  font-weight: var(--font-semibold);
 }
 
 /* ── Loading overlay ── */
@@ -786,7 +752,7 @@
   }
 
   .heroTitle {
-    font-size: 36px;
+    font-size: var(--text-display-lg);
   }
 
   .heroFacts {

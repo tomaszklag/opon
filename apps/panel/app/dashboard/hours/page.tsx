@@ -1,5 +1,6 @@
 'use client';
 
+import { Heading, Text } from '@opony/design-system-web';
 import { useWorkingHours } from '../../../lib/hooks/use-working-hours';
 import { useAuthGuard } from '../../../lib/hooks/use-auth-guard';
 import { HoursActionBar } from './_components/HoursActionBar';
@@ -28,10 +29,12 @@ export default function HoursPage() {
       <div className={styles.content}>
         <div className={styles.formCol}>
           <header className={styles.pageHero}>
-            <h1 className={styles.pageTitle}>Godziny pracy</h1>
-            <p className={styles.pageSub}>
+            <Heading variant="display" as="h1" className={styles.pageTitle}>
+              Godziny pracy
+            </Heading>
+            <Text variant="body-md" as="p" className={styles.pageSub}>
               Ustaw dni i godziny przyjęć klientów. Slot to czas jednej rezerwowanej wizyty.
-            </p>
+            </Text>
           </header>
 
           <DayList days={days} errors={errors} todayDow={todayDow} onUpdate={updateDay} />

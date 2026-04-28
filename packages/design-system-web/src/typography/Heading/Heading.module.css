@@ -1,0 +1,49 @@
+.heading {
+  font-family: var(--font-display, 'Bebas Neue'), sans-serif;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+/* ── Variants (font-size + line-height + letter-spacing baked per wariant) ── */
+
+.heroXl {
+  font-size: var(--text-hero-xl);
+  line-height: var(--leading-condensed);
+  letter-spacing: var(--tracking-wide);
+}
+
+.hero {
+  font-size: var(--text-hero);
+  line-height: var(--leading-none);
+  letter-spacing: var(--tracking-widest);
+}
+
+.display {
+  font-size: var(--text-display-lg);
+  line-height: var(--leading-none);
+  letter-spacing: var(--tracking-display);
+}
+
+.displayXl {
+  font-size: var(--text-display-xl);
+  line-height: var(--leading-condensed);
+  letter-spacing: var(--tracking-display);
+}
+
+.section {
+  font-size: var(--text-4xl);
+  line-height: var(--leading-none);
+  letter-spacing: var(--tracking-display);
+}
+
+.subsection {
+  font-size: var(--text-3xl);
+  line-height: var(--leading-none);
+  letter-spacing: var(--tracking-wide);
+}
+
+/* ── Color overrides ── */
+
+.colorSecondary { color: var(--text-secondary); }
+.colorMuted     { color: var(--text-muted); }
+.colorAccent    { color: var(--accent); }

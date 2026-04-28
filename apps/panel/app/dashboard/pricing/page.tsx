@@ -1,5 +1,6 @@
 'use client';
 
+import { Heading, Text } from '@opony/design-system-web';
 import { usePricingTiers } from '../../../lib/hooks/use-pricing-tiers';
 import { useAuthGuard } from '../../../lib/hooks/use-auth-guard';
 import { PricingActionBar } from './_components/PricingActionBar';
@@ -48,10 +49,12 @@ export default function PricingPage() {
       <div className={styles.content}>
         <div className={styles.formCol}>
           <header className={styles.pageHero}>
-            <h1 className={styles.pageTitle}>Cennik</h1>
-            <p className={styles.pageSub}>
+            <Heading variant="display" as="h1" className={styles.pageTitle}>
+              Cennik
+            </Heading>
+            <Text variant="body-md" as="p" className={styles.pageSub}>
               Widoczny publicznie — klient widzi te ceny przy wyszukiwaniu warsztatu.
-            </p>
+            </Text>
           </header>
 
           <TierList

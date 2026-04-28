@@ -7,7 +7,7 @@ body {
   background: var(--bg);
   color: var(--text-primary);
   font-family: var(--font-body, 'Archivo'), system-ui, -apple-system, sans-serif;
-  font-size: 15px;
+  font-size: var(--text-lg);
   line-height: var(--leading-normal);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;

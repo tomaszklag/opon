@@ -1,5 +1,13 @@
 import { Controller } from 'react-hook-form';
-import { Input, PhoneInput, Button, Spinner, NoticeBlock } from '@opony/design-system-web';
+import {
+  Input,
+  PhoneInput,
+  Button,
+  Spinner,
+  NoticeBlock,
+  Heading,
+  Text,
+} from '@opony/design-system-web';
 import {
   IconCheck,
   IconChevronRight,
@@ -62,35 +70,37 @@ export function FirmStep({ flow }: Props) {
     <form onSubmit={handleSubmit} className={styles.formInner} noValidate>
       {/* Hero */}
       <div className={styles.hero}>
-        <h1 className={styles.heroTitle}>Zarejestruj warsztat</h1>
-        <p className={styles.heroSub}>
+        <Heading variant="hero" as="h1" className={styles.heroTitle}>
+          Zarejestruj warsztat
+        </Heading>
+        <Text variant="body-md" as="p" className={styles.heroSub}>
           3 kroki, około 5 minut. Weryfikacja do 24 h — potem możesz zacząć przyjmować rezerwacje.
-        </p>
+        </Text>
         <div className={styles.heroFacts}>
-          <span className={styles.factChip}>
+          <Text variant="label" as="span" className={styles.factChip}>
             <IconPricing width={11} height={11} />
             0% prowizji w pilocie · później 8%
-          </span>
-          <span className={styles.factChip}>
+          </Text>
+          <Text variant="label" as="span" className={styles.factChip}>
             <IconBriefcase width={11} height={11} />
             Rezerwacje online, klient płaci offline
-          </span>
-          <span className={styles.factChip}>
+          </Text>
+          <Text variant="label" as="span" className={styles.factChip}>
             <IconLockOutline width={11} height={11} />
             SMS OTP — bez hasła do zapamiętania
-          </span>
+          </Text>
         </div>
       </div>
 
       {/* Section 01: Zgody */}
       <section className={styles.section} aria-labelledby="sec-zgody">
         <div className={styles.sectionHead}>
-          <h2 className={styles.sectionTitle} id="sec-zgody">
+          <Heading variant="section" as="h2" id="sec-zgody" className={styles.sectionTitle}>
             Zgody
-          </h2>
-          <span className={styles.sectionNumber}>
+          </Heading>
+          <Text variant="kicker" as="span" className={styles.sectionNumber}>
             <strong className={styles.sectionNumberAccent}>01</strong> / 03
-          </span>
+          </Text>
         </div>
 
         <div className={styles.consentList}>
@@ -108,19 +118,19 @@ export function FirmStep({ flow }: Props) {
             </span>
             <div className={styles.consentCol}>
               <div className={styles.consentTitleRow}>
-                <span className={styles.consentTitle}>
+                <Text variant="body-sm" as="span" weight="bold" className={styles.consentTitle}>
                   Regulamin platformy Opony.app
                   <span className={styles.consentReqStar} aria-hidden="true">
                     *
                   </span>
-                </span>
+                </Text>
               </div>
-              <p className={styles.consentDesc}>
+              <Text variant="body-sm" as="p" className={styles.consentDesc}>
                 <strong style={{ color: 'var(--accent)' }}>
                   0% prowizji w okresie pilotażowym
                 </strong>{' '}
                 (pierwsze 3 miesiące po uruchomieniu). Później 8% od zrealizowanej rezerwacji.
-              </p>
+              </Text>
               <a
                 className={styles.consentLink}
                 href="#"
@@ -149,17 +159,17 @@ export function FirmStep({ flow }: Props) {
             </span>
             <div className={styles.consentCol}>
               <div className={styles.consentTitleRow}>
-                <span className={styles.consentTitle}>
+                <Text variant="body-sm" as="span" weight="bold" className={styles.consentTitle}>
                   Polityka prywatności (RODO)
                   <span className={styles.consentReqStar} aria-hidden="true">
                     *
                   </span>
-                </span>
+                </Text>
               </div>
-              <p className={styles.consentDesc}>
+              <Text variant="body-sm" as="p" className={styles.consentDesc}>
                 Przetwarzanie danych klientów zgodnie z RODO, retencja, bezpieczeństwo, eksport /
                 usunięcie.
-              </p>
+              </Text>
               <a
                 className={styles.consentLink}
                 href="#"
@@ -190,14 +200,20 @@ export function FirmStep({ flow }: Props) {
             </span>
             <div className={styles.consentCol}>
               <div className={styles.consentTitleRow}>
-                <span className={styles.consentTitle}>Komunikacja z zespołem Opony.app</span>
-                <span className={`${styles.consentBadge} ${styles.consentBadgeOpt}`}>
+                <Text variant="body-sm" as="span" weight="bold" className={styles.consentTitle}>
+                  Komunikacja z zespołem Opony.app
+                </Text>
+                <Text
+                  variant="nano"
+                  as="span"
+                  className={`${styles.consentBadge} ${styles.consentBadgeOpt}`}
+                >
                   Opcjonalne
-                </span>
+                </Text>
               </div>
-              <p className={styles.consentDesc}>
+              <Text variant="body-sm" as="p" className={styles.consentDesc}>
                 Tipsy onboardingowe, nowości platformy, prośby o feedback. Max 1 e-mail / miesiąc.
-              </p>
+              </Text>
             </div>
           </div>
         </div>
@@ -206,12 +222,12 @@ export function FirmStep({ flow }: Props) {
       {/* Section 02: Firma */}
       <section className={styles.section} aria-labelledby="sec-firma">
         <div className={styles.sectionHead}>
-          <h2 className={styles.sectionTitle} id="sec-firma">
+          <Heading variant="section" as="h2" id="sec-firma" className={styles.sectionTitle}>
             Firma
-          </h2>
-          <span className={styles.sectionNumber}>
+          </Heading>
+          <Text variant="kicker" as="span" className={styles.sectionNumber}>
             <strong className={styles.sectionNumberAccent}>02</strong> / 03
-          </span>
+          </Text>
         </div>
 
         <div>
@@ -265,12 +281,12 @@ export function FirmStep({ flow }: Props) {
       {/* Section 03: Kontakt */}
       <section className={styles.section} aria-labelledby="sec-kontakt">
         <div className={styles.sectionHead}>
-          <h2 className={styles.sectionTitle} id="sec-kontakt">
+          <Heading variant="section" as="h2" id="sec-kontakt" className={styles.sectionTitle}>
             Kontakt
-          </h2>
-          <span className={styles.sectionNumber}>
+          </Heading>
+          <Text variant="kicker" as="span" className={styles.sectionNumber}>
             <strong className={styles.sectionNumberAccent}>03</strong> / 03
-          </span>
+          </Text>
         </div>
 
         <div className={styles.fieldGrid2}>
@@ -307,10 +323,10 @@ export function FirmStep({ flow }: Props) {
 
       {/* CTA */}
       <div className={styles.ctaRow}>
-        <p className={styles.ctaNote}>
+        <Text variant="body" as="p" className={styles.ctaNote}>
           Po kliknięciu &bdquo;Dalej&rdquo; zapiszemy dane firmy. Na podany e-mail wyślemy link
           weryfikacyjny, a na numer telefonu — kod SMS do logowania.
-        </p>
+        </Text>
         <Button type="submit" variant="primary" loading={isSubmitting} disabled={isSubmitting}>
           Dalej
           <IconArrowRight width={16} height={16} />
@@ -319,10 +335,10 @@ export function FirmStep({ flow }: Props) {
       </div>
 
       {/* Help foot */}
-      <div className={styles.helpFoot}>
+      <Text variant="body-sm" as="p" className={styles.helpFoot}>
         Problem z NIP-em? GUS nie odpowiada? Napisz na{' '}
         <a href="mailto:pomoc@opony.app">pomoc@opony.app</a> — odpowiemy w 2 godziny.
-      </div>
+      </Text>
     </form>
   );
 }

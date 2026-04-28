@@ -3,7 +3,7 @@
 import { useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { StepIndicator } from '@opony/design-system-web';
+import { StepIndicator, Heading, Text } from '@opony/design-system-web';
 import { Button, Spinner } from '@opony/design-system-web';
 import { useAuthGuard } from '../../../lib/hooks/use-auth-guard';
 import { usePhotosFlow } from '../../../lib/hooks/use-photos-flow';
@@ -53,7 +53,7 @@ const REQUIRED_TILES: RequiredTileDef[] = [
 export default function PhotosPage() {
   const router = useRouter();
   const { isLoading: authLoading } = useAuthGuard('/onboarding/zdjecia');
-  const { photos, isLoading, uploading, error, upload, remove, setPrimary, canProceed } =
+  const { photos, isLoading, uploading, error, upload, remove, rename, setPrimary, canProceed } =
     usePhotosFlow();
 
   const addInputRef = useRef<HTMLInputElement>(null);
@@ -105,7 +105,9 @@ export default function PhotosPage() {
             OPONY
             <span className={styles.brandDot} />
           </span>
-          <span className={styles.panelTag}>PANEL</span>
+          <Text variant="nano" as="span" className={styles.panelTag}>
+            PANEL
+          </Text>
         </Link>
         <span className={styles.topStripSpacer} />
         <span className={styles.saveDraftStrip}>
@@ -121,11 +123,13 @@ export default function PhotosPage() {
       <div className={styles.formScroll}>
         <div className={styles.formInner}>
           <div className={styles.hero}>
-            <h1 className={styles.heroTitle}>Wgraj zdjęcia</h1>
-            <p className={styles.heroSub}>
+            <Heading variant="hero" as="h1" className={styles.heroTitle}>
+              Wgraj zdjęcia
+            </Heading>
+            <Text variant="body-md" as="p" className={styles.heroSub}>
               Warsztaty ze zdjęciami otrzymują <strong>do 3× więcej rezerwacji</strong> niż te bez.
               Potrzebujemy minimum 3 zdjęć — logo, pojazdu/warsztatu i stanowiska pracy.
-            </p>
+            </Text>
             <div className={styles.heroTips}>
               <span className={styles.tipChip}>
                 <IconHome width={11} height={11} />
@@ -169,7 +173,9 @@ export default function PhotosPage() {
           </div>
 
           <div className={styles.sectionLabel}>
-            <h2 className={styles.sectionTitle}>Wymagane zdjęcia</h2>
+            <Heading variant="section" as="h2" className={styles.sectionTitle}>
+              Wymagane zdjęcia
+            </Heading>
             <span className={styles.sectionSub}>
               <strong>3</strong> minimum · <strong>JPG / PNG</strong> · max 5&nbsp;MB / zdjęcie
             </span>
@@ -185,13 +191,16 @@ export default function PhotosPage() {
                 photoIndex={i + 1}
                 onUpload={upload}
                 onRemove={remove}
+                onRename={rename}
                 onSetPrimary={setPrimary}
               />
             ))}
           </div>
 
           <div className={styles.sectionLabel}>
-            <h2 className={styles.sectionTitle}>Dodatkowe zdjęcia</h2>
+            <Heading variant="section" as="h2" className={styles.sectionTitle}>
+              Dodatkowe zdjęcia
+            </Heading>
             <span className={styles.sectionSub}>
               Opcjonalne · <strong>{totalAdditional}</strong> / 10 — pokaż więcej, zwiększ
               zainteresowanie
@@ -208,7 +217,7 @@ export default function PhotosPage() {
 
           <div className={styles.addGrid}>
             {additionalPhotos.map((photo) => (
-              <AddTile key={photo.id} photo={photo} onRemove={remove} />
+              <AddTile key={photo.id} photo={photo} onRemove={remove} onRename={rename} />
             ))}
 
             {uploading === 'additional' && (
@@ -250,9 +259,9 @@ export default function PhotosPage() {
           )}
 
           <div className={styles.ctaRow}>
-            <p className={styles.ctaNote}>
+            <Text variant="body-md" as="p" className={styles.ctaNote}>
               Masz zapisany szkic — możesz wrócić i dokończyć później.
-            </p>
+            </Text>
             <div className={styles.ctaGroup}>
               <Button type="button" variant="neutral" onClick={() => router.back()}>
                 <IconChevronLeft width={14} height={14} />

@@ -24,9 +24,9 @@
   background: var(--warning-muted);
   border: 1px solid var(--warning-border);
   color: var(--warning);
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 1.2px;
+  font-size: var(--text-2xs);
+  font-weight: var(--font-extrabold);
+  letter-spacing: var(--tracking-display);
   text-transform: uppercase;
 }
 
@@ -39,9 +39,9 @@
   background: var(--success-muted);
   border: 1px solid var(--success-border);
   color: var(--success);
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 1.2px;
+  font-size: var(--text-2xs);
+  font-weight: var(--font-extrabold);
+  letter-spacing: var(--tracking-display);
   text-transform: uppercase;
 }
 
@@ -58,8 +58,8 @@
   align-items: center;
   padding: 8px 16px;
   border-radius: 8px;
-  font-size: 12px;
-  font-weight: 800;
+  font-size: var(--text-sm);
+  font-weight: var(--font-extrabold);
   cursor: pointer;
   background: var(--accent);
   color: var(--text-on-accent);
@@ -103,16 +103,11 @@
 }
 
 .pageTitle {
-  font-family: var(--font-display, 'Bebas Neue'), sans-serif;
-  font-size: 38px;
-  letter-spacing: 2px;
-  line-height: 1;
   color: var(--text-primary);
 }
 
 .pageSub {
   margin-top: 6px;
-  font-size: 13px;
   color: var(--text-secondary);
 }
 
@@ -148,18 +143,14 @@
 }
 
 .secTitle {
-  font-family: var(--font-display, 'Bebas Neue'), sans-serif;
-  font-size: 20px;
-  letter-spacing: 2px;
   color: var(--text-primary);
-  line-height: 1;
 }
 
 .secKicker {
   font-family: var(--font-mono, monospace);
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 1.4px;
+  font-size: var(--text-3xs);
+  font-weight: var(--font-bold);
+  letter-spacing: var(--tracking-display);
   text-transform: uppercase;
   color: var(--text-muted);
   padding: 3px 7px;
@@ -184,9 +175,9 @@
 }
 
 .label {
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 1.2px;
+  font-size: var(--text-2xs);
+  font-weight: var(--font-extrabold);
+  letter-spacing: var(--tracking-display);
   text-transform: uppercase;
   color: var(--text-muted);
 }
@@ -203,7 +194,7 @@
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 10px 12px;
-  font-size: 13px;
+  font-size: var(--text-base);
   color: var(--text-primary);
   outline: none;
   transition: border-color 0.12s, background 0.12s, box-shadow 0.12s;
@@ -222,33 +213,33 @@
 
 .textarea {
   resize: vertical;
-  line-height: 1.55;
+  line-height: var(--leading-relaxed);
   min-height: 90px;
 }
 
 .charCounter {
   font-family: var(--font-mono, monospace);
-  font-size: 10px;
+  font-size: var(--text-2xs);
   color: var(--text-muted);
   text-align: right;
-  letter-spacing: 0.3px;
+  letter-spacing: var(--tracking-wide);
 }
 
 .charCounter strong {
   color: var(--text-secondary);
-  font-weight: 700;
+  font-weight: var(--font-bold);
 }
 
 .fieldHint {
-  font-size: 11px;
+  font-size: var(--text-xs);
   color: var(--text-muted);
-  line-height: 1.4;
+  line-height: var(--leading-cozy);
 }
 
 .fieldError {
-  font-size: 11px;
+  font-size: var(--text-xs);
   color: var(--danger);
-  font-weight: 600;
+  font-weight: var(--font-semibold);
 }
 
 /* ── Locked input ── */
@@ -261,7 +252,7 @@
   border: 1px dashed var(--border);
   border-radius: 8px;
   font-family: var(--font-mono, monospace);
-  font-size: 12px;
+  font-size: var(--text-sm);
   color: var(--text-secondary);
 }
 
@@ -272,19 +263,19 @@
 
 .lockedVal {
   color: var(--text-primary);
-  font-weight: 700;
-  letter-spacing: 0.5px;
+  font-weight: var(--font-bold);
+  letter-spacing: var(--tracking-wider);
   flex: 1;
 }
 
 .lockedTag {
-  font-size: 9px;
+  font-size: var(--text-3xs);
   padding: 2px 6px;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 4px;
   color: var(--text-muted);
-  letter-spacing: 1px;
+  letter-spacing: var(--tracking-display);
   text-transform: uppercase;
 }
 
@@ -307,19 +298,19 @@
 
 .metaPillLabel {
   font-family: var(--font-mono, monospace);
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 1.2px;
+  font-size: var(--text-3xs);
+  font-weight: var(--font-bold);
+  letter-spacing: var(--tracking-display);
   text-transform: uppercase;
   color: var(--text-muted);
 }
 
 .metaPillVal {
   font-family: var(--font-mono, monospace);
-  font-size: 12px;
-  font-weight: 700;
+  font-size: var(--text-sm);
+  font-weight: var(--font-bold);
   color: var(--text-primary);
-  letter-spacing: 0.3px;
+  letter-spacing: var(--tracking-wide);
 }
 
 /* ── Right: preview ── */
@@ -359,15 +350,15 @@
 
 .previewTitle {
   font-family: var(--font-display, 'Bebas Neue'), sans-serif;
-  font-size: 18px;
-  letter-spacing: 1.8px;
+  font-size: var(--text-2xl);
+  letter-spacing: var(--tracking-label);
   color: var(--text-primary);
-  line-height: 1;
+  line-height: var(--leading-none);
 }
 
 .previewSub {
   font-family: var(--font-mono, monospace);
-  font-size: 10px;
+  font-size: var(--text-2xs);
   color: var(--text-muted);
 }
 
@@ -403,10 +394,10 @@
 
 .previewAvatarInitials {
   font-family: var(--font-display, 'Bebas Neue'), sans-serif;
-  font-size: 20px;
-  letter-spacing: 2px;
+  font-size: var(--text-3xl);
+  letter-spacing: var(--tracking-display);
   color: var(--text-on-accent);
-  line-height: 1;
+  line-height: var(--leading-none);
 }
 
 .previewCardBody {
@@ -417,10 +408,10 @@
 
 .previewName {
   font-family: var(--font-display, 'Bebas Neue'), sans-serif;
-  font-size: 20px;
-  letter-spacing: 1.5px;
+  font-size: var(--text-3xl);
+  letter-spacing: var(--tracking-label);
   color: var(--text-primary);
-  line-height: 1;
+  line-height: var(--leading-none);
 }
 
 .previewPlaceholder {
@@ -429,16 +420,16 @@
 }
 
 .previewLocation {
-  font-size: 11px;
+  font-size: var(--text-xs);
   color: var(--text-muted);
-  font-weight: 600;
-  letter-spacing: 0.3px;
+  font-weight: var(--font-semibold);
+  letter-spacing: var(--tracking-wide);
 }
 
 .previewDesc {
-  font-size: 11px;
+  font-size: var(--text-xs);
   color: var(--text-secondary);
-  line-height: 1.5;
+  line-height: var(--leading-normal);
   margin-top: 2px;
 }
 
@@ -453,10 +444,10 @@
 
 .previewContact span {
   font-family: var(--font-mono, monospace);
-  font-size: 11px;
+  font-size: var(--text-xs);
   color: var(--accent);
-  font-weight: 700;
-  letter-spacing: 0.3px;
+  font-weight: var(--font-bold);
+  letter-spacing: var(--tracking-wide);
 }
 
 /* ── Loading ── */

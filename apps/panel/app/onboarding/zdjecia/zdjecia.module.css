@@ -30,9 +30,9 @@
 
 .brandWordmark {
   font-family: var(--font-display, 'Bebas Neue'), sans-serif;
-  font-size: 28px;
-  letter-spacing: 3.5px;
-  line-height: 1;
+  font-size: var(--text-5xl);
+  letter-spacing: var(--tracking-brand);
+  line-height: var(--leading-none);
   color: var(--text-primary);
   display: inline-flex;
   align-items: baseline;
@@ -50,16 +50,11 @@
 }
 
 .panelTag {
-  font-family: var(--font-mono, monospace);
-  font-size: 9px;
   padding: 2px 6px;
   border-radius: 4px;
   background: var(--accent-muted);
   border: 1px solid var(--accent-border);
   color: var(--accent);
-  letter-spacing: 1.2px;
-  text-transform: uppercase;
-  font-weight: 800;
 }
 
 .topStripSpacer {
@@ -68,7 +63,7 @@
 
 /* ── Save draft indicator (right side of top strip) ── */
 .saveDraftStrip {
-  font-size: 12px;
+  font-size: var(--text-sm);
   color: var(--text-muted);
   display: inline-flex;
   align-items: center;
@@ -143,22 +138,21 @@
 
 .heroTitle {
   font-family: var(--font-display, 'Bebas Neue'), sans-serif;
-  font-size: 48px;
-  letter-spacing: 2.5px;
-  line-height: 1;
+  font-size: var(--text-hero);
+  line-height: var(--leading-none);
   color: var(--text-primary);
 }
 
 .heroSub {
-  font-size: 14px;
+  font-size: var(--text-md);
   color: var(--text-secondary);
-  line-height: 1.5;
+  line-height: var(--leading-normal);
   max-width: 640px;
 }
 
 .heroSub strong {
   color: var(--accent);
-  font-weight: 700;
+  font-weight: var(--font-bold);
 }
 
 .heroTips {
@@ -177,10 +171,10 @@
   border-radius: 5px;
   background: var(--surface);
   border: 1px solid var(--border);
-  font-size: 11px;
-  font-weight: 600;
+  font-size: var(--text-xs);
+  font-weight: var(--font-semibold);
   color: var(--text-secondary);
-  letter-spacing: 0.3px;
+  letter-spacing: var(--tracking-wide);
 }
 
 .tipChip svg {
@@ -197,7 +191,7 @@
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 10px;
-  font-size: 12px;
+  font-size: var(--text-sm);
   color: var(--text-secondary);
 }
 
@@ -224,10 +218,10 @@
 
 .progressCount {
   font-family: var(--font-mono, monospace);
-  font-weight: 700;
-  font-size: 12px;
+  font-weight: var(--font-bold);
+  font-size: var(--text-sm);
   color: var(--text-primary);
-  letter-spacing: 0.5px;
+  letter-spacing: var(--tracking-wider);
   white-space: nowrap;
 }
 
@@ -245,17 +239,16 @@
 
 .sectionTitle {
   font-family: var(--font-display, 'Bebas Neue'), sans-serif;
-  font-size: 22px;
-  letter-spacing: 2px;
+  font-size: var(--text-4xl);
   color: var(--text-primary);
-  line-height: 1;
+  line-height: var(--leading-none);
 }
 
 .sectionSub {
-  font-size: 11px;
+  font-size: var(--text-xs);
   color: var(--text-muted);
-  font-weight: 600;
-  letter-spacing: 0.3px;
+  font-weight: var(--font-semibold);
+  letter-spacing: var(--tracking-wide);
 }
 
 .sectionSub strong {
@@ -362,29 +355,34 @@
 }
 
 .tileType {
-  font-size: 9px;
-  font-weight: 800;
-  letter-spacing: 1.2px;
-  text-transform: uppercase;
   color: rgba(255, 255, 255, 0.7);
 }
 
 .tileName {
-  font-size: 13px;
-  font-weight: 700;
   color: var(--text-primary);
-  line-height: 1.1;
+  line-height: var(--leading-micro);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 180px;
 }
 
+.tileRenameInput {
+  font-size: var(--text-base);
+  font-weight: var(--font-bold);
+  color: var(--text-primary);
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  padding: 2px 6px;
+  outline: none;
+  width: 100%;
+  max-width: 180px;
+  line-height: var(--leading-cozy);
+}
+
 .tileSize {
-  font-family: var(--font-mono, monospace);
-  font-size: 10px;
   color: rgba(255, 255, 255, 0.5);
-  letter-spacing: 0.3px;
   margin-top: 2px;
 }
 
@@ -428,10 +426,6 @@
   backdrop-filter: blur(6px);
   border: 1px solid var(--border);
   border-radius: 5px;
-  font-family: var(--font-mono, monospace);
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.5px;
   color: var(--text-secondary);
   z-index: 2;
 }
@@ -453,10 +447,6 @@
   padding: 3px 7px;
   background: var(--accent);
   color: var(--text-on-accent);
-  font-size: 9px;
-  font-weight: 800;
-  letter-spacing: 1.1px;
-  text-transform: uppercase;
   border-radius: 4px;
   z-index: 2;
 }
@@ -477,27 +467,20 @@
 }
 
 .emptyTitle {
-  font-size: 13px;
-  font-weight: 700;
   color: var(--text-primary);
   margin-bottom: 4px;
   text-align: center;
 }
 
 .emptySub {
-  font-size: 11px;
   color: var(--text-muted);
   max-width: 200px;
   text-align: center;
-  line-height: 1.4;
+  line-height: var(--leading-cozy);
 }
 
 .emptyHint {
   margin-top: 10px;
-  font-size: 9px;
-  font-weight: 800;
-  letter-spacing: 1.2px;
-  text-transform: uppercase;
   color: var(--accent);
   display: inline-flex;
   align-items: center;
@@ -512,10 +495,6 @@
   background: var(--accent-muted);
   border: 1px solid var(--accent-border);
   border-radius: 4px;
-  font-size: 9px;
-  font-weight: 800;
-  letter-spacing: 1.1px;
-  text-transform: uppercase;
   color: var(--accent);
 }
 
@@ -627,15 +606,12 @@
 
 .addMorePlus {
   font-family: var(--font-display, 'Bebas Neue'), sans-serif;
-  font-size: 28px;
-  line-height: 1;
+  font-size: var(--text-5xl);
+  line-height: var(--leading-none);
 }
 
 .addMoreLabel {
-  font-size: 9px;
-  font-weight: 800;
-  letter-spacing: 1.2px;
-  text-transform: uppercase;
+  /* typography handled by DS Text component */
 }
 
 /* ── Info panel (dashed border) ── */
@@ -647,9 +623,9 @@
   background: transparent;
   border: 1px dashed var(--border);
   border-radius: 10px;
-  font-size: 11px;
+  font-size: var(--text-xs);
   color: var(--text-muted);
-  line-height: 1.5;
+  line-height: var(--leading-normal);
 }
 
 .infoPanelDashed svg {
@@ -659,7 +635,7 @@
 
 .infoPanelDashed strong {
   color: var(--text-primary);
-  font-weight: 700;
+  font-weight: var(--font-bold);
 }
 
 /* ── CTA row ── */
@@ -674,9 +650,9 @@
 }
 
 .ctaNote {
-  font-size: 11px;
+  font-size: var(--text-xs);
   color: var(--text-muted);
-  line-height: 1.4;
+  line-height: var(--leading-cozy);
   max-width: 380px;
 }
 
@@ -690,9 +666,9 @@
 
 .ctaBtnLabel {
   opacity: 0.6;
-  font-weight: 600;
-  font-size: 11px;
-  letter-spacing: 1px;
+  font-weight: var(--font-semibold);
+  font-size: var(--text-xs);
+  letter-spacing: var(--tracking-display);
   text-transform: uppercase;
   margin-left: 4px;
 }
@@ -703,9 +679,9 @@
   background: rgba(255, 87, 87, 0.1);
   border: 1px solid rgba(255, 87, 87, 0.3);
   border-radius: 10px;
-  font-size: 12px;
+  font-size: var(--text-sm);
   color: var(--danger);
-  font-weight: 600;
+  font-weight: var(--font-semibold);
 }
 
 /* ── Loading overlay ── */
@@ -746,7 +722,7 @@
   }
 
   .heroTitle {
-    font-size: 36px;
+    font-size: var(--text-display-lg);
   }
 
   .heroTips {

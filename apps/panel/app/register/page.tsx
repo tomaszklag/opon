@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { StepIndicator } from '@opony/design-system-web';
+import { StepIndicator, Text } from '@opony/design-system-web';
 import { useRegisterFlow } from '../../lib/hooks/use-register-flow';
 import { useAuthGuard } from '../../lib/hooks/use-auth-guard';
 import { FirmStep } from './_components/FirmStep';
@@ -36,15 +36,17 @@ export default function RegisterPage() {
             OPONY
             <span className={styles.brandDot} />
           </span>
-          <span className={styles.panelTag}>PANEL</span>
+          <Text variant="nano" as="span" className={styles.panelTag}>
+            PANEL
+          </Text>
         </Link>
         <span className={styles.topStripSpacer} />
-        <span className={styles.loginLink}>
+        <Text variant="caption" as="span" className={styles.loginLink}>
           Masz już konto?
           <Link className={styles.loginLinkAnchor} href="/login">
             Zaloguj się →
           </Link>
-        </span>
+        </Text>
       </header>
 
       {/* Saving strip */}

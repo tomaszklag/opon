@@ -1,4 +1,4 @@
-import { Input, Textarea } from '@opony/design-system-web';
+import { Input, Textarea, Heading } from '@opony/design-system-web';
 import { type UseFormRegister, type FieldErrors } from 'react-hook-form';
 import { type ProviderFormValues } from '../../../../lib/schemas/provider.schema';
 import { IconLock } from '../../../../components/icons';
@@ -17,7 +17,9 @@ export function IdentitySection({ register, errors, description, nip }: Props) {
   return (
     <section className={styles.section}>
       <header className={styles.secHead}>
-        <h2 className={styles.secTitle}>Tożsamość firmy</h2>
+        <Heading variant="section" as="h2" className={styles.secTitle}>
+          Tożsamość firmy
+        </Heading>
         <span className={styles.secKicker}>Widoczne publicznie</span>
       </header>
 

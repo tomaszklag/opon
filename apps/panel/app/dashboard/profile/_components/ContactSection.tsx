@@ -1,4 +1,4 @@
-import { Input } from '@opony/design-system-web';
+import { Input, Heading } from '@opony/design-system-web';
 import { type UseFormRegister, type FieldErrors } from 'react-hook-form';
 import { type ProviderFormValues } from '../../../../lib/schemas/provider.schema';
 import styles from '../profile.module.css';
@@ -12,7 +12,9 @@ export function ContactSection({ register, errors }: Props) {
   return (
     <section className={styles.section}>
       <header className={styles.secHead}>
-        <h2 className={styles.secTitle}>Kontakt</h2>
+        <Heading variant="section" as="h2" className={styles.secTitle}>
+          Kontakt
+        </Heading>
         <span className={styles.secKicker}>Widoczne dla klientów</span>
       </header>
 

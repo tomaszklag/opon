@@ -1,3 +1,4 @@
+import { Heading } from '@opony/design-system-web';
 import { type DayEntry } from '../../../../lib/hooks/use-working-hours';
 import { DayRow } from './DayRow';
 import styles from '../hours.module.css';
@@ -13,7 +14,9 @@ export function DayList({ days, errors, todayDow, onUpdate }: Props) {
   return (
     <section className={styles.secCard}>
       <div className={styles.secHead}>
-        <h2 className={styles.secTitle}>Tydzień</h2>
+        <Heading variant="section" as="h2" className={styles.secTitle}>
+          Tydzień
+        </Heading>
         <span className={styles.secSub}>Toggle — włącz lub wyłącz dzień</span>
       </div>
 

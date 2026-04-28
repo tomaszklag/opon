@@ -1,3 +1,4 @@
+import { Text } from '@opony/design-system-web';
 import styles from '../zdjecia.module.css';
 
 interface AddMoreProps {
@@ -15,7 +16,9 @@ export function AddMoreSlot({ onUpload, dim }: AddMoreProps) {
       aria-label="Dodaj zdjęcie"
     >
       <span className={styles.addMorePlus}>+</span>
-      <span className={styles.addMoreLabel}>Dodaj zdjęcie</span>
+      <Text variant="nano" as="span" className={styles.addMoreLabel}>
+        Dodaj zdjęcie
+      </Text>
     </button>
   );
 }

@@ -26,6 +26,7 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { JwtPayload } from '../auth/types/jwt-payload.interface';
 import { ProvidersService } from '../providers/providers.service';
 import { PhotoResponseDto } from './dto/photo-response.dto';
+import { RenamePhotoDto } from './dto/rename-photo.dto';
 import { UploadPhotoDto } from './dto/upload-photo.dto';
 import { PhotosService } from './photos.service';
 
@@ -131,6 +132,26 @@ export class PhotosController implements OnModuleInit {
   ): Promise<void> {
     const provider = await this.providersService.getMyProvider(user.sub);
     await this.photosService.remove(provider.id, id);
+  }
+
+  // ── PATCH /v1/providers/me/photos/:id ───────────────────────────────────
+
+  @Patch('me/photos/:id')
+  @ApiCookieAuth('access_token')
+  @ApiOperation({ summary: 'Zmień nazwę zdjęcia' })
+  @ApiResponse({ status: 200, type: PhotoResponseDto })
+  @ApiResponse({ status: 404, description: 'Zdjęcie nie istnieje' })
+  async rename(
+    @CurrentUser() user: JwtPayload,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: RenamePhotoDto,
+  ): Promise<PhotoResponseDto> {
+    const provider = await this.providersService.getMyProvider(user.sub);
+    return this.photosService.rename(
+      provider.id,
+      id,
+      dto.name,
+    ) as unknown as Promise<PhotoResponseDto>;
   }
 
   // ── PATCH /v1/providers/me/photos/:id/primary ────────────────────────────

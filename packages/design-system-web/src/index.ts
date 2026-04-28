@@ -57,3 +57,7 @@ export * from './navigation/SideMenu';
 
 // layout
 export * from './layout/StickyBottomBar';
+
+// typography
+export * from './typography/Heading';
+export * from './typography/Text';

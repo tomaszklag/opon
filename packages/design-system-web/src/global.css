@@ -69,6 +69,8 @@
   --shadow-accent: 0 0 20px var(--accent-glow);
   --shadow-accent-lift: 0 8px 20px rgba(255, 107, 26, 0.35);
   /* typography — font sizes */
+  --text-4xs: 8px;
+  --text-3xs: 9px;
   --text-2xs: 10px;
   --text-xs: 11px;
   --text-sm: 12px;
@@ -82,6 +84,10 @@
   --text-5xl: 28px;
   --text-display: 30px;
   --text-display-lg: 38px;
+  --text-display-xl: 42px;
+  --text-hero: 48px;
+  --text-hero-lg: 56px;
+  --text-hero-xl: 62px;
   /* typography — font weights */
   --font-regular: 400;
   --font-medium: 500;
@@ -89,17 +95,24 @@
   --font-bold: 700;
   --font-extrabold: 800;
   /* typography — line heights */
+  --leading-ultra: 0.9;
+  --leading-condensed: 0.95;
   --leading-none: 1;
+  --leading-micro: 1.1;
   --leading-tight: 1.2;
   --leading-snug: 1.3;
+  --leading-cozy: 1.4;
   --leading-normal: 1.5;
   --leading-relaxed: 1.55;
+  --leading-loose: 1.6;
   /* typography — letter spacing */
+  --tracking-tight: 0.01em;
   --tracking-wide: 0.02em;
   --tracking-wider: 0.04em;
   --tracking-widest: 0.06em;
   --tracking-display: 0.08em;
   --tracking-label: 0.12em;
+  --tracking-brand: 0.14em;
   /* borders */
   --border-width: 1px;
   --border-width-2: 2px;

@@ -1,4 +1,4 @@
-import { OTPInput, Button, NoticeBlock } from '@opony/design-system-web';
+import { OTPInput, Button, NoticeBlock, Heading, Text } from '@opony/design-system-web';
 import { IconArrowRight } from '../../../components/icons';
 import styles from '../login.module.css';
 
@@ -36,19 +36,23 @@ export function OtpStep({
   return (
     <form onSubmit={onSubmit} className={styles.formInner} noValidate>
       <div className={styles.kickerRow}>
-        <span className={styles.kickerNum}>02 / 02</span>
-        <span className={styles.kickerLabel}>Wpisz kod z SMS</span>
+        <Text variant="kicker" as="span" className={styles.kickerNum}>
+          02 / 02
+        </Text>
+        <Text variant="kicker" as="span" className={styles.kickerLabel}>
+          Wpisz kod z SMS
+        </Text>
       </div>
 
-      <h1 className={styles.title} id="login-title">
+      <Heading variant="display" as="h1" className={styles.title} id="login-title">
         WPISZ
         <br />
         KOD SMS
-      </h1>
-      <p className={styles.subtitle}>
+      </Heading>
+      <Text variant="body-md" as="p" className={styles.subtitle}>
         {'Wysłaliśmy 6-cyfrowy kod na '}
         <strong>{phone}</strong>. Kod jest ważny przez 5 minut.
-      </p>
+      </Text>
 
       <OTPInput length={6} value={code} onChange={onCodeChange} error={!!error} autoFocus />
 

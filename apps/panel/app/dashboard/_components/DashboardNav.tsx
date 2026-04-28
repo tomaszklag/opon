@@ -2,6 +2,7 @@
 
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { Text } from '@opony/design-system-web';
 import { api } from '../../../lib/api';
 import { useAuth } from '../../../lib/auth';
 import { useAuthGuard } from '../../../lib/hooks/use-auth-guard';
@@ -76,11 +77,15 @@ export default function DashboardNav() {
       <aside className={styles.sidebar} aria-label="Nawigacja główna">
         <div className={styles.brand}>
           <span className={styles.logo}>OPONY</span>
-          <span className={styles.tag}>Panel</span>
+          <Text variant="nano" as="span" className={styles.tag}>
+            Panel
+          </Text>
         </div>
 
         <nav className={styles.nav}>
-          <span className={styles.navSection}>Dziś</span>
+          <Text variant="nano" as="span" className={styles.navSection}>
+            Dziś
+          </Text>
           <a
             href="/dashboard"
             className={`${styles.navItem} ${isActive('/dashboard') ? styles.navActive : ''}`}
@@ -96,7 +101,9 @@ export default function DashboardNav() {
             Rezerwacje
           </a>
 
-          <span className={styles.navSection}>Warsztat</span>
+          <Text variant="nano" as="span" className={styles.navSection}>
+            Warsztat
+          </Text>
           <a
             href="/dashboard/pricing"
             className={`${styles.navItem} ${isActive('/dashboard/pricing') ? styles.navActive : ''}`}
@@ -112,7 +119,9 @@ export default function DashboardNav() {
             Godziny pracy
           </a>
 
-          <span className={styles.navSection}>Konto</span>
+          <Text variant="nano" as="span" className={styles.navSection}>
+            Konto
+          </Text>
           <a
             href="/dashboard/profile"
             className={`${styles.navItem} ${isActive('/dashboard/profile') ? styles.navActive : ''}`}
@@ -126,8 +135,12 @@ export default function DashboardNav() {
           <div className={styles.userCard}>
             <div className={styles.avatar}>{user?.phone?.slice(-2) ?? '??'}</div>
             <div className={styles.userInfo}>
-              <span className={styles.userPhone}>{user?.phone}</span>
-              <span className={styles.userRole}>{user?.role}</span>
+              <Text variant="kicker" as="span" className={styles.userPhone}>
+                {user?.phone}
+              </Text>
+              <Text variant="nano" as="span" className={styles.userRole}>
+                {user?.role}
+              </Text>
             </div>
           </div>
           <button className={styles.logoutBtn} onClick={handleLogout}>
@@ -148,10 +161,16 @@ export default function DashboardNav() {
         <div className={styles.topbarSpacer} />
         {provider && (
           <>
-            <span className={styles.firmName}>{provider.name}</span>
-            <span className={`${styles.statusBadge} ${STATUS_CLASS[provider.status]}`}>
+            <Text variant="body-sm" as="span" weight="bold" className={styles.firmName}>
+              {provider.name}
+            </Text>
+            <Text
+              variant="nano"
+              as="span"
+              className={`${styles.statusBadge} ${STATUS_CLASS[provider.status]}`}
+            >
               {STATUS_LABEL[provider.status]}
-            </span>
+            </Text>
           </>
         )}
       </header>

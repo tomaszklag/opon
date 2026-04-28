@@ -25,10 +25,6 @@
   background: var(--success-muted);
   border: 1px solid var(--success-border);
   color: var(--success);
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 1.2px;
-  text-transform: uppercase;
 }
 
 .savedChip::before {
@@ -45,9 +41,9 @@
   gap: 7px;
   padding: 8px 16px;
   border-radius: 8px;
-  font-size: 12px;
-  font-weight: 800;
-  letter-spacing: 0.3px;
+  font-size: var(--text-sm);
+  font-weight: var(--font-extrabold);
+  letter-spacing: var(--tracking-wide);
   cursor: pointer;
   background: var(--accent);
   color: var(--text-on-accent);
@@ -90,16 +86,11 @@
 }
 
 .pageTitle {
-  font-family: var(--font-display, 'Bebas Neue'), sans-serif;
-  font-size: 38px;
-  letter-spacing: 2px;
-  line-height: 1;
   color: var(--text-primary);
 }
 
 .pageSub {
   margin-top: 6px;
-  font-size: 13px;
   color: var(--text-secondary);
 }
 
@@ -135,17 +126,13 @@
 }
 
 .secTitle {
-  font-family: var(--font-display, 'Bebas Neue'), sans-serif;
-  font-size: 20px;
-  letter-spacing: 2px;
   color: var(--text-primary);
-  line-height: 1;
 }
 
 .secSub {
-  font-size: 11px;
+  font-size: var(--text-xs);
   color: var(--text-muted);
-  font-weight: 600;
+  font-weight: var(--font-semibold);
 }
 
 /* ── Day row ── */
@@ -194,19 +181,15 @@
 }
 
 .dayAbbr {
-  font-family: var(--font-display, 'Bebas Neue'), sans-serif;
-  font-size: 20px;
-  letter-spacing: 1.5px;
   color: var(--text-primary);
-  line-height: 1;
 }
 
 .dayFull {
-  font-size: 9px;
+  font-size: var(--text-3xs);
   color: var(--text-muted);
-  letter-spacing: 1px;
+  letter-spacing: var(--tracking-display);
   text-transform: uppercase;
-  font-weight: 700;
+  font-weight: var(--font-bold);
 }
 
 .todayTag {
@@ -215,9 +198,9 @@
   padding: 1px 5px;
   background: var(--accent);
   color: var(--text-on-accent);
-  font-size: 8px;
-  font-weight: 800;
-  letter-spacing: 1px;
+  font-size: var(--text-4xs);
+  font-weight: var(--font-extrabold);
+  letter-spacing: var(--tracking-display);
   text-transform: uppercase;
   border-radius: 3px;
 }
@@ -286,16 +269,16 @@
   outline: none;
   color: var(--text-primary);
   font-family: var(--font-mono, monospace);
-  font-weight: 700;
-  font-size: 13px;
-  letter-spacing: 0.5px;
+  font-weight: var(--font-bold);
+  font-size: var(--text-base);
+  letter-spacing: var(--tracking-wider);
   text-align: center;
 }
 
 .timeLabel {
-  font-size: 9px;
-  font-weight: 800;
-  letter-spacing: 1.1px;
+  font-size: var(--text-3xs);
+  font-weight: var(--font-extrabold);
+  letter-spacing: var(--tracking-display);
   text-transform: uppercase;
   color: var(--text-muted);
 }
@@ -310,8 +293,8 @@
   padding: 7px 12px;
   color: var(--text-primary);
   font-family: var(--font-mono, monospace);
-  font-size: 13px;
-  font-weight: 700;
+  font-size: var(--text-base);
+  font-weight: var(--font-bold);
   cursor: pointer;
   transition: border-color 0.14s, box-shadow 0.14s;
   width: 100%;
@@ -329,10 +312,6 @@
 
 /* Closed label */
 .closedLabel {
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 1.2px;
-  text-transform: uppercase;
   color: var(--text-muted);
   grid-column: 3 / -1;
 }
@@ -346,11 +325,7 @@
 }
 
 .slotCount {
-  font-family: var(--font-mono, monospace);
-  font-size: 13px;
-  font-weight: 700;
   color: var(--text-primary);
-  letter-spacing: 0.3px;
 }
 
 .slotCountAccent {
@@ -358,15 +333,14 @@
 }
 
 .slotHint {
-  font-size: 10px;
   color: var(--text-muted);
 }
 
 /* Day error — auto-placed in next implicit row spanning all columns */
 .dayError {
-  font-size: 11px;
+  font-size: var(--text-xs);
   color: var(--danger);
-  font-weight: 600;
+  font-weight: var(--font-semibold);
   grid-column: 1 / -1;
   padding-top: 2px;
 }
@@ -408,15 +382,15 @@
 
 .previewTitle {
   font-family: var(--font-display, 'Bebas Neue'), sans-serif;
-  font-size: 18px;
-  letter-spacing: 1.8px;
+  font-size: var(--text-2xl);
+  letter-spacing: var(--tracking-label);
   color: var(--text-primary);
-  line-height: 1;
+  line-height: var(--leading-none);
 }
 
 .previewSub {
   font-family: var(--font-mono, monospace);
-  font-size: 10px;
+  font-size: var(--text-2xs);
   color: var(--text-muted);
 }
 
@@ -436,10 +410,10 @@
 
 .tlDayLabel {
   font-family: var(--font-display, 'Bebas Neue'), sans-serif;
-  font-size: 13px;
-  letter-spacing: 1.3px;
+  font-size: var(--text-base);
+  letter-spacing: var(--tracking-display);
   color: var(--text-secondary);
-  line-height: 1;
+  line-height: var(--leading-none);
 }
 
 .tlDayToday .tlDayLabel {
@@ -475,10 +449,10 @@
 
 .tlDayHours {
   font-family: var(--font-mono, monospace);
-  font-size: 10px;
-  font-weight: 700;
+  font-size: var(--text-2xs);
+  font-weight: var(--font-bold);
   color: var(--text-primary);
-  letter-spacing: 0.3px;
+  letter-spacing: var(--tracking-wide);
   white-space: nowrap;
   min-width: 95px;
   text-align: right;
@@ -490,7 +464,7 @@
 
 .tlDayClosed .tlDayHours {
   color: var(--text-muted);
-  font-weight: 500;
+  font-weight: var(--font-medium);
 }
 
 /* ── Loading ── */

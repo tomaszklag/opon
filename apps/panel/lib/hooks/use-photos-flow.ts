@@ -77,6 +77,25 @@ export function usePhotosFlow() {
     [mutate],
   );
 
+  const rename = useCallback(
+    async (id: string, name: string) => {
+      const trimmed = name.trim();
+      if (!trimmed) return;
+      await mutate(
+        (prev = []) => prev.map((p) => (p.id === id ? { ...p, originalName: trimmed } : p)),
+        {
+          revalidate: false,
+        },
+      );
+      try {
+        await api.patch(`${PHOTOS_KEY}/${id}`, { name: trimmed });
+      } catch {
+        await mutate();
+      }
+    },
+    [mutate],
+  );
+
   const setPrimary = useCallback(
     async (id: string) => {
       setUploadError(null);
@@ -104,6 +123,7 @@ export function usePhotosFlow() {
     uploading,
     upload,
     remove,
+    rename,
     setPrimary,
     canProceed,
   };
