@@ -1,0 +1,67 @@
+.iconButton {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  cursor: pointer;
+  background: rgba(10, 11, 14, 0.7);
+  backdrop-filter: blur(6px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+  transition: background 140ms ease, border-color 140ms ease, color 140ms ease;
+}
+
+.iconButton:hover {
+  background: rgba(10, 11, 14, 0.9);
+}
+
+/* ── Sizes ── */
+
+.xs {
+  width: 22px;
+  height: 22px;
+  border-radius: 5px;
+}
+
+.sm {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+}
+
+/* ── Variants ── */
+
+.danger:hover {
+  color: var(--danger);
+  border-color: var(--danger-border);
+}
+
+/* ── Tooltip ── */
+
+.iconButton[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  background: rgba(10, 11, 14, 0.95);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  font-family: var(--font-body, 'Archivo'), system-ui, sans-serif;
+  font-size: var(--text-3xs);
+  font-weight: var(--font-semibold);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  padding: 3px 7px;
+  border-radius: 5px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 120ms ease 200ms;
+  z-index: 10;
+}
+
+.iconButton[data-tooltip]:hover::after {
+  opacity: 1;
+}

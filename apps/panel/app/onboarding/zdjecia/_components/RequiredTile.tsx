@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { Spinner, Text } from '@opony/design-system-web';
+import { IconButton, InlineInput, Spinner, Text } from '@opony/design-system-web';
 import type { PhotoType, ProviderPhoto } from '../../../../lib/hooks/use-photos-flow';
 import {
   IconCamera,
@@ -146,7 +146,7 @@ export function RequiredTile({
                 {def.title}
               </Text>
               {isRenaming ? (
-                <input
+                <InlineInput
                   className={styles.tileRenameInput}
                   value={editName}
                   autoFocus
@@ -166,47 +166,48 @@ export function RequiredTile({
               </Text>
             </div>
             <div className={styles.tileActions}>
-              <button
-                type="button"
-                className={styles.tileBtn}
+              <IconButton
+                size="sm"
                 aria-label="Zmień plik"
+                data-tooltip="Zmień plik"
                 onClick={handleReplaceClick}
                 onKeyDown={handleReplaceKey}
               >
                 <IconRefresh width={11} height={11} />
-              </button>
-              <button
-                type="button"
-                className={styles.tileBtn}
+              </IconButton>
+              <IconButton
+                size="sm"
                 aria-label="Zmień nazwę"
+                data-tooltip="Zmień nazwę"
                 onClick={startRename}
               >
                 <IconPencil width={11} height={11} />
-              </button>
+              </IconButton>
               {!isPrimary && (
-                <button
-                  type="button"
-                  className={styles.tileBtn}
+                <IconButton
+                  size="sm"
                   aria-label="Ustaw jako główne"
+                  data-tooltip="Ustaw główne"
                   onClick={(e) => {
                     e.stopPropagation();
                     onSetPrimary(photo.id);
                   }}
                 >
                   <IconStar width={11} height={11} />
-                </button>
+                </IconButton>
               )}
-              <button
-                type="button"
-                className={`${styles.tileBtn} ${styles.tileBtnDanger}`}
-                aria-label="Usuń"
+              <IconButton
+                size="sm"
+                variant="danger"
+                aria-label="Usuń zdjęcie"
+                data-tooltip="Usuń"
                 onClick={(e) => {
                   e.stopPropagation();
                   onRemove(photo.id);
                 }}
               >
                 <IconTrash width={11} height={11} />
-              </button>
+              </IconButton>
             </div>
           </div>
         </>

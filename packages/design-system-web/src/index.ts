@@ -1,6 +1,8 @@
 // forms
 export * from './forms/Button';
 export * from './forms/Checkbox';
+export * from './forms/IconButton';
+export * from './forms/InlineInput';
 export * from './forms/DropZone';
 export * from './forms/FieldLabel';
 export * from './forms/Input';
