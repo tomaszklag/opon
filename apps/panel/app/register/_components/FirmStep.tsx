@@ -311,13 +311,7 @@ export function FirmStep({ flow }: Props) {
           Po kliknięciu &bdquo;Dalej&rdquo; zapiszemy dane firmy. Na podany e-mail wyślemy link
           weryfikacyjny, a na numer telefonu — kod SMS do logowania.
         </p>
-        <Button
-          type="submit"
-          variant="primary"
-          loading={isSubmitting}
-          disabled={isSubmitting}
-          className={styles.ctaBtn}
-        >
+        <Button type="submit" variant="primary" loading={isSubmitting} disabled={isSubmitting}>
           Dalej
           <IconArrowRight width={16} height={16} />
           <span className={styles.ctaBtnNext}>Zdjęcia</span>

@@ -1,9 +1,19 @@
 const { withSentryConfig } = require('@sentry/nextjs');
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
   transpilePackages: ['@opony/design-system-web', '@opony/shared-types'],
+  async rewrites() {
+    return [
+      {
+        source: '/uploads/:path*',
+        destination: `${API_URL}/uploads/:path*`,
+      },
+    ];
+  },
 };
 
 module.exports = withSentryConfig(nextConfig, {

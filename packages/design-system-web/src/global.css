@@ -67,6 +67,7 @@
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.5);
   --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.6);
   --shadow-accent: 0 0 20px var(--accent-glow);
+  --shadow-accent-lift: 0 8px 20px rgba(255, 107, 26, 0.35);
   /* typography — font sizes */
   --text-2xs: 10px;
   --text-xs: 11px;

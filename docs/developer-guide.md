@@ -314,6 +314,59 @@ Przykład: `StepIndicator` w DS istniał, ale miał błędny styl (full-width `<
 
 DS `Input` i `Textarea` są `forwardRef` → działają bezpośrednio z `{...register('field')}` z RHF.
 
+### DS Button — warianty i rozmiary
+
+Wariant określa **wyłącznie schemat kolorów**. Rozmiar określa **wyłącznie wymiary**. Nigdy nie umieszczaj `height`, `padding` ani `font-size` w wariancie — i odwrotnie, nie umieszczaj kolorów w rozmiarze.
+
+#### Warianty
+
+| Wariant     | Kiedy używać                                                        |
+| ----------- | ------------------------------------------------------------------- |
+| `primary`   | Główna akcja strony (submit, Dalej, Zapisz). Zawsze tylko jeden.    |
+| `secondary` | Akcja alternatywna z akcentem — np. „Dodaj kolejny".                |
+| `neutral`   | Nawigacja wstecz, Anuluj — przezroczysty, obramowanie `--border`.   |
+| `ghost`     | Akcja w toolbarze/nagłówku — przezroczysty, bez obramowania.        |
+| `danger`    | Destruktywne operacje (Usuń konto, Odrzuć).                         |
+| `link`      | Inline link-button — bez obramowania, kolor akcentu.                |
+| `cta`       | Jednorazowe hero-CTA na stronach auth (Bebas Neue, persistent glow) |
+
+#### Rozmiary
+
+| Rozmiar | Wysokość | Użycie                                    |
+| ------- | -------- | ----------------------------------------- |
+| `sm`    | 32 px    | Gęste UI — wiersze tabeli, toolbar.       |
+| `md`    | 44 px    | Domyślny — formularze, dialogi (default). |
+| `lg`    | 52 px    | Duże akcenty — główne CTA sekcji.         |
+
+Jeśli design pokazuje przycisk o wymiarach, które nie pasują do żadnego rozmiaru DS → design jest niespójny z DS. Używaj najbliższego rozmiaru DS, nie nadpisuj w page CSS.
+
+#### Reguła: żadnych `!important` w page CSS dla DS Button
+
+Jeśli DS Button wygląda inaczej niż design, właściwe rozwiązanie to:
+
+1. Dodaj nowy **wariant** (kolor/border) do `Button.module.css` i `ButtonVariant`
+2. Dodaj nowy **token** do `global.css` (shadow, kolor)
+3. Zaktualizuj istniejący wariant w DS
+
+**Nigdy** nie nadpisuj `height`, `padding`, `border-radius` ani `font-size` z `!important` w pliku `*.module.css` strony. To sygnał, że brakuje wariantu lub rozmiaru w DS.
+
+```css
+/* ✅ TAK — brakuje wariantu, dodaj do DS */
+/* packages/design-system-web/src/forms/Button/Button.module.css */
+.neutral {
+  background: transparent;
+  color: var(--text-primary);
+  border-color: var(--border);
+}
+
+/* ❌ NIE — walczenie z DS przez !important w page CSS */
+.myBackBtn {
+  height: auto !important;
+  border-color: var(--border) !important;
+  color: var(--text-primary) !important;
+}
+```
+
 ### Reguła: tło inputów zawsze `var(--bg)`
 
 Wszystkie komponenty formularzy DS (`Input`, `Textarea`, `Select`, `PhoneInput`) używają `background: var(--bg)` — nie `var(--surface)` ani `var(--surface-raised)`. Tło `--surface-raised` jest zarezerwowane dla elementów unoszących się nad stroną (dropdowny, modale).
@@ -397,6 +450,12 @@ Dostępne tokeny kolorów w `global.css`:
 --success, --success-muted, --success-border
 --warning, --warning-muted, --warning-border
 --danger, --danger-muted, --danger-border
+
+/* shadows */
+--shadow-sm / --shadow-md / --shadow-lg   ← cienie neutralne (czarne)
+--shadow-accent                           ← glow (0 0 20px accent-glow) — używany na hover
+--shadow-accent-lift                      ← elevation + kolor (0 8px 20px rgba(255,107,26,0.35))
+                                            wbudowany w Button variant="primary" (base state)
 ```
 
 Wartości bez tokenu (np. specyficzne przezroczystości w gradientach tła) mogą pozostać hardcoded — ale to wyjątek, nie reguła.

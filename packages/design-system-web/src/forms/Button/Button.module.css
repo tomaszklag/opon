@@ -32,17 +32,40 @@
   pointer-events: none;
 }
 
-/* Variants */
+/* ── Sizes (declared first so variants can override) ── */
+
+.sm {
+  height: 32px;
+  padding: 0 var(--space-3);
+  font-size: var(--text-base);
+  border-radius: var(--radius-sm);
+}
+
+.md {
+  height: 44px;
+  padding: 0 var(--space-6);
+  font-size: var(--text-lg);
+}
+
+.lg {
+  height: 52px;
+  padding: 0 var(--space-8);
+  font-size: var(--text-xl);
+}
+
+/* ── Variants (declared after sizes so they can override height/padding) ── */
+
 .primary {
   background: var(--accent);
   color: var(--text-on-accent);
   border-color: var(--accent);
+  box-shadow: var(--shadow-accent-lift);
 }
 
 .primary:hover:not(:disabled) {
   background: var(--accent-hover);
   border-color: var(--accent-hover);
-  box-shadow: var(--shadow-accent);
+  box-shadow: var(--shadow-accent-lift), var(--shadow-accent);
 }
 
 .secondary {
@@ -64,6 +87,18 @@
 
 .ghost:hover:not(:disabled) {
   background: var(--surface-hover);
+}
+
+/* Neutral — transparent bg, neutral border, text-primary; for back/navigation actions */
+.neutral {
+  background: transparent;
+  color: var(--text-primary);
+  border-color: var(--border);
+}
+
+.neutral:hover:not(:disabled) {
+  background: var(--surface);
+  border-color: var(--border-strong);
 }
 
 .danger {
@@ -90,7 +125,7 @@
   color: var(--accent-hover);
 }
 
-/* CTA variant — display font, persistent glow, used for primary call-to-action on auth screens */
+/* CTA — display font, persistent glow; used for primary call-to-action on auth screens */
 .cta {
   background: var(--accent);
   color: var(--text-on-accent);
@@ -117,25 +152,7 @@
   box-shadow: 0 6px 18px rgba(255, 107, 26, 0.3);
 }
 
-/* Sizes */
-.sm {
-  height: 32px;
-  padding: 0 var(--space-3);
-  font-size: var(--text-base);
-  border-radius: var(--radius-sm);
-}
-
-.md {
-  height: 44px;
-  padding: 0 var(--space-6);
-  font-size: var(--text-lg);
-}
-
-.lg {
-  height: 52px;
-  padding: 0 var(--space-8);
-  font-size: var(--text-xl);
-}
+/* ── Utilities ── */
 
 .fullWidth {
   width: 100%;

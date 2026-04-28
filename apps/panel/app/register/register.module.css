@@ -732,15 +732,7 @@
   max-width: 380px;
 }
 
-/* Overrides DS Button .primary to match design CTA style */
 .ctaBtn {
-  height: auto !important;
-  padding: 14px 24px !important;
-  border-radius: 12px !important;
-  font-weight: 800;
-  font-size: 14px;
-  letter-spacing: 0.5px;
-  box-shadow: 0 8px 20px rgba(255, 107, 26, 0.35);
   flex-shrink: 0;
 }
 

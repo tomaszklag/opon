@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { StepIndicator } from '@opony/design-system-web';
@@ -57,6 +57,7 @@ export default function PhotosPage() {
     usePhotosFlow();
 
   const addInputRef = useRef<HTMLInputElement>(null);
+  const [attempted, setAttempted] = useState(false);
 
   function handleAddMore() {
     addInputRef.current?.click();
@@ -236,18 +237,24 @@ export default function PhotosPage() {
             </div>
           </div>
 
+          {attempted && !canProceed && (
+            <div className={styles.errorNotice} role="alert">
+              Wymagane zdjęcia:{' '}
+              <strong>
+                {REQUIRED_TILES.filter((t) => !requiredPhotos[t.type])
+                  .map((t) => t.title)
+                  .join(', ')}
+              </strong>
+              . Dodaj je, żeby przejść dalej.
+            </div>
+          )}
+
           <div className={styles.ctaRow}>
             <p className={styles.ctaNote}>
-              Zdjęcie &bdquo;Stanowisko pracy&rdquo; jest wymagane, żeby przejść dalej. Masz
-              zapisany szkic — możesz wrócić później.
+              Masz zapisany szkic — możesz wrócić i dokończyć później.
             </p>
             <div className={styles.ctaGroup}>
-              <Button
-                type="button"
-                variant="secondary"
-                className={styles.ctaBtnBack}
-                onClick={() => router.back()}
-              >
+              <Button type="button" variant="neutral" onClick={() => router.back()}>
                 <IconChevronLeft width={14} height={14} />
                 Wstecz
                 <span className={styles.ctaBtnLabel}>Firma</span>
@@ -255,9 +262,10 @@ export default function PhotosPage() {
               <Button
                 type="button"
                 variant="primary"
-                className={styles.ctaBtnNext}
-                disabled={!canProceed}
-                onClick={() => router.push('/onboarding/weryfikacja')}
+                onClick={() => {
+                  setAttempted(true);
+                  if (canProceed) router.push('/onboarding/weryfikacja');
+                }}
               >
                 Dalej
                 <IconArrowRight width={16} height={16} />

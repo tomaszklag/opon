@@ -686,24 +686,7 @@
   flex-shrink: 0;
 }
 
-.ctaBtnBack {
-  height: auto !important;
-  padding: 12px 20px !important;
-  border-radius: 10px !important;
-  font-weight: 700;
-  font-size: 13px;
-  letter-spacing: 0.3px;
-}
 
-.ctaBtnNext {
-  height: auto !important;
-  padding: 14px 24px !important;
-  border-radius: 10px !important;
-  font-weight: 800;
-  font-size: 14px;
-  letter-spacing: 0.5px;
-  box-shadow: 0 8px 20px rgba(255, 107, 26, 0.35);
-}
 
 .ctaBtnLabel {
   opacity: 0.6;

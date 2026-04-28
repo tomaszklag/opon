@@ -9,6 +9,8 @@
   },
   "scripts": {
     "dev": "turbo dev",
+    "dev:panel": "turbo dev --filter=@opony/api --filter=@opony/panel",
+    "dev:all": "turbo dev --filter=@opony/api --filter=@opony/panel --filter=@opony/landing --filter=@opony/mobile",
     "dev-stop": "powershell -ExecutionPolicy Bypass -NoProfile -File scripts/dev-stop.ps1",
     "build": "turbo build",
     "lint": "turbo lint",
