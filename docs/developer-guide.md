@@ -620,18 +620,22 @@ Nie twórz własnych wrapperów `fetchWithRefresh` ani nie ustawiaj `Content-Typ
 Jedyne źródło prawdy dla decyzji o przekierowaniu to funkcja w `lib/auth-routing.ts`:
 
 ```ts
-canonicalRoute(user: AuthUser | null): '/login' | '/register' | '/onboarding/zdjecia' | '/onboarding/weryfikacja' | '/dashboard'
+canonicalRoute(user: AuthUser | null): AuthRoute
+// AuthRoute = '/login' | '/register' | '/onboarding/zdjecia' | '/onboarding/weryfikacja' | '/dashboard' | '/admin/providers'
 ```
 
-| `user`  | `providerId` | `status`                                        | Wynik                     |
-| ------- | ------------ | ----------------------------------------------- | ------------------------- |
-| `null`  | —            | —                                               | `/login`                  |
-| present | brak         | —                                               | `/register`               |
-| present | present      | `PENDING_DOCS` lub `PENDING_NIP`                | `/onboarding/zdjecia`     |
-| present | present      | ≠ `APPROVED`, ≠ `PENDING_DOCS`, ≠ `PENDING_NIP` | `/onboarding/weryfikacja` |
-| present | present      | `APPROVED`                                      | `/dashboard`              |
+| `user`  | `role`  | `providerId` | `status`                                        | Wynik                     |
+| ------- | ------- | ------------ | ----------------------------------------------- | ------------------------- |
+| `null`  | —       | —            | —                                               | `/login`                  |
+| present | `ADMIN` | —            | —                                               | `/admin/providers`        |
+| present | inne    | brak         | —                                               | `/register`               |
+| present | inne    | present      | `PENDING_DOCS` lub `PENDING_NIP`                | `/onboarding/zdjecia`     |
+| present | inne    | present      | ≠ `APPROVED`, ≠ `PENDING_DOCS`, ≠ `PENDING_NIP` | `/onboarding/weryfikacja` |
+| present | inne    | present      | `APPROVED`                                      | `/dashboard`              |
 
 **Nigdy nie implementuj logiki przekierowań ręcznie.** Zawsze używaj `canonicalRoute`.
+
+Sprawdzanie roli jest **pierwszą** regułą po null-check — admin nie potrzebuje providerId ani statusu.
 
 Możliwe wartości `status` (`ProviderStatus`):
 
@@ -670,9 +674,64 @@ Hook porównuje `canonicalRoute(user)` z przekazanym `pageRoute`. Jeśli się r�
 
 **Strona logowania** używa `canonicalRoute` bezpośrednio w `useLoginFlow` — przekierowuje zalogowanego użytkownika do jego kanonicznego celu.
 
-### 9.5. Rola = CLIENT
+### 9.5. RBAC — Role-Based Access Control
 
-Jeśli `user.role === 'CLIENT'` po OTP — to numer klienta (z mobilnej aplikacji), nie providera. Nie rób redirect — pokaż `clientRoleError` (komunikat w OtpStep: „To numer klienta. Aby otworzyć panel, zarejestruj warsztat.").
+Backend używa dwuwarstwowego systemu guardów rejestrowanych globalnie jako `APP_GUARD` w `AppModule`:
+
+1. `JwtAuthGuard` — weryfikuje JWT (wszystkie trasy, chyba że `@Public()`)
+2. `RolesGuard` — sprawdza `@Roles()` dekorator (jeśli brak dekoratora → przepuszcza)
+
+**Ochrona endpointu tylko dla admina:**
+
+```ts
+import { Roles } from '../auth/decorators/roles.decorator';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { UserRole } from '@prisma/client';
+
+@Controller('v1/admin/something')
+@UseGuards(RolesGuard)
+@Roles(UserRole.ADMIN)
+export class AdminSomethingController { ... }
+```
+
+`RolesGuard` czyta pole `role` z JWT payload (`JwtPayload.role`). Brak wymaganej roli → 403 Forbidden.
+
+**Role użytkowników:**
+
+| Rola             | Opis                                                   |
+| ---------------- | ------------------------------------------------------ |
+| `CLIENT`         | Klient z mobilnej apki — nie ma dostępu do panelu      |
+| `PROVIDER_OWNER` | Właściciel warsztatu — onboarding + dashboard          |
+| `PROVIDER_STAFF` | Pracownik warsztatu — zdefiniowany, jeszcze nieużywany |
+| `ADMIN`          | Administrator — panel `/admin/*`                       |
+
+### 9.6. Unieważnianie sesji
+
+Sesję (JWT) unieważniamy gdy zmienia się istotny stan użytkownika i chcemy wymusić świeży token. Wzorzec:
+
+```ts
+// Unieważnij wszystkie aktywne sesje użytkownika
+await this.prisma.session.updateMany({
+  where: { userId: ownerId, revokedAt: null },
+  data: { revokedAt: new Date() },
+});
+```
+
+**Kiedy unieważniać:**
+
+- Admin zatwierdza providera (`PENDING_APPROVAL → APPROVED`) — wymagany nowy JWT z aktualnym statusem, żeby routing trafił na `/dashboard`
+- Reset hasła / zmiana numeru telefonu (jeśli zaimplementowane)
+
+**Kiedy NIE unieważniać:**
+
+- Weryfikacja emaila — czysto informacyjna, nie zmienia routingu ani uprawnień
+- Aktualizacja danych firmy (nazwa, opis, zdjęcia)
+
+Po unieważnieniu: przy kolejnym API request `JwtAuthGuard` przyjmie token (jest jeszcze ważny przez 15 min), ale przy próbie odświeżenia (`/refresh`) backend znajdzie sesję jako `revokedAt != null` → zwróci 401 → interceptor wyloguje użytkownika.
+
+### 9.7. Rola = CLIENT
+
+Jeśli `user.role === 'CLIENT'` po OTP — to numer klienta (z mobilnej aplikacji), nie providera. Nie rób redirect — pokaż `clientRoleError` (komunikat w OtpStep: „To numer klienta. Aby otworzyć panel, zarejestruj warsztat."). `canonicalRoute` nie obsługuje roli CLIENT — guard logowania musi wykryć ją przed wywołaniem funkcji.
 
 ---
 
