@@ -40,8 +40,6 @@ Thumbs.db
 coverage/
 .nyc_output/
 
-# Prisma
-apps/api/prisma/migrations/
 
 # Uploaded files (local disk storage, sprint 1)
 apps/api/uploads/

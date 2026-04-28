@@ -6,6 +6,8 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Provider, ProviderStatus } from '@prisma/client';
+import { EmailService } from '../email/email.service';
+import { EmailVerificationService } from '../email/email-verification.service';
 import { CreateProviderDto } from './dto/create-provider.dto';
 import { ListProvidersQueryDto } from './dto/list-providers-query.dto';
 import { UpdateProviderDto } from './dto/update-provider.dto';
@@ -23,7 +25,11 @@ export type ProviderPage = {
 
 @Injectable()
 export class ProvidersService {
-  constructor(private readonly repo: ProvidersRepository) {}
+  constructor(
+    private readonly repo: ProvidersRepository,
+    private readonly emailService: EmailService,
+    private readonly emailVerificationService: EmailVerificationService,
+  ) {}
 
   async create(ownerId: string, dto: CreateProviderDto): Promise<Provider> {
     const existingByOwner = await this.repo.findByOwnerId(ownerId);
@@ -37,10 +43,17 @@ export class ProvidersService {
     }
 
     try {
-      return await this.repo.createWithOwnerPromotion(ownerId, {
+      const createdProvider = await this.repo.createWithOwnerPromotion(ownerId, {
         ...dto,
         status: ProviderStatus.PENDING_DOCS,
       });
+      if (createdProvider.email) {
+        await this.emailVerificationService.createAndSend(
+          createdProvider.id,
+          createdProvider.email,
+        );
+      }
+      return createdProvider;
     } catch (err) {
       // Prisma P2025 = Record not found during update (np. user usunięty między requestami)
       if ((err as { code?: string }).code === 'P2025') {
@@ -76,10 +89,14 @@ export class ProvidersService {
         'Zgłoszenie zostało już wysłane lub firma jest w nieprawidłowym stanie.',
       );
     }
-    return this.repo.update(provider.id, {
+    const updated = await this.repo.update(provider.id, {
       status: ProviderStatus.PENDING_APPROVAL,
       submittedAt: new Date(),
     });
+    if (provider.email) {
+      await this.emailService.sendSubmissionReceived(provider.id, provider.email, provider.name);
+    }
+    return updated;
   }
 
   async getById(id: string): Promise<Provider> {

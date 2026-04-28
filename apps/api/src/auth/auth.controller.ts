@@ -5,13 +5,16 @@ import {
   HttpCode,
   HttpStatus,
   Post,
+  Query,
   Req,
   Res,
   UnauthorizedException,
 } from '@nestjs/common';
-import { ApiCookieAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiCookieAuth, ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ConfigService } from '@nestjs/config';
 import { randomUUID } from 'crypto';
 import { Request, Response } from 'express';
+import { EmailVerificationService } from '../email/email-verification.service';
 import { AuthService } from './auth.service';
 import { CurrentUser } from './decorators/current-user.decorator';
 import { Public } from './decorators/public.decorator';
@@ -30,6 +33,8 @@ export class AuthController {
   constructor(
     private readonly authService: AuthService,
     private readonly otpService: OtpService,
+    private readonly emailVerificationService: EmailVerificationService,
+    private readonly config: ConfigService,
   ) {}
 
   // ── POST /v1/auth/request-otp ──────────────────────────────────────────────
@@ -152,6 +157,22 @@ export class AuthController {
     }
     this.authService.clearAuthCookies(res);
     return { message: 'Wylogowano' };
+  }
+
+  // ── GET /v1/auth/verify-email ──────────────────────────────────────────────
+
+  @Public()
+  @Get('verify-email')
+  @ApiOperation({ summary: 'Weryfikacja adresu email providera' })
+  @ApiQuery({ name: 'token', type: String })
+  async verifyEmail(@Query('token') token: string, @Res() res: Response): Promise<void> {
+    const panelUrl = this.config.get<string>('PANEL_URL', 'http://localhost:3000');
+    const result = await this.emailVerificationService.verifyToken(token);
+    if (!result) {
+      res.redirect(`${panelUrl}/verify-email?error=invalid`);
+      return;
+    }
+    res.redirect(`${panelUrl}/verify-email?success=1`);
   }
 
   // ── GET /v1/auth/me ────────────────────────────────────────────────────────

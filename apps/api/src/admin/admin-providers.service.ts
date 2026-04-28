@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { Provider, ProviderStatus } from '@prisma/client';
+import { EmailService } from '../email/email.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { AdminProviderListQueryDto } from './dto/admin-provider-list-query.dto';
 
@@ -12,7 +13,10 @@ export type AdminProviderPage = {
 
 @Injectable()
 export class AdminProvidersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly emailService: EmailService,
+  ) {}
 
   async listProviders(query: AdminProviderListQueryDto): Promise<AdminProviderPage> {
     const skip = (query.page - 1) * query.limit;
@@ -36,21 +40,33 @@ export class AdminProvidersService {
     if (!provider) throw new NotFoundException('Firma nie istnieje.');
     if (provider.status !== ProviderStatus.PENDING_APPROVAL)
       throw new BadRequestException('Firma nie jest w stanie oczekującym na weryfikację.');
-    return this.prisma.provider.update({
+    const updated = await this.prisma.provider.update({
       where: { id },
       data: { status: ProviderStatus.APPROVED, approvedAt: new Date() },
     });
+    if (provider.email) {
+      await this.emailService.sendAccountApproved(provider.id, provider.email, provider.name);
+    }
+    return updated;
   }
 
   async rejectProvider(id: string, reason?: string): Promise<Provider> {
-    void reason; // accepted in DTO but not stored — no DB field yet
     const provider = await this.prisma.provider.findUnique({ where: { id } });
     if (!provider) throw new NotFoundException('Firma nie istnieje.');
     if (provider.status !== ProviderStatus.PENDING_APPROVAL)
       throw new BadRequestException('Firma nie jest w stanie oczekującym na weryfikację.');
-    return this.prisma.provider.update({
+    const updated = await this.prisma.provider.update({
       where: { id },
       data: { status: ProviderStatus.REJECTED },
     });
+    if (provider.email) {
+      await this.emailService.sendAccountRejected(
+        provider.id,
+        provider.email,
+        provider.name,
+        reason,
+      );
+    }
+    return updated;
   }
 }

@@ -55,6 +55,13 @@ enum ConsentType {
   MARKETING
 }
 
+enum EmailType {
+  EMAIL_VERIFICATION
+  SUBMISSION_RECEIVED
+  ACCOUNT_APPROVED
+  ACCOUNT_REJECTED
+}
+
 enum WaitlistRole {
   CLIENT
   PROVIDER
@@ -133,14 +140,18 @@ model Provider {
   approvedAt       DateTime?
   updatedAt        DateTime       @updatedAt
 
-  owner              User                @relation("ProviderOwner", fields: [ownerId], references: [id], onDelete: Restrict)
+  emailVerifiedAt  DateTime?
+
+  owner              User                       @relation("ProviderOwner", fields: [ownerId], references: [id], onDelete: Restrict)
   photos             ProviderPhoto[]
   pricingTiers       PricingTier[]
   workingHours       WorkingHours[]
   scheduleExceptions ScheduleException[]
-  bookings           Booking[]           @relation("ProviderBookings")
-  reviews            Review[]            @relation("ProviderReviews")
+  bookings           Booking[]                  @relation("ProviderBookings")
+  reviews            Review[]                   @relation("ProviderReviews")
   consentLogs        ConsentLog[]
+  emailVerificationTokens EmailVerificationToken[]
+  emailLogs          EmailLog[]
 
   @@map("providers")
 }
@@ -382,6 +393,43 @@ model AuditLog {
   @@index([entity, entityId])
   @@index([actorId])
   @@map("audit_logs")
+}
+
+// ──────────────────────────────────────────────
+// EMAIL VERIFICATION TOKEN
+// ──────────────────────────────────────────────
+
+model EmailVerificationToken {
+  id         String    @id @default(uuid())
+  providerId String
+  email      String    @db.VarChar(254)
+  tokenHash  String    @unique @db.VarChar(64)
+  expiresAt  DateTime
+  usedAt     DateTime?
+  createdAt  DateTime  @default(now())
+
+  provider Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+
+  @@index([providerId])
+  @@map("email_verification_tokens")
+}
+
+// ──────────────────────────────────────────────
+// EMAIL LOG
+// ──────────────────────────────────────────────
+
+model EmailLog {
+  id         String    @id @default(uuid())
+  providerId String
+  type       EmailType
+  to         String    @db.VarChar(254)
+  sentAt     DateTime  @default(now())
+  error      String?   @db.Text
+
+  provider Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+
+  @@index([providerId, sentAt(sort: Desc)])
+  @@map("email_logs")
 }
 
 // ──────────────────────────────────────────────

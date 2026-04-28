@@ -981,7 +981,99 @@ async getByNip(@Param('nip') nip: string) {
 
 ---
 
-## 15. Pobieranie danych w FE — SWR
+## 15. System emaili
+
+### 15.1. Architektura modułu
+
+Email jest zaimplementowany jako globalny moduł NestJS (`@Global()`) w `apps/api/src/email/`:
+
+```
+apps/api/src/email/
+  ├─ email.module.ts                 ← @Global(), eksportuje oba serwisy
+  ├─ email.service.ts                ← wysyłka przez Resend SDK + zapis do EmailLog
+  ├─ email-verification.service.ts   ← cykl życia tokenów weryfikacyjnych
+  └─ templates/
+     └─ email.templates.ts           ← funkcje zwracające HTML string (bez template engine)
+```
+
+Moduł jest `@Global()` — nie importuj go w ProvidersModule / AdminModule / AuthModule osobno.
+
+### 15.2. Modele Prisma
+
+#### EmailVerificationToken
+
+Jednorazowy token weryfikacji emaila providera:
+
+- `tokenHash: String @unique` — SHA-256(rawToken); raw token **nigdy nie trafia do bazy** (wzorzec z `Session.tokenHash`)
+- `expiresAt: DateTime` — TTL 24h od wygenerowania
+- `usedAt: DateTime?` — ustawiane przy weryfikacji; jednorazowość bez usuwania rekordu
+- `onDelete: Cascade` — usunięcie Providera czyści tokeny
+
+#### EmailLog
+
+Historia wysłanych maili:
+
+- `type: EmailType` — enum: `EMAIL_VERIFICATION | SUBMISSION_RECEIVED | ACCOUNT_APPROVED | ACCOUNT_REJECTED`
+- `sentAt: DateTime` — timestamp wysyłki (zapisywany zawsze, nawet przy błędzie)
+- `error: String?` — `null` = sukces, string = komunikat błędu z Resend
+
+#### Provider — nowe pole
+
+- `emailVerifiedAt: DateTime?` — kiedy provider potwierdził email; `null` = niepotwierdzony
+
+### 15.3. Typy maili i punkty integracji
+
+| Typ                   | Trigger                                                   | Gdzie wywołać                              |
+| --------------------- | --------------------------------------------------------- | ------------------------------------------ |
+| `EMAIL_VERIFICATION`  | `ProvidersService.create()` gdy `provider.email` istnieje | `EmailVerificationService.createAndSend()` |
+| `SUBMISSION_RECEIVED` | `ProvidersService.submitForApproval()`                    | `EmailService.sendSubmissionReceived()`    |
+| `ACCOUNT_APPROVED`    | `AdminProvidersService.approveProvider()`                 | `EmailService.sendAccountApproved()`       |
+| `ACCOUNT_REJECTED`    | `AdminProvidersService.rejectProvider()`                  | `EmailService.sendAccountRejected()`       |
+
+### 15.4. Endpoint weryfikacji emaila
+
+```
+GET /v1/auth/verify-email?token=xxx
+```
+
+- `@Public()` — nie wymaga auth (link otwierany bezpośrednio z klienta pocztowego)
+- Weryfikuje token (hash, `expiresAt > now`, `usedAt == null`)
+- Ustawia `provider.emailVerifiedAt` i `token.usedAt` w jednej transakcji
+- Response: **redirect** (nie JSON)
+  - Sukces → `${PANEL_URL}/verify-email?success=1`
+  - Błąd → `${PANEL_URL}/verify-email?error=invalid`
+
+### 15.5. Zasady projektowe
+
+**Błędy wysyłki nie propagują się.** Jeśli Resend zwróci błąd, serwis łapie go (`Logger.error`) i zapisuje w `EmailLog.error`, ale operacja biznesowa (np. zapis Providera) **nie jest przerywana**. Provider musi być zapisany niezależnie od stanu systemu emaili.
+
+**Raw token nigdy w bazie.** Tylko `SHA-256(rawToken)` trafia do `tokenHash`. Generowanie:
+
+```typescript
+import { randomBytes, createHash } from 'crypto';
+const rawToken = randomBytes(32).toString('hex');
+const tokenHash = createHash('sha256').update(rawToken).digest('hex');
+```
+
+**EmailLog zawsze zapisywany** — umożliwia audit i przyszły retry.
+
+### 15.6. Zmienne środowiskowe
+
+```env
+RESEND_API_KEY=           # klucz z Resend dashboard
+RESEND_FROM_EMAIL=noreply@opony.app
+PANEL_URL=http://localhost:3000   # URL panelu (dla redirectów weryfikacji)
+```
+
+### 15.7. Testowanie emaili w dev
+
+Mailpit działa lokalnie na `http://localhost:8025` (uruchamiany przez `pnpm docker:up`). Przechwytuje wszystkie wychodzące maile gdy `RESEND_API_KEY` jest placeholderem — sprawdź w WebUI czy mail dotarł.
+
+Flow weryfikacji możesz testować w Prisma Studio (`pnpm db:studio`): po `POST /v1/providers` znajdź rekord w tabeli `EmailVerificationToken`, skopiuj `tokenHash` i sprawdź że `emailVerifiedAt` na Providerze ustawia się po GET `/v1/auth/verify-email`.
+
+---
+
+## 16. Pobieranie danych w FE — SWR
 
 Instalacja: `swr` jest już zależnością `apps/panel`. Nie instaluj `react-query` ani żadnej alternatywy.
 
@@ -1064,7 +1156,7 @@ SWR jest właściwy gdy: dane mogą się zmieniać w tle, wiele komponentów pot
 
 ---
 
-## 16. Upload plików — wzorzec NestJS
+## 17. Upload plików — wzorzec NestJS
 
 ### 16.1. Multer — konfiguracja dysku
 
