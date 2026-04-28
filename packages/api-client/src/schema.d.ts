@@ -335,6 +335,8 @@ export interface components {
       /** Format: date-time */
       createdAt: string;
       /** Format: date-time */
+      submittedAt?: string | null;
+      /** Format: date-time */
       approvedAt?: string | null;
       /** Format: date-time */
       updatedAt: string;

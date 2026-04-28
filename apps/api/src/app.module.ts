@@ -3,8 +3,10 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { ServeStaticModule } from '@nestjs/serve-static';
+import { AdminModule } from './admin/admin.module';
 import { AuthModule } from './auth/auth.module';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
+import { RolesGuard } from './auth/guards/roles.guard';
 import { HealthModule } from './health/health.module';
 import { PhotosModule } from './photos/photos.module';
 import { PrismaModule } from './prisma/prisma.module';
@@ -29,12 +31,18 @@ import { GusModule } from './gus/gus.module';
     WorkingHoursModule,
     GusModule,
     PhotosModule,
+    AdminModule,
   ],
   providers: [
     // Globalny guard — wszystkie endpointy wymagają JWT, chyba że @Public()
     {
       provide: APP_GUARD,
       useClass: JwtAuthGuard,
+    },
+    // Globalny guard — sprawdza @Roles() dekorator
+    {
+      provide: APP_GUARD,
+      useClass: RolesGuard,
     },
   ],
 })
