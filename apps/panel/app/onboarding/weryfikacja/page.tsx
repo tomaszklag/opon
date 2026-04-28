@@ -226,9 +226,20 @@ export default function WeryfikacjaPage() {
                           </Text>
                         )}
                         {provider.email && (
-                          <Text variant="nano" as="span" color="muted">
-                            {provider.email}
-                          </Text>
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                            <Text variant="nano" as="span" color="muted">
+                              {provider.email}
+                            </Text>
+                            {provider.emailVerifiedAt ? (
+                              <Text variant="nano" as="span" color="accent">
+                                ✓ zweryfikowany
+                              </Text>
+                            ) : (
+                              <Text variant="nano" as="span" color="muted">
+                                · oczekuje na weryfikację
+                              </Text>
+                            )}
+                          </span>
                         )}
                       </div>
                     </div>

@@ -1,13 +1,17 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { createHash, randomBytes } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { EmailService } from './email.service';
 
 @Injectable()
 export class EmailVerificationService {
+  private readonly logger = new Logger(EmailVerificationService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly emailService: EmailService,
+    private readonly config: ConfigService,
   ) {}
 
   async createAndSend(providerId: string, email: string): Promise<void> {
@@ -18,6 +22,13 @@ export class EmailVerificationService {
     await this.prisma.emailVerificationToken.create({
       data: { providerId, email, tokenHash, expiresAt },
     });
+
+    if (this.config.get('NODE_ENV') === 'development') {
+      const appUrl = this.config.get('APP_URL', 'http://localhost:4000');
+      this.logger.debug(
+        `[DEV] Email verification link for ${email}:\n  ${appUrl}/v1/auth/verify-email?token=${rawToken}`,
+      );
+    }
 
     await this.emailService.sendEmailVerification(providerId, email, rawToken);
   }

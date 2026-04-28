@@ -40,10 +40,16 @@ export class AdminProvidersService {
     if (!provider) throw new NotFoundException('Firma nie istnieje.');
     if (provider.status !== ProviderStatus.PENDING_APPROVAL)
       throw new BadRequestException('Firma nie jest w stanie oczekującym na weryfikację.');
-    const updated = await this.prisma.provider.update({
-      where: { id },
-      data: { status: ProviderStatus.APPROVED, approvedAt: new Date() },
-    });
+    const [updated] = await this.prisma.$transaction([
+      this.prisma.provider.update({
+        where: { id },
+        data: { status: ProviderStatus.APPROVED, approvedAt: new Date() },
+      }),
+      this.prisma.session.updateMany({
+        where: { userId: provider.ownerId, revokedAt: null },
+        data: { revokedAt: new Date() },
+      }),
+    ]);
     if (provider.email) {
       await this.emailService.sendAccountApproved(provider.id, provider.email, provider.name);
     }
