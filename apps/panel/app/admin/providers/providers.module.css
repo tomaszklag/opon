@@ -233,6 +233,27 @@
   color: var(--text-muted);
 }
 
+/* ── Email verified badge ── */
+.emailBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.emailBadge[data-verified='true'] {
+  background: rgba(46, 224, 160, 0.15);
+  color: var(--success);
+}
+
+.emailBadge[data-verified='false'] {
+  background: var(--warning-muted);
+  color: var(--warning);
+}
+
 /* ── Row actions ── */
 .rowActions {
   display: flex;

@@ -99,6 +99,17 @@ function ProviderRow({
                   <Text variant="nano" as="span" color="muted">
                     {provider.email}
                   </Text>
+                  <span
+                    className={styles.emailBadge}
+                    data-verified={!!provider.emailVerifiedAt}
+                    title={
+                      provider.emailVerifiedAt ? 'Email zweryfikowany' : 'Email niezweryfikowany'
+                    }
+                  >
+                    <Text variant="nano" as="span">
+                      {provider.emailVerifiedAt ? '✓' : '!'}
+                    </Text>
+                  </span>
                 </span>
               </>
             )}
