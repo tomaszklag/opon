@@ -1,19 +1,16 @@
 import { Controller, Get } from '@nestjs/common';
-import { ApiTags, ApiOperation } from '@nestjs/swagger';
+import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Public } from '../auth/decorators/public.decorator';
-
-interface HealthResponse {
-  status: string;
-  version: string;
-}
+import { HealthResponseDto } from './dto/health-response.dto';
 
 @ApiTags('health')
 @Controller('v1/health')
 export class HealthController {
   @Public()
   @ApiOperation({ summary: 'Health check', description: 'Returns API status and version' })
+  @ApiResponse({ status: 200, type: HealthResponseDto })
   @Get()
-  check(): HealthResponse {
+  check(): HealthResponseDto {
     return {
       status: 'ok',
       version: '0.1.0',

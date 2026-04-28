@@ -494,26 +494,26 @@ Jedyne źródło prawdy dla decyzji o przekierowaniu to funkcja w `lib/auth-rout
 canonicalRoute(user: AuthUser | null): '/login' | '/register' | '/onboarding/zdjecia' | '/onboarding/weryfikacja' | '/dashboard'
 ```
 
-| `user`  | `providerId` | `status`                       | Wynik                     |
-| ------- | ------------ | ------------------------------ | ------------------------- |
-| `null`  | —            | —                              | `/login`                  |
-| present | brak         | —                              | `/register`               |
-| present | present      | `PENDING_DOCS`                 | `/onboarding/zdjecia`     |
-| present | present      | ≠ `APPROVED`, ≠ `PENDING_DOCS` | `/onboarding/weryfikacja` |
-| present | present      | `APPROVED`                     | `/dashboard`              |
+| `user`  | `providerId` | `status`                                        | Wynik                     |
+| ------- | ------------ | ----------------------------------------------- | ------------------------- |
+| `null`  | —            | —                                               | `/login`                  |
+| present | brak         | —                                               | `/register`               |
+| present | present      | `PENDING_DOCS` lub `PENDING_NIP`                | `/onboarding/zdjecia`     |
+| present | present      | ≠ `APPROVED`, ≠ `PENDING_DOCS`, ≠ `PENDING_NIP` | `/onboarding/weryfikacja` |
+| present | present      | `APPROVED`                                      | `/dashboard`              |
 
 **Nigdy nie implementuj logiki przekierowań ręcznie.** Zawsze używaj `canonicalRoute`.
 
 Możliwe wartości `status` (`ProviderStatus`):
 
-| Wartość            | Znaczenie                                  |
-| ------------------ | ------------------------------------------ |
-| `PENDING_NIP`      | Onboarding niezakończony — brak NIP        |
-| `PENDING_DOCS`     | Onboarding niezakończony — brak dokumentów |
-| `PENDING_APPROVAL` | Czeka na ręczną weryfikację przez admina   |
-| `APPROVED`         | Aktywny — dostęp do dashboardu             |
-| `SUSPENDED`        | Zawieszony przez admina                    |
-| `REJECTED`         | Odrzucony — nie może korzystać z panelu    |
+| Wartość            | Znaczenie                                                                                         |
+| ------------------ | ------------------------------------------------------------------------------------------------- |
+| `PENDING_NIP`      | Onboarding niezakończony — traktowany jak `PENDING_DOCS` w routingu (oba → `/onboarding/zdjecia`) |
+| `PENDING_DOCS`     | Onboarding niezakończony — brak dokumentów                                                        |
+| `PENDING_APPROVAL` | Czeka na ręczną weryfikację przez admina                                                          |
+| `APPROVED`         | Aktywny — dostęp do dashboardu                                                                    |
+| `SUSPENDED`        | Zawieszony przez admina                                                                           |
+| `REJECTED`         | Odrzucony — nie może korzystać z panelu                                                           |
 
 Typ w kodzie: `AuthUser.status?: ProviderStatus` z `lib/auth.tsx`.
 

@@ -16,7 +16,9 @@ import { AuthService } from './auth.service';
 import { CurrentUser } from './decorators/current-user.decorator';
 import { Public } from './decorators/public.decorator';
 import { AuthMeResponseDto } from './dto/auth-me-response.dto';
+import { MessageResponseDto } from './dto/message-response.dto';
 import { RequestOtpDto } from './dto/request-otp.dto';
+import { RequestOtpResponseDto } from './dto/request-otp-response.dto';
 import { VerifyOtpDto } from './dto/verify-otp.dto';
 import { VerifyOtpResponseDto } from './dto/verify-otp-response.dto';
 import { OtpService } from './otp.service';
@@ -36,9 +38,9 @@ export class AuthController {
   @Post('request-otp')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Wyślij kod OTP na podany numer telefonu' })
-  @ApiResponse({ status: 200, description: 'Kod wysłany' })
+  @ApiResponse({ status: 200, type: RequestOtpResponseDto })
   @ApiResponse({ status: 429, description: 'Zbyt wiele prób' })
-  async requestOtp(@Body() dto: RequestOtpDto): Promise<{ message: string; expiresIn: number }> {
+  async requestOtp(@Body() dto: RequestOtpDto): Promise<RequestOtpResponseDto> {
     await this.otpService.requestOtp(dto.phone);
     return { message: 'Kod OTP wysłany', expiresIn: 300 };
   }
@@ -92,12 +94,12 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @ApiCookieAuth('refresh_token')
   @ApiOperation({ summary: 'Odśwież access token używając refresh cookie' })
-  @ApiResponse({ status: 200, description: 'Tokeny zrotowane' })
+  @ApiResponse({ status: 200, type: MessageResponseDto })
   @ApiResponse({ status: 401, description: 'Brak, nieprawidłowy lub skradziony refresh token' })
   async refresh(
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
-  ): Promise<{ message: string }> {
+  ): Promise<MessageResponseDto> {
     const oldRefreshToken = req.cookies?.['refresh_token'] as string | undefined;
     if (!oldRefreshToken) throw new UnauthorizedException('Brak refresh token.');
 
@@ -140,11 +142,11 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @ApiCookieAuth('access_token')
   @ApiOperation({ summary: 'Wyloguj użytkownika — unieważnia sesję i usuwa cookies' })
-  @ApiResponse({ status: 200, description: 'Wylogowano' })
+  @ApiResponse({ status: 200, type: MessageResponseDto })
   async logout(
     @CurrentUser() user: JwtPayload,
     @Res({ passthrough: true }) res: Response,
-  ): Promise<{ message: string }> {
+  ): Promise<MessageResponseDto> {
     if (user.jti) {
       await this.authService.revokeSession(user.jti);
     }

@@ -216,7 +216,7 @@
   top: 0;
   left: 0;
   bottom: 0;
-  background: linear-gradient(90deg, var(--accent), #FF8039);
+  background: linear-gradient(90deg, var(--accent), var(--accent-hover));
   border-radius: 3px;
   box-shadow: 0 0 10px rgba(255, 107, 26, 0.35);
   transition: width 300ms ease;

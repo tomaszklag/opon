@@ -11,7 +11,7 @@ export type AuthRoute =
 export function canonicalRoute(user: AuthUser | null): AuthRoute {
   if (!user) return '/login';
   if (!user.providerId) return '/register';
-  if (user.status === 'PENDING_DOCS') return '/onboarding/zdjecia';
+  if (user.status === 'PENDING_DOCS' || user.status === 'PENDING_NIP') return '/onboarding/zdjecia';
   if (user.status !== 'APPROVED') return '/onboarding/weryfikacja';
   return '/dashboard';
 }

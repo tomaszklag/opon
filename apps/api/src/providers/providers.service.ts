@@ -36,7 +36,10 @@ export class ProvidersService {
     }
 
     try {
-      return await this.repo.createWithOwnerPromotion(ownerId, dto);
+      return await this.repo.createWithOwnerPromotion(ownerId, {
+        ...dto,
+        status: ProviderStatus.PENDING_DOCS,
+      });
     } catch (err) {
       // Prisma P2025 = Record not found during update (np. user usunięty między requestami)
       if ((err as { code?: string }).code === 'P2025') {

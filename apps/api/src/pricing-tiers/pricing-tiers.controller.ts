@@ -73,6 +73,7 @@ export class PricingTiersController {
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiCookieAuth('access_token')
   @ApiOperation({ summary: 'Usuń tier cenowy' })
+  @ApiResponse({ status: 204, description: 'Tier usunięty' })
   async remove(@CurrentUser() user: JwtPayload, @Param('id', ParseUUIDPipe) id: string) {
     const provider = await this.providersService.getMyProvider(user.sub);
     await this.service.remove(id, provider.id);

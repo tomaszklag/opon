@@ -6,6 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { api, ApiError } from '../api';
 import { useAuth } from '../auth';
+import { canonicalRoute } from '../auth-routing';
 import { registerSchema, type RegisterFormValues } from '../schemas/register.schema';
 
 export interface GusData {
@@ -98,8 +99,8 @@ export function useRegisterFlow() {
         phone: '+48' + values.phone,
         email: values.email,
       });
-      await refresh();
-      router.replace('/onboarding/zdjecia');
+      const freshUser = await refresh();
+      router.replace(canonicalRoute(freshUser));
     } catch (err) {
       if (err instanceof ApiError && err.isConflict) {
         setApiError('Firma z tym NIPem już istnieje w systemie.');

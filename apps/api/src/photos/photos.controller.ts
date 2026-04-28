@@ -10,6 +10,7 @@ import {
   HttpCode,
   HttpStatus,
   MaxFileSizeValidator,
+  OnModuleInit,
   Param,
   ParseFilePipe,
   ParseUUIDPipe,
@@ -30,16 +31,17 @@ import { PhotosService } from './photos.service';
 
 const UPLOADS_ROOT = path.join(process.cwd(), 'uploads');
 
-// Upewnij się, że katalog tymczasowy dla multipart uploads istnieje
-fs.mkdirSync(UPLOADS_ROOT, { recursive: true });
-
 @ApiTags('photos')
 @Controller('v1/providers')
-export class PhotosController {
+export class PhotosController implements OnModuleInit {
   constructor(
     private readonly photosService: PhotosService,
     private readonly providersService: ProvidersService,
   ) {}
+
+  onModuleInit() {
+    fs.mkdirSync(UPLOADS_ROOT, { recursive: true });
+  }
 
   // ── POST /v1/providers/me/photos ─────────────────────────────────────────
 
@@ -79,19 +81,26 @@ export class PhotosController {
     file: Express.Multer.File,
     @Body() dto: UploadPhotoDto,
   ): Promise<PhotoResponseDto> {
-    const provider = await this.providersService.getMyProvider(user.sub);
+    let destPath: string | undefined;
+    try {
+      const provider = await this.providersService.getMyProvider(user.sub);
 
-    // Przenieś plik do właściwego katalogu providera
-    const providerDir = path.join(UPLOADS_ROOT, 'providers', provider.id);
-    fs.mkdirSync(providerDir, { recursive: true });
+      const providerDir = path.join(UPLOADS_ROOT, 'providers', provider.id);
+      fs.mkdirSync(providerDir, { recursive: true });
 
-    const destPath = path.join(providerDir, path.basename(file.path));
-    fs.renameSync(file.path, destPath);
+      destPath = path.join(providerDir, path.basename(file.path));
+      fs.renameSync(file.path, destPath);
 
-    // Zaktualizuj ścieżkę w obiekcie file przed przekazaniem do serwisu
-    const movedFile: Express.Multer.File = { ...file, path: destPath };
-
-    return this.photosService.upload(provider.id, movedFile, dto.type) as Promise<PhotoResponseDto>;
+      const movedFile: Express.Multer.File = { ...file, path: destPath };
+      return (await this.photosService.upload(
+        provider.id,
+        movedFile,
+        dto.type,
+      )) as unknown as PhotoResponseDto;
+    } catch (err) {
+      fs.unlink(destPath ?? file.path, () => {});
+      throw err;
+    }
   }
 
   // ── GET /v1/providers/me/photos ──────────────────────────────────────────
@@ -102,7 +111,7 @@ export class PhotosController {
   @ApiResponse({ status: 200, type: [PhotoResponseDto] })
   async getPhotos(@CurrentUser() user: JwtPayload): Promise<PhotoResponseDto[]> {
     const provider = await this.providersService.getMyProvider(user.sub);
-    return this.photosService.findByProvider(provider.id) as Promise<PhotoResponseDto[]>;
+    return this.photosService.findByProvider(provider.id) as unknown as Promise<PhotoResponseDto[]>;
   }
 
   // ── DELETE /v1/providers/me/photos/:id ───────────────────────────────────
@@ -133,6 +142,6 @@ export class PhotosController {
     @Param('id', ParseUUIDPipe) id: string,
   ): Promise<PhotoResponseDto> {
     const provider = await this.providersService.getMyProvider(user.sub);
-    return this.photosService.setPrimary(provider.id, id) as Promise<PhotoResponseDto>;
+    return this.photosService.setPrimary(provider.id, id) as unknown as Promise<PhotoResponseDto>;
   }
 }

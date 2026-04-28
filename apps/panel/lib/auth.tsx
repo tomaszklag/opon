@@ -30,7 +30,7 @@ type AuthState =
 type AuthCtx = AuthState & {
   login: (user: AuthUser) => void;
   logout: () => Promise<void>;
-  refresh: () => Promise<void>;
+  refresh: () => Promise<AuthUser | null>;
 };
 
 const AuthContext = createContext<AuthCtx | null>(null);
@@ -38,14 +38,16 @@ const AuthContext = createContext<AuthCtx | null>(null);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<AuthState>({ status: 'loading' });
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (): Promise<AuthUser | null> => {
     try {
       const user = await api.get<AuthUser>('/v1/auth/me');
       setState({ status: 'authenticated', user });
+      return user;
     } catch (err) {
       if (err instanceof ApiError && err.isUnauthorized) {
         setState({ status: 'unauthenticated' });
       }
+      return null;
     }
   }, []);
 
