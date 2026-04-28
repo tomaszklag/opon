@@ -9,8 +9,9 @@ import {
   listPendingProviders,
   approveProvider,
   rejectProvider,
+  getGusHealth,
 } from '../../../api-data-access/admin';
-import type { Provider } from '../../../api-data-access/admin';
+import type { Provider, GusHealthStatus, GusHealthResponse } from '../../../api-data-access/admin';
 import type { ProviderStatus } from '../../../lib/auth';
 import {
   IconBriefcase,
@@ -30,6 +31,12 @@ const STATUS_LABELS: Record<ProviderStatus, string> = {
   REJECTED: 'Odrzucona',
 };
 
+const CEIDG_STATUS_LABELS: Record<GusHealthStatus, string> = {
+  ok: 'OK',
+  degraded: 'PRZERWA',
+  down: 'NIEDOSTĘPNE',
+};
+
 function formatDate(iso: string | undefined | null): string {
   if (!iso) return '—';
   const d = new Date(iso);
@@ -37,6 +44,25 @@ function formatDate(iso: string | undefined | null): string {
     d.toLocaleDateString('pl-PL', { day: '2-digit', month: 'short', year: 'numeric' }) +
     ' · ' +
     d.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' })
+  );
+}
+
+function CeidgStatusBadge() {
+  const { data } = useSWR<GusHealthResponse>('/v1/admin/gus/health', getGusHealth, {
+    refreshInterval: 60_000,
+    revalidateOnFocus: false,
+  });
+
+  const status: GusHealthStatus | 'unknown' = data?.status ?? 'unknown';
+  const label = status === 'unknown' ? '…' : CEIDG_STATUS_LABELS[status];
+
+  return (
+    <span className={styles.ceidgBadge} title={data?.message ?? 'Sprawdzanie statusu CEIDG…'}>
+      <span className={styles.ceidgDot} data-status={status} aria-hidden="true" />
+      <Text variant="nano" as="span" color="muted">
+        CEIDG ● {label}
+      </Text>
+    </span>
   );
 }
 
@@ -210,6 +236,7 @@ export default function AdminProvidersPage() {
             ADMIN PANEL
           </Text>
         </Link>
+        <CeidgStatusBadge />
       </header>
 
       <div className={styles.content}>

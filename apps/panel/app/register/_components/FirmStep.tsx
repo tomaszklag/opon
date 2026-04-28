@@ -27,8 +27,17 @@ interface Props {
 }
 
 export function FirmStep({ flow }: Props) {
-  const { form, apiError, gusData, gusLoading, gusError, retry, toggleConsent, handleSubmit } =
-    flow;
+  const {
+    form,
+    apiError,
+    gusData,
+    gusLoading,
+    gusError,
+    gusErrorCode,
+    retry,
+    toggleConsent,
+    handleSubmit,
+  } = flow;
   const {
     control,
     register,
@@ -49,6 +58,9 @@ export function FirmStep({ flow }: Props) {
       toggleConsent(field);
     }
   }
+
+  const isRetryableError =
+    gusErrorCode === 'GUS_CONNECTION_ERROR' || gusErrorCode === 'GUS_REQUEST_ERROR';
 
   const nipSuffix = gusLoading ? (
     <Spinner size="sm" label="Weryfikuję NIP…" />
@@ -255,6 +267,23 @@ export function FirmStep({ flow }: Props) {
               />
             )}
           />
+          {gusError && isRetryableError && (
+            <NoticeBlock variant="warning">
+              <Text variant="body-sm" as="span">
+                {gusError}
+              </Text>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={retry}
+                style={{ marginTop: 8 }}
+              >
+                <IconRefresh width={14} height={14} />
+                Spróbuj ponownie
+              </Button>
+            </NoticeBlock>
+          )}
           {gusData && (
             <div className={styles.gusResult} role="region" aria-label="Dane z GUS">
               <div className={styles.gusHead}>

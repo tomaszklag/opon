@@ -38,6 +38,7 @@ export function useRegisterFlow() {
   const [gusData, setGusData] = useState<GusData | null>(null);
   const [gusLoading, setGusLoading] = useState(false);
   const [gusError, setGusError] = useState('');
+  const [gusErrorCode, setGusErrorCode] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
   const abortRef = useRef<AbortController | null>(null);
 
@@ -47,6 +48,7 @@ export function useRegisterFlow() {
     if (nip.length !== 10) {
       setGusData(null);
       setGusError('');
+      setGusErrorCode(null);
       setGusLoading(false);
       return;
     }
@@ -58,6 +60,7 @@ export function useRegisterFlow() {
     setGusLoading(true);
     setGusData(null);
     setGusError('');
+    setGusErrorCode(null);
 
     api
       .get<GusData>(`/v1/gus/${nip}`, { signal: ctrl.signal })
@@ -68,9 +71,30 @@ export function useRegisterFlow() {
       .catch((err: unknown) => {
         if (err instanceof DOMException && err.name === 'AbortError') return;
         setGusLoading(false);
-        if (err instanceof ApiError && (err.code === 'GUS_NIP_NOT_FOUND' || err.status === 404)) {
-          setGusError('NIP nie znaleziony w rejestrze GUS / CEIDG.');
+        if (err instanceof ApiError) {
+          switch (err.code) {
+            case 'GUS_NIP_NOT_FOUND':
+              setGusErrorCode('GUS_NIP_NOT_FOUND');
+              setGusError('NIP nie znaleziony w rejestrze GUS / CEIDG.');
+              break;
+            case 'GUS_INVALID_NIP':
+              setGusErrorCode('GUS_INVALID_NIP');
+              setGusError('Nieprawidłowy numer NIP.');
+              break;
+            case 'GUS_CONNECTION_ERROR':
+              setGusErrorCode('GUS_CONNECTION_ERROR');
+              setGusError('CEIDG jest niedostępne. Spróbuj ponownie za chwilę.');
+              break;
+            case 'GUS_REQUEST_ERROR':
+              setGusErrorCode('GUS_REQUEST_ERROR');
+              setGusError('Błąd komunikacji z CEIDG — API może być w przerwie serwisowej.');
+              break;
+            default:
+              setGusErrorCode(null);
+              setGusError('Błąd połączenia z GUS. Spróbuj ponownie.');
+          }
         } else {
+          setGusErrorCode(null);
           setGusError('Błąd połączenia z GUS. Spróbuj ponownie.');
         }
       });
@@ -116,6 +140,7 @@ export function useRegisterFlow() {
     gusData,
     gusLoading,
     gusError,
+    gusErrorCode,
     retry: () => setRetryCount((c) => c + 1),
     toggleConsent,
     handleSubmit: form.handleSubmit(onSubmit),

@@ -5,5 +5,6 @@ import { GusService } from './gus.service';
 @Module({
   controllers: [GusController],
   providers: [GusService],
+  exports: [GusService],
 })
 export class GusModule {}
