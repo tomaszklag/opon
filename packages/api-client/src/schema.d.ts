@@ -597,6 +597,40 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/v1/providers/me/bookings/{referenceCode}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get booking detail (provider) */
+    get: operations['BookingsController_getDetail'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/providers/me/bookings/{referenceCode}/status': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /** Update booking status (provider action) */
+    patch: operations['BookingsController_updateStatus'];
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1038,6 +1072,51 @@ export interface components {
       stationId?: string | null;
       notes?: string | null;
       createdAt: string;
+    };
+    BookingClientDto: {
+      clientId: string;
+      clientName: string;
+      clientPhone: string;
+      bookingCount: number;
+    };
+    BookingVehicleDto: {
+      vehicleId: string;
+      nickname: string;
+      tireSize: string;
+    };
+    BookingDetailResponseDto: {
+      id: string;
+      referenceCode: string;
+      status: string;
+      startAt: string;
+      endAt: string;
+      client: components['schemas']['BookingClientDto'];
+      vehicle?: components['schemas']['BookingVehicleDto'] | null;
+      addressLine?: string | null;
+      addressCity?: string | null;
+      addressLat?: number | null;
+      addressLng?: number | null;
+      tireSize?: string | null;
+      serviceType?: string | null;
+      sizeTier?: string | null;
+      tpmsRequired: boolean;
+      basePricePln?: number | null;
+      travelFeePln?: number | null;
+      totalPricePln?: number | null;
+      stationId?: string | null;
+      notes?: string | null;
+      rejectReason?: string | null;
+      cancelReason?: string | null;
+      createdAt: string;
+      confirmedAt?: string | null;
+      startedAt?: string | null;
+      completedAt?: string | null;
+      cancelledAt?: string | null;
+    };
+    UpdateBookingStatusDto: {
+      /** @enum {string} */
+      action: 'confirm' | 'start' | 'complete' | 'cancel' | 'reject' | 'no_show';
+      reason?: string;
     };
   };
   responses: never;
@@ -2204,6 +2283,52 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['BookingResponseDto'][];
+        };
+      };
+    };
+  };
+  BookingsController_getDetail: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        referenceCode: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['BookingDetailResponseDto'];
+        };
+      };
+    };
+  };
+  BookingsController_updateStatus: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        referenceCode: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['UpdateBookingStatusDto'];
+      };
+    };
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['BookingDetailResponseDto'];
         };
       };
     };

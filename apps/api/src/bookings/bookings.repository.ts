@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { BookingStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
 type BookingWithClient = Prisma.BookingGetPayload<{
@@ -7,6 +7,13 @@ type BookingWithClient = Prisma.BookingGetPayload<{
     client: {
       select: { phone: true; firstName: true; lastName: true };
     };
+  };
+}>;
+
+export type BookingWithDetail = Prisma.BookingGetPayload<{
+  include: {
+    client: { select: { phone: true; firstName: true; lastName: true } };
+    vehicle: { select: { nickname: true; tireSize: true } };
   };
 }>;
 
@@ -30,6 +37,45 @@ export class BookingsRepository {
         },
       },
       orderBy: { startAt: 'asc' },
+    });
+  }
+
+  findDetailByReferenceCode(
+    providerId: string,
+    referenceCode: string,
+  ): Promise<BookingWithDetail | null> {
+    return this.prisma.booking.findUnique({
+      where: { referenceCode, providerId },
+      include: {
+        client: { select: { phone: true, firstName: true, lastName: true } },
+        vehicle: { select: { nickname: true, tireSize: true } },
+      },
+    });
+  }
+
+  countClientBookings(clientId: string, providerId: string): Promise<number> {
+    return this.prisma.booking.count({ where: { clientId, providerId } });
+  }
+
+  async updateStatus(
+    id: string,
+    status: BookingStatus,
+    timestamps: Partial<{
+      confirmedAt: Date;
+      startedAt: Date;
+      completedAt: Date;
+      cancelledAt: Date;
+    }>,
+    reason?: string,
+    isReject = false,
+  ): Promise<void> {
+    await this.prisma.booking.update({
+      where: { id },
+      data: {
+        status,
+        ...timestamps,
+        ...(reason ? (isReject ? { rejectReason: reason } : { cancelReason: reason }) : {}),
+      },
     });
   }
 }

@@ -72,10 +72,12 @@ export default function DashboardNav() {
   }
 
   function isActive(href: string) {
-    return pathname === href;
+    if (href === '/dashboard') return pathname === href;
+    return pathname === href || pathname.startsWith(href + '/');
   }
 
-  const pageTitle = PAGE_TITLE[pathname] ?? 'Panel';
+  const pageTitle =
+    PAGE_TITLE[pathname] ?? (pathname.startsWith('/dashboard/bookings/') ? 'Rezerwacje' : 'Panel');
 
   return (
     <>

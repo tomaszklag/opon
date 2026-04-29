@@ -15,7 +15,21 @@ export type BookingStatus =
   | 'REJECTED';
 export type Booking = Omit<BookingBase, 'status'> & { status: BookingStatus };
 
+type BookingDetailBase = components['schemas']['BookingDetailResponseDto'];
+export type BookingClient = components['schemas']['BookingClientDto'];
+export type BookingVehicle = components['schemas']['BookingVehicleDto'];
+export type BookingDetail = Omit<BookingDetailBase, 'status'> & { status: BookingStatus };
+
+export type StatusAction = 'confirm' | 'start' | 'complete' | 'cancel' | 'reject' | 'no_show';
+
 export const bookingsApi = {
   list: (weekStart?: string) =>
     api.get<Booking[]>(`/v1/providers/me/bookings${weekStart ? `?weekStart=${weekStart}` : ''}`),
+  getDetail: (referenceCode: string) =>
+    api.get<BookingDetail>(`/v1/providers/me/bookings/${referenceCode}`),
+  updateStatus: (referenceCode: string, action: StatusAction, reason?: string) =>
+    api.patch<BookingDetail>(`/v1/providers/me/bookings/${referenceCode}/status`, {
+      action,
+      reason,
+    }),
 };
