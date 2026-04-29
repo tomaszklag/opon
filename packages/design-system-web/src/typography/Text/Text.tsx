@@ -10,7 +10,7 @@ export type TextVariant =
   | 'nano'
   | 'kicker'
   | 'kicker-sm';
-export type TextColor = 'primary' | 'secondary' | 'muted' | 'accent';
+export type TextColor = 'primary' | 'secondary' | 'muted' | 'accent' | 'warning' | 'danger';
 export type TextWeight = 'regular' | 'medium' | 'semibold' | 'bold' | 'extrabold';
 type TextElement = 'p' | 'span' | 'div' | 'label' | 'li' | 'strong' | 'em';
 
@@ -38,6 +38,8 @@ const colorClass: Partial<Record<TextColor, string>> = {
   secondary: styles.colorSecondary as string,
   muted: styles.colorMuted as string,
   accent: styles.colorAccent as string,
+  warning: styles.colorWarning as string,
+  danger: styles.colorDanger as string,
 };
 
 const weightClass: Partial<Record<TextWeight, string>> = {

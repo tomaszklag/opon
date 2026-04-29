@@ -312,6 +312,7 @@ model Booking {
   serviceType     ServiceType?
   sizeTier        SizeTier?
   tpmsRequired    Boolean      @default(false)
+  isManual        Boolean      @default(false)
 
   client      User         @relation("ClientBookings", fields: [clientId], references: [id])
   provider    Provider     @relation("ProviderBookings", fields: [providerId], references: [id])

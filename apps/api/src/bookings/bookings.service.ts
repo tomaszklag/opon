@@ -5,6 +5,10 @@ import { BookingDetailResponseDto } from './dto/booking-detail-response.dto';
 import { BookingResponseDto } from './dto/booking-response.dto';
 import { UpdateBookingStatusDto } from './dto/update-booking-status.dto';
 import { BookingsRepository, BookingWithDetail } from './bookings.repository';
+import { BookingAdminListQueryDto } from './dto/booking-admin-list-query.dto';
+import { BookingPageResponseDto } from './dto/booking-page-response.dto';
+import { BookingStatsResponseDto } from './dto/booking-stats-response.dto';
+import { BulkUpdateStatusDto } from './dto/bulk-update-status.dto';
 
 type BookingWithClient = Prisma.BookingGetPayload<{
   include: {
@@ -45,6 +49,7 @@ export class BookingsService {
       stationId: booking.stationId ?? null,
       notes: booking.notes ?? null,
       createdAt: booking.createdAt.toISOString(),
+      isManual: booking.isManual,
     };
   }
 
@@ -208,5 +213,73 @@ export class BookingsService {
     );
 
     return bookings.map((b) => this.toResponseDto(b));
+  }
+
+  async listAdmin(
+    providerId: string,
+    query: BookingAdminListQueryDto,
+  ): Promise<BookingPageResponseDto> {
+    const page = query.page ?? 1;
+    const pageSize = query.pageSize ?? 10;
+    const sortBy = query.sortBy ?? 'startAt';
+    const sortDir = query.sortDir ?? 'desc';
+
+    const dateFrom = query.dateFrom ? new Date(query.dateFrom) : undefined;
+    const dateTo = query.dateTo ? new Date(query.dateTo) : undefined;
+
+    const { items, total } = await this.bookingsRepository.findAdminList(providerId, {
+      search: query.search,
+      status: query.status,
+      dateFrom,
+      dateTo,
+      page,
+      pageSize,
+      sortBy,
+      sortDir,
+    });
+
+    return {
+      items: items.map((b) => this.toResponseDto(b)),
+      total,
+      page,
+      pageSize,
+      totalPages: Math.ceil(total / pageSize),
+    };
+  }
+
+  async getStats(providerId: string): Promise<BookingStatsResponseDto> {
+    const now = new Date();
+    const dateTo = new Date(now);
+    const dateFrom = new Date(now);
+    dateFrom.setDate(dateFrom.getDate() - 30);
+
+    const prevDateTo = new Date(dateFrom);
+    prevDateTo.setDate(prevDateTo.getDate() - 1);
+    const prevDateFrom = new Date(prevDateTo);
+    prevDateFrom.setDate(prevDateFrom.getDate() - 30);
+
+    const [curr, prev] = await Promise.all([
+      this.bookingsRepository.getStats(providerId, dateFrom, dateTo),
+      this.bookingsRepository.getStats(providerId, prevDateFrom, prevDateTo),
+    ]);
+
+    const completionRate =
+      curr.total > 0 ? Math.round(((curr.total - curr.nonShowCount) / curr.total) * 100) : 100;
+    const completionRatePrev =
+      prev.total > 0 ? Math.round(((prev.total - prev.nonShowCount) / prev.total) * 100) : null;
+
+    return {
+      total: curr.total,
+      totalPrev: prev.total,
+      revenuePln: Math.round(curr.revenuePln * 100) / 100,
+      revenuePrevPln: Math.round(prev.revenuePln * 100) / 100,
+      avgValuePln: Math.round(curr.avgValuePln * 100) / 100,
+      completionRate,
+      completionRatePrev,
+    };
+  }
+
+  async bulkUpdateStatus(providerId: string, dto: BulkUpdateStatusDto): Promise<void> {
+    await this.bookingsRepository.bulkUpdateStatus(providerId, dto.ids, dto.action);
   }
 }

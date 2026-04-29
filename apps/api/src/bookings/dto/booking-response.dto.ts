@@ -18,4 +18,5 @@ export class BookingResponseDto {
   @ApiPropertyOptional({ type: String, nullable: true }) stationId!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) notes!: string | null;
   @ApiProperty() createdAt!: string;
+  @ApiProperty() isManual!: boolean;
 }

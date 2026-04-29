@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, Param, Patch, Query } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Param, Patch, Query } from '@nestjs/common';
 import { ApiCookieAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { JwtPayload } from '../auth/types/jwt-payload.interface';
@@ -8,6 +8,10 @@ import { BookingListQueryDto } from './dto/booking-list-query.dto';
 import { BookingResponseDto } from './dto/booking-response.dto';
 import { UpdateBookingStatusDto } from './dto/update-booking-status.dto';
 import { BookingsService } from './bookings.service';
+import { BookingAdminListQueryDto } from './dto/booking-admin-list-query.dto';
+import { BookingPageResponseDto } from './dto/booking-page-response.dto';
+import { BookingStatsResponseDto } from './dto/booking-stats-response.dto';
+import { BulkUpdateStatusDto } from './dto/bulk-update-status.dto';
 
 @ApiTags('bookings')
 @ApiCookieAuth('access_token')
@@ -29,6 +33,42 @@ export class BookingsController {
   ): Promise<BookingResponseDto[]> {
     const provider = await this.providersService.getMyProvider(user.sub);
     return this.service.listByProvider(provider.id, query.weekStart);
+  }
+
+  // ── GET /v1/providers/me/bookings/summary ─────────────────────────────────
+
+  @Get('summary')
+  @ApiOperation({ summary: 'Paginated booking list with filters (admin table)' })
+  @ApiResponse({ status: 200, type: BookingPageResponseDto })
+  async listAdmin(
+    @CurrentUser() user: JwtPayload,
+    @Query() query: BookingAdminListQueryDto,
+  ): Promise<BookingPageResponseDto> {
+    const provider = await this.providersService.getMyProvider(user.sub);
+    return this.service.listAdmin(provider.id, query);
+  }
+
+  // ── GET /v1/providers/me/bookings/stats ───────────────────────────────────
+
+  @Get('stats')
+  @ApiOperation({ summary: 'Booking KPI stats (last 30 days vs prior 30 days)' })
+  @ApiResponse({ status: 200, type: BookingStatsResponseDto })
+  async getStats(@CurrentUser() user: JwtPayload): Promise<BookingStatsResponseDto> {
+    const provider = await this.providersService.getMyProvider(user.sub);
+    return this.service.getStats(provider.id);
+  }
+
+  // ── PATCH /v1/providers/me/bookings/bulk-status ───────────────────────────
+
+  @Patch('bulk-status')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Bulk update booking status (confirm or cancel)' })
+  async bulkUpdateStatus(
+    @CurrentUser() user: JwtPayload,
+    @Body() dto: BulkUpdateStatusDto,
+  ): Promise<void> {
+    const provider = await this.providersService.getMyProvider(user.sub);
+    return this.service.bulkUpdateStatus(provider.id, dto);
   }
 
   // ── GET /v1/providers/me/bookings/:referenceCode ──────────────────────────
