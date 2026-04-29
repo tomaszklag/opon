@@ -42,7 +42,10 @@
       "@prisma/engines",
       "prisma",
       "sharp"
-    ]
+    ],
+    "overrides": {
+      "@types/react": "18.3.28"
+    }
   },
   "lint-staged": {
     "**/*.{ts,tsx,js,jsx}": [

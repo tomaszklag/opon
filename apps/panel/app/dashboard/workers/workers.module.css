@@ -1,0 +1,673 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+/* ── Loading ── */
+.loadingWrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}
+
+/* ── Error banner ── */
+.errorBanner {
+  margin: 12px 28px 0;
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: var(--danger-muted);
+  border: 1px solid var(--danger-border);
+  color: var(--danger);
+}
+
+/* ── Content split ── */
+.content {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 24px 28px 40px;
+  display: grid;
+  grid-template-columns: 1fr 360px;
+  gap: 22px;
+  align-items: start;
+}
+
+/* ── Left: form col ── */
+.formCol {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.pageHero {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.pageSubRow {
+  margin-top: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.statPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: 5px;
+  background: var(--accent-muted);
+  border: 1px solid var(--accent-border);
+}
+
+/* ── Worker card ── */
+.workerCard {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+  position: relative;
+  transition: border-color 0.14s;
+}
+
+.workerCard::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--hairline);
+  border-radius: 14px 14px 0 0;
+  pointer-events: none;
+}
+
+.workerCardExpanded {
+  border-color: var(--accent-border);
+}
+
+.workerCardExpanded::after {
+  content: '';
+  position: absolute;
+  left: -1px;
+  top: 20px;
+  bottom: 20px;
+  width: 3px;
+  background: var(--accent);
+  border-radius: 2px;
+}
+
+/* ── Card header ── */
+.workerHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 16px;
+  cursor: pointer;
+}
+
+.workerHeaderInfo {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+/* ── Avatar ── */
+.avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  flex-shrink: 0;
+  /* #fff for contrast on dynamically-set dark avatar backgrounds */
+  color: #fff;
+}
+
+/* ── Station chips ── */
+.stationChips {
+  display: inline-flex;
+  gap: 5px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.stationChip {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 5px;
+  background: var(--accent-muted);
+  border: 1px solid var(--accent-border);
+  color: var(--accent);
+}
+
+/* ── Leave badge (collapsed) ── */
+.leaveBadgeVacation {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: 5px;
+  font-family: var(--font-mono);
+  background: var(--danger-muted);
+  border: 1px solid var(--danger-border);
+  color: var(--danger);
+}
+
+.leaveBadgeSoon {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: 5px;
+  font-family: var(--font-mono);
+  background: var(--warning-muted);
+  border: 1px solid var(--warning-border);
+  color: var(--warning);
+}
+
+/* ── Chevron ── */
+.chevron {
+  color: var(--text-muted);
+  flex-shrink: 0;
+  transition: transform 0.2s;
+}
+
+/* Rotate ChevronRight 90deg so it points downward */
+.chevronDown {
+  transform: rotate(90deg);
+}
+
+/* When expanded, rotate to 270deg (pointing up) */
+.chevronDown.chevronOpen {
+  transform: rotate(270deg);
+}
+
+/* ── Card body ── */
+.workerBody {
+  padding: 0 16px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  border-top: 1px solid var(--border);
+}
+
+.sectionLabel {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1.3px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.fieldsRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.stationsReadonly {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.stationChipLarge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 5px;
+  background: var(--accent-muted);
+  border: 1px solid var(--accent-border);
+  color: var(--accent);
+}
+
+/* ── Leave list ── */
+.leaveList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.leaveItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  position: relative;
+}
+
+.leaveItemUpcoming {
+  border-color: var(--info-border);
+  background: var(--info-muted);
+}
+
+.leaveItemSoon {
+  border-color: var(--warning-border);
+  background: var(--warning-muted);
+}
+
+.leaveIco {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--accent);
+  background: var(--accent-muted);
+}
+
+.leaveInfo {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.leaveNameRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.leaveTypeTag {
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: var(--accent-muted);
+  color: var(--accent);
+}
+
+.leaveTypeTagSick {
+  background: var(--warning-muted);
+  color: var(--warning);
+}
+
+.leaveTypeTagOther {
+  background: var(--surface-raised);
+  color: var(--text-muted);
+}
+
+.leaveDates {
+  font-family: var(--font-mono);
+}
+
+.leaveDur {
+  font-family: var(--font-mono);
+}
+
+.leaveActions {
+  display: flex;
+  gap: 5px;
+  flex-shrink: 0;
+}
+
+.leaveActionBtn {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: color 0.14s, border-color 0.14s, background 0.14s;
+}
+
+.leaveActionBtn:hover {
+  color: var(--danger);
+  border-color: var(--danger-border);
+  background: var(--danger-muted);
+}
+
+/* ── Add leave button ── */
+.addLeaveBtn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  border: 1px dashed var(--accent-border);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--accent);
+  cursor: pointer;
+  width: 100%;
+  transition: background 0.14s, border-color 0.14s;
+}
+
+.addLeaveBtn:hover {
+  background: var(--accent-muted);
+  border-color: var(--accent);
+}
+
+/* ── Add leave form ── */
+.addLeaveForm {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--accent-border);
+  border-radius: 10px;
+  background: var(--accent-muted);
+}
+
+.addLeaveFormRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.addLeaveFormActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.leaveNote {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 9px 11px;
+  background: transparent;
+  border: 1px dashed var(--border);
+  border-radius: 9px;
+  color: var(--text-muted);
+}
+
+.leaveNoteIcon {
+  color: var(--accent);
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+/* ── Delete worker ── */
+.deleteWorkerWrap {
+  padding-top: 4px;
+  border-top: 1px dashed var(--border);
+}
+
+.confirmDeleteRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.leaveError {
+  color: var(--danger);
+}
+
+/* ── Add worker form (inline) ── */
+.addWorkerForm {
+  background: var(--surface);
+  border: 1px dashed var(--accent-border);
+  border-radius: 14px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.addWorkerFormRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.addWorkerFormActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.addWorkerTrigger {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px;
+  border: 1px dashed var(--accent-border);
+  border-radius: 14px;
+  background: transparent;
+  color: var(--accent);
+  cursor: pointer;
+  width: 100%;
+  transition: background 0.14s, border-color 0.14s;
+}
+
+.addWorkerTrigger:hover {
+  background: var(--accent-muted);
+  border-color: var(--accent);
+}
+
+/* ── Right: preview col ── */
+.previewCol {
+  position: sticky;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.previewPanel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  position: relative;
+}
+
+.previewPanel::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--hairline);
+  border-radius: 14px 14px 0 0;
+  pointer-events: none;
+}
+
+.previewHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+/* ── Gantt timeline ── */
+.timelineWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.timelineHead {
+  display: grid;
+  grid-template-columns: 68px 1fr 1fr 1fr 1fr;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 5px;
+  margin-bottom: 4px;
+}
+
+.tlMonth {
+  text-align: center;
+  padding: 0 2px;
+}
+
+.timelineRow {
+  display: grid;
+  grid-template-columns: 68px 1fr 1fr 1fr 1fr;
+  margin-bottom: 4px;
+  align-items: center;
+}
+
+.tlName {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  padding-right: 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tlCell {
+  height: 20px;
+  position: relative;
+  border-right: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.tlCell:last-child {
+  border-right: none;
+}
+
+.tlBar {
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  border-radius: 4px;
+}
+
+.tlBarVacation {
+  background: var(--accent);
+  opacity: 0.8;
+}
+
+.tlBarSoon {
+  background: var(--warning);
+  opacity: 0.85;
+}
+
+.tlBarAccent {
+  background: var(--accent);
+  opacity: 0.8;
+}
+
+.tlEmpty {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--border-strong);
+  text-align: center;
+  line-height: 20px;
+}
+
+.timelineLegend {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.tlLegendItem {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.tlLegendDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+}
+
+.tlLegendDotVacation {
+  background: var(--accent);
+}
+
+.tlLegendDotSoon {
+  background: var(--warning);
+}
+
+/* ── Today list ── */
+.todayList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.todayItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+}
+
+.todayDotActive {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--success);
+  flex-shrink: 0;
+}
+
+.todayDotAbsent {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--border-strong);
+  flex-shrink: 0;
+}
+
+.todayItemAbsent {
+  opacity: 0.6;
+  background: var(--warning-muted);
+  border-color: var(--warning-border);
+}
+
+.infoNote {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 9px 11px;
+  background: transparent;
+  border: 1px dashed var(--border);
+  border-radius: 9px;
+  color: var(--text-muted);
+}
+
+.infoNoteIcon {
+  color: var(--accent);
+  flex-shrink: 0;
+  margin-top: 1px;
+}

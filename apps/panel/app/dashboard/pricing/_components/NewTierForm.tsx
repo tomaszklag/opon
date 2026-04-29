@@ -1,7 +1,15 @@
 import { Controller, type UseFormReturn } from 'react-hook-form';
-import { Input, Button, Text } from '@opony/design-system-web';
+import { Input, Button, Select, Text } from '@opony/design-system-web';
 import { type NewTierValues } from '../../../../lib/schemas/pricing.schema';
+import { sizeTierLabel, type SizeTierValue } from './utils';
 import styles from '../pricing.module.css';
+
+const SIZE_TIERS: SizeTierValue[] = ['S', 'M', 'L'];
+
+const SIZE_TIER_OPTIONS = SIZE_TIERS.map((s) => ({
+  value: s,
+  label: sizeTierLabel(s),
+}));
 
 interface Props {
   form: UseFormReturn<NewTierValues>;
@@ -18,48 +26,22 @@ export function NewTierForm({ form, onCancel }: Props) {
     <div className={[styles.tierRow, styles.tierRowNew].join(' ')}>
       <div className={styles.rimRangeInputs}>
         <Text variant="body-sm" as="span" color="muted" className={styles.rimLabel}>
-          Felga
+          Rozmiar
         </Text>
         <Controller
-          name="rimSizeMin"
+          name="sizeTier"
           control={control}
           render={({ field }) => (
-            <Input
-              type="number"
-              min={10}
-              max={24}
+            <Select
+              options={SIZE_TIER_OPTIONS}
               value={field.value}
-              onChange={(e) => field.onChange(Number(e.target.value))}
+              onChange={(e) => field.onChange(e.target.value)}
               onBlur={field.onBlur}
-              error={errors.rimSizeMin?.message ? ' ' : undefined}
-              aria-label="Rozmiar felgi od"
-              className={styles.rimInputNum}
+              error={errors.sizeTier?.message ? ' ' : undefined}
+              aria-label="Tier rozmiaru felgi"
             />
           )}
         />
-        <Text variant="body-sm" as="span" color="muted">
-          –
-        </Text>
-        <Controller
-          name="rimSizeMax"
-          control={control}
-          render={({ field }) => (
-            <Input
-              type="number"
-              min={10}
-              max={24}
-              value={field.value}
-              onChange={(e) => field.onChange(Number(e.target.value))}
-              onBlur={field.onBlur}
-              error={errors.rimSizeMax?.message ? ' ' : undefined}
-              aria-label="Rozmiar felgi do"
-              className={styles.rimInputNum}
-            />
-          )}
-        />
-        <Text variant="body-sm" as="span" color="muted">
-          cali
-        </Text>
       </div>
 
       <Controller

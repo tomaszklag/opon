@@ -1,21 +1,14 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
-import { IsInt, IsNumber, IsOptional, Max, Min } from 'class-validator';
+import { IsEnum, IsNumber, IsOptional, Min } from 'class-validator';
+import { SizeTier } from '@prisma/client';
 
 export class CreatePricingTierDto {
-  @ApiProperty({ example: 13, description: 'Minimalny rozmiar felgi (cale)' })
-  @Type(() => Number)
-  @IsInt()
-  @Min(10)
-  @Max(24)
-  rimSizeMin!: number;
-
-  @ApiProperty({ example: 15, description: 'Maksymalny rozmiar felgi (cale)' })
-  @Type(() => Number)
-  @IsInt()
-  @Min(10)
-  @Max(24)
-  rimSizeMax!: number;
+  @ApiProperty({
+    enum: SizeTier,
+    description: 'Tier rozmiaru felgi: S (≤R15), M (R16–R17), L (≥R18)',
+  })
+  @IsEnum(SizeTier)
+  sizeTier!: SizeTier;
 
   @ApiProperty({ example: 120.0, description: 'Cena wymiany kompletu (PLN)' })
   @IsNumber({ maxDecimalPlaces: 2 })

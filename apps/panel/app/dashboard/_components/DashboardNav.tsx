@@ -12,6 +12,8 @@ import {
   IconPricing,
   IconHours,
   IconProfile,
+  IconStations,
+  IconWorkers,
 } from '../../../components/icons';
 import styles from './DashboardNav.module.css';
 
@@ -38,6 +40,8 @@ const PAGE_TITLE: Record<string, string> = {
   '/dashboard': 'Dashboard',
   '/dashboard/hours': 'Godziny pracy',
   '/dashboard/pricing': 'Cennik',
+  '/dashboard/stations': 'Stanowiska',
+  '/dashboard/workers': 'Pracownicy',
   '/dashboard/bookings': 'Rezerwacje',
   '/dashboard/profile': 'Profil firmy',
 };
@@ -110,6 +114,20 @@ export default function DashboardNav() {
           >
             <IconPricing width="15" height="15" />
             Cennik
+          </a>
+          <a
+            href="/dashboard/stations"
+            className={`${styles.navItem} ${isActive('/dashboard/stations') ? styles.navActive : ''}`}
+          >
+            <IconStations width="15" height="15" />
+            Stanowiska
+          </a>
+          <a
+            href="/dashboard/workers"
+            className={`${styles.navItem} ${isActive('/dashboard/workers') ? styles.navActive : ''}`}
+          >
+            <IconWorkers width="15" height="15" />
+            Pracownicy
           </a>
           <a
             href="/dashboard/hours"

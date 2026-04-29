@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Opony.app — 02b Konfiguracja wizyty · W:12.3</title>
+<!--
+  Screen: Konfiguracja wizyty — wybór usługi, rozmiaru i TPMS
+  Ref:    docs/plan-sprintow.md → W:12.3 (nowy)
+  US:     US-05 (wybór usługi), US-06 (rozmiar), US-08 (TPMS)
+  Tone:   industrial-dark · krok 1 z 3 (konfiguracja → termin → gotowe)
+  Flow:   02-provider-detail → [ten ekran] → 03-time-slot → 04-booking-confirmed
+  Note:   TPMS pokazuje się warunkowo dla Sezonowej wymiany i Wymiany kół.
+          Cena w summary aktualizuje się na bieżąco po wyborach.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Bebas+Neue&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0A0B0E;
+    --bg-tint-top: #12141A;
+    --surface: #14171D;
+    --surface-raised: #1B1E26;
+    --surface-hover: #23272F;
+    --border: #262A34;
+    --border-strong: #363B47;
+    --hairline: rgba(255, 255, 255, 0.06);
+    --text-primary: #F5F4EF;
+    --text-secondary: #9EA2AD;
+    --text-muted: #60646F;
+    --text-on-accent: #0A0B0E;
+    --accent: #FF6B1A;
+    --accent-hover: #FF8039;
+    --accent-muted: rgba(255, 107, 26, 0.14);
+    --accent-border: rgba(255, 107, 26, 0.32);
+    --accent-glow: rgba(255, 107, 26, 0.45);
+    --success: #2EE0A0;
+    --success-muted: rgba(46, 224, 160, 0.12);
+    --success-border: rgba(46, 224, 160, 0.30);
+    --warning: #FFB020;
+    --danger: #FF5757;
+    --font-display: 'Bebas Neue', sans-serif;
+    --font-body: 'Archivo', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    --phone-scale: min(1, calc((100vh - 240px) / 852px), calc((100vw - 60px) / 393px));
+    font-family: var(--font-body);
+    background: var(--bg);
+    color: var(--text-primary);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    background-image:
+      radial-gradient(ellipse 70% 50% at 50% 0%, rgba(255, 107, 26, 0.07) 0%, transparent 60%),
+      radial-gradient(ellipse 50% 30% at 90% 100%, rgba(46, 224, 160, 0.03) 0%, transparent 60%),
+      linear-gradient(180deg, var(--bg-tint-top) 0%, var(--bg) 30%);
+    background-attachment: fixed;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 48px 24px 80px;
+    gap: 28px;
+  }
+
+  .canvas-label {
+    width: 100%;
+    max-width: 560px;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: baseline;
+    gap: 20px;
+    padding-bottom: 18px;
+    border-bottom: 1px solid var(--border);
+  }
+  .film-strip { font-family: var(--font-display); font-size: 34px; letter-spacing: 3px; line-height: 1; }
+  .slug {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    border-left: 1px solid var(--border);
+    padding-left: 18px;
+  }
+  .canvas-meta {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-secondary);
+    letter-spacing: 1px;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .canvas-meta .pulse {
+    display: inline-block;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 0 4px var(--accent-muted);
+    animation: pulse 1800ms ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 4px var(--accent-muted); opacity: 1; }
+    50%      { box-shadow: 0 0 0 8px transparent; opacity: 0.6; }
+  }
+
+  /* Phone frame */
+  .phone {
+    width: 393px;
+    height: 852px;
+    border-radius: 54px;
+    background: var(--bg);
+    border: 10px solid #0D0E12;
+    box-shadow:
+      0 0 0 1px #1C1E24,
+      0 40px 120px rgba(0, 0, 0, 0.7),
+      0 24px 48px rgba(0, 0, 0, 0.45),
+      inset 0 0 0 1px rgba(255, 255, 255, 0.03);
+    overflow: hidden;
+    position: relative;
+    isolation: isolate;
+    flex-shrink: 0;
+    transform: scale(var(--phone-scale));
+    transform-origin: top center;
+    margin-bottom: calc((var(--phone-scale) - 1) * 852px);
+  }
+  .phone::before {
+    content: '';
+    position: absolute;
+    top: 12px; left: 50%;
+    transform: translateX(-50%);
+    width: 124px; height: 36px;
+    border-radius: 24px;
+    background: #000;
+    z-index: 100;
+  }
+  .phone::after {
+    content: '';
+    position: absolute;
+    bottom: 8px; left: 50%;
+    transform: translateX(-50%);
+    width: 134px; height: 5px;
+    border-radius: 3px;
+    background: var(--text-primary);
+    opacity: 0.28;
+    z-index: 100;
+  }
+
+  .status-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 36px 0;
+    height: 54px;
+    font-weight: 700;
+    font-size: 15px;
+    position: relative;
+    z-index: 50;
+  }
+  .status-bar .right { display: inline-flex; gap: 6px; align-items: center; }
+
+  /* App bar */
+  .app-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px 10px;
+    border-bottom: 1px solid var(--border);
+    background: rgba(10, 11, 14, 0.92);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+  .ab-back {
+    width: 36px; height: 36px;
+    border-radius: 10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .ab-title {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+  }
+  .ab-provider {
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .ab-screen {
+    font-family: var(--font-display);
+    font-size: 20px;
+    letter-spacing: 1.5px;
+    color: var(--text-primary);
+    line-height: 1;
+  }
+  .ab-step {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: var(--text-muted);
+    flex-shrink: 0;
+  }
+  .ab-step strong { color: var(--accent); }
+
+  /* Step indicator — 3 steps */
+  .step-indicator {
+    display: flex;
+    align-items: center;
+    padding: 12px 20px;
+    gap: 0;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+  }
+  .si-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    position: relative;
+  }
+  .si-item:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    top: 10px;
+    left: calc(50% + 12px);
+    right: calc(-50% + 12px);
+    height: 2px;
+    background: var(--border);
+  }
+  .si-item.done:not(:last-child)::after { background: var(--accent); }
+  .si-dot {
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-mono);
+    font-size: 9px;
+    font-weight: 800;
+    position: relative;
+    z-index: 1;
+  }
+  .si-dot.active {
+    background: var(--accent);
+    color: var(--text-on-accent);
+    box-shadow: 0 0 0 4px var(--accent-muted);
+  }
+  .si-dot.done {
+    background: var(--accent);
+    color: var(--text-on-accent);
+  }
+  .si-dot.upcoming {
+    background: var(--surface-raised);
+    border: 2px solid var(--border);
+    color: var(--text-muted);
+  }
+  .si-label {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    text-align: center;
+  }
+  .si-item.active .si-label { color: var(--accent); }
+  .si-item.done .si-label { color: var(--text-secondary); }
+
+  /* Screen body */
+  .screen {
+    position: absolute;
+    top: 54px; left: 0; right: 0; bottom: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .scroll-area {
+    flex: 1;
+    overflow-y: auto;
+    scrollbar-width: thin;
+  }
+  .scroll-area::-webkit-scrollbar { width: 3px; }
+  .scroll-area::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .wrap {
+    padding: 0 0 24px;
+  }
+
+  /* Section label */
+  .sec-label {
+    padding: 16px 20px 10px;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+
+  /* ====== SERVICE CARDS ====== */
+  .service-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 0 14px;
+  }
+  .svc-card {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 13px 14px;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 140ms ease;
+    overflow: hidden;
+  }
+  .svc-card::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    background: transparent;
+    transition: background 140ms ease;
+  }
+  .svc-card.selected {
+    border-color: var(--accent-border);
+    background: var(--accent-muted);
+  }
+  .svc-card.selected::before { background: var(--accent); }
+  .svc-card.disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+  .svc-ico {
+    width: 38px; height: 38px;
+    border-radius: 10px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-secondary);
+    flex-shrink: 0;
+  }
+  .svc-card.selected .svc-ico {
+    background: var(--accent-muted);
+    border-color: var(--accent-border);
+    color: var(--accent);
+  }
+  .svc-col { flex: 1; min-width: 0; }
+  .svc-name {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    line-height: 1.2;
+  }
+  .svc-card.selected .svc-name { color: var(--accent); }
+  .svc-desc {
+    font-size: 11px;
+    color: var(--text-secondary);
+    margin-top: 2px;
+    line-height: 1.35;
+  }
+  .svc-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 5px;
+  }
+  .svc-time {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+  .svc-price {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-secondary);
+  }
+  .svc-card.selected .svc-price { color: var(--accent); }
+  .svc-radio {
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    border: 2px solid var(--border);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: all 140ms ease;
+  }
+  .svc-card.selected .svc-radio {
+    border-color: var(--accent);
+    background: var(--accent);
+  }
+  .svc-card.selected .svc-radio::after {
+    content: '';
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--text-on-accent);
+  }
+  .svc-badge {
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .svc-badge.popular {
+    background: var(--accent-muted);
+    border: 1px solid var(--accent-border);
+    color: var(--accent);
+  }
+
+  /* ====== SIZE SELECTOR ====== */
+  .size-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    padding: 0 14px;
+  }
+  .size-tile {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 12px 8px;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: 12px;
+    cursor: pointer;
+    text-align: center;
+    transition: all 140ms ease;
+  }
+  .size-tile.selected {
+    border-color: var(--accent-border);
+    background: var(--accent-muted);
+  }
+  .size-tile.selected::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: var(--accent);
+    border-radius: 12px 12px 0 0;
+  }
+  .size-letter {
+    font-family: var(--font-display);
+    font-size: 28px;
+    letter-spacing: 2px;
+    line-height: 1;
+    color: var(--text-muted);
+  }
+  .size-tile.selected .size-letter { color: var(--accent); }
+  .size-inches {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--text-muted);
+    letter-spacing: 0.5px;
+  }
+  .size-tile.selected .size-inches { color: var(--accent); opacity: 0.8; }
+  .size-price {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-secondary);
+    margin-top: 2px;
+  }
+  .size-tile.selected .size-price { color: var(--accent); }
+  .your-tag {
+    position: absolute;
+    top: -1px;
+    right: -1px;
+    padding: 2px 6px;
+    background: var(--accent);
+    color: var(--text-on-accent);
+    font-size: 8px;
+    font-weight: 800;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    border-radius: 0 11px 0 6px;
+  }
+
+  /* ====== TPMS SECTION ====== */
+  .tpms-block {
+    margin: 0 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .tpms-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 13px 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  .tpms-ico {
+    width: 34px; height: 34px;
+    border-radius: 9px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-secondary);
+    flex-shrink: 0;
+  }
+  .tpms-col { flex: 1; }
+  .tpms-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-primary);
+  }
+  .tpms-sub {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 1px;
+  }
+  .tpms-options {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+  }
+  .tpms-opt {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    padding: 12px 8px;
+    cursor: pointer;
+    transition: background 120ms ease;
+    border-right: 1px solid var(--border);
+    text-align: center;
+  }
+  .tpms-opt:last-child { border-right: none; }
+  .tpms-opt.selected { background: var(--accent-muted); }
+  .tpms-opt-label {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-secondary);
+  }
+  .tpms-opt.selected .tpms-opt-label { color: var(--accent); }
+  .tpms-opt-detail {
+    font-size: 10px;
+    color: var(--text-muted);
+  }
+  .tpms-opt.selected .tpms-opt-detail { color: var(--accent); opacity: 0.75; }
+
+  /* ====== STICKY SUMMARY + CTA ====== */
+  .sticky-bottom {
+    flex-shrink: 0;
+    border-top: 1px solid var(--border);
+    background: var(--bg);
+    box-shadow: 0 -12px 28px rgba(0, 0, 0, 0.45);
+  }
+  .summary-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 18px 6px;
+    gap: 12px;
+  }
+  .summary-desc {
+    font-size: 11px;
+    color: var(--text-muted);
+    line-height: 1.4;
+    flex: 1;
+    min-width: 0;
+  }
+  .summary-desc strong { color: var(--text-secondary); font-weight: 600; }
+  .summary-price-col {
+    text-align: right;
+    flex-shrink: 0;
+  }
+  .summary-label {
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    line-height: 1;
+  }
+  .summary-price {
+    font-family: var(--font-mono);
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1;
+  }
+  .summary-price .zl { font-size: 12px; color: var(--accent); margin-left: 1px; }
+  .summary-time {
+    font-size: 10px;
+    color: var(--text-muted);
+    text-align: right;
+  }
+  .cta-wrap {
+    padding: 6px 14px 34px;
+  }
+  .cta-btn {
+    width: 100%;
+    background: var(--accent);
+    color: var(--text-on-accent);
+    border: none;
+    padding: 14px 16px;
+    border-radius: 12px;
+    font-family: var(--font-body);
+    font-weight: 800;
+    font-size: 14px;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    box-shadow: 0 6px 18px rgba(255, 107, 26, 0.4);
+    transition: transform 120ms ease;
+  }
+  .cta-btn:hover { background: var(--accent-hover); }
+  .cta-btn:active { transform: scale(0.98); }
+  .cta-btn:disabled {
+    background: var(--surface-raised);
+    color: var(--text-muted);
+    box-shadow: none;
+    cursor: not-allowed;
+  }
+
+  /* Footer caption */
+  .caption {
+    max-width: 560px;
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 0.5px;
+  }
+  .caption strong {
+    color: var(--text-secondary);
+    font-weight: 500;
+    display: block;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    font-size: 10px;
+  }
+  .caption em { color: var(--accent); font-style: normal; }
+</style>
+</head>
+<body>
+
+  <header class="canvas-label">
+    <span class="film-strip">OPONY — 02b</span>
+    <span class="slug">konfiguracja wizyty · usługa + rozmiar + tpms</span>
+    <span class="canvas-meta"><span class="pulse"></span>W:12.3 · US-05 / 06 / 08</span>
+  </header>
+
+  <main class="phone" role="region" aria-label="Mockup — konfiguracja wizyty">
+
+    <div class="status-bar" aria-hidden="true">
+      <span>9:41</span>
+      <span class="right">
+        <svg width="18" height="12" viewBox="0 0 18 12" fill="currentColor"><rect x="0" y="8" width="3" height="4" rx="0.5"/><rect x="5" y="5" width="3" height="7" rx="0.5"/><rect x="10" y="2" width="3" height="10" rx="0.5"/><rect x="15" y="0" width="3" height="12" rx="0.5" opacity="0.4"/></svg>
+        <svg width="16" height="12" viewBox="0 0 16 12" fill="currentColor"><path d="M8 11.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z"/><path d="M4 7.5a6 6 0 0 1 8 0l-1 1a4.6 4.6 0 0 0-6 0l-1-1Z"/><path d="M1.5 4.5a10 10 0 0 1 13 0l-1 1a8.5 8.5 0 0 0-11 0l-1-1Z" opacity="0.6"/></svg>
+        <svg width="26" height="12" viewBox="0 0 26 12" fill="none"><rect x="0.5" y="0.5" width="22" height="11" rx="3" stroke="currentColor" opacity="0.5"/><rect x="2" y="2" width="19" height="8" rx="1.5" fill="currentColor"/><rect x="23" y="4" width="2" height="4" rx="1" fill="currentColor" opacity="0.5"/></svg>
+      </span>
+    </div>
+
+    <div class="screen">
+
+      <!-- APP BAR -->
+      <div class="app-bar">
+        <button class="ab-back" aria-label="Wróć do profilu serwisu">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+        </button>
+        <div class="ab-title">
+          <span class="ab-provider">MobilOpony Kasia</span>
+          <span class="ab-screen">Konfiguracja</span>
+        </div>
+        <span class="ab-step">Krok <strong>1</strong> / 3</span>
+      </div>
+
+      <!-- STEP INDICATOR -->
+      <div class="step-indicator" role="progressbar" aria-valuenow="1" aria-valuemin="1" aria-valuemax="3" aria-label="Krok 1 z 3: Konfiguracja">
+        <div class="si-item active">
+          <span class="si-dot active">1</span>
+          <span class="si-label">Usługa</span>
+        </div>
+        <div class="si-item upcoming">
+          <span class="si-dot upcoming">2</span>
+          <span class="si-label">Termin</span>
+        </div>
+        <div class="si-item upcoming">
+          <span class="si-dot upcoming">3</span>
+          <span class="si-label">Gotowe</span>
+        </div>
+      </div>
+
+      <!-- SCROLL AREA -->
+      <div class="scroll-area">
+        <div class="wrap">
+
+          <!-- 1. WYBIERZ USŁUGĘ -->
+          <p class="sec-label">Wybierz usługę</p>
+          <div class="service-list" role="radiogroup" aria-label="Rodzaj usługi">
+
+            <!-- Sezonowa wymiana — SELECTED -->
+            <div class="svc-card selected" role="radio" aria-checked="true" tabindex="0">
+              <span class="svc-ico" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/>
+                  <circle cx="12" cy="12" r="5"/>
+                </svg>
+              </span>
+              <div class="svc-col">
+                <div class="svc-name">
+                  Sezonowa wymiana
+                  <span class="svc-badge popular">Popularne</span>
+                </div>
+                <div class="svc-desc">Komplet: demontaż + montaż + wyważanie + wentyle</div>
+                <div class="svc-meta">
+                  <span class="svc-time">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+                    ~60 min
+                  </span>
+                  <span class="svc-price">od 140 zł</span>
+                </div>
+              </div>
+              <span class="svc-radio" aria-hidden="true"></span>
+            </div>
+
+            <!-- Wymiana kół -->
+            <div class="svc-card" role="radio" aria-checked="false" tabindex="0">
+              <span class="svc-ico" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="9"/>
+                  <circle cx="12" cy="12" r="3"/>
+                  <path d="M12 3v3M12 18v3M3 12h3M18 12h3"/>
+                </svg>
+              </span>
+              <div class="svc-col">
+                <div class="svc-name">Wymiana kół</div>
+                <div class="svc-desc">Tylko montaż / demontaż kół, bez wyważania</div>
+                <div class="svc-meta">
+                  <span class="svc-time">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+                    ~30 min
+                  </span>
+                  <span class="svc-price">od 80 zł</span>
+                </div>
+              </div>
+              <span class="svc-radio" aria-hidden="true"></span>
+            </div>
+
+            <!-- Wyważanie kół -->
+            <div class="svc-card" role="radio" aria-checked="false" tabindex="0">
+              <span class="svc-ico" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 2 L12 6 M12 18 L12 22 M2 12 L6 12 M18 12 L22 12"/>
+                  <path d="M4.93 4.93 L7.76 7.76 M16.24 16.24 L19.07 19.07 M4.93 19.07 L7.76 16.24 M16.24 7.76 L19.07 4.93"/>
+                  <circle cx="12" cy="12" r="4"/>
+                </svg>
+              </span>
+              <div class="svc-col">
+                <div class="svc-name">Wyważanie kół</div>
+                <div class="svc-desc">Samo wyważanie na maszynie</div>
+                <div class="svc-meta">
+                  <span class="svc-time">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+                    ~20 min
+                  </span>
+                  <span class="svc-price">od 40 zł</span>
+                </div>
+              </div>
+              <span class="svc-radio" aria-hidden="true"></span>
+            </div>
+
+            <!-- Naprawa opony -->
+            <div class="svc-card" role="radio" aria-checked="false" tabindex="0">
+              <span class="svc-ico" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+                </svg>
+              </span>
+              <div class="svc-col">
+                <div class="svc-name">Naprawa opony</div>
+                <div class="svc-desc">Łatanie, wymiana wentyla</div>
+                <div class="svc-meta">
+                  <span class="svc-time">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+                    ~30 min
+                  </span>
+                  <span class="svc-price">od 30 zł</span>
+                </div>
+              </div>
+              <span class="svc-radio" aria-hidden="true"></span>
+            </div>
+
+          </div>
+
+          <!-- 2. ROZMIAR OPON -->
+          <p class="sec-label" style="margin-top: 6px;">Rozmiar opon</p>
+          <div class="size-grid" role="radiogroup" aria-label="Rozmiar obręczy">
+
+            <div class="size-tile" role="radio" aria-checked="false" tabindex="0" aria-label="Rozmiar S, do 15 cali, 140 złotych">
+              <span class="size-letter">S</span>
+              <span class="size-inches">≤ 15"</span>
+              <span class="size-price">140 zł</span>
+            </div>
+
+            <div class="size-tile selected" role="radio" aria-checked="true" tabindex="0" aria-label="Rozmiar M, 16 do 17 cali, 200 złotych, Twoje opony">
+              <span class="your-tag">Twoje</span>
+              <span class="size-letter">M</span>
+              <span class="size-inches">16 – 17"</span>
+              <span class="size-price">200 zł</span>
+            </div>
+
+            <div class="size-tile" role="radio" aria-checked="false" tabindex="0" aria-label="Rozmiar L, 18 cali i więcej, 260 złotych">
+              <span class="size-letter">L</span>
+              <span class="size-inches">≥ 18"</span>
+              <span class="size-price">260 zł</span>
+            </div>
+
+          </div>
+
+          <!-- 3. TPMS — widoczne dla Sezonowej wymiany i Wymiany kół -->
+          <p class="sec-label" style="margin-top: 6px;">Czujniki TPMS</p>
+          <div class="tpms-block" role="group" aria-label="Czujniki ciśnienia opon">
+            <div class="tpms-head">
+              <span class="tpms-ico" aria-hidden="true">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20Z"/>
+                  <path d="M12 8v4M12 16h.01"/>
+                </svg>
+              </span>
+              <div class="tpms-col">
+                <div class="tpms-title">Czy Twoje koła mają czujniki TPMS?</div>
+                <div class="tpms-sub">Wymaga specjalnych nakrętek przy każdym kole</div>
+              </div>
+            </div>
+            <div class="tpms-options">
+              <div class="tpms-opt selected" role="radio" aria-checked="true" tabindex="0">
+                <span class="tpms-opt-label">Nie</span>
+                <span class="tpms-opt-detail">bez dopłaty</span>
+              </div>
+              <div class="tpms-opt" role="radio" aria-checked="false" tabindex="0">
+                <span class="tpms-opt-label">Tak</span>
+                <span class="tpms-opt-detail">+20 zł · +10 min</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- notatka do serwisu -->
+          <p class="sec-label" style="margin-top: 6px;">Notatka do serwisu <span style="color: var(--text-muted); font-weight: 400; text-transform: none; letter-spacing: 0;">(opcjonalnie)</span></p>
+          <div style="padding: 0 14px;">
+            <div style="background: var(--surface); border: 1.5px solid var(--border); border-radius: 12px; padding: 11px 13px; min-height: 64px; font-size: 13px; color: var(--text-muted);">
+              np. wejście od tyłu budynku, dzwonek nr 3…
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- STICKY BOTTOM — SUMMARY + CTA -->
+      <div class="sticky-bottom">
+        <div class="summary-row">
+          <div class="summary-desc">
+            <strong>Sezonowa wymiana</strong> · Rozmiar M · bez TPMS
+          </div>
+          <div class="summary-price-col">
+            <div class="summary-label">Szacowana cena</div>
+            <div class="summary-price">200<span class="zl">zł</span></div>
+            <div class="summary-time">~60 min</div>
+          </div>
+        </div>
+        <div class="cta-wrap">
+          <button class="cta-btn" type="button">
+            Wybierz termin
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+          </button>
+        </div>
+      </div>
+
+    </div><!-- /.screen -->
+  </main>
+
+  <footer class="caption">
+    <div>
+      <strong>Sekcje</strong>
+      AppBar (back do profilu + provider name + krok 1/3) · StepIndicator 3 kroków (Usługa active, Termin + Gotowe upcoming) · 4 karty usług (radio + selected state: Sezonowa wymiana) · 3 kafelki rozmiaru (S/M/L, M selected + „Twoje") · TPMS Tak/Nie (conditional, show gdy usługa korzysta z kół) · Notatka textarea · Sticky summary + CTA
+    </div>
+    <div>
+      <strong>Logika warunkowa</strong>
+      TPMS sekcja: widoczna tylko dla <em>Sezonowa wymiana</em> i <em>Wymiana kół</em>. Ukryta dla Wyważania i Naprawy. Size selector: ukryty dla <em>Naprawa opony</em> (cena ryczałtowa). Cena w summary reaguje na wybory w czasie rzeczywistym.
+    </div>
+    <div style="grid-column: 1 / -1; border-top: 1px solid var(--border); padding-top: 12px; margin-top: 4px;">
+      <strong>DS Components</strong>
+      <code style="font-family:var(--font-mono);color:var(--text-secondary);font-size:10px">AppHeader</code> back + title-col + step badge ·
+      <code style="font-family:var(--font-mono);color:var(--text-secondary);font-size:10px">StepIndicator</code> horizontal 3-step (<em>⚠️ brak wariantu 3-step w DS — rozszerzyć</em>) ·
+      <em>❌ ServiceCard</em> (radio-card z ikoną + nazwa + opis + czas + cena — nowy komponent) ·
+      <em>❌ SizeTile</em> (radio-tile S/M/L z ceną + „Twoje" badge — nowy komponent) ·
+      <em>❌ TpmsToggle</em> (dwu-opcyjny radio inline + dopłata — nowy komponent lub RadioGroup variant) ·
+      <code style="font-family:var(--font-mono);color:var(--text-secondary);font-size:10px">Textarea</code> placeholder notatka ·
+      <em>❌ BookingSummaryBar</em> (sticky bottom: opis + cena + czas + CTA — nowy komponent)
+    </div>
+  </footer>
+
+</body>
+</html>

@@ -1,6 +1,6 @@
 import { Heading, Text, PricingTable, type PricingRow } from '@opony/design-system-web';
 import { type TierDraft } from '../../../../lib/hooks/use-pricing-tiers';
-import { rimLabel } from './utils';
+import { sizeTierLabel, type SizeTierValue } from './utils';
 import styles from '../pricing.module.css';
 
 interface Props {
@@ -12,9 +12,9 @@ interface Props {
 export function PricingPreview({ drafts, globalBalancingEnabled, globalBalancingPrice }: Props) {
   const rows: PricingRow[] = drafts.map((d, i) => ({
     id: d.id ?? `draft-${i}`,
-    size: rimLabel(d.rimSizeMin, d.rimSizeMax),
+    size: sizeTierLabel(d.sizeTier as SizeTierValue),
     price: `${d.priceSwapPln} zł`,
-    highlighted: d.rimSizeMin >= 16 && d.rimSizeMax <= 17,
+    highlighted: d.sizeTier === 'M',
     highlightLabel: 'Twoje opony',
   }));
 

@@ -62,6 +62,26 @@ enum EmailType {
   ACCOUNT_REJECTED
 }
 
+enum ServiceType {
+  SEASONAL_SWAP
+  WHEEL_SWAP
+  BALANCING
+  PUNCTURE_REPAIR
+}
+
+enum SizeTier {
+  S
+  M
+  L
+}
+
+enum LeaveType {
+  VACATION
+  UNPAID
+  SICK
+  OTHER
+}
+
 enum WaitlistRole {
   CLIENT
   PROVIDER
@@ -152,6 +172,8 @@ model Provider {
   consentLogs        ConsentLog[]
   emailVerificationTokens EmailVerificationToken[]
   emailLogs          EmailLog[]
+  stations           Station[]
+  workers            Worker[]
 
   @@map("providers")
 }
@@ -185,14 +207,13 @@ model ProviderPhoto {
 }
 
 // ──────────────────────────────────────────────
-// PRICING TIER — 3 widelki rozmiaru felgi
+// PRICING TIER — 3 widelki rozmiaru felgi (S/M/L)
 // ──────────────────────────────────────────────
 
 model PricingTier {
   id                        String   @id @default(uuid())
   providerId                String
-  rimSizeMin                Int
-  rimSizeMax                Int
+  sizeTier                  SizeTier
   priceSwapPln              Decimal  @db.Decimal(10, 2)
   priceBalancingPerWheelPln Decimal? @db.Decimal(10, 2)
   travelFeeFirstKmPln       Decimal  @default(0) @db.Decimal(10, 2)
@@ -201,7 +222,7 @@ model PricingTier {
   provider Provider  @relation(fields: [providerId], references: [id], onDelete: Cascade)
   bookings  Booking[] @relation("TierBookings")
 
-  @@unique([providerId, rimSizeMin, rimSizeMax])
+  @@unique([providerId, sizeTier])
   @@map("pricing_tiers")
 }
 
@@ -279,10 +300,16 @@ model Booking {
   completedAt     DateTime?
   cancelledAt     DateTime?
 
+  stationId       String?
+  serviceType     ServiceType?
+  sizeTier        SizeTier?
+  tpmsRequired    Boolean      @default(false)
+
   client      User         @relation("ClientBookings", fields: [clientId], references: [id])
   provider    Provider     @relation("ProviderBookings", fields: [providerId], references: [id])
   vehicle     Vehicle?     @relation("VehicleBookings", fields: [vehicleId], references: [id])
   pricingTier PricingTier? @relation("TierBookings", fields: [pricingTierId], references: [id])
+  station     Station?     @relation(fields: [stationId], references: [id])
   review      Review?
 
   @@index([providerId, startAt])
@@ -454,4 +481,79 @@ model Session {
   @@index([userId])
   @@index([userId, revokedAt])
   @@map("sessions")
+}
+
+// ──────────────────────────────────────────────
+// STATION — fizyczne stanowisko warsztatu
+// ──────────────────────────────────────────────
+
+model Station {
+  id         String        @id @default(cuid())
+  providerId String
+  name       String        @db.VarChar(100)
+  services   ServiceType[]
+  schedule   Json          // DaySchedule[] — grafik tygodniowy
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+
+  provider   Provider        @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  workers    StationWorker[]
+  bookings   Booking[]
+
+  @@map("stations")
+}
+
+// ──────────────────────────────────────────────
+// WORKER — pracownik warsztatu
+// ──────────────────────────────────────────────
+
+model Worker {
+  id         String          @id @default(cuid())
+  providerId String
+  name       String          @db.VarChar(100)
+  role       String?         @db.VarChar(100)
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+
+  provider   Provider        @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  stations   StationWorker[]
+  leaves     WorkerLeave[]
+
+  @@map("workers")
+}
+
+// ──────────────────────────────────────────────
+// STATION WORKER — powiązanie stanowisko ↔ pracownik
+// ──────────────────────────────────────────────
+
+model StationWorker {
+  stationId  String
+  workerId   String
+  shiftStart String? @db.VarChar(5) // "08:00", null = cały grafik stanowiska
+  shiftEnd   String? @db.VarChar(5) // "14:00"
+
+  station Station @relation(fields: [stationId], references: [id], onDelete: Cascade)
+  worker  Worker  @relation(fields: [workerId], references: [id], onDelete: Cascade)
+
+  @@id([stationId, workerId])
+  @@index([workerId])
+  @@map("station_workers")
+}
+
+// ──────────────────────────────────────────────
+// WORKER LEAVE — urlopy / nieobecności
+// ──────────────────────────────────────────────
+
+model WorkerLeave {
+  id        String    @id @default(cuid())
+  workerId  String
+  type      LeaveType
+  startDate DateTime  @db.Date
+  endDate   DateTime  @db.Date
+  note      String?   @db.VarChar(500)
+  createdAt DateTime  @default(now())
+
+  worker Worker @relation(fields: [workerId], references: [id], onDelete: Cascade)
+
+  @@map("worker_leaves")
 }

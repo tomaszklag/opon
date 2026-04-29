@@ -13,14 +13,12 @@ export function useMarketPrices(): MarketPrice[] {
   return data;
 }
 
-export function getMarketRef(
+export function getMarketRefBySizeTier(
   marketPrices: MarketPrice[],
-  rimSizeMin: number,
-  rimSizeMax: number,
+  sizeTier: 'S' | 'M' | 'L',
 ): MarketPrice | undefined {
-  if (rimSizeMax <= 15) return marketPrices.find((m) => m.category === 'small');
-  if (rimSizeMin >= 16 && rimSizeMax <= 17)
-    return marketPrices.find((m) => m.category === 'medium');
-  if (rimSizeMin >= 18) return marketPrices.find((m) => m.category === 'large');
+  if (sizeTier === 'S') return marketPrices.find((m) => m.category === 'small');
+  if (sizeTier === 'M') return marketPrices.find((m) => m.category === 'medium');
+  if (sizeTier === 'L') return marketPrices.find((m) => m.category === 'large');
   return undefined;
 }

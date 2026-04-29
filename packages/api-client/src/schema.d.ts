@@ -439,6 +439,147 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/v1/providers/me/stations': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Lista stanowisk (z przypisanymi pracownikami) */
+    get: operations['StationsController_list'];
+    put?: never;
+    /** Utwórz stanowisko */
+    post: operations['StationsController_create'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/providers/me/stations/{id}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /** Zaktualizuj stanowisko (name, services, schedule) */
+    put: operations['StationsController_update'];
+    post?: never;
+    /** Usuń stanowisko */
+    delete: operations['StationsController_remove'];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/providers/me/stations/{id}/workers': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Przypisz pracownika do stanowiska */
+    post: operations['StationsController_assignWorker'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/providers/me/stations/{id}/workers/{workerId}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /** Zaktualizuj godziny zmiany pracownika na stanowisku */
+    put: operations['StationsController_updateShift'];
+    post?: never;
+    /** Odepnij pracownika od stanowiska */
+    delete: operations['StationsController_removeWorker'];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/providers/me/workers': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Lista pracowników (ze stanowiskami i urlopami) */
+    get: operations['WorkersController_list'];
+    put?: never;
+    /** Utwórz pracownika */
+    post: operations['WorkersController_create'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/providers/me/workers/{id}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /** Zaktualizuj pracownika (name, role) */
+    put: operations['WorkersController_update'];
+    post?: never;
+    /** Usuń pracownika */
+    delete: operations['WorkersController_remove'];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/providers/me/workers/{id}/leaves': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Dodaj urlop / nieobecność pracownika */
+    post: operations['WorkersController_addLeave'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/providers/me/workers/{id}/leaves/{leaveId}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /** Usuń urlop / nieobecność pracownika */
+    delete: operations['WorkersController_deleteLeave'];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -583,8 +724,8 @@ export interface components {
     PricingTierResponseDto: {
       id: string;
       providerId: string;
-      rimSizeMin: number;
-      rimSizeMax: number;
+      /** @enum {string} */
+      sizeTier: 'S' | 'M' | 'L';
       priceSwapPln: number;
       priceBalancingPerWheelPln?: number | null;
       travelFeeFirstKmPln: number;
@@ -592,15 +733,10 @@ export interface components {
     };
     CreatePricingTierDto: {
       /**
-       * @description Minimalny rozmiar felgi (cale)
-       * @example 13
+       * @description Tier rozmiaru felgi: S (≤R15), M (R16–R17), L (≥R18)
+       * @enum {string}
        */
-      rimSizeMin: number;
-      /**
-       * @description Maksymalny rozmiar felgi (cale)
-       * @example 15
-       */
-      rimSizeMax: number;
+      sizeTier: 'S' | 'M' | 'L';
       /**
        * @description Cena wymiany kompletu (PLN)
        * @example 120
@@ -710,6 +846,143 @@ export interface components {
     };
     RejectProviderDto: {
       reason?: string;
+    };
+    StationWorkerResponseDto: {
+      workerId: string;
+      workerName: string;
+      workerRole?: string | null;
+      shiftStart?: string | null;
+      shiftEnd?: string | null;
+    };
+    StationResponseDto: {
+      id: string;
+      providerId: string;
+      name: string;
+      services: ('SEASONAL_SWAP' | 'WHEEL_SWAP' | 'BALANCING' | 'PUNCTURE_REPAIR')[];
+      schedule: Record<string, never>;
+      workers: components['schemas']['StationWorkerResponseDto'][];
+      /** Format: date-time */
+      createdAt: string;
+    };
+    CreateStationDto: {
+      /** @example Stanowisko 1 */
+      name: string;
+      /** @default [] */
+      services: ('SEASONAL_SWAP' | 'WHEEL_SWAP' | 'BALANCING' | 'PUNCTURE_REPAIR')[];
+      /**
+       * @description DaySchedule[] — grafik tygodniowy (JSON)
+       * @example [
+       *       {
+       *         "dayOfWeek": 1,
+       *         "open": true,
+       *         "startTime": "08:00",
+       *         "endTime": "17:00"
+       *       }
+       *     ]
+       */
+      schedule: string[];
+    };
+    UpdateStationDto: {
+      /** @example Stanowisko 1 */
+      name?: string;
+      services?: ('SEASONAL_SWAP' | 'WHEEL_SWAP' | 'BALANCING' | 'PUNCTURE_REPAIR')[];
+      /**
+       * @description DaySchedule[] — grafik tygodniowy (JSON)
+       * @example [
+       *       {
+       *         "dayOfWeek": 1,
+       *         "open": true,
+       *         "startTime": "08:00",
+       *         "endTime": "17:00"
+       *       }
+       *     ]
+       */
+      schedule?: string[];
+    };
+    AssignWorkerDto: {
+      /** @description ID pracownika do przypisania */
+      workerId: string;
+      /**
+       * @description Godzina rozpoczęcia zmiany (HH:MM)
+       * @example 08:00
+       */
+      shiftStart?: string;
+      /**
+       * @description Godzina zakończenia zmiany (HH:MM)
+       * @example 16:00
+       */
+      shiftEnd?: string;
+    };
+    UpdateShiftDto: {
+      /**
+       * @description Godzina rozpoczęcia zmiany (HH:MM)
+       * @example 08:00
+       */
+      shiftStart?: string;
+      /**
+       * @description Godzina zakończenia zmiany (HH:MM)
+       * @example 16:00
+       */
+      shiftEnd?: string;
+    };
+    WorkerStationResponseDto: {
+      stationId: string;
+      stationName: string;
+      shiftStart?: string | null;
+      shiftEnd?: string | null;
+    };
+    LeaveResponseDto: {
+      id: string;
+      /** @enum {string} */
+      type: 'VACATION' | 'UNPAID' | 'SICK' | 'OTHER';
+      /** Format: date-time */
+      startDate: string;
+      /** Format: date-time */
+      endDate: string;
+      note?: string | null;
+      /** Format: date-time */
+      createdAt: string;
+    };
+    WorkerResponseDto: {
+      id: string;
+      providerId: string;
+      name: string;
+      role?: string | null;
+      /** Format: date-time */
+      createdAt: string;
+      stations: components['schemas']['WorkerStationResponseDto'][];
+      leaves: components['schemas']['LeaveResponseDto'][];
+    };
+    CreateWorkerDto: {
+      /** @example Jan Kowalski */
+      name: string;
+      /** @example Mechanik */
+      role?: string;
+    };
+    UpdateWorkerDto: {
+      /** @example Jan Kowalski */
+      name?: string;
+      /** @example Mechanik */
+      role?: string;
+    };
+    CreateLeaveDto: {
+      /**
+       * @example VACATION
+       * @enum {string}
+       */
+      type: 'VACATION' | 'UNPAID' | 'SICK' | 'OTHER';
+      /**
+       * @description Data rozpoczęcia (YYYY-MM-DD)
+       * @example 2025-07-01
+       */
+      startDate: string;
+      /**
+       * @description Data zakończenia (YYYY-MM-DD)
+       * @example 2025-07-14
+       */
+      endDate: string;
+      /** @example Urlop wypoczynkowy */
+      note?: string;
     };
   };
   responses: never;
@@ -1566,6 +1839,294 @@ export interface operations {
       };
       /** @description Brak uprawnień */
       403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  StationsController_list: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['StationResponseDto'][];
+        };
+      };
+    };
+  };
+  StationsController_create: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CreateStationDto'];
+      };
+    };
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['StationResponseDto'];
+        };
+      };
+    };
+  };
+  StationsController_update: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['UpdateStationDto'];
+      };
+    };
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['StationResponseDto'];
+        };
+      };
+    };
+  };
+  StationsController_remove: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  StationsController_assignWorker: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['AssignWorkerDto'];
+      };
+    };
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['StationResponseDto'];
+        };
+      };
+    };
+  };
+  StationsController_updateShift: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+        workerId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['UpdateShiftDto'];
+      };
+    };
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['StationResponseDto'];
+        };
+      };
+    };
+  };
+  StationsController_removeWorker: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+        workerId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  WorkersController_list: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['WorkerResponseDto'][];
+        };
+      };
+    };
+  };
+  WorkersController_create: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CreateWorkerDto'];
+      };
+    };
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['WorkerResponseDto'];
+        };
+      };
+    };
+  };
+  WorkersController_update: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['UpdateWorkerDto'];
+      };
+    };
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['WorkerResponseDto'];
+        };
+      };
+    };
+  };
+  WorkersController_remove: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  WorkersController_addLeave: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CreateLeaveDto'];
+      };
+    };
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['WorkerResponseDto'];
+        };
+      };
+    };
+  };
+  WorkersController_deleteLeave: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+        leaveId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
         headers: {
           [name: string]: unknown;
         };

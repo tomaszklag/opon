@@ -3,12 +3,14 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Opony.app — 04 Rezerwacja potwierdzona · W:12.4</title>
+<title>Opony.app — 04 Rezerwacja wysłana · W:12.4</title>
 <!--
-  Screen: Rezerwacja potwierdzona (success)
+  Screen: Rezerwacja wysłana — stan PENDING (oczekiwanie na potwierdzenie serwisu)
   Ref:    docs/plan-sprintow.md → W:12.4
   US:     US-10 (potwierdzenie), US-07 (anulowanie), US-37 (SMS)
-  Tone:   industrial-dark · success glow + ticket-style card z nacięciami po bokach
+  Tone:   industrial-dark · amber pending (nie success green) · ticket-style card
+  Note:   Klient widzi ten ekran zaraz po złożeniu rezerwacji.
+          Provider musi ją potwierdzić — po potwierdzeniu klient dostaje SMS.
 -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -182,7 +184,7 @@
     gap: 24px;
   }
 
-  /* ====== SUCCESS HERO ====== */
+  /* ====== PENDING HERO ====== */
   .success-hero {
     display: flex;
     flex-direction: column;
@@ -191,24 +193,59 @@
     padding: 16px 0 8px;
     text-align: center;
   }
-  .check-badge {
+  .pending-badge {
     width: 84px;
     height: 84px;
     border-radius: 50%;
-    background: var(--accent);
+    background: var(--surface-raised);
+    border: 2px solid var(--accent-border);
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    color: var(--text-on-accent);
+    color: var(--accent);
     box-shadow:
       0 0 0 10px var(--accent-muted),
-      0 0 0 20px rgba(255, 107, 26, 0.06),
-      0 16px 40px rgba(255, 107, 26, 0.5);
+      0 0 0 20px rgba(255, 107, 26, 0.04),
+      0 16px 40px rgba(255, 107, 26, 0.25);
     animation: popIn 480ms cubic-bezier(0.2, 1.2, 0.3, 1) both;
   }
+  @keyframes pendingSpin {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
+  }
+  .pending-badge svg { animation: pendingSpin 4000ms linear infinite; }
   @keyframes popIn {
     from { transform: scale(0.5); opacity: 0; }
     to   { transform: scale(1); opacity: 1; }
+  }
+
+  .pending-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: rgba(255, 176, 32, 0.14);
+    border: 1px solid rgba(255, 176, 32, 0.34);
+    color: var(--warning);
+    font-family: var(--font-body);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    animation: riseIn 520ms ease 80ms both;
+  }
+  .pending-chip::before {
+    content: '';
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--warning);
+    box-shadow: 0 0 6px rgba(255, 176, 32, 0.6);
+    animation: pendingPulse 1400ms ease-in-out infinite;
+  }
+  @keyframes pendingPulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
   }
 
   .success-title {
@@ -231,7 +268,7 @@
     to   { opacity: 1; transform: translateY(0); }
   }
 
-  /* Stepper 3/3 done — minified */
+  /* Stepper 3/3 — krok 3 w toku (pending) */
   .stepper-mini {
     display: flex;
     align-items: center;
@@ -251,6 +288,11 @@
     font-size: 10px;
     font-weight: 800;
   }
+  .sm-dot.pending {
+    background: var(--surface-raised);
+    border: 2px solid var(--warning);
+    color: var(--warning);
+  }
   .sm-line {
     width: 28px;
     height: 2px;
@@ -263,7 +305,7 @@
     font-size: 10px;
     letter-spacing: 1.2px;
     text-transform: uppercase;
-    color: var(--accent);
+    color: var(--text-muted);
     font-weight: 700;
   }
 
@@ -542,7 +584,7 @@
 
   <header class="canvas-label">
     <span class="film-strip">OPONY — 04</span>
-    <span class="slug">rezerwacja potwierdzona · success</span>
+    <span class="slug">rezerwacja wysłana · pending</span>
     <span class="canvas-meta"><span class="pulse"></span>W:12.4 · US-10 / 07</span>
   </header>
 
@@ -560,14 +602,15 @@
     <div class="screen">
       <div class="wrap">
 
-        <!-- SUCCESS HERO -->
+        <!-- PENDING HERO -->
         <section class="success-hero" aria-labelledby="success-title">
-          <div class="check-badge" aria-hidden="true">
-            <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7"/></svg>
+          <div class="pending-badge" aria-hidden="true">
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
           </div>
+          <span class="pending-chip">Oczekuje na potwierdzenie</span>
           <h1 class="success-title" id="success-title">Rezerwacja wysłana</h1>
-          <p class="success-sub">Provider otrzymał SMS i potwierdzi w ciągu 2h. Przypomnienie wyślemy 24 h przed wizytą.</p>
-          <div class="stepper-mini" role="progressbar" aria-valuemin="1" aria-valuemax="2" aria-valuenow="2">
+          <p class="success-sub">Serwis potwierdzi w ciągu 2h. Po potwierdzeniu dostaniesz SMS z finalnym terminem.</p>
+          <div class="stepper-mini" role="progressbar" aria-valuemin="1" aria-valuemax="3" aria-valuenow="3">
             <span class="sm-dot" aria-hidden="true">
               <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7"/></svg>
             </span>
@@ -575,7 +618,11 @@
             <span class="sm-dot" aria-hidden="true">
               <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7"/></svg>
             </span>
-            <span class="sm-label">2 / 2</span>
+            <span class="sm-line"></span>
+            <span class="sm-dot pending" aria-hidden="true">
+              <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5"/></svg>
+            </span>
+            <span class="sm-label">3 / 3</span>
           </div>
         </section>
 
@@ -641,7 +688,7 @@
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
               </span>
               <div class="tic-col">
-                <div class="tic-main">Po wizycie · <span class="tic-price">180 zł</span> <span style="font-weight: 500; color: var(--text-secondary); font-size: 12px;">(szacunek)</span></div>
+                <div class="tic-main">Po wizycie · <span class="tic-price">200 zł</span> <span style="font-weight: 500; color: var(--text-secondary); font-size: 12px;">(szacunek)</span></div>
                 <div class="tic-sub">
                   <span>Zapłacisz providerowi bezpośrednio — gotówka lub przelew. Aplikacja darmowa w pilocie.</span>
                 </div>
@@ -656,7 +703,7 @@
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h18v14H3z"/><path d="m3 5 9 8 9-8"/></svg>
           </span>
           <div class="notice-col">
-            <strong>SMS wysłany</strong> na +48&nbsp;*** *** 345. Sprawdź skrzynkę.
+            <strong>SMS z potwierdzeniem</strong> wyślemy na +48&nbsp;*** *** 345 gdy serwis zatwierdzi termin.
           </div>
         </div>
 
@@ -665,7 +712,7 @@
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v5"/><circle cx="12" cy="16" r="0.5" fill="currentColor"/></svg>
           </span>
           <div class="notice-col">
-            <strong>Anulowanie do 2 h przed wizytą</strong> = pełny zwrot na konto. Później zwrot nie jest możliwy.
+            <strong>Możesz anulować bezpłatnie</strong> do czasu potwierdzenia przez serwis lub do 2 h przed wizytą.
           </div>
         </div>
 
@@ -692,11 +739,11 @@
   <footer class="caption">
     <div>
       <strong>Sekcje</strong>
-      Success hero (animowany ✓ badge + title + stepper 3/3) · Ticket-card z nacięciami bocznymi (kod rezerwacji + kopiuj + 4 rzędy szczegółów oddzielone dashed) · 2 notices (SMS, anulowanie) · Akcje: primary „Dodaj do kalendarza", secondary „Wróć", danger-link „Anuluj"
+      Pending hero (animowany zegar + chip „Oczekuje na potwierdzenie" + stepper 3/3 z pending dot) · Ticket-card z nacięciami bocznymi (kod + kopiuj + 4 rzędy: data / provider / adres / płatność) · 2 notices (SMS po potwierdzeniu, anulowanie bezpłatne) · Akcje: primary „Dodaj do kalendarza", secondary „Wróć", danger-link „Anuluj"
     </div>
     <div>
       <strong>Detale</strong>
-      popIn animacja checka · <em>Za 3 dni</em> urgent chip na dacie · <em>Opłacone</em> w success green · kod <em>OPN-4F2K</em> w mono 28px z amber dywizem · perforowane nacięcia na bokach karty
+      Zegar obraca się (pendingSpin CSS) · chip warning „Oczekuje" z pulsującą kropką · 3. dot steppera ma styl warning-outline (nie filled) · kod <em>OPN-4F2K</em> w mono z amber dywizem · cena 200 zł
     </div>
     <div style="grid-column: 1 / -1; border-top: 1px solid var(--border); padding-top: 12px; margin-top: 4px;">
       <strong>DS Components</strong>

@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { WorkingHours } from '@prisma/client';
+import { Prisma, WorkingHours } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
 type UpsertPayload = {
@@ -9,7 +9,7 @@ type UpsertPayload = {
   closeTime: Date;
   slotMinutes: number;
   workstations: number;
-  blocks: unknown | null;
+  blocks: Prisma.NullableJsonNullValueInput | Prisma.InputJsonValue;
 };
 
 @Injectable()

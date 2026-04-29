@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Opony Panel — B2B-07 Stanowiska</title>
+<!--
+  Screen: Panel providera — Stanowiska (nowy ekran)
+  Ref:    docs/plan-sprintow.md → W:13.x
+  Tone:   industrial-dark · lista stanowisk + weekly grid
+  Model:
+    Stanowisko = fizyczne miejsce pracy (lifter, wyważarka itp.)
+      · przypisany pracownik (zajętość, grafik)
+      · lista usług które to stanowisko może wykonać
+      · własny grafik tygodniowy (niezależny od godzin warsztatu)
+    Slot engine: znajdź stanowisko które (a) potrafi wykonać usługę
+      (b) ma pracownika dostępnego w oknie [start, start+duration]
+      (c) nie ma już innej rezerwacji
+    Godziny pracy (b2b-06c) → tylko godziny warsztatu + wyjątki.
+      Stepper stanowisk usunięty — capacity zarządzana tu.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Bebas+Neue&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#0A0B0E; --bg-tint-top:#12141A; --surface:#14171D;
+    --surface-raised:#1B1E26;
+    --border:#262A34; --border-strong:#363B47;
+    --hairline:rgba(255,255,255,0.06);
+    --text-primary:#F5F4EF; --text-secondary:#9EA2AD;
+    --text-muted:#60646F; --text-on-accent:#0A0B0E;
+    --accent:#FF6B1A; --accent-hover:#FF8039;
+    --accent-muted:rgba(255,107,26,0.14); --accent-border:rgba(255,107,26,0.32);
+    --accent-glow:rgba(255,107,26,0.45);
+    --success:#2EE0A0; --success-muted:rgba(46,224,160,0.14); --success-border:rgba(46,224,160,0.32);
+    --warning:#FFB020; --warning-muted:rgba(255,176,32,0.14); --warning-border:rgba(255,176,32,0.32);
+    --font-display:'Bebas Neue',sans-serif;
+    --font-body:'Archivo',system-ui,sans-serif;
+    --font-mono:'JetBrains Mono',monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{height:100%;overflow-x:hidden;max-width:100vw;}
+  body{
+    --desktop-scale:min(1,calc((100vh - 200px)/900px),calc((100vw - 80px)/1440px));
+    font-family:var(--font-body);background:var(--bg);color:var(--text-primary);
+    -webkit-font-smoothing:antialiased;
+    background-image:
+      radial-gradient(ellipse 70% 50% at 50% 0%,rgba(255,107,26,0.05) 0%,transparent 60%),
+      linear-gradient(180deg,var(--bg-tint-top) 0%,var(--bg) 30%);
+    background-attachment:fixed;
+    min-height:100vh;display:flex;flex-direction:column;
+    align-items:center;padding:40px 40px 60px;gap:24px;
+  }
+  @keyframes pulse{0%,100%{box-shadow:0 0 0 4px var(--accent-muted);opacity:1;}50%{box-shadow:0 0 0 8px transparent;opacity:0.6;}}
+
+  /* ── Canvas chrome ── */
+  .canvas-label{width:100%;max-width:1440px;display:grid;grid-template-columns:auto 1fr auto;align-items:baseline;gap:20px;padding-bottom:14px;border-bottom:1px solid var(--border);}
+  .film-strip{font-family:var(--font-display);font-size:32px;letter-spacing:3px;line-height:1;}
+  .slug{font-family:var(--font-mono);font-size:11px;color:var(--text-muted);letter-spacing:1.5px;text-transform:uppercase;border-left:1px solid var(--border);padding-left:18px;}
+  .canvas-meta{font-family:var(--font-mono);font-size:11px;color:var(--text-secondary);letter-spacing:1px;display:inline-flex;align-items:center;gap:10px;}
+  .canvas-meta .pulse{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 4px var(--accent-muted);animation:pulse 1800ms ease-in-out infinite;}
+
+  /* ── Desktop frame ── */
+  .desktop-frame{width:1440px;height:900px;background:var(--bg);border-radius:14px;border:1px solid #1C1E24;box-shadow:0 40px 120px rgba(0,0,0,0.6),0 20px 40px rgba(0,0,0,0.4);overflow:hidden;flex-shrink:0;transform:scale(var(--desktop-scale));transform-origin:top center;margin-bottom:calc((var(--desktop-scale)-1)*900px);display:flex;flex-direction:column;}
+  .browser-chrome{height:44px;background:linear-gradient(180deg,#1A1D23,#14171D);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 16px;gap:16px;flex-shrink:0;}
+  .traffic-lights{display:inline-flex;gap:8px;}
+  .light{width:12px;height:12px;border-radius:50%;}
+  .light.red{background:#FF5F57;}.light.yellow{background:#FEBC2E;}.light.green{background:#28C840;}
+  .browser-tab{display:inline-flex;align-items:center;gap:8px;padding:6px 14px;background:var(--surface);border:1px solid var(--border);border-bottom:none;border-radius:8px 8px 0 0;font-size:12px;color:var(--text-primary);position:relative;top:6px;}
+  .favicon{width:14px;height:14px;border-radius:3px;background:var(--accent);display:inline-flex;align-items:center;justify-content:center;font-family:var(--font-display);font-size:9px;color:var(--text-on-accent);}
+  .browser-address{flex:1;max-width:480px;display:inline-flex;align-items:center;gap:8px;padding:6px 14px;background:var(--bg);border:1px solid var(--border);border-radius:8px;font-family:var(--font-mono);font-size:12px;color:var(--text-secondary);}
+
+  /* ── App layout ── */
+  .app-root{flex:1;min-height:0;display:grid;grid-template-columns:220px 1fr;}
+  .sidebar{background:var(--surface);border-right:1px solid var(--border);padding:20px 14px 14px;display:flex;flex-direction:column;gap:6px;}
+  .sb-brand{display:flex;align-items:center;gap:10px;padding:8px 10px 18px;}
+  .wordmark{font-family:var(--font-display);font-size:26px;letter-spacing:3px;line-height:1;color:var(--text-primary);display:inline-flex;align-items:baseline;gap:3px;}
+  .dot-accent{display:inline-block;width:6px;height:6px;background:var(--accent);border-radius:50%;transform:translateY(-2px);box-shadow:0 0 10px var(--accent-glow);}
+  .panel-tag{font-family:var(--font-mono);font-size:9px;padding:2px 5px;border-radius:4px;background:var(--bg);border:1px solid var(--border);color:var(--text-muted);letter-spacing:1px;text-transform:uppercase;font-weight:700;margin-left:auto;}
+  .sb-section-label{font-size:10px;font-weight:800;letter-spacing:1.3px;text-transform:uppercase;color:var(--text-muted);padding:8px 10px 4px;}
+  .sb-item{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;background:transparent;border:1px solid transparent;color:var(--text-secondary);font-size:13px;font-weight:600;cursor:pointer;text-align:left;width:100%;}
+  .sb-item.active{background:var(--accent-muted);color:var(--accent);border-color:var(--accent-border);}
+  .sb-badge{margin-left:auto;min-width:20px;height:18px;padding:0 6px;background:var(--accent);color:var(--text-on-accent);font-family:var(--font-mono);font-size:10px;font-weight:700;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;}
+  .sb-spacer{flex:1;}
+  .sb-user{display:flex;align-items:center;gap:10px;padding:10px;background:var(--bg);border:1px solid var(--border);border-radius:10px;}
+  .sb-avatar{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,#FF8039,#C73F0A);display:inline-flex;align-items:center;justify-content:center;font-family:var(--font-display);font-size:15px;color:var(--text-on-accent);letter-spacing:1.5px;flex-shrink:0;}
+  .sb-user-col{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;}
+  .sb-user-name{font-size:12px;font-weight:700;color:var(--text-primary);line-height:1.1;}
+  .sb-user-role{font-family:var(--font-mono);font-size:9px;color:var(--accent);letter-spacing:0.5px;text-transform:uppercase;font-weight:700;}
+
+  .main{display:flex;flex-direction:column;overflow:hidden;}
+  .topbar{height:52px;border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 28px;gap:16px;flex-shrink:0;}
+  .tb-breadcrumb{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--text-muted);font-weight:600;}
+  .tb-breadcrumb .sep{color:var(--border-strong);}
+  .tb-breadcrumb .current{color:var(--text-primary);font-weight:700;}
+  .tb-spacer{flex:1;}
+  .saved-chip{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:5px;background:var(--success-muted);border:1px solid var(--success-border);color:var(--success);font-size:10px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase;}
+  .saved-chip::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--success);}
+  .tb-btn{display:inline-flex;align-items:center;gap:7px;padding:7px 12px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--text-primary);}
+  .tb-btn.primary{background:var(--accent);color:var(--text-on-accent);border-color:var(--accent);font-weight:800;box-shadow:0 4px 12px rgba(255,107,26,0.3);}
+
+  /* ── Content layout ── */
+  .content{flex:1;min-height:0;overflow-y:auto;padding:20px 28px 28px;scrollbar-width:thin;display:grid;grid-template-columns:1fr 360px;gap:22px;align-items:start;}
+  .content::-webkit-scrollbar{width:6px;}
+  .content::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+  .col-form{display:flex;flex-direction:column;gap:14px;}
+
+  .page-hero{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;padding-bottom:14px;border-bottom:1px solid var(--border);}
+  .page-title{font-family:var(--font-display);font-size:38px;letter-spacing:2px;line-height:1;}
+  .page-sub{font-size:12px;color:var(--text-secondary);margin-top:6px;display:inline-flex;align-items:center;gap:10px;}
+  .stat-pill{display:inline-flex;align-items:center;gap:5px;padding:3px 8px;border-radius:5px;background:var(--accent-muted);border:1px solid var(--accent-border);font-family:var(--font-mono);font-size:11px;font-weight:700;color:var(--accent);}
+
+  /* ── Stanowisko card ── */
+  .stn-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;position:relative;transition:border-color 0.14s;}
+  .stn-card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:var(--hairline);border-radius:14px 14px 0 0;pointer-events:none;}
+
+  /* Active/expanded card gets accent left bar */
+  .stn-card.expanded{border-color:var(--accent-border);}
+  .stn-card.expanded::after{content:'';position:absolute;left:-1px;top:20px;bottom:20px;width:3px;background:var(--accent);border-radius:2px;}
+
+  /* ── Card header (always visible) ── */
+  .stn-header{display:flex;align-items:center;gap:12px;padding:13px 16px;cursor:pointer;}
+  .worker-avatar{width:36px;height:36px;border-radius:9px;display:inline-flex;align-items:center;justify-content:center;font-family:var(--font-display);font-size:14px;font-weight:700;letter-spacing:1px;flex-shrink:0;}
+  .av-orange{background:linear-gradient(135deg,#FF8039,#C73F0A);color:var(--text-on-accent);}
+  .av-blue{background:linear-gradient(135deg,#3B82F6,#1D4ED8);color:#fff;}
+  .av-green{background:linear-gradient(135deg,#2EE0A0,#059669);color:#0A0B0E;}
+  .av-purple{background:linear-gradient(135deg,#A855F7,#7C3AED);color:#fff;}
+  .av-empty{background:var(--surface-raised);border:1px dashed var(--border-strong);color:var(--text-muted);}
+
+  .stn-header-info{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px;}
+  .stn-name{font-family:var(--font-display);font-size:18px;letter-spacing:2px;color:var(--text-primary);line-height:1;}
+  .stn-worker{font-size:12px;color:var(--text-secondary);font-weight:600;}
+  .stn-worker .unassigned{color:var(--text-muted);font-style:italic;}
+
+  .stn-svc-pills{display:inline-flex;gap:5px;flex-wrap:wrap;align-items:center;}
+  .svc-pill{display:inline-flex;align-items:center;padding:2px 8px;border-radius:5px;background:var(--bg);border:1px solid var(--border);font-size:10px;font-weight:600;color:var(--text-secondary);}
+  .svc-pill.active{background:var(--accent-muted);border-color:var(--accent-border);color:var(--accent);}
+
+  .stn-status{display:inline-flex;align-items:center;gap:5px;font-family:var(--font-mono);font-size:10px;font-weight:700;white-space:nowrap;}
+  .status-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+  .status-dot.active{background:var(--success);}
+  .status-dot.inactive{background:var(--border-strong);}
+
+  .stn-chevron{color:var(--text-muted);flex-shrink:0;transition:transform 0.2s;}
+  .stn-card.expanded .stn-chevron{transform:rotate(180deg);}
+
+  /* ── Card body (edit state) ── */
+  .stn-body{padding:0 16px 16px;display:flex;flex-direction:column;gap:12px;border-top:1px solid var(--border);}
+
+  .field-row{display:flex;align-items:center;gap:10px;}
+  .field-label{font-size:10px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-muted);width:100px;flex-shrink:0;}
+
+  /* Worker select */
+  .worker-select{display:inline-flex;align-items:center;gap:8px;padding:7px 12px;background:var(--surface-raised);border:1px solid var(--border-strong);border-radius:8px;font-size:13px;font-weight:600;color:var(--text-primary);cursor:pointer;flex:1;}
+  .worker-select .chev{margin-left:auto;color:var(--text-muted);}
+
+  /* Services checklist */
+  .svc-check-list{display:flex;flex-direction:column;gap:6px;flex:1;}
+  .svc-check-item{display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--bg);border:1px solid var(--border);border-radius:9px;}
+  .svc-check-item.checked{border-color:var(--accent-border);background:var(--accent-muted);}
+  .checkbox{width:18px;height:18px;border-radius:5px;border:1px solid var(--border-strong);background:var(--surface-raised);display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .checkbox.checked{background:var(--accent);border-color:var(--accent);}
+  .svc-check-name{font-size:12px;font-weight:700;color:var(--text-primary);flex:1;}
+  .svc-check-dur{font-family:var(--font-mono);font-size:10px;color:var(--text-muted);}
+
+  /* Weekly schedule per stanowisko */
+  .sched-grid{display:flex;flex-direction:column;gap:5px;}
+  .sched-row{display:grid;grid-template-columns:48px 38px 110px 110px 1fr;align-items:center;gap:8px;padding:7px 10px;background:var(--bg);border:1px solid var(--border);border-radius:8px;}
+  .sched-day{font-family:var(--font-display);font-size:14px;letter-spacing:1.5px;color:var(--text-secondary);line-height:1;}
+  .toggle-sm{width:34px;height:19px;border-radius:999px;background:var(--border);border:1px solid var(--border-strong);position:relative;cursor:pointer;flex-shrink:0;}
+  .toggle-sm::after{content:'';position:absolute;top:2px;left:2px;width:13px;height:13px;border-radius:50%;background:var(--text-secondary);}
+  .toggle-sm.on{background:var(--accent);border-color:var(--accent);}
+  .toggle-sm.on::after{left:17px;background:var(--text-on-accent);}
+  .time-input{display:inline-flex;align-items:center;background:var(--surface-raised);border:1px solid var(--border-strong);border-radius:7px;padding:5px 8px;gap:5px;}
+  .time-input .lbl{font-size:9px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);}
+  .time-input input{width:44px;background:transparent;border:none;outline:none;color:var(--text-primary);font-family:var(--font-mono);font-weight:700;font-size:12px;text-align:center;}
+  .sched-closed{font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;grid-column:3/-1;}
+  .sched-note{font-family:var(--font-mono);font-size:10px;color:var(--text-muted);}
+  .sched-note.warn{color:var(--warning);}
+
+  /* Collapsed mini schedule */
+  .stn-mini-sched{display:flex;gap:4px;align-items:center;}
+  .mini-day{display:flex;flex-direction:column;align-items:center;gap:2px;}
+  .mini-day-label{font-family:var(--font-display);font-size:10px;letter-spacing:1px;color:var(--text-muted);line-height:1;}
+  .mini-day-bar{width:28px;height:6px;border-radius:3px;background:var(--border);}
+  .mini-day-bar.on{background:var(--accent);opacity:0.7;}
+  .mini-day-bar.off{background:var(--border);}
+
+  /* Add stanowisko btn */
+  .add-stn-btn{display:flex;align-items:center;justify-content:center;gap:8px;padding:14px;border:1px dashed var(--accent-border);border-radius:14px;background:transparent;color:var(--accent);font-size:13px;font-weight:700;cursor:pointer;width:100%;}
+
+  /* ── Right: weekly grid ── */
+  .col-preview{position:sticky;top:0;display:flex;flex-direction:column;gap:12px;}
+  .preview-panel{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:12px;position:relative;}
+  .preview-panel::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:var(--hairline);border-radius:14px 14px 0 0;pointer-events:none;}
+  .preview-head{display:flex;align-items:baseline;justify-content:space-between;}
+  .preview-title{font-family:var(--font-display);font-size:17px;letter-spacing:1.8px;color:var(--text-primary);line-height:1;}
+  .preview-sub{font-family:var(--font-mono);font-size:10px;color:var(--text-muted);}
+
+  /* Weekly grid */
+  .week-grid{display:flex;flex-direction:column;gap:2px;}
+  .week-grid-head{display:grid;grid-template-columns:80px repeat(7,1fr);gap:4px;padding-bottom:4px;}
+  .wg-day-label{font-family:var(--font-display);font-size:11px;letter-spacing:1px;color:var(--text-muted);text-align:center;line-height:1;}
+  .wg-day-label.today{color:var(--accent);}
+  .week-grid-row{display:grid;grid-template-columns:80px repeat(7,1fr);gap:4px;align-items:center;}
+  .wg-stn-name{font-size:10px;font-weight:700;color:var(--text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:4px;}
+  .wg-cell{height:22px;border-radius:4px;background:var(--bg);border:1px solid var(--border);position:relative;overflow:hidden;}
+  .wg-bar{position:absolute;top:0;bottom:0;background:linear-gradient(90deg,var(--accent),var(--accent-hover));border-radius:3px;box-shadow:0 0 6px var(--accent-glow);opacity:0.75;}
+  .wg-cell.off{background:var(--bg);}
+  .wg-cell.off .wg-bar{display:none;}
+  .wg-row-sep{height:1px;background:var(--border);grid-column:1/-1;margin:3px 0;}
+
+  /* Coverage summary */
+  .coverage-list{display:flex;flex-direction:column;gap:6px;}
+  .coverage-item{display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--bg);border:1px solid var(--border);border-radius:9px;}
+  .coverage-svc{flex:1;font-size:12px;font-weight:600;color:var(--text-primary);}
+  .coverage-count{font-family:var(--font-mono);font-size:11px;font-weight:700;color:var(--text-secondary);}
+  .coverage-dots{display:inline-flex;gap:3px;}
+  .cdot{width:8px;height:8px;border-radius:50%;background:var(--accent);}
+  .cdot.off{background:var(--border);}
+
+  .info-note{display:flex;align-items:flex-start;gap:9px;padding:9px 11px;background:transparent;border:1px dashed var(--border);border-radius:9px;font-size:11px;line-height:1.5;color:var(--text-muted);}
+  .info-note svg{color:var(--accent);flex-shrink:0;margin-top:1px;}
+  .info-note strong{color:var(--text-primary);}
+
+  .caption{max-width:1440px;width:100%;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;padding-top:12px;border-top:1px solid var(--border);font-family:var(--font-mono);font-size:11px;color:var(--text-muted);letter-spacing:0.5px;}
+  .caption strong{color:var(--text-secondary);font-weight:500;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:1.2px;font-size:10px;}
+  .caption em{color:var(--accent);font-style:normal;}
+
+  /* ── Multi-worker assignment ── */
+  .avatar-stack{display:inline-flex;align-items:center;flex-shrink:0;}
+  .avatar-stack .worker-avatar{width:32px;height:32px;font-size:12px;border-radius:8px;border:2px solid var(--surface);}
+  .avatar-stack .worker-avatar:not(:first-child){margin-left:-10px;}
+  .workers-list{display:flex;flex-direction:column;gap:6px;flex:1;}
+  .worker-tag{display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--bg);border:1px solid var(--border);border-radius:9px;}
+  .worker-tag-info{flex:1;display:flex;flex-direction:column;gap:2px;}
+  .worker-tag-name{font-size:12px;font-weight:700;color:var(--text-primary);}
+  .worker-tag-shift{font-family:var(--font-mono);font-size:10px;color:var(--text-muted);}
+  .remove-worker-btn{width:22px;height:22px;border-radius:5px;background:transparent;border:1px solid var(--border);color:var(--text-muted);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;font-size:15px;line-height:1;}
+  .add-worker-btn{display:flex;align-items:center;gap:7px;padding:7px 10px;border:1px dashed var(--accent-border);border-radius:9px;background:transparent;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;}
+  .av-purple{background:linear-gradient(135deg,#A855F7,#7C3AED);color:#fff;}
+</style>
+</head>
+<body>
+
+<header class="canvas-label">
+  <span class="film-strip">OPONY PANEL — B2B-07</span>
+  <span class="slug">stanowiska · pracownicy · grafiki</span>
+  <span class="canvas-meta"><span class="pulse"></span>W:13.x · nowy ekran</span>
+</header>
+
+<main class="desktop-frame">
+  <div class="browser-chrome" aria-hidden="true">
+    <span class="traffic-lights"><span class="light red"></span><span class="light yellow"></span><span class="light green"></span></span>
+    <span class="browser-tab"><span class="favicon">O</span>Opony Panel — Stanowiska</span>
+    <span class="browser-address">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#2EE0A0" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+      <span>panel.opony.app</span><span style="color:var(--text-muted)">/settings/stations</span>
+    </span>
+  </div>
+
+  <div class="app-root">
+    <aside class="sidebar">
+      <div class="sb-brand"><div class="wordmark">OPONY<span class="dot-accent"></span></div><span class="panel-tag">PANEL</span></div>
+      <span class="sb-section-label">Dziś</span>
+      <button class="sb-item"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>Dashboard</button>
+      <button class="sb-item"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 10h18M8 2v4M16 2v4"/></svg>Kalendarz</button>
+      <button class="sb-item"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11H5a2 2 0 0 0-2 2v7h18v-7a2 2 0 0 0-2-2h-4M9 11V5a3 3 0 0 1 6 0v6M9 11h6"/></svg>Rezerwacje<span class="sb-badge">12</span></button>
+      <span class="sb-section-label">Warsztat</span>
+      <button class="sb-item"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>Cennik</button>
+      <button class="sb-item active"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/></svg>Stanowiska</button>
+      <button class="sb-item"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>Pracownicy</button>
+      <button class="sb-item"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Godziny pracy</button>
+      <div class="sb-spacer"></div>
+      <div class="sb-user"><div class="sb-avatar">MK</div><div class="sb-user-col"><span class="sb-user-name">MobilOpony Kasia</span><span class="sb-user-role">Provider · APPROVED</span></div></div>
+    </aside>
+
+    <section class="main">
+      <header class="topbar">
+        <nav class="tb-breadcrumb"><span>Panel</span><span class="sep">/</span><span>Warsztat</span><span class="sep">/</span><span class="current">Stanowiska</span></nav>
+        <span class="tb-spacer"></span>
+        <span class="saved-chip">Zapisano</span>
+        <button class="tb-btn">Przywróć</button>
+        <button class="tb-btn primary"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/></svg>Zapisz zmiany</button>
+      </header>
+
+      <div class="content">
+        <div class="col-form">
+
+          <header class="page-hero">
+            <div>
+              <h1 class="page-title">Stanowiska</h1>
+              <div class="page-sub">
+                <span class="stat-pill">4 stanowiska</span>
+                <span style="color:var(--text-secondary)">4 pracownicy · 1 stanowisko bez pracownika</span>
+              </div>
+            </div>
+            <button class="tb-btn"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>Zarządzaj pracownikami</button>
+          </header>
+
+          <!-- ── STANOWISKO 1 — expanded (edit state) ── -->
+          <div class="stn-card expanded">
+            <div class="stn-header">
+              <div class="avatar-stack">
+                <div class="worker-avatar av-orange">PK</div>
+                <div class="worker-avatar av-purple">KZ</div>
+              </div>
+              <div class="stn-header-info">
+                <div class="stn-name">Stanowisko 1</div>
+                <div class="stn-worker">Piotr Kowalski, Kamil Zając</div>
+              </div>
+              <div class="stn-svc-pills">
+                <span class="svc-pill active">Sezonowa wymiana</span>
+                <span class="svc-pill active">Wymiana kół</span>
+                <span class="svc-pill active">Wyważanie</span>
+              </div>
+              <div class="stn-status" style="margin-left:12px;color:var(--success);">
+                <span class="status-dot active"></span>aktywne
+              </div>
+              <svg class="stn-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+            </div>
+
+            <div class="stn-body">
+              <!-- Workers (multi) -->
+              <div class="field-row" style="align-items:flex-start;">
+                <span class="field-label" style="padding-top:6px;">Pracownicy</span>
+                <div class="workers-list">
+                  <div class="worker-tag">
+                    <div class="worker-avatar av-orange" style="width:28px;height:28px;font-size:11px;border-radius:7px;flex-shrink:0;">PK</div>
+                    <div class="worker-tag-info">
+                      <span class="worker-tag-name">Piotr Kowalski</span>
+                      <span class="worker-tag-shift">Pon–Pt · 08:00–14:00</span>
+                    </div>
+                    <button class="remove-worker-btn">×</button>
+                  </div>
+                  <div class="worker-tag">
+                    <div class="worker-avatar av-purple" style="width:28px;height:28px;font-size:11px;border-radius:7px;flex-shrink:0;">KZ</div>
+                    <div class="worker-tag-info">
+                      <span class="worker-tag-name">Kamil Zając</span>
+                      <span class="worker-tag-shift">Pon–Pt · 13:00–19:00</span>
+                    </div>
+                    <button class="remove-worker-btn">×</button>
+                  </div>
+                  <button class="add-worker-btn">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+                    Przypisz pracownika
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Services -->
+              <div class="field-row" style="align-items:flex-start;">
+                <span class="field-label" style="padding-top:6px;">Usługi</span>
+                <div class="svc-check-list">
+                  <div class="svc-check-item checked">
+                    <div class="checkbox checked"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
+                    <span class="svc-check-name">Sezonowa wymiana opon</span>
+                    <span class="svc-check-dur">15 min/koło</span>
+                  </div>
+                  <div class="svc-check-item checked">
+                    <div class="checkbox checked"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
+                    <span class="svc-check-name">Wymiana kół</span>
+                    <span class="svc-check-dur">7 min/koło</span>
+                  </div>
+                  <!-- Fix #4: Wyważanie OFF w cenniku → grayed, nieklikalny -->
+                  <div class="svc-check-item" style="opacity:0.5;cursor:not-allowed;">
+                    <div class="checkbox" style="background:var(--border);border-color:var(--border);cursor:not-allowed;"></div>
+                    <span class="svc-check-name" style="color:var(--text-muted);">Wyważanie kół</span>
+                    <span class="svc-check-dur">8 min/koło</span>
+                    <span style="margin-left:auto;padding:2px 6px;border-radius:4px;background:var(--warning-muted);border:1px solid var(--warning-border);color:var(--warning);font-family:var(--font-mono);font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;white-space:nowrap;">OFF w cenniku</span>
+                  </div>
+                  <div class="svc-check-item">
+                    <div class="checkbox"></div>
+                    <span class="svc-check-name" style="color:var(--text-muted);">Naprawa opony</span>
+                    <span class="svc-check-dur">~20 min flat</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Fix #2: overlap info + booking-unit rule -->
+              <div class="info-note" style="background:var(--warning-muted);border-color:var(--warning-border);border-style:solid;">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--warning)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/></svg>
+                <span style="font-size:10px;color:var(--warning);">Nakładające się zmiany 13:00–14:00 — <strong style="color:var(--warning);">stanowisko obsługuje 1 rezerwację naraz</strong>, niezależnie od liczby pracowników. Slot engine blokuje drugie okno automatycznie.</span>
+              </div>
+
+              <!-- Weekly schedule -->
+              <div class="field-row" style="align-items:flex-start;">
+                <span class="field-label" style="padding-top:8px;">Grafik</span>
+                <div class="sched-grid" style="flex:1;">
+                  <div class="sched-row">
+                    <span class="sched-day">PON</span>
+                    <span class="toggle-sm on"></span>
+                    <label class="time-input"><span class="lbl">Od</span><input type="time" value="08:00"/></label>
+                    <label class="time-input"><span class="lbl">Do</span><input type="time" value="16:00"/></label>
+                    <span class="sched-note">8 h</span>
+                  </div>
+                  <div class="sched-row">
+                    <span class="sched-day">WT</span>
+                    <span class="toggle-sm on"></span>
+                    <label class="time-input"><span class="lbl">Od</span><input type="time" value="08:00"/></label>
+                    <label class="time-input"><span class="lbl">Do</span><input type="time" value="16:00"/></label>
+                    <span class="sched-note">8 h</span>
+                  </div>
+                  <div class="sched-row" style="opacity:0.5;">
+                    <span class="sched-day">ŚR</span>
+                    <span class="toggle-sm"></span>
+                    <span class="sched-closed">— wolne —</span>
+                  </div>
+                  <div class="sched-row">
+                    <span class="sched-day">CZW</span>
+                    <span class="toggle-sm on"></span>
+                    <label class="time-input"><span class="lbl">Od</span><input type="time" value="08:00"/></label>
+                    <label class="time-input"><span class="lbl">Do</span><input type="time" value="16:00"/></label>
+                    <span class="sched-note">8 h</span>
+                  </div>
+                  <div class="sched-row">
+                    <span class="sched-day">PT</span>
+                    <span class="toggle-sm on"></span>
+                    <label class="time-input"><span class="lbl">Od</span><input type="time" value="08:00"/></label>
+                    <label class="time-input"><span class="lbl">Do</span><input type="time" value="14:00"/></label>
+                    <span class="sched-note warn">6 h · krótki dzień</span>
+                  </div>
+                  <div class="sched-row" style="opacity:0.5;">
+                    <span class="sched-day">SOB</span>
+                    <span class="toggle-sm"></span>
+                    <span class="sched-closed">— wolne —</span>
+                  </div>
+                  <div class="sched-row" style="opacity:0.5;">
+                    <span class="sched-day">ND</span>
+                    <span class="toggle-sm"></span>
+                    <span class="sched-closed">— wolne —</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── STANOWISKO 2 — collapsed ── -->
+          <div class="stn-card">
+            <div class="stn-header">
+              <div class="worker-avatar av-blue">MM</div>
+              <div class="stn-header-info">
+                <div class="stn-name">Stanowisko 2</div>
+                <div class="stn-worker">Marta Michalak · zmiana popołudniowa</div>
+              </div>
+              <div class="stn-svc-pills">
+                <span class="svc-pill active">Sezonowa wymiana</span>
+                <span class="svc-pill active">Wymiana kół</span>
+              </div>
+              <div class="stn-mini-sched" style="margin-left:12px;">
+                <div class="mini-day"><span class="mini-day-label">P</span><div class="mini-day-bar on"></div></div>
+                <div class="mini-day"><span class="mini-day-label">W</span><div class="mini-day-bar on"></div></div>
+                <div class="mini-day"><span class="mini-day-label">Ś</span><div class="mini-day-bar on"></div></div>
+                <div class="mini-day"><span class="mini-day-label">C</span><div class="mini-day-bar on"></div></div>
+                <div class="mini-day"><span class="mini-day-label">P</span><div class="mini-day-bar on"></div></div>
+                <div class="mini-day"><span class="mini-day-label">S</span><div class="mini-day-bar off"></div></div>
+                <div class="mini-day"><span class="mini-day-label">N</span><div class="mini-day-bar off"></div></div>
+              </div>
+              <div class="stn-status" style="margin-left:12px;color:var(--success);">
+                <span class="status-dot active"></span>aktywne
+              </div>
+              <svg class="stn-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+            </div>
+          </div>
+
+          <!-- ── STANOWISKO 3 (Wyważarka) — collapsed ── -->
+          <div class="stn-card">
+            <div class="stn-header">
+              <div class="worker-avatar av-green">AW</div>
+              <div class="stn-header-info">
+                <div class="stn-name">Wyważarka</div>
+                <div class="stn-worker">Adam Wiśniewski · pełny etat</div>
+              </div>
+              <div class="stn-svc-pills">
+                <span class="svc-pill active">Wyważanie</span>
+                <span class="svc-pill active">Naprawa opony</span>
+              </div>
+              <div class="stn-mini-sched" style="margin-left:12px;">
+                <div class="mini-day"><span class="mini-day-label">P</span><div class="mini-day-bar on"></div></div>
+                <div class="mini-day"><span class="mini-day-label">W</span><div class="mini-day-bar on"></div></div>
+                <div class="mini-day"><span class="mini-day-label">Ś</span><div class="mini-day-bar on"></div></div>
+                <div class="mini-day"><span class="mini-day-label">C</span><div class="mini-day-bar on"></div></div>
+                <div class="mini-day"><span class="mini-day-label">P</span><div class="mini-day-bar on"></div></div>
+                <div class="mini-day"><span class="mini-day-label">S</span><div class="mini-day-bar on"></div></div>
+                <div class="mini-day"><span class="mini-day-label">N</span><div class="mini-day-bar off"></div></div>
+              </div>
+              <div class="stn-status" style="margin-left:12px;color:var(--success);">
+                <span class="status-dot active"></span>aktywne
+              </div>
+              <svg class="stn-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+            </div>
+          </div>
+
+          <!-- ── STANOWISKO 4 — nieprzypisane ── -->
+          <div class="stn-card" style="opacity:0.6;">
+            <div class="stn-header">
+              <div class="worker-avatar av-empty">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              </div>
+              <div class="stn-header-info">
+                <div class="stn-name">Stanowisko 4</div>
+                <div class="stn-worker"><span class="unassigned">Brak pracownika — kliknij aby przypisać</span></div>
+              </div>
+              <div class="stn-svc-pills">
+                <span class="svc-pill" style="border-style:dashed;">brak usług</span>
+              </div>
+              <div class="stn-status" style="margin-left:12px;color:var(--text-muted);">
+                <span class="status-dot inactive"></span>nieaktywne
+              </div>
+              <svg class="stn-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+            </div>
+          </div>
+
+          <button class="add-stn-btn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+            Dodaj stanowisko
+          </button>
+
+        </div>
+
+        <!-- RIGHT: weekly grid + coverage -->
+        <div class="col-preview">
+
+          <div class="preview-panel">
+            <div class="preview-head">
+              <h3 class="preview-title">Tydzień pracy</h3>
+              <span class="preview-sub">bieżący tydzień</span>
+            </div>
+
+            <div class="week-grid">
+              <div class="week-grid-head">
+                <div></div>
+                <div class="wg-day-label today">PON</div>
+                <div class="wg-day-label">WT</div>
+                <div class="wg-day-label">ŚR</div>
+                <div class="wg-day-label">CZW</div>
+                <div class="wg-day-label">PT</div>
+                <div class="wg-day-label">SOB</div>
+                <div class="wg-day-label">ND</div>
+              </div>
+              <!-- Stan. 1 — Piotr (08–14, zmiana poranna) -->
+              <div class="week-grid-row">
+                <div class="wg-stn-name">St.1 · Piotr</div>
+                <div class="wg-cell"><div class="wg-bar" style="left:0%;width:55%;"></div></div>
+                <div class="wg-cell"><div class="wg-bar" style="left:0%;width:55%;"></div></div>
+                <div class="wg-cell off"></div>
+                <div class="wg-cell"><div class="wg-bar" style="left:0%;width:55%;"></div></div>
+                <div class="wg-cell"><div class="wg-bar" style="left:0%;width:40%;"></div></div>
+                <div class="wg-cell off"></div>
+                <div class="wg-cell off"></div>
+              </div>
+              <!-- Stan. 1 — Kamil (13–19, zmiana popołudniowa) -->
+              <div class="week-grid-row">
+                <div class="wg-stn-name" style="color:var(--text-muted);font-size:9px;">St.1 · Kamil</div>
+                <div class="wg-cell"><div class="wg-bar" style="left:45%;width:55%;opacity:0.55;background:linear-gradient(90deg,#A855F7,#7C3AED);"></div></div>
+                <div class="wg-cell"><div class="wg-bar" style="left:45%;width:55%;opacity:0.55;background:linear-gradient(90deg,#A855F7,#7C3AED);"></div></div>
+                <div class="wg-cell off"></div>
+                <div class="wg-cell"><div class="wg-bar" style="left:45%;width:55%;opacity:0.55;background:linear-gradient(90deg,#A855F7,#7C3AED);"></div></div>
+                <div class="wg-cell"><div class="wg-bar" style="left:45%;width:55%;opacity:0.55;background:linear-gradient(90deg,#A855F7,#7C3AED);"></div></div>
+                <div class="wg-cell off"></div>
+                <div class="wg-cell off"></div>
+              </div>
+              <!-- Stan. 2 — Marta: 10-18, pn-pt -->
+              <div class="week-grid-row">
+                <div class="wg-stn-name">St.2 · Marta</div>
+                <div class="wg-cell"><div class="wg-bar" style="left:20%;width:80%;opacity:0.55;"></div></div>
+                <div class="wg-cell"><div class="wg-bar" style="left:20%;width:80%;opacity:0.55;"></div></div>
+                <div class="wg-cell"><div class="wg-bar" style="left:20%;width:80%;opacity:0.55;"></div></div>
+                <div class="wg-cell"><div class="wg-bar" style="left:20%;width:80%;opacity:0.55;"></div></div>
+                <div class="wg-cell"><div class="wg-bar" style="left:20%;width:80%;opacity:0.55;"></div></div>
+                <div class="wg-cell off"></div>
+                <div class="wg-cell off"></div>
+              </div>
+              <!-- Wyważarka — Adam: pn-sob full -->
+              <div class="week-grid-row">
+                <div class="wg-stn-name">Wyważ. · Adam</div>
+                <div class="wg-cell"><div class="wg-bar" style="left:0%;width:100%;opacity:0.4;"></div></div>
+                <div class="wg-cell"><div class="wg-bar" style="left:0%;width:100%;opacity:0.4;"></div></div>
+                <div class="wg-cell"><div class="wg-bar" style="left:0%;width:100%;opacity:0.4;"></div></div>
+                <div class="wg-cell"><div class="wg-bar" style="left:0%;width:100%;opacity:0.4;"></div></div>
+                <div class="wg-cell"><div class="wg-bar" style="left:0%;width:100%;opacity:0.4;"></div></div>
+                <div class="wg-cell"><div class="wg-bar" style="left:0%;width:100%;opacity:0.4;"></div></div>
+                <div class="wg-cell off"></div>
+              </div>
+              <!-- Stan. 4 — nieaktywne -->
+              <div class="week-grid-row" style="opacity:0.3;">
+                <div class="wg-stn-name">St.4 · —</div>
+                <div class="wg-cell off"></div>
+                <div class="wg-cell off"></div>
+                <div class="wg-cell off"></div>
+                <div class="wg-cell off"></div>
+                <div class="wg-cell off"></div>
+                <div class="wg-cell off"></div>
+                <div class="wg-cell off"></div>
+              </div>
+            </div>
+
+            <div class="info-note">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/></svg>
+              <span style="font-size:10px;">Jasny pas = zmiana poranna · Ciemny = popołudniowa. Słupki ograniczone godzinami otwarcia warsztatu z <strong>Godziny pracy</strong>.</span>
+            </div>
+          </div>
+
+          <div class="preview-panel">
+            <div class="preview-head">
+              <h3 class="preview-title">Pokrycie usług</h3>
+              <span class="preview-sub">kto co może wykonać</span>
+            </div>
+            <div class="coverage-list">
+              <div class="coverage-item">
+                <div class="coverage-svc">Sezonowa wymiana opon</div>
+                <div class="coverage-dots">
+                  <span class="cdot" title="Piotr"></span>
+                  <span class="cdot" title="Marta"></span>
+                  <span class="cdot off"></span>
+                  <span class="cdot off"></span>
+                </div>
+                <span class="coverage-count">2 st.</span>
+              </div>
+              <div class="coverage-item">
+                <div class="coverage-svc">Wymiana kół</div>
+                <div class="coverage-dots">
+                  <span class="cdot" title="Piotr"></span>
+                  <span class="cdot" title="Marta"></span>
+                  <span class="cdot off"></span>
+                  <span class="cdot off"></span>
+                </div>
+                <span class="coverage-count">2 st.</span>
+              </div>
+              <div class="coverage-item">
+                <div class="coverage-svc">Wyważanie kół</div>
+                <div class="coverage-dots">
+                  <span class="cdot" title="Piotr"></span>
+                  <span class="cdot off"></span>
+                  <span class="cdot" style="background:var(--success);" title="Adam"></span>
+                  <span class="cdot off"></span>
+                </div>
+                <span class="coverage-count">2 st.</span>
+              </div>
+              <div class="coverage-item">
+                <div class="coverage-svc">Naprawa opony</div>
+                <div class="coverage-dots">
+                  <span class="cdot off"></span>
+                  <span class="cdot off"></span>
+                  <span class="cdot" style="background:var(--success);" title="Adam"></span>
+                  <span class="cdot off"></span>
+                </div>
+                <span class="coverage-count">1 st.</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+  </div>
+</main>
+
+<footer class="caption">
+  <div>
+    <strong>Model stanowiska</strong>
+    Stanowisko = fizyczne miejsce pracy (lifter, wyważarka itp.).
+    Ma: <em>nazwę · 1 lub więcej pracowników (różne zmiany) · listę usług · grafik tygodniowy</em>.
+    Kilku pracowników na jednym stanowisku = zmiany poranna + popołudniowa → dłuższe godziny pracy stanowiska.
+    Slot engine: <em>znajdź stanowisko potrafiące wykonać usługę X z wolnym oknem [T, T+dur]</em>.
+  </div>
+  <div>
+    <strong>Wpływ na inne ekrany</strong>
+    <em>Godziny pracy (B2B-06c)</em>: stepper stanowisk i capacity blocks usunięte — zarządzane tutaj.
+    Godziny warsztatu = zewnętrzna granica (kiedy budynek otwarty).
+    <em>Cennik (B2B-05d)</em>: bez zmian — czas usługi per koło pozostaje.
+    Solo operator = 1 stanowisko + 1 pracownik → identyczny UX, mniej konfiguracji.
+  </div>
+</footer>
+
+</body>
+</html>

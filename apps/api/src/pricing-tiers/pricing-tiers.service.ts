@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { PricingTier, Provider } from '@prisma/client';
+import { PricingTier, Provider, SizeTier } from '@prisma/client';
 import { AppException, ErrorCode } from '../common/errors';
 import { CreatePricingTierDto } from './dto/create-pricing-tier.dto';
 import { MarketPriceCategory, MarketPriceResponseDto } from './dto/market-price-response.dto';
@@ -15,30 +15,17 @@ export class PricingTiersService {
   }
 
   async create(providerId: string, dto: CreatePricingTierDto): Promise<PricingTier> {
-    if (dto.rimSizeMin > dto.rimSizeMax) {
-      throw new AppException(
-        ErrorCode.PRICING_TIER_INVALID_RIM_RANGE,
-        'rimSizeMin musi być ≤ rimSizeMax.',
-        400,
-      );
-    }
-
-    const existing = await this.repo.findByProviderAndRange(
-      providerId,
-      dto.rimSizeMin,
-      dto.rimSizeMax,
-    );
+    const existing = await this.repo.findByProviderAndSizeTier(providerId, dto.sizeTier);
     if (existing) {
       throw new AppException(
         ErrorCode.PRICING_TIER_RANGE_CONFLICT,
-        `Przedział felg ${dto.rimSizeMin}–${dto.rimSizeMax}" już istnieje.`,
+        `Tier rozmiaru ${dto.sizeTier} już istnieje.`,
         409,
       );
     }
 
     return this.repo.create({
-      rimSizeMin: dto.rimSizeMin,
-      rimSizeMax: dto.rimSizeMax,
+      sizeTier: dto.sizeTier,
       priceSwapPln: dto.priceSwapPln,
       priceBalancingPerWheelPln: dto.priceBalancingPerWheelPln,
       travelFeeFirstKmPln: dto.travelFeeFirstKmPln ?? 0,
@@ -81,15 +68,15 @@ export class PricingTiersService {
 
     const CATEGORIES: Array<{
       key: MarketPriceCategory;
-      match: (r: (typeof rows)[0]) => boolean;
+      sizeTier: SizeTier;
     }> = [
-      { key: 'small', match: (r) => r.rimSizeMax <= 15 },
-      { key: 'medium', match: (r) => r.rimSizeMin >= 16 && r.rimSizeMax <= 17 },
-      { key: 'large', match: (r) => r.rimSizeMin >= 18 },
+      { key: 'small', sizeTier: SizeTier.S },
+      { key: 'medium', sizeTier: SizeTier.M },
+      { key: 'large', sizeTier: SizeTier.L },
     ];
 
-    return CATEGORIES.flatMap(({ key, match }) => {
-      const matching = rows.filter(match);
+    return CATEGORIES.flatMap(({ key, sizeTier }) => {
+      const matching = rows.filter((r) => r.sizeTier === sizeTier);
       const uniqueProviders = new Set(matching.map((r) => r.providerId)).size;
       if (uniqueProviders < 2) return []; // suppress single-provider "market" data
       const prices = matching.map((r) => r.priceSwapPln);

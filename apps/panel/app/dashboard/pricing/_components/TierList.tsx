@@ -1,21 +1,21 @@
 import { Heading, Text, NoticeBlock } from '@opony/design-system-web';
 import { type UseFormReturn } from 'react-hook-form';
 import { type TierDraft } from '../../../../lib/hooks/use-pricing-tiers';
-import { type MarketPrice, getMarketRef } from '../../../../lib/hooks/use-market-prices';
+import { type MarketPrice, getMarketRefBySizeTier } from '../../../../lib/hooks/use-market-prices';
 import { type NewTierValues } from '../../../../lib/schemas/pricing.schema';
+import { type SizeTierValue } from './utils';
 import { TierRow } from './TierRow';
 import { NewTierForm } from './NewTierForm';
 import styles from '../pricing.module.css';
 
-function isPopularTier(rimSizeMin: number, rimSizeMax: number): boolean {
-  return rimSizeMin >= 16 && rimSizeMax <= 17;
+function isPopularTier(sizeTier: SizeTierValue): boolean {
+  return sizeTier === 'M';
 }
 
-function tierDescription(rimSizeMin: number, rimSizeMax: number): string {
-  if (rimSizeMax <= 15) return 'Samochody miejskie, starsze modele';
-  if (rimSizeMin >= 16 && rimSizeMax <= 17)
-    return 'Kompakty i segment C/D — Focus, Octavia, Passat';
-  if (rimSizeMin >= 18) return 'SUV-y i auta premium';
+function tierDescription(sizeTier: SizeTierValue): string {
+  if (sizeTier === 'S') return 'Samochody miejskie, starsze modele';
+  if (sizeTier === 'M') return 'Kompakty i segment C/D — Focus, Octavia, Passat';
+  if (sizeTier === 'L') return 'SUV-y i auta premium';
   return '';
 }
 
@@ -54,7 +54,7 @@ export function TierList({
 
         {drafts.length === 0 && !showAddForm && (
           <Text variant="body-sm" as="p" color="muted" className={styles.emptyState}>
-            Brak zdefiniowanych przedziałów. Kliknij &bdquo;Dodaj przedział&rdquo; aby rozpocząć.
+            Brak zdefiniowanych tierów. Kliknij &bdquo;Dodaj przedział&rdquo; aby rozpocząć.
           </Text>
         )}
 
@@ -63,9 +63,9 @@ export function TierList({
             key={d.id ?? `draft-${idx}`}
             draft={d}
             idx={idx}
-            popular={isPopularTier(d.rimSizeMin, d.rimSizeMax)}
-            description={tierDescription(d.rimSizeMin, d.rimSizeMax)}
-            marketRef={getMarketRef(marketPrices, d.rimSizeMin, d.rimSizeMax)}
+            popular={isPopularTier(d.sizeTier as SizeTierValue)}
+            description={tierDescription(d.sizeTier as SizeTierValue)}
+            marketRef={getMarketRefBySizeTier(marketPrices, d.sizeTier as SizeTierValue)}
             onUpdate={onUpdate}
             onDelete={onDelete}
           />

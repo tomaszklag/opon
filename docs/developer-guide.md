@@ -145,6 +145,43 @@ export function getBookings(): Promise<Booking[]> {
 
 Nigdy nie definiuj typów odpowiedzi ręcznie — zawsze `components['schemas']['XxxResponseDto']`.
 
+### 3.4. Prisma JSON → `Record<string, never>` — wzorzec override
+
+Pola `Json` w Prisma schema (np. `Station.schedule Json`, `WorkingHours.blocks Json?`) są generowane przez openapi-typescript jako `Record<string, never>` — typ pusty, z którym nic nie można zrobić.
+
+**W `api-data-access/`:** nadpisz typ przez `Omit + intersection`:
+
+```ts
+// api-data-access/stations.ts
+import type { components } from '@opony/api-client';
+
+type StationBase = components['schemas']['StationResponseDto'];
+
+// schedule: Record<string, never> → zastępujemy właściwym typem
+export type Station = Omit<StationBase, 'schedule'> & { schedule: DaySchedule[] };
+```
+
+**W backend DTO → Prisma:** tablica typowanych obiektów nie jest bezpośrednio assignowalna do `Prisma.InputJsonValue`. Użyj podwójnego casta:
+
+```ts
+// stations.service.ts
+await this.stationsRepository.create(providerId, {
+  schedule: dto.schedule as unknown as Prisma.InputJsonValue,
+  //                       ^^^^^^^^ wymagane — DayScheduleDto[] nie pasuje do InputJsonObject
+});
+```
+
+**Przy walidacji DTO:** dla JSON pola z zagnieżdżoną strukturą zawsze używaj `@ValidateNested` + `@Type()`:
+
+```ts
+export class CreateStationDto {
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => DayScheduleDto)
+  schedule!: DayScheduleDto[];
+}
+```
+
 ---
 
 ## 4. Workflow branchy i commitów
@@ -188,6 +225,59 @@ Husky + lint-staged uruchamia ESLint i Prettier automatycznie przed każdym comm
 
 ## 5. Dodawanie nowego modułu BE — krok po kroku
 
+### 5.1. Obowiązujący wzorzec: Controller → Service → Repository
+
+Każdy moduł BE musi używać wzorca trójwarstwowego. Repository jest obowiązkowe (nie opcjonalne) dla modułów z dostępem do bazy danych:
+
+- **Controller** — przyjmuje request, waliduje DTO, wywołuje Service, zwraca response
+- **Service** — logika biznesowa, walidacja domenowa, wywołuje Repository
+- **Repository** — wyłącznie zapytania Prisma, zero logiki biznesowej
+
+```ts
+// stations.repository.ts — TYLKO zapytania do bazy
+@Injectable()
+export class StationsRepository {
+  constructor(private readonly prisma: PrismaService) {}
+
+  findAllByProvider(providerId: string): Promise<StationWithWorkers[]> {
+    return this.prisma.station.findMany({
+      where: { providerId },
+      include: { workers: { include: { worker: true } } },
+      orderBy: { createdAt: 'asc' },
+    });
+  }
+
+  create(
+    providerId: string,
+    data: { name: string; services: string[]; schedule: Prisma.InputJsonValue },
+  ) {
+    return this.prisma.station.create({
+      data: { providerId, ...data },
+      include: { workers: { include: { worker: true } } },
+    });
+  }
+  // ...
+}
+
+// stations.service.ts — logika biznesowa, wywołuje repository
+@Injectable()
+export class StationsService {
+  constructor(
+    private readonly stationsRepository: StationsRepository,
+    private readonly workersRepository: WorkersRepository,
+  ) {}
+
+  async create(providerId: string, dto: CreateStationDto): Promise<StationResponseDto> {
+    const station = await this.stationsRepository.create(providerId, dto);
+    return mapToDto(station);
+  }
+}
+```
+
+Moduły z repozytoriami: `providers`, `pricing-tiers`, `working-hours`, `stations`, `workers`.
+
+### 5.2. Krok po kroku
+
 ```
 1. Schemat Prisma
    └─ apps/api/prisma/schema.prisma  ← dodaj model
@@ -198,7 +288,7 @@ Husky + lint-staged uruchamia ESLint i Prettier automatycznie przed każdym comm
         ├─ <modul>.module.ts
         ├─ <modul>.controller.ts
         ├─ <modul>.service.ts
-        ├─ <modul>.repository.ts   (opcjonalnie)
+        ├─ <modul>.repository.ts   ← OBOWIĄZKOWE dla modułów z DB
         └─ dto/
              ├─ create-<modul>.dto.ts      ← @IsString, @IsNumber itd.
              ├─ update-<modul>.dto.ts
@@ -386,6 +476,37 @@ Przykład: `StepIndicator` w DS istniał, ale miał błędny styl (full-width `<
 
 DS `Input` i `Textarea` są `forwardRef` → działają bezpośrednio z `{...register('field')}` z RHF.
 
+### Czego DS celowo nie ma — i co robić zamiast
+
+DS nie zawiera specjalistycznych pickerów przeglądarki. Nie szukaj ich — nie istnieją. Zamiast tego:
+
+| Brakujący komponent DS        | Właściwe podejście                                                                                  |
+| ----------------------------- | --------------------------------------------------------------------------------------------------- |
+| `<Input type="time" />`       | Natywny `<input type="time" />` owinięty w `<label className={styles.timeInput}>` z CSS module      |
+| `<Input type="date" />`       | Natywny `<input type="date" />` — analogicznie                                                      |
+| `<Input type="number" />`     | DS `<Input type="number" />` działa — ustaw `className` tylko dla geometrii (width, text-align)     |
+| `<input type="checkbox" />`   | DS `<Toggle>` (switch) lub natywny `<input type="checkbox">` z CSS module — zależy od designu       |
+| Color picker, date-range, ... | Natywne elementy + CSS module bez inline styles. Dodaj komentarz `{/* DS nie ma */}` przy elemencie |
+
+**Zasada:** jeśli natywny element jest niezbędny, owin go w strukturę z CSS module — bez inline `style={}`, bez hardcoded wartości. Sam `<input>` może być natywny; jego opakowanie musi respektować tokeny.
+
+```tsx
+{
+  /* ✅ TAK — natywny input, ale bez inline styles */
+}
+<label className={styles.timeInput}>
+  <Text variant="nano" as="span" color="muted">
+    Od
+  </Text>
+  <input type="time" value={value} onChange={onChange} />
+</label>;
+
+{
+  /* ❌ NIE — inline styles z wartościami */
+}
+<input type="time" style={{ border: '1px solid #333', fontSize: '13px' }} />;
+```
+
 ### DS Button — warianty i rozmiary
 
 Wariant określa **wyłącznie schemat kolorów**. Rozmiar określa **wyłącznie wymiary**. Nigdy nie umieszczaj `height`, `padding` ani `font-size` w wariancie — i odwrotnie, nie umieszczaj kolorów w rozmiarze.
@@ -532,6 +653,36 @@ Dostępne tokeny kolorów w `global.css`:
 ```
 
 Wartości bez tokenu (np. specyficzne przezroczystości w gradientach tła) mogą pozostać hardcoded — ale to wyjątek, nie reguła.
+
+### Kolory spoza palety DS — lokalne zmienne CSS
+
+Niektóre elementy wymagają kolorów których nie ma w tokenach DS (np. paleta avatarów pracowników: niebieski, zielony, fioletowy). W takim przypadku zdefiniuj lokalne zmienne na początku CSS module:
+
+```css
+/* ✅ TAK — lokalne zmienne CSS w module */
+/* stations.module.css */
+:root {
+  --avatar-blue-light: #3b82f6;
+  --avatar-blue-dark: #1d4ed8;
+  --avatar-green-light: #2ee0a0;
+  --avatar-green-dark: #059669;
+  --avatar-purple-light: #a855f7;
+  --avatar-purple-dark: #7c3aed;
+}
+
+.avatarBlue {
+  background: linear-gradient(135deg, var(--avatar-blue-light), var(--avatar-blue-dark));
+  color: #fff; /* kontrast wymagany przez dostępność */
+}
+
+/* ❌ NIE — hardcoded hex bezpośrednio w selektorze */
+.avatarBlue {
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  color: #fff;
+}
+```
+
+Zasada: hardcoded wartości dozwolone tylko jako wartości zmiennych CSS — nigdy bezpośrednio w selektorze. Dzięki temu łatwo znaleźć i zmienić cały schemat kolorystyczny modułu.
 
 #### DS Input — `className` trafia na wewnętrzny `<input>`
 
@@ -1553,3 +1704,458 @@ ServeStaticModule.forRoot({
 ```
 
 Katalog `apps/api/uploads/` jest w `.gitignore`. Na produkcji zastąp S3/CDN — zmień tylko `storageKey` i logikę `deleteFile`/`url` w serwisie.
+
+---
+
+## 20. Model usług — zamknięta lista
+
+Platforma definiuje dokładnie **4 usługi**. Provider nie może dodawać własnych — tylko włączać/wyłączać togglem i ustawiać ceny.
+
+| ID usługi         | Nazwa                 | Opis                                                                                   |
+| ----------------- | --------------------- | -------------------------------------------------------------------------------------- |
+| `SEASONAL_SWAP`   | Sezonowa wymiana opon | Pakiet all-in: demontaż + montaż + wyważanie + wentyle. Klient nie wybiera składowych. |
+| `WHEEL_SWAP`      | Wymiana kół           | Zdjęcie/założenie kompletnych kół (bez wyważania).                                     |
+| `BALANCING`       | Wyważanie kół         | Samo wyważanie (bez demontażu).                                                        |
+| `PUNCTURE_REPAIR` | Naprawa opony         | Wulkanizacja uszkodzonej opony.                                                        |
+
+### SizeTier — warianty rozmiaru
+
+Rozmiar felgi jest reprezentowany przez enum `SizeTier` (trzy widelki). Używany zarówno w `PricingTier` (cennik providera), jak i w `Booking` (rozmiar zamówiony przez klienta):
+
+| `SizeTier` | Opis   | Typowe rozmiary felg |
+| ---------- | ------ | -------------------- |
+| `S`        | Mały   | ≤ R15                |
+| `M`        | Średni | R16–R17              |
+| `L`        | Duży   | ≥ R18                |
+
+Provider może mieć do 3 rekordów `PricingTier` — jeden na każdy tier. Identyfikatorem jest `@@unique([providerId, sizeTier])`.
+
+### Model Prisma — PricingTier
+
+```prisma
+model PricingTier {
+  id                        String   @id @default(uuid())
+  providerId                String
+  sizeTier                  SizeTier // S | M | L
+  priceSwapPln              Decimal  @db.Decimal(10, 2)
+  priceBalancingPerWheelPln Decimal? @db.Decimal(10, 2)
+  travelFeeFirstKmPln       Decimal  @default(0) @db.Decimal(10, 2)
+  travelFeeExtraKmPln       Decimal  @default(0) @db.Decimal(10, 2)
+
+  provider Provider  @relation(fields: [providerId], references: [id], onDelete: Cascade)
+
+  @@unique([providerId, sizeTier])   // maks. 3 tiery per provider (S, M, L)
+  @@map("pricing_tiers")
+}
+
+enum SizeTier {
+  S   // ≤ R15
+  M   // R16–R17
+  L   // ≥ R18
+}
+```
+
+**Uwaga:** `PricingTier` to cennik providera zarządzany na stronie B2B Cennik (`/settings/pricing`). Nie mylić z `ServiceConfig` — patrz niżej.
+
+### ServiceConfig — konfiguracja usługi per provider
+
+`ServiceConfig` zastąpi `PricingTier` w przyszłych iteracjach jako bardziej szczegółowy model cen per usługa. W sprint 1 oba modele koegzystują.
+
+Każda usługa (`ServiceConfig`) ma trzy warianty rozmiaru opony odpowiadające `SizeTier`:
+
+| Wariant | Zakres  |
+| ------- | ------- |
+| `S`     | ≤ R15   |
+| `M`     | R16–R17 |
+| `L`     | ≥ R18   |
+
+Dodatkowo każdy wariant może mieć **modyfikator ALU** (opcjonalne) — osobna cena i czas za felgi aluminiowe.
+
+### TPMS
+
+TPMS (czujnik ciśnienia) **nie jest osobną usługą** — to pytanie uzupełniające (tak/nie) wyświetlane klientowi po wyborze usługi. Provider ustawia cenę i czas per koło w konfiguracji warsztatu.
+
+### Model Prisma — ServiceConfig
+
+```prisma
+model ServiceConfig {
+  id          String      @id @default(cuid())
+  providerId  String
+  serviceId   ServiceType // enum: SEASONAL_SWAP | WHEEL_SWAP | BALANCING | PUNCTURE_REPAIR
+  enabled     Boolean     @default(false)
+
+  // Ceny i czasy per wariant S/M/L
+  priceSPln   Decimal?
+  priceMPln   Decimal?
+  priceLPln   Decimal?
+  durationSMin Int?
+  durationMMin Int?
+  durationLMin Int?
+
+  // Modyfikator ALU (opcjonalny)
+  aluExtraPln  Decimal?
+  aluExtraMin  Int?
+
+  // TPMS (opcjonalny)
+  tpmsEnabled    Boolean   @default(false)
+  tpmsPricePln   Decimal?
+  tpmsTimeMin    Int?
+
+  provider    Provider    @relation(fields: [providerId], references: [id], onDelete: Cascade)
+
+  @@unique([providerId, serviceId])
+  @@map("service_configs")
+}
+
+enum ServiceType {
+  SEASONAL_SWAP
+  WHEEL_SWAP
+  BALANCING
+  PUNCTURE_REPAIR
+}
+```
+
+---
+
+## 21. Stanowiska i pracownicy
+
+### Koncepcja
+
+**Stanowisko** = fizyczne miejsce pracy (lifter, wyważarka itp.). Stanowisko:
+
+- ma przypisanych pracowników (1 lub więcej, różne zmiany),
+- obsługuje podzbiór usług platformy,
+- ma własny grafik tygodniowy niezależny od godzin warsztatu.
+
+**Pracownik** może być przypisany do wielu stanowisk (praca zmianowa). Urlop pracownika blokuje go we wszystkich przypisanych stanowiskach.
+
+### WorkingHours vs Station.schedule — podział odpowiedzialności
+
+Te dwa modele **nie są duplikatami** — mają różne role i oba są wymagane przez slot engine:
+
+| Model              | Tabela                     | Zarządzane na stronie | Rola                                                                                   |
+| ------------------ | -------------------------- | --------------------- | -------------------------------------------------------------------------------------- |
+| `WorkingHours`     | `working_hours`            | B2B "Godziny pracy"   | Godziny otwarcia **warsztatu** (budynku). Zewnętrzna granica dla wszystkich stanowisk. |
+| `Station.schedule` | `stations.schedule` (JSON) | B2B "Stanowiska"      | Harmonogram konkretnego **stanowiska**. Może być węższy niż WorkingHours.              |
+
+Przykład: warsztat otwarty Pn–Pt 08:00–18:00 (`WorkingHours`), ale Stanowisko A pracuje tylko Pn–Śr 08:00–14:00 (`Station.schedule`).
+
+**Slot engine używa obu** — w kolejności:
+
+1. Sprawdza `WorkingHours.isClosed == false` dla danego dnia (warsztat otwarty)
+2. Sprawdza `Station.schedule[dayOfWeek].open == true` (stanowisko aktywne)
+3. Slot musi zmieścić się w **obu** przedziałach czasowych
+
+`Station.schedule` jest **źródłem prawdy** dla dostępności stanowiska. `WorkingHours` jest **zewnętrzną granicą** dla całego warsztatu — slot nigdy nie wychodzi poza godziny otwarcia warsztatu, nawet jeśli stanowisko ma szerszy grafik.
+
+### Model Prisma
+
+```prisma
+model Station {
+  id         String        @id @default(cuid())
+  providerId String
+  name       String        @db.VarChar(100)   // "Stanowisko 1", "Wyważarka"
+  services   ServiceType[] // jakie usługi to stanowisko może wykonać
+  schedule   Json          // DaySchedule[] — grafik tygodniowy (JSON)
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+
+  provider   Provider        @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  workers    StationWorker[]
+  bookings   Booking[]
+
+  @@map("stations")
+}
+
+model Worker {
+  id         String          @id @default(cuid())
+  providerId String
+  name       String          @db.VarChar(100)
+  role       String?         @db.VarChar(100)
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+
+  provider   Provider        @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  stations   StationWorker[]
+  leaves     WorkerLeave[]
+
+  @@map("workers")
+}
+
+// Tabela pośrednia Station ↔ Worker — zawiera godziny zmiany per stanowisko
+model StationWorker {
+  stationId  String
+  workerId   String
+  shiftStart String? @db.VarChar(5)  // "08:00" — null = pracuje przez cały grafik stanowiska
+  shiftEnd   String? @db.VarChar(5)  // "14:00"
+
+  station Station @relation(fields: [stationId], references: [id], onDelete: Cascade)
+  worker  Worker  @relation(fields: [workerId], references: [id], onDelete: Cascade)
+
+  @@id([stationId, workerId])
+  @@index([workerId])                // wydajność: "wszystkie stanowiska pracownika X"
+  @@map("station_workers")
+}
+
+model WorkerLeave {
+  id        String    @id @default(cuid())
+  workerId  String
+  type      LeaveType
+  startDate DateTime  @db.Date
+  endDate   DateTime  @db.Date
+  note      String?   @db.VarChar(500)
+  createdAt DateTime  @default(now())
+
+  worker Worker @relation(fields: [workerId], references: [id], onDelete: Cascade)
+
+  @@map("worker_leaves")
+}
+
+enum LeaveType {
+  VACATION
+  UNPAID
+  SICK
+  OTHER
+}
+```
+
+Typ `DaySchedule` (pole `schedule` w `Station`) to JSON array:
+
+```ts
+type DaySchedule = {
+  dayOfWeek: 0 | 1 | 2 | 3 | 4 | 5 | 6; // 0 = niedziela
+  open: boolean;
+  startTime: string; // "08:00"
+  endTime: string; // "17:00"
+};
+```
+
+Pole `schedule` przechowuje pełną tablicę 7 elementów (jeden na każdy dzień tygodnia). Przy `open: false` pola `startTime`/`endTime` są ignorowane przez slot engine, ale powinny być przesyłane jako puste stringi.
+
+### WorkerLeave — isWorkerOnLeave
+
+`WorkersRepository` udostępnia metodę pomocniczą używaną przez slot engine:
+
+```ts
+// Zwraca true jeśli pracownik ma urlop obejmujący podany dzień
+async isWorkerOnLeave(workerId: string, date: Date): Promise<boolean>
+```
+
+Metoda sprawdza tabelę `worker_leaves` pod kątem nakładania: `startDate <= date <= endDate`. Slot engine musi wywołać tę metodę dla każdego pracownika przypisanego do stanowiska przed wygenerowaniem slotu.
+
+Reguła: jeśli wszystkie stanowiska wykonujące usługę X mają wszystkich pracowników na urlopie w danym dniu → stanowisko jest niedostępne, slot nie jest generowany.
+
+### Slot engine — nowa logika
+
+Algorytm wyznaczania dostępnych slotów:
+
+```
+Dla każdego kandydackiego okna [T, T + duration]:
+  1. Pobierz stanowiska które (a) należą do providera i (b) mają usługę X w station.services
+  2. Dla każdego stanowiska:
+     a. Sprawdź grafik stanowiska (station.schedule) — czy [T, T+dur] mieści się w godzinach
+     b. Znajdź pracowników przypisanych do stanowiska (StationWorker)
+     c. Filtruj po shiftStart/shiftEnd — pracownik musi być dostępny przez całe [T, T+dur]
+     d. Odfiltruj pracowników z urlopem (WorkerLeave) obejmującym dzień T
+     e. Jeśli ≥1 pracownik dostępny → sprawdź konflikty rezerwacji (booking.stationId == station.id)
+     f. Brak konfliktu → slot dostępny dla tego stanowiska
+  3. Jeśli ≥1 stanowisko ma slot → okno jest dostępne
+```
+
+Urlop pracownika to **twardy blok** — slot engine pomija pracownika dla całego zakresu dat `[startDate, endDate]`. Jeśli wszystkie stanowiska wykonujące usługę X mają wszystkich pracowników na urlopie → stanowisko jest niedostępne.
+
+**Krytyczne wymagania implementacyjne:**
+
+| #   | Problem                                     | Wymaganie                                                                                                                                                                                               |
+| --- | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| T1  | Booking musi znać stanowisko                | Model `Booking` musi mieć `stationId` — bez tego slot engine nie sprawdzi kolizji per stanowisko                                                                                                        |
+| T2  | Race condition przy równoległych requestach | Użyj `SELECT FOR UPDATE` na wierszu stanowiska przy tworzeniu rezerwacji (PostgreSQL advisory lock lub transakcja z lock) — `unique(startAt)` nie wystarczy dla okien nakładających się                 |
+| T3  | Urlop dodany po istniejącej rezerwacji      | Przy dodawaniu `WorkerLeave` sprawdź istniejące `Booking` w zakresie dat — jeśli są i pracownik jest jedynym na stanowisku → zwróć error `WORKER_LEAVE_BOOKING_CONFLICT` z listą dotkniętych rezerwacji |
+| T4  | Obsługa DST                                 | Wszystkie operacje na datach muszą używać strefy `Europe/Warsaw` przez `luxon` lub `date-fns-tz`. Nigdy nie przechowuj ani nie porównuj naiwnych `Date()` UTC dla wyznaczania slotów                    |
+
+Stare pola `slotMinutes`, `capacityBlocks`, `CapacityBlock[]` są zastąpione przez model Stanowisk i ich grafiki.
+
+### Ekrany B2B — ustawienia
+
+| Plik HTML                       | URL                  | Opis                                                                              |
+| ------------------------------- | -------------------- | --------------------------------------------------------------------------------- |
+| `design/b2b-05-cennik.html`     | `/settings/pricing`  | Cennik — zamknięta lista 4 usług, toggle ON/OFF, warianty S/M/L, TPMS             |
+| `design/b2b-06-godziny.html`    | `/settings/hours`    | Godziny otwarcia warsztatu per dzień + wyjątki/święta. Bez steppera stanowisk.    |
+| `design/b2b-07-stanowiska.html` | `/settings/stations` | CRUD stanowisk, przypisanie pracowników (multi), grafik tygodniowy per stanowisko |
+| `design/b2b-08-pracownicy.html` | `/settings/workers`  | CRUD pracowników, zarządzanie urlopami/nieobecnościami, timeline absencji         |
+
+### ErrorCode — nowe kody
+
+Dodaj do `apps/api/src/common/errors/error-code.enum.ts`:
+
+| Kod                             | Status | Kiedy                                                                                                       |
+| ------------------------------- | ------ | ----------------------------------------------------------------------------------------------------------- |
+| `STATION_NOT_FOUND`             | 404    | Stanowisko nie istnieje lub nie należy do providera                                                         |
+| `WORKER_NOT_FOUND`              | 404    | Pracownik nie istnieje lub nie należy do providera                                                          |
+| `WORKER_LEAVE_CONFLICT`         | 409    | Daty urlopu nakładają się na istniejący urlop pracownika                                                    |
+| `WORKER_LEAVE_BOOKING_CONFLICT` | 409    | Dodanie urlopu koliduje z istniejącymi rezerwacjami — odpowiedź powinna zawierać listę `affectedBookingIds` |
+| `SERVICE_CONFIG_NOT_FOUND`      | 404    | Konfiguracja usługi nie istnieje                                                                            |
+| `BOOKING_SLOT_UNAVAILABLE`      | 409    | Wybrany slot jest już zajęty (race condition lub nieświeży cache)                                           |
+| `BOOKING_NOT_FOUND`             | 404    | Rezerwacja nie istnieje lub nie należy do klienta/providera                                                 |
+
+---
+
+## 22. Booking — model, state machine i flow klienta
+
+### Model Prisma
+
+```prisma
+model Booking {
+  id              String        @id @default(uuid())
+  referenceCode   String        @unique @db.VarChar(10)
+  clientId        String
+  providerId      String
+  vehicleId       String?
+  pricingTierId   String?
+  stationId       String?       // stanowisko obsługujące rezerwację
+  status          BookingStatus @default(PENDING)
+  startAt         DateTime
+  endAt           DateTime
+  // adres klienta (mobile provider)
+  addressLine     String?
+  addressCity     String?
+  addressLat      Decimal?
+  addressLng      Decimal?
+  // snapshot wymagań klienta — immutable po stworzeniu rezerwacji
+  serviceType     ServiceType?  // typ usługi: SEASONAL_SWAP | WHEEL_SWAP | BALANCING | PUNCTURE_REPAIR
+  sizeTier        SizeTier?     // rozmiar: S | M | L
+  tpmsRequired    Boolean       @default(false)  // czy klient wybrał obsługę TPMS
+  // snapshot cen z momentu rezerwacji (immutable po created)
+  tireSize        String?
+  basePricePln    Decimal?
+  travelFeePln    Decimal?
+  totalPricePln   Decimal?
+  // notatki i powody
+  notes           String?
+  rejectReason    String?
+  cancelReason    String?
+  // timestamps
+  createdAt       DateTime      @default(now())
+  confirmedAt     DateTime?
+  startedAt       DateTime?
+  completedAt     DateTime?
+  cancelledAt     DateTime?
+
+  client      User         @relation("ClientBookings", fields: [clientId], references: [id])
+  provider    Provider     @relation("ProviderBookings", fields: [providerId], references: [id])
+  vehicle     Vehicle?     @relation("VehicleBookings", fields: [vehicleId], references: [id])
+  pricingTier PricingTier? @relation("TierBookings", fields: [pricingTierId], references: [id])
+  station     Station?     @relation(fields: [stationId], references: [id])
+  review      Review?
+
+  @@index([providerId, startAt])
+  @@index([clientId, startAt(sort: Desc)])
+  @@map("bookings")
+}
+```
+
+**Pola `serviceType`, `sizeTier`, `tpmsRequired`** są immutable po stworzeniu rezerwacji — stanowią snapshot wymagań klienta w momencie bookingu. TPMS jest dostępne tylko dla `SEASONAL_SWAP` i `WHEEL_SWAP`; backend wymusza `tpmsRequired: false` dla `BALANCING` i `PUNCTURE_REPAIR`.
+
+`totalPricePln` jest wyliczana i blokowana przy tworzeniu rezerwacji na podstawie `ServiceConfig` / `PricingTier` providera. Nie jest przeliczana po zmianach cennika.
+
+### State machine — BookingStatus
+
+Aktualny enum `BookingStatus` w schemacie Prisma:
+
+```prisma
+enum BookingStatus {
+  PENDING               // złożona, oczekuje na potwierdzenie przez serwis
+  CONFIRMED             // serwis zatwierdził termin
+  IN_PROGRESS           // zarezerwowany dla przyszłych iteracji
+  COMPLETED             // wizyta zakończona
+  CANCELLED_BY_CLIENT   // anulowane przez klienta
+  CANCELLED_BY_PROVIDER // anulowane przez providera
+  CANCELLED_BY_SYSTEM   // anulowane przez system (np. brak potwierdzenia w limicie czasu)
+  NO_SHOW               // klient nie pojawił się
+  REJECTED              // zarezerwowany dla przyszłych iteracji
+}
+```
+
+Stany używane w sprint 1:
+
+```
+[klient tworzy] → PENDING
+                      │
+        ┌─────────────┼────────────────────────┐
+        │             │                         │
+  serwis         klient anuluje         provider anuluje
+  potwierdza          │                         │
+        │      CANCELLED_BY_CLIENT   CANCELLED_BY_PROVIDER
+    CONFIRMED
+        │
+        ├─── [klient nie przyszedł] → NO_SHOW
+        │
+        └─── [wizyta zakończona] → COMPLETED
+```
+
+Przejścia dozwolone w sprint 1:
+
+- `PENDING → CONFIRMED`: tylko provider (`PATCH /v1/bookings/:id/confirm`)
+- `PENDING → CANCELLED_BY_CLIENT`: klient
+- `PENDING → CANCELLED_BY_PROVIDER`: provider
+- `CONFIRMED → CANCELLED_BY_CLIENT`: klient (≥2h przed `startAt`)
+- `CONFIRMED → CANCELLED_BY_PROVIDER`: provider (zawsze)
+- `CONFIRMED → NO_SHOW`: system automatycznie po `endAt` gdy klient nie pojawił się
+- `CONFIRMED → COMPLETED`: system automatycznie po `endAt + buffer`
+
+Stany `IN_PROGRESS` i `REJECTED` są zarezerwowane dla przyszłych iteracji — nie implementuj przejść do tych stanów w sprint 1.
+
+### Flow rezerwacji klienta — 3 kroki
+
+```
+02-provider-detail  →  02b-konfiguracja  →  03-time-slot  →  04-booking-confirmed
+   (wybór serwisu)      (usługa + rozmiar    (wybór terminu)    (PENDING state)
+                         + TPMS + notatka)
+```
+
+| Krok | Ekran                       | Co zbiera                                                   |
+| ---- | --------------------------- | ----------------------------------------------------------- |
+| 1    | `02b-konfiguracja.html`     | `serviceType`, `sizeTier`, `tpmsRequired`, `note`           |
+| 2    | `03-time-slot.html`         | `startAt` (slot wybrany ze slotów dostępnych dla providera) |
+| 3    | `04-booking-confirmed.html` | Prezentacja stanu `PENDING` po udanym POST                  |
+
+### Create Booking DTO
+
+```ts
+// POST /v1/bookings
+class CreateBookingDto {
+  @IsString() providerId: string;
+  @IsEnum(ServiceType) serviceType: ServiceType;
+  @IsEnum(SizeTier) sizeTier: SizeTier;
+  @IsBoolean() tpmsRequired: boolean;
+  @IsString() @IsOptional() note?: string;
+  @IsDateString() startAt: string; // ISO 8601 — backend konwertuje do UTC
+}
+```
+
+Backend wybiera stanowisko automatycznie (slot engine) — klient nie wskazuje `stationId`. Cena jest wyliczana z `ServiceConfig` providera i zwracana w response jako `totalPricePln`.
+
+### TPMS — logika warunkowa po stronie klienta
+
+TPMS pytanie pokazuj tylko dla usług `SEASONAL_SWAP` i `WHEEL_SWAP`. Dla `BALANCING` i `PUNCTURE_REPAIR` — ukryj sekcję i wyślij `tpmsRequired: false`.
+
+```ts
+const showTpms = ['SEASONAL_SWAP', 'WHEEL_SWAP'].includes(selectedService);
+```
+
+### Size selector — logika warunkowa
+
+Size selector (S/M/L) ukryj dla `PUNCTURE_REPAIR` — usługa ma cenę ryczałtową niezależną od rozmiaru. Wyślij `sizeTier: 'S'` jako placeholder.
+
+### Cena — obliczanie w kliencie (podgląd)
+
+```ts
+// ServiceConfig zwrócony z GET /v1/providers/:id — tylko enabled=true
+function previewPrice(config: ServiceConfig, tier: SizeTier, tpms: boolean): number {
+  const base = tier === 'S' ? config.priceSPln : tier === 'M' ? config.priceMPln : config.priceLPln;
+  const tpmsExtra = tpms && config.tpmsEnabled ? (config.tpmsPricePln ?? 0) * 4 : 0;
+  return (base ?? 0) + tpmsExtra;
+}
+```
+
+Cena w UI to **szacunek** (oznaczony "(szacunek)") — ostateczna cena potwierdzona jest po stronie backendu przy `POST /v1/bookings`.

@@ -6,6 +6,7 @@ interface Props {
   saved: boolean;
   saving: boolean;
   showAddForm: boolean;
+  allTiersDefined: boolean;
   onOpenAddForm: () => void;
   onSave: () => void;
   onRevert: () => void;
@@ -16,6 +17,7 @@ export function PricingActionBar({
   saved,
   saving,
   showAddForm,
+  allTiersDefined,
   onOpenAddForm,
   onSave,
   onRevert,
@@ -32,7 +34,12 @@ export function PricingActionBar({
           Zapisano
         </Text>
       )}
-      <Button variant="secondary" size="sm" onClick={onOpenAddForm} disabled={showAddForm}>
+      <Button
+        variant="secondary"
+        size="sm"
+        onClick={onOpenAddForm}
+        disabled={showAddForm || allTiersDefined}
+      >
         + Dodaj przedział
       </Button>
       {dirty && (

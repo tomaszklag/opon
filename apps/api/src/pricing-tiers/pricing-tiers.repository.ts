@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma, PricingTier } from '@prisma/client';
+import { Prisma, PricingTier, SizeTier } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
@@ -9,7 +9,7 @@ export class PricingTiersRepository {
   findAllByProvider(providerId: string): Promise<PricingTier[]> {
     return this.prisma.pricingTier.findMany({
       where: { providerId },
-      orderBy: { rimSizeMin: 'asc' },
+      orderBy: { sizeTier: 'asc' },
     });
   }
 
@@ -17,13 +17,9 @@ export class PricingTiersRepository {
     return this.prisma.pricingTier.findUnique({ where: { id } });
   }
 
-  findByProviderAndRange(
-    providerId: string,
-    rimSizeMin: number,
-    rimSizeMax: number,
-  ): Promise<PricingTier | null> {
+  findByProviderAndSizeTier(providerId: string, sizeTier: SizeTier): Promise<PricingTier | null> {
     return this.prisma.pricingTier.findUnique({
-      where: { providerId_rimSizeMin_rimSizeMax: { providerId, rimSizeMin, rimSizeMax } },
+      where: { providerId_sizeTier: { providerId, sizeTier } },
     });
   }
 
@@ -48,14 +44,11 @@ export class PricingTiersRepository {
     lng: number,
     radiusKm: number,
     excludeProviderId: string,
-  ): Promise<
-    Array<{ providerId: string; rimSizeMin: number; rimSizeMax: number; priceSwapPln: number }>
-  > {
+  ): Promise<Array<{ providerId: string; sizeTier: SizeTier; priceSwapPln: number }>> {
     return this.prisma.$queryRaw`
       SELECT
         pt."providerId",
-        pt."rimSizeMin",
-        pt."rimSizeMax",
+        pt."sizeTier",
         CAST(pt."priceSwapPln" AS FLOAT) AS "priceSwapPln"
       FROM pricing_tiers pt
       JOIN providers p ON p.id = pt."providerId"

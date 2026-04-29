@@ -66,9 +66,7 @@ export enum ErrorCode {
   PRICING_TIER_NOT_FOUND = 'PRICING_TIER_NOT_FOUND',
   /** Brak dostępu do tieru cenowego */
   PRICING_TIER_ACCESS_DENIED = 'PRICING_TIER_ACCESS_DENIED',
-  /** rimSizeMin musi być ≤ rimSizeMax */
-  PRICING_TIER_INVALID_RIM_RANGE = 'PRICING_TIER_INVALID_RIM_RANGE',
-  /** Przedział felg już istnieje */
+  /** Tier rozmiaru (S/M/L) już istnieje dla tego dostawcy */
   PRICING_TIER_RANGE_CONFLICT = 'PRICING_TIER_RANGE_CONFLICT',
 
   // ── WORKING HOURS ─────────────────────────────────────────────────────────
@@ -78,6 +76,22 @@ export enum ErrorCode {
   WORKING_HOURS_INVALID_TIME_RANGE = 'WORKING_HOURS_INVALID_TIME_RANGE',
   /** Bloki obsady nakładają się, wychodzą poza ramy dnia lub mają błędny czas */
   WORKING_HOURS_INVALID_BLOCKS = 'WORKING_HOURS_INVALID_BLOCKS',
+
+  // ── STATION ───────────────────────────────────────────────────────────────
+  /** Stanowisko nie istnieje */
+  STATION_NOT_FOUND = 'STATION_NOT_FOUND',
+  /** Brak dostępu do stanowiska */
+  STATION_ACCESS_DENIED = 'STATION_ACCESS_DENIED',
+
+  // ── WORKER ────────────────────────────────────────────────────────────────
+  /** Pracownik nie istnieje */
+  WORKER_NOT_FOUND = 'WORKER_NOT_FOUND',
+  /** Brak dostępu do pracownika */
+  WORKER_ACCESS_DENIED = 'WORKER_ACCESS_DENIED',
+  /** Daty urlopu nakładają się na istniejący urlop pracownika */
+  WORKER_LEAVE_CONFLICT = 'WORKER_LEAVE_CONFLICT',
+  /** Urlop nie istnieje */
+  WORKER_LEAVE_NOT_FOUND = 'WORKER_LEAVE_NOT_FOUND',
 
   // ── VALIDATION ────────────────────────────────────────────────────────────
   /** Ogólny błąd walidacji danych wejściowych */

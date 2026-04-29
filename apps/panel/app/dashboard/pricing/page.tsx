@@ -2,7 +2,7 @@
 
 import { Heading, Text, Spinner, Button, Modal } from '@opony/design-system-web';
 import { usePricingTiers } from '../../../lib/hooks/use-pricing-tiers';
-import { useMarketPrices, getMarketRef } from '../../../lib/hooks/use-market-prices';
+import { useMarketPrices } from '../../../lib/hooks/use-market-prices';
 import { useAuthGuard } from '../../../lib/hooks/use-auth-guard';
 import { useNavigationGuard } from '../../../lib/hooks/use-navigation-guard';
 import { PricingActionBar } from './_components/PricingActionBar';
@@ -11,7 +11,14 @@ import { TravelFeeSection } from './_components/TravelFeeSection';
 import { ServicesSection } from './_components/ServicesSection';
 import { PricingInfoNote } from './_components/PricingInfoNote';
 import { PricingPreview } from './_components/PricingPreview';
+import { type SizeTierValue } from './_components/utils';
 import styles from './pricing.module.css';
+
+const MARKET_CATEGORY: Record<SizeTierValue, 'small' | 'medium' | 'large'> = {
+  S: 'small',
+  M: 'medium',
+  L: 'large',
+};
 
 export default function PricingPage() {
   const { isLoading: authLoading } = useAuthGuard('/dashboard');
@@ -36,6 +43,7 @@ export default function PricingPage() {
     globalBalancingEnabled,
     globalBalancingPrice,
     updateGlobalBalancing,
+    allTiersDefined,
   } = usePricingTiers();
 
   const {
@@ -54,7 +62,8 @@ export default function PricingPage() {
 
   function applyMarketPreset() {
     drafts.forEach((d, idx) => {
-      const ref = getMarketRef(marketPrices, d.rimSizeMin, d.rimSizeMax);
+      const category = MARKET_CATEGORY[d.sizeTier as SizeTierValue];
+      const ref = marketPrices.find((m) => m.category === category);
       if (ref) {
         const avg = Math.round((ref.priceMin + ref.priceMax) / 2);
         updateDraft(idx, { priceSwapPln: avg });
@@ -92,6 +101,7 @@ export default function PricingPage() {
           saved={saved}
           saving={saving}
           showAddForm={showAddForm}
+          allTiersDefined={allTiersDefined}
           onOpenAddForm={openAddForm}
           onSave={save}
           onRevert={revert}

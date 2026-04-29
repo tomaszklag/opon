@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { WorkingHours } from '@prisma/client';
+import { Prisma, WorkingHours } from '@prisma/client';
 import { AppException, ErrorCode } from '../common/errors';
 import {
   CapacityBlockDto,
@@ -60,7 +60,7 @@ export class WorkingHoursService {
       closeTime: midnight,
       slotMinutes: day.slotMinutes ?? 45,
       workstations: day.workstations ?? 1,
-      blocks: null,
+      blocks: Prisma.JsonNull,
     };
   }
 
@@ -69,8 +69,8 @@ export class WorkingHoursService {
     dayOfWeek: number,
     open: Date,
     close: Date,
-  ): unknown | null {
-    if (!blocks || blocks.length === 0) return null;
+  ): Prisma.NullableJsonNullValueInput | Prisma.InputJsonValue {
+    if (!blocks || blocks.length === 0) return Prisma.JsonNull;
 
     const openMins = open.getUTCHours() * 60 + open.getUTCMinutes();
     const closeMins = close.getUTCHours() * 60 + close.getUTCMinutes();
@@ -106,7 +106,7 @@ export class WorkingHoursService {
       prevEnd = toMins;
     }
 
-    return sorted;
+    return sorted as unknown as Prisma.InputJsonValue;
   }
 
   private toMins(hhmm: string): number {

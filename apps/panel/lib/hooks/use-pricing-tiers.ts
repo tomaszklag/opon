@@ -11,12 +11,11 @@ import {
   type PricingTier,
 } from '../../api-data-access/pricing-tiers';
 import { ApiError } from '../api';
-import { newTierSchema, type NewTierValues } from '../schemas/pricing.schema';
+import { newTierSchema, type NewTierValues, type SizeTierValue } from '../schemas/pricing.schema';
 
 export type TierDraft = {
   id?: string;
-  rimSizeMin: number;
-  rimSizeMax: number;
+  sizeTier: SizeTierValue;
   priceSwapPln: number;
   balancingEnabled: boolean;
   priceBalancingPerWheelPln: number;
@@ -25,8 +24,7 @@ export type TierDraft = {
 export type TravelFee = { zone1: number; zone2: number };
 
 const NEW_TIER_DEFAULTS: NewTierValues = {
-  rimSizeMin: 13,
-  rimSizeMax: 15,
+  sizeTier: 'S',
   priceSwapPln: 0,
   balancingEnabled: false,
   priceBalancingPerWheelPln: 20,
@@ -36,20 +34,19 @@ function tierToDraft(t: PricingTier): TierDraft {
   const balPln = t.priceBalancingPerWheelPln ?? 0;
   return {
     id: t.id,
-    rimSizeMin: t.rimSizeMin,
-    rimSizeMax: t.rimSizeMax,
+    sizeTier: t.sizeTier as SizeTierValue,
     priceSwapPln: t.priceSwapPln,
     balancingEnabled: balPln > 0,
     priceBalancingPerWheelPln: balPln > 0 ? balPln : 20,
   };
 }
 
+const SIZE_TIER_ORDER: SizeTierValue[] = ['S', 'M', 'L'];
+
 function validateDrafts(drafts: TierDraft[]): string[] {
   const errs: string[] = [];
   for (const d of drafts) {
-    if (d.rimSizeMin > d.rimSizeMax) errs.push(`Tier ${d.rimSizeMin}–${d.rimSizeMax}: min > max`);
-    if (d.priceSwapPln <= 0)
-      errs.push(`Tier ${d.rimSizeMin}–${d.rimSizeMax} cali: cena musi być > 0`);
+    if (d.priceSwapPln <= 0) errs.push(`Tier ${d.sizeTier}: cena musi być > 0`);
   }
   return errs;
 }
@@ -75,7 +72,13 @@ export function usePricingTiers() {
   useEffect(() => {
     getPricingTiers()
       .then((tiers) => {
-        const sorted = tiers.sort((a, b) => a.rimSizeMin - b.rimSizeMin);
+        const sorted = tiers
+          .slice()
+          .sort(
+            (a, b) =>
+              SIZE_TIER_ORDER.indexOf(a.sizeTier as SizeTierValue) -
+              SIZE_TIER_ORDER.indexOf(b.sizeTier as SizeTierValue),
+          );
         const fetchedDrafts = sorted.map(tierToDraft);
         setDrafts(fetchedDrafts);
         setSavedDrafts(fetchedDrafts);
@@ -108,8 +111,11 @@ export function usePricingTiers() {
   }
 
   function openAddForm() {
+    // Only allow adding a tier for a size not yet present
+    const existingSizes = new Set(drafts.map((d) => d.sizeTier));
+    const nextAvailable = SIZE_TIER_ORDER.find((s) => !existingSizes.has(s)) ?? 'S';
     setShowAddForm(true);
-    newTierForm.reset(NEW_TIER_DEFAULTS);
+    newTierForm.reset({ ...NEW_TIER_DEFAULTS, sizeTier: nextAvailable });
     setDirty(true);
   }
 
@@ -165,15 +171,16 @@ export function usePricingTiers() {
       if (showAddForm) {
         const values = newTierForm.getValues();
         const created = await createPricingTier({
-          rimSizeMin: values.rimSizeMin,
-          rimSizeMax: values.rimSizeMax,
+          sizeTier: values.sizeTier,
           priceSwapPln: values.priceSwapPln,
           priceBalancingPerWheelPln: values.balancingEnabled ? values.priceBalancingPerWheelPln : 0,
           travelFeeFirstKmPln: travelFee.zone1,
           travelFeeExtraKmPln: travelFee.zone2,
         });
         setDrafts((prev) =>
-          [...prev, tierToDraft(created)].sort((a, b) => a.rimSizeMin - b.rimSizeMin),
+          [...prev, tierToDraft(created)].sort(
+            (a, b) => SIZE_TIER_ORDER.indexOf(a.sizeTier) - SIZE_TIER_ORDER.indexOf(b.sizeTier),
+          ),
         );
         setShowAddForm(false);
         newTierForm.reset(NEW_TIER_DEFAULTS);
@@ -202,7 +209,7 @@ export function usePricingTiers() {
         err instanceof ApiError &&
         (err.code === 'PRICING_TIER_RANGE_CONFLICT' || err.isConflict)
       ) {
-        setErrors(['Przedział felg już istnieje. Zmień zakres lub usuń istniejący tier.']);
+        setErrors(['Tier tego rozmiaru już istnieje. Zmień rozmiar lub usuń istniejący tier.']);
       } else {
         setErrors([
           err instanceof ApiError ? err.message : 'Błąd zapisu cennika. Spróbuj ponownie.',
@@ -215,6 +222,9 @@ export function usePricingTiers() {
 
   const globalBalancingEnabled = drafts[0]?.balancingEnabled ?? false;
   const globalBalancingPrice = drafts[0]?.priceBalancingPerWheelPln ?? 20;
+
+  // Whether all 3 tiers are already defined (hide "add" button)
+  const allTiersDefined = drafts.length >= 3;
 
   return {
     drafts,
@@ -236,5 +246,6 @@ export function usePricingTiers() {
     globalBalancingEnabled,
     globalBalancingPrice,
     updateGlobalBalancing,
+    allTiersDefined,
   };
 }

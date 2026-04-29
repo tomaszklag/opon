@@ -2,7 +2,7 @@ import { Input, Button, Text } from '@opony/design-system-web';
 import { type TierDraft } from '../../../../lib/hooks/use-pricing-tiers';
 import { type MarketPrice } from '../../../../lib/hooks/use-market-prices';
 import { IconTrash } from '../../../../components/icons';
-import { rimLabel } from './utils';
+import { sizeTierLabel, type SizeTierValue } from './utils';
 import styles from '../pricing.module.css';
 
 interface Props {
@@ -31,6 +31,7 @@ export function TierRow({
   onDelete,
 }: Props) {
   const delta = marketRef ? priceDelta(d.priceSwapPln, marketRef) : null;
+  const label = sizeTierLabel(d.sizeTier as SizeTierValue);
 
   return (
     <div
@@ -39,7 +40,7 @@ export function TierRow({
       <div className={styles.tierInfo}>
         <div className={styles.tierNameRow}>
           <Text variant="label" as="span" weight="bold" className={styles.tierName}>
-            {rimLabel(d.rimSizeMin, d.rimSizeMax)}
+            {label}
           </Text>
           {popular && (
             <Text variant="label" as="span" className={styles.popularBadge}>
@@ -78,7 +79,7 @@ export function TierRow({
         value={d.priceSwapPln}
         suffix={<span>zł</span>}
         onChange={(e) => onUpdate(idx, { priceSwapPln: Number(e.target.value) })}
-        aria-label={`Cena wymiany ${rimLabel(d.rimSizeMin, d.rimSizeMax)}`}
+        aria-label={`Cena wymiany ${label}`}
         className={styles.priceInputNum}
       />
 
@@ -87,7 +88,7 @@ export function TierRow({
         size="sm"
         iconOnly
         onClick={() => onDelete(idx)}
-        aria-label={`Usuń tier ${rimLabel(d.rimSizeMin, d.rimSizeMax)}`}
+        aria-label={`Usuń tier ${label}`}
       >
         <IconTrash width="13" height="13" />
       </Button>
