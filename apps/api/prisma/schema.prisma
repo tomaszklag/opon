@@ -26,6 +26,7 @@ enum UserRole {
 enum ProviderType {
   MOBILE
   STATIONARY
+  BOTH
 }
 
 enum ProviderStatus {
@@ -155,6 +156,13 @@ model Provider {
   avgRating        Decimal        @default(0) @db.Decimal(3, 2)
   reviewCount      Int            @default(0)
   bankAccountIban  String?        @db.VarChar(34)
+  tagline         String?        @db.VarChar(80)
+  foundedYear     Int?
+  showPhone       Boolean        @default(true)
+  address         String?        @db.VarChar(300)
+  vehicleTypes    String[]       @default([])
+  tireSizes       String[]       @default([])
+  additionalServices String[]    @default([])
   createdAt        DateTime       @default(now())
   submittedAt      DateTime?
   approvedAt       DateTime?

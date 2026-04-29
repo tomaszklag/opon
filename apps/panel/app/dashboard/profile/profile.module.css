@@ -1,10 +1,623 @@
+/* ── Page shell ── */
 .page {
   display: flex;
   flex-direction: column;
   height: 100%;
 }
 
-/* ── Action bar ── */
+/* ── Topbar ── */
+.topbar {
+  height: 58px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 28px;
+  gap: 16px;
+  flex-shrink: 0;
+  background: var(--surface);
+}
+
+.topbarBreadcrumb {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.topbarSpacer {
+  flex: 1;
+}
+
+.topbarActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* ── Autosave pill ── */
+.autosavePill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 11px;
+  border-radius: 999px;
+  background: var(--success-muted);
+  border: 1px solid var(--success-border);
+}
+
+.autosaveDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--success);
+  flex-shrink: 0;
+}
+
+@keyframes autosaveBlink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+
+.autosaveDotPulsing {
+  animation: autosaveBlink 1200ms ease-in-out infinite;
+}
+
+/* ── Content split ── */
+.contentSplit {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 1fr 384px;
+}
+
+/* ── Form column ── */
+.formCol {
+  overflow-y: auto;
+  padding: 22px 28px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  scrollbar-width: thin;
+}
+
+.formCol::-webkit-scrollbar {
+  width: 6px;
+}
+
+.formCol::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+
+/* ── Preview column ── */
+.previewCol {
+  border-left: 1px solid var(--border);
+  background: linear-gradient(180deg, var(--bg-tint-top) 0%, var(--bg) 100%);
+  padding: 18px 22px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow: hidden;
+}
+
+/* ── Section cards ── */
+.section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.secHead {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 12px;
+  border-bottom: 1px dashed var(--border);
+}
+
+.secKicker {
+  text-transform: uppercase;
+  padding: 3px 7px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.secHint {
+  margin-left: auto;
+}
+
+/* ── Fields ── */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.fieldRow2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.fieldRow3 {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr 1fr;
+  gap: 14px;
+}
+
+.fieldHint {
+  /* typography handled by DS Text props — class is layout-only placeholder */
+}
+
+/* ── Locked field ── */
+.lockedField {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--surface-hover);
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+}
+
+.lockedFieldIco {
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.lockedFieldVal {
+  flex: 1;
+}
+
+.lockedFieldTag {
+  padding: 2px 6px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  text-transform: uppercase;
+  display: inline-flex;
+  align-items: center;
+}
+
+/* ── Char counter ── */
+.charCounter {
+  text-align: right;
+}
+
+/* ── Service type grid ── */
+.typeGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.typeCard {
+  border: 1px solid var(--border);
+  background: var(--bg);
+  border-radius: 10px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 120ms, background 120ms;
+}
+
+.typeCard:hover {
+  border-color: var(--border-strong);
+}
+
+.typeCardSelected {
+  background: var(--accent-muted);
+  border-color: var(--accent-border);
+  box-shadow: inset 0 0 0 1px var(--accent-border);
+}
+
+.typeIco {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+.typeIcoSelected {
+  background: var(--accent);
+  color: var(--text-on-accent);
+  border-color: transparent;
+}
+
+/* ── Chip row ── */
+.chipRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+/* ── Gallery grid ── */
+.galleryGrid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 10px;
+}
+
+.galleryTile {
+  aspect-ratio: 4 / 3;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  position: relative;
+  overflow: hidden;
+  background: var(--surface);
+}
+
+.galleryTileImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.galleryTileCover {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  text-transform: uppercase;
+  padding: 3px 7px;
+  background: var(--accent);
+  color: var(--text-on-accent); /* DS exception — text-on-accent not in TextColor type */
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.galleryTileIdx {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  padding: 2px 6px;
+  background: rgba(10, 11, 14, 0.7);
+  backdrop-filter: blur(6px);
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  display: inline-flex;
+  align-items: center;
+}
+
+.galleryTileActions {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  display: inline-flex;
+  gap: 4px;
+}
+
+.tileMiniBtn {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  background: rgba(10, 11, 14, 0.8);
+  backdrop-filter: blur(6px);
+  border: 1px solid var(--border);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text-primary);
+  transition: background 120ms;
+}
+
+.tileMiniBtn:hover {
+  background: var(--surface-raised);
+}
+
+.tileMiniDanger:hover {
+  background: var(--danger-muted);
+  color: var(--danger);
+  border-color: var(--danger-border);
+}
+
+.galleryEmpty {
+  aspect-ratio: 4 / 3;
+  border-radius: 10px;
+  background: transparent;
+  border: 1.5px dashed var(--border-strong);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: border-color 140ms, color 140ms, background 140ms;
+}
+
+.galleryEmpty:hover {
+  border-color: var(--accent-border);
+  color: var(--accent);
+  background: var(--accent-muted);
+}
+
+/* ── Contact / toggle row ── */
+.toggleRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.toggleText {
+  flex: 1;
+}
+
+/* ── Phone preview ── */
+.previewHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.previewToolbar {
+  display: inline-flex;
+  gap: 4px;
+  margin-left: auto;
+  padding: 3px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+}
+
+.previewTab {
+  padding: 5px 10px;
+  border-radius: 5px;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-family: var(--font-mono, monospace);
+  font-size: var(--text-3xs);
+  font-weight: var(--font-bold);
+  letter-spacing: 0.5px;
+}
+
+.previewTabActive {
+  background: var(--surface);
+  color: var(--text-primary);
+  box-shadow: 0 0 0 1px var(--border);
+}
+
+.phonePreview {
+  width: 280px;
+  align-self: center;
+  background: #070809;
+  border-radius: 28px;
+  border: 2px solid var(--border);
+  padding: 8px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.55);
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.phoneMockup {
+  background: var(--bg);
+  border-radius: 22px;
+  overflow: hidden;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.phoneStatus {
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 14px;
+  flex-shrink: 0;
+}
+
+.phoneHeroImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  position: absolute;
+  inset: 0;
+}
+
+.phoneHero {
+  height: 108px;
+  background: linear-gradient(135deg, #2C2118 0%, #14171D 55%, #1B1316 100%);
+  position: relative;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.phoneHero::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent 40%, rgba(10, 11, 14, 0.8) 100%);
+}
+
+.phoneDots {
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  display: inline-flex;
+  gap: 4px;
+  z-index: 1;
+}
+
+.phoneDot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.phoneDotActive {
+  background: var(--accent);
+  width: 14px;
+  border-radius: 3px;
+}
+
+.phoneBody {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 12px 14px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  scrollbar-width: none;
+}
+
+.phoneBody::-webkit-scrollbar {
+  display: none;
+}
+
+.ppNameRow {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.ppName {
+  font-family: var(--font-display, 'Bebas Neue'), sans-serif;
+  font-size: 21px;
+  letter-spacing: 1.5px;
+  line-height: 1;
+  color: var(--text-primary);
+}
+
+.ppBadge {
+  font-family: var(--font-mono, monospace);
+  font-size: var(--text-4xs);
+  font-weight: var(--font-extrabold);
+  letter-spacing: var(--tracking-display);
+  text-transform: uppercase;
+  padding: 2px 5px;
+  background: var(--accent-muted);
+  color: var(--accent);
+  border-radius: 3px;
+  border: 1px solid var(--accent-border);
+}
+
+.ppMetaRow {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.ppRating {
+  display: inline-flex;
+  gap: 3px;
+  align-items: center;
+}
+
+.ppStarIco {
+  color: var(--warning);
+}
+
+.ppDotSep {
+  display: inline-block;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--border-strong);
+}
+
+.ppTagRow {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+
+.ppTag {
+  font-family: var(--font-mono, monospace);
+  font-size: var(--text-4xs);
+  font-weight: var(--font-bold);
+  letter-spacing: 0.6px;
+  padding: 3px 6px;
+  border-radius: 4px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  text-transform: uppercase;
+}
+
+.ppDesc {
+  /* typography via DS Text props */
+}
+
+.ppDescFade {
+  color: var(--text-muted);
+}
+
+.ppCtaRow {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 6px;
+  padding: 8px 0 2px;
+  border-top: 1px dashed var(--border);
+}
+
+.ppCtaPrimary {
+  padding: 9px 10px;
+  background: var(--accent);
+  color: var(--text-on-accent);
+  border-radius: 8px;
+  font-family: var(--font-display, 'Bebas Neue'), sans-serif;
+  font-size: 13px;
+  letter-spacing: 2px;
+  text-align: center;
+  line-height: 1;
+}
+
+.ppCtaGhost {
+  width: 34px;
+  height: 34px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-primary);
+}
+
+.previewCaption {
+  text-align: center;
+  padding: 4px 8px;
+  border-top: 1px dashed var(--border);
+  flex-shrink: 0;
+}
+
+/* ── Loading ── */
+.loadingWrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}
+
+/* ── Legacy classes kept for compatibility ── */
 .actionBar {
   display: flex;
   align-items: center;
@@ -78,7 +691,6 @@
   box-shadow: none;
 }
 
-/* ── Content ── */
 .content {
   flex: 1;
   min-height: 0;
@@ -90,75 +702,19 @@
   align-items: start;
 }
 
-/* ── Form column ── */
-.formCol {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
 .pageHero {
   padding-bottom: 14px;
   border-bottom: 1px solid var(--border);
 }
 
-.pageTitle {
-  color: var(--text-primary);
-}
-
 .pageSub {
   margin-top: 6px;
-  color: var(--text-secondary);
-}
-
-
-/* ── Section ── */
-.section {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  padding: 18px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  position: relative;
-}
-
-.section::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: var(--hairline);
-  border-radius: 14px 14px 0 0;
-  pointer-events: none;
-}
-
-.secHead {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
 }
 
 .secTitle {
-  color: var(--text-primary);
+  /* intentionally empty — Heading component handles styles */
 }
 
-.secKicker {
-  font-family: var(--font-mono, monospace);
-  font-size: var(--text-3xs);
-  font-weight: var(--font-bold);
-  letter-spacing: var(--tracking-display);
-  text-transform: uppercase;
-  color: var(--text-muted);
-  padding: 3px 7px;
-  border: 1px solid var(--border);
-  border-radius: 5px;
-}
-
-/* ── Fields ── */
 .fieldRow {
   display: grid;
   gap: 14px;
@@ -166,12 +722,6 @@
 
 .fieldRowTwo {
   grid-template-columns: 1fr 1fr;
-}
-
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
 }
 
 .label {
@@ -217,7 +767,7 @@
   min-height: 90px;
 }
 
-.charCounter {
+.charCounterLegacy {
   font-family: var(--font-mono, monospace);
   font-size: var(--text-2xs);
   color: var(--text-muted);
@@ -225,12 +775,12 @@
   letter-spacing: var(--tracking-wide);
 }
 
-.charCounter strong {
+.charCounterLegacy strong {
   color: var(--text-secondary);
   font-weight: var(--font-bold);
 }
 
-.fieldHint {
+.fieldHintLegacy {
   font-size: var(--text-xs);
   color: var(--text-muted);
   line-height: var(--leading-cozy);
@@ -242,7 +792,6 @@
   font-weight: var(--font-semibold);
 }
 
-/* ── Locked input ── */
 .lockedInput {
   display: flex;
   align-items: center;
@@ -279,7 +828,6 @@
   text-transform: uppercase;
 }
 
-/* ── Meta pills (locked location) ── */
 .metaRow {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -313,7 +861,6 @@
   letter-spacing: var(--tracking-wide);
 }
 
-/* ── Right: preview ── */
 .previewCol {
   position: sticky;
   top: 0;
@@ -342,12 +889,6 @@
   pointer-events: none;
 }
 
-.previewHead {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-}
-
 .previewTitle {
   font-family: var(--font-display, 'Bebas Neue'), sans-serif;
   font-size: var(--text-2xl);
@@ -362,7 +903,6 @@
   color: var(--text-muted);
 }
 
-/* ── Provider card preview ── */
 .previewCard {
   background: var(--bg);
   border: 1px solid var(--border);
@@ -450,12 +990,10 @@
   letter-spacing: var(--tracking-wide);
 }
 
-/* ── Loading ── */
-.loadingWrap {
+.previewHead {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
+  align-items: baseline;
+  justify-content: space-between;
 }
 
 .spinner {

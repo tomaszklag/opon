@@ -26,4 +26,11 @@ export class ProviderResponseDto {
   @ApiPropertyOptional({ type: String, format: 'date-time', nullable: true })
   approvedAt?: Date | null;
   @ApiProperty() updatedAt!: Date;
+  @ApiPropertyOptional({ type: String, nullable: true }) tagline?: string | null;
+  @ApiPropertyOptional({ type: Number, nullable: true }) foundedYear?: number | null;
+  @ApiProperty() showPhone!: boolean;
+  @ApiPropertyOptional({ type: String, nullable: true }) address?: string | null;
+  @ApiProperty({ type: [String] }) vehicleTypes!: string[];
+  @ApiProperty({ type: [String] }) tireSizes!: string[];
+  @ApiProperty({ type: [String] }) additionalServices!: string[];
 }

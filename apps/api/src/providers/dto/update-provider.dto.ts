@@ -1,6 +1,10 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
+import { ProviderType } from '@prisma/client';
 import {
+  IsArray,
+  IsBoolean,
   IsEmail,
+  IsEnum,
   IsInt,
   IsLatitude,
   IsLongitude,
@@ -59,4 +63,51 @@ export class UpdateProviderDto {
   @Min(1)
   @Max(100)
   serviceRadiusKm?: number;
+
+  @ApiPropertyOptional({ enum: ProviderType })
+  @IsOptional()
+  @IsEnum(ProviderType)
+  type?: ProviderType;
+
+  @ApiPropertyOptional({ maxLength: 80 })
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  tagline?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsInt()
+  @Min(1900)
+  @Max(2030)
+  foundedYear?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsBoolean()
+  showPhone?: boolean;
+
+  @ApiPropertyOptional({ maxLength: 300 })
+  @IsOptional()
+  @IsString()
+  @MaxLength(300)
+  address?: string;
+
+  @ApiPropertyOptional({ type: [String] })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  vehicleTypes?: string[];
+
+  @ApiPropertyOptional({ type: [String] })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  tireSizes?: string[];
+
+  @ApiPropertyOptional({ type: [String] })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  additionalServices?: string[];
 }

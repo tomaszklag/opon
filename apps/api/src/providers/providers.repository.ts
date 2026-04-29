@@ -1,5 +1,12 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma, Provider, ProviderStatus, ProviderType, UserRole } from '@prisma/client';
+import {
+  PhotoType,
+  Prisma,
+  Provider,
+  ProviderStatus,
+  ProviderType,
+  UserRole,
+} from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
 export type ProviderWithoutRelations = Provider;
@@ -48,6 +55,60 @@ export class ProvidersRepository {
 
   update(id: string, data: Prisma.ProviderUpdateInput): Promise<Provider> {
     return this.prisma.provider.update({ where: { id }, data });
+  }
+
+  // ── Photos ─────────────────────────────────────────────────────────────────
+
+  async getPhotos(providerId: string) {
+    return this.prisma.providerPhoto.findMany({
+      where: { providerId },
+      orderBy: [{ isPrimary: 'desc' }, { createdAt: 'asc' }],
+    });
+  }
+
+  async addPhoto(providerId: string, url: string, type: PhotoType) {
+    const count = await this.prisma.providerPhoto.count({ where: { providerId } });
+    return this.prisma.providerPhoto.create({
+      data: {
+        providerId,
+        url,
+        storageKey: url,
+        type: type ?? PhotoType.WORKSPACE,
+        isPrimary: count === 0,
+        size: 0,
+        mimeType: 'image/jpeg',
+        originalName: url,
+      },
+    });
+  }
+
+  async deletePhoto(id: string, providerId: string) {
+    const photo = await this.prisma.providerPhoto.findFirst({ where: { id, providerId } });
+    if (!photo) return null;
+    await this.prisma.providerPhoto.delete({ where: { id } });
+    if (photo.isPrimary) {
+      const next = await this.prisma.providerPhoto.findFirst({
+        where: { providerId },
+        orderBy: { createdAt: 'asc' },
+      });
+      if (next)
+        await this.prisma.providerPhoto.update({
+          where: { id: next.id },
+          data: { isPrimary: true },
+        });
+    }
+    return photo;
+  }
+
+  async reorderPhotos(providerId: string, orderedIds: string[]) {
+    return this.prisma.$transaction(async (tx) => {
+      for (let i = 0; i < orderedIds.length; i++) {
+        await tx.providerPhoto.updateMany({
+          where: { id: orderedIds[i], providerId },
+          data: { isPrimary: i === 0 },
+        });
+      }
+    });
   }
 
   /**
