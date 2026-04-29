@@ -8,7 +8,7 @@ export const DAY_META: Record<number, { abbr: string; full: string }> = {
   6: { abbr: 'SOB', full: 'Sobota' },
 };
 
-export const SLOT_OPTIONS = [15, 30, 45, 60, 90];
+export const SLOT_OPTIONS = [30, 45, 60, 90];
 
 export function parseTime(time: string): [number, number] {
   const parts = time.split(':');

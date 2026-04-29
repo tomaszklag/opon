@@ -49,32 +49,61 @@ function validate(days: DayEntry[]): Record<number, string> {
   return errs;
 }
 
+function inferDefaultSlot(days: DayEntry[]): number {
+  const counts: Record<number, number> = {};
+  for (const d of days) {
+    if (!d.isClosed) counts[d.slotMinutes] = (counts[d.slotMinutes] ?? 0) + 1;
+  }
+  let best = 45;
+  let bestCount = 0;
+  for (const [mins, cnt] of Object.entries(counts)) {
+    if (cnt > bestCount) {
+      best = Number(mins);
+      bestCount = cnt;
+    }
+  }
+  return best;
+}
+
+const INITIAL_DAYS = DISPLAY_ORDER.map(defaultDay);
+
 export function useWorkingHours() {
-  const [days, setDays] = useState<DayEntry[]>(() => DISPLAY_ORDER.map(defaultDay));
+  const [days, setDays] = useState<DayEntry[]>(INITIAL_DAYS);
+  const [savedDays, setSavedDays] = useState<DayEntry[]>(INITIAL_DAYS);
+  const [defaultSlotMinutes, setDefaultSlotMinutes] = useState(45);
+  const [savedDefaultSlot, setSavedDefaultSlot] = useState(45);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [dirty, setDirty] = useState(false);
   const [errors, setErrors] = useState<Record<number, string>>({});
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const savedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     getWorkingHours()
       .then((serverDays) => {
-        setDays(
-          DISPLAY_ORDER.map((dow) => {
-            const found = serverDays.find((d) => d.dayOfWeek === dow);
-            if (!found) return defaultDay(dow);
-            return {
-              dayOfWeek: found.dayOfWeek,
-              isClosed: found.isClosed,
-              openTime: found.openTime ?? (dow === 6 ? '09:00' : '08:00'),
-              closeTime: found.closeTime ?? (dow === 6 ? '14:00' : '18:00'),
-              slotMinutes: found.slotMinutes,
-            };
-          }),
-        );
+        const mapped = DISPLAY_ORDER.map((dow) => {
+          const found = serverDays.find((d) => d.dayOfWeek === dow);
+          if (!found) return defaultDay(dow);
+          return {
+            dayOfWeek: found.dayOfWeek,
+            isClosed: found.isClosed,
+            openTime: found.openTime ?? (dow === 6 ? '09:00' : '08:00'),
+            closeTime: found.closeTime ?? (dow === 6 ? '14:00' : '18:00'),
+            slotMinutes: found.slotMinutes,
+          };
+        });
+        const inferredSlot = inferDefaultSlot(mapped);
+        setDays(mapped);
+        setSavedDays(mapped);
+        setDefaultSlotMinutes(inferredSlot);
+        setSavedDefaultSlot(inferredSlot);
       })
-      .catch(() => {})
+      .catch(() => {
+        setLoadError('Błąd ładowania godzin pracy. Odśwież stronę.');
+      })
       .finally(() => setLoading(false));
   }, []);
 
@@ -85,6 +114,48 @@ export function useWorkingHours() {
       delete next[dayOfWeek];
       return next;
     });
+    setSaveError(null);
+    setDirty(true);
+  }
+
+  function updateDefaultSlot(minutes: number) {
+    setDefaultSlotMinutes(minutes);
+    setSaveError(null);
+    setDirty(true);
+  }
+
+  function applyDefaultSlotToAll() {
+    setDays((prev) => prev.map((d) => ({ ...d, slotMinutes: defaultSlotMinutes })));
+    setSaveError(null);
+    setDirty(true);
+  }
+
+  function copyDayToAll(fromDow: number) {
+    const from = days.find((d) => d.dayOfWeek === fromDow);
+    if (!from) return;
+    setDays((prev) =>
+      prev.map((d) =>
+        d.dayOfWeek !== fromDow
+          ? {
+              ...d,
+              openTime: from.openTime,
+              closeTime: from.closeTime,
+              slotMinutes: from.slotMinutes,
+            }
+          : d,
+      ),
+    );
+    setSaveError(null);
+    setDirty(true);
+  }
+
+  function revert() {
+    setDays(savedDays);
+    setDefaultSlotMinutes(savedDefaultSlot);
+    setErrors({});
+    setSaveError(null);
+    setDirty(false);
+    setSaved(false);
   }
 
   async function save() {
@@ -94,17 +165,37 @@ export function useWorkingHours() {
       return;
     }
     setSaving(true);
+    setSaveError(null);
     try {
       await saveWorkingHours({ days });
+      setSavedDays(days);
+      setSavedDefaultSlot(defaultSlotMinutes);
+      setDirty(false);
       setSaved(true);
       if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
       savedTimerRef.current = setTimeout(() => setSaved(false), 3000);
     } catch {
-      // no-op
+      setSaveError('Błąd zapisu godzin pracy. Spróbuj ponownie.');
     } finally {
       setSaving(false);
     }
   }
 
-  return { days, loading, saving, saved, errors, updateDay, save };
+  return {
+    days,
+    defaultSlotMinutes,
+    loading,
+    saving,
+    saved,
+    dirty,
+    errors,
+    loadError,
+    saveError,
+    updateDay,
+    updateDefaultSlot,
+    applyDefaultSlotToAll,
+    copyDayToAll,
+    revert,
+    save,
+  };
 }
