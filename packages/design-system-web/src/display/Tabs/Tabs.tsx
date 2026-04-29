@@ -6,6 +6,7 @@ export interface Tab {
   key: string;
   label: string;
   count?: number;
+  countWarn?: boolean;
 }
 
 export interface TabsProps {
@@ -55,7 +56,12 @@ export function Tabs({ tabs, activeKey, onChange, className }: TabsProps) {
           >
             {tab.label}
             {tab.count !== undefined && (
-              <span className={styles.count} aria-label={`${tab.count} pozycji`}>
+              <span
+                className={[styles.count, tab.countWarn ? styles.countWarn : null]
+                  .filter(Boolean)
+                  .join(' ')}
+                aria-label={`${tab.count} pozycji`}
+              >
                 {tab.count}
               </span>
             )}

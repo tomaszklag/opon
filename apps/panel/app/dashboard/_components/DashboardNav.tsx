@@ -13,6 +13,7 @@ import {
   IconPricing,
   IconHours,
   IconProfile,
+  IconReviews,
   IconStations,
   IconWorkers,
 } from '../../../components/icons';
@@ -46,6 +47,7 @@ const PAGE_TITLE: Record<string, string> = {
   '/dashboard/workers': 'Pracownicy',
   '/dashboard/bookings': 'Rezerwacje',
   '/dashboard/profile': 'Profil firmy',
+  '/dashboard/reviews': 'Opinie',
 };
 
 // ── Component ──────────────────────────────────────────────────────────────
@@ -146,6 +148,13 @@ export default function DashboardNav() {
           >
             <IconHours width="15" height="15" />
             Godziny pracy
+          </a>
+          <a
+            href="/dashboard/reviews"
+            className={`${styles.navItem} ${isActive('/dashboard/reviews') ? styles.navActive : ''}`}
+          >
+            <IconReviews width="15" height="15" />
+            Opinie
           </a>
 
           <Text variant="nano" as="span" className={styles.navSection}>

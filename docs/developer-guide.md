@@ -182,6 +182,34 @@ export class CreateStationDto {
 }
 ```
 
+### 3.5. Prisma enum → `string` — wzorzec override statusów
+
+Pola enum w Prisma schema (np. `BookingStatus`, `ProviderStatus`) są generowane przez openapi-typescript jako `status: string` — bez konkretnych wartości. Wymagają ręcznego override'u dokładnie tak samo jak pola `Json`.
+
+```ts
+// api-data-access/bookings.ts
+import type { components } from '@opony/api-client';
+
+type BookingBase = components['schemas']['BookingResponseDto'];
+
+// status: string → zastępujemy union type z konkretnymi wartościami
+export type BookingStatus =
+  | 'PENDING'
+  | 'CONFIRMED'
+  | 'IN_PROGRESS'
+  | 'COMPLETED'
+  | 'CANCELLED_BY_CLIENT'
+  | 'CANCELLED_BY_PROVIDER'
+  | 'CANCELLED_BY_SYSTEM'
+  | 'NO_SHOW'
+  | 'REJECTED';
+
+export type Booking = Omit<BookingBase, 'status'> & { status: BookingStatus };
+// Dla modelu z wieloma polami-enumami: Omit<Base, 'status' | 'role'> & { status: StatusUnion; role: RoleUnion }
+```
+
+Wartości unii muszą być identyczne z wartościami Prisma enum — przepisz je dosłownie z `schema.prisma`.
+
 ---
 
 ## 4. Workflow branchy i commitów
@@ -410,6 +438,18 @@ import { Heading, Text } from '@opony/design-system-web';
 
 `as` akceptuje: `h1 h2 h3 h4 h5 h6 span div`
 
+`Heading` akceptuje też prop **`color`** o tych samych wartościach co `Text.color`: `primary | secondary | muted | accent`. Używaj go zamiast `color:` w CSS dla elementów nagłówkowych.
+
+```tsx
+// ✅ TAK
+<Heading variant="subsection" color="accent">
+  Odpowiedzi
+</Heading>
+
+// ❌ NIE — color w CSS module
+// .respTitle { color: var(--accent); }
+```
+
 #### Text — warianty
 
 | Wariant     | Zastosowanie                                    |
@@ -424,6 +464,48 @@ import { Heading, Text } from '@opony/design-system-web';
 | `kicker-sm` | Mono mikro — rozmiary pliku, kody (9px Mono)    |
 
 `as` akceptuje: `p span div label li strong em`
+
+#### Reguła: kontenery owijające DS `<Text>` nie mogą ustawiać typografii
+
+Jeśli element CSS module pełni rolę **kontenera** (flex wrapper, grid cell, section) i jego bezpośrednie dzieci to komponenty DS `<Text>` lub `<Heading>`, **nie ustawiaj** na nim `font-size`, `color`, `line-height`, `font-weight` ani `font-family`. DS komponenty zarządzają tymi właściwościami wewnętrznie — właściwości na rodzicu kaskadują i nadpisują je.
+
+```css
+/* ❌ NIE — container ustawia font-size, który kaskaduje do <Text> */
+.clientMeta {
+  display: flex;
+  gap: 4px;
+  font-size: 13px; /* <-- kaskaduje do <Text variant="body-sm"> → nadpisuje DS */
+  color: var(--text-muted); /* <-- nadpisuje color prop w <Text> */
+}
+
+/* ✅ TAK — container tylko layout */
+.clientMeta {
+  display: flex;
+  gap: 4px;
+}
+/* Jeśli niebędące DS dziecko (np. <time>) wymaga rozmiaru — dodaj mu własną klasę */
+.clientMetaTime {
+  font-size: 13px;
+}
+```
+
+Naruszenie tej reguły jest trudne do wykrycia — DS Text nadal renderuje się poprawnie, ale różni się od zamierzonego projektu (zły rozmiar, kolor). Traktuj go jak błąd DS compliance.
+
+Reguła obowiązuje **dwustronnie**: nie tylko dla klas na rodzicach, ale również dla klas aplikowanych bezpośrednio do DS komponentów. Jeśli dodajesz `className` do `<Text>` lub `<Heading>`, ta klasa może zawierać wyłącznie właściwości layoutowe (`width`, `margin`, `flex`, `grid-*`). Typografia należy do propsów komponentu.
+
+```tsx
+// ❌ NIE — line-height na klasie przyklejonej bezpośrednio do <Text>
+// .reviewText { line-height: 1.55; }
+<Text variant="body" className={styles.reviewText}>...</Text>
+
+// ❌ NIE — font-size na klasie przyklejonej bezpośrednio do <Text as="span">
+// .respUnit { font-size: 18px; color: var(--accent); }
+<Text as="span" className={styles.respUnit}>%</Text>
+
+// ✅ TAK — typography przez propsy, className tylko dla geometrii
+<Text as="span" variant="body-md" color="accent" className={styles.respUnit}>%</Text>
+// .respUnit { margin-left: 2px; }   ← tylko layout
+```
 
 #### CSS Modules + noUncheckedIndexedAccess
 
@@ -457,6 +539,39 @@ import {
 **Zanim napiszesz nowy komponent** — sprawdź `packages/design-system-web/src/`. Jeśli odpowiednik istnieje ale wizualnie nie zgadza się z designem → **napraw DS**, nie twórz lokalnego duplikatu. Lokalne kopie komponentów DS są niedopuszczalne.
 
 Przykład: `StepIndicator` w DS istniał, ale miał błędny styl (full-width `<ol>` zamiast kompaktowego paska). Właściwe rozwiązanie: zaktualizować DS, nie tworzyć `StepsIndicator.tsx` w panelu.
+
+### Zasada: brakująca funkcja DS → rozszerz DS, nie omijaj
+
+Jeśli istniejący komponent DS nie obsługuje potrzebnego wariantu, stanu lub propsa — **rozszerz DS** (dodaj prop + CSS do DS), nie twórz lokalnego obejścia w panelu.
+
+Lokalnym obejściem jest m.in.:
+
+- duplikat komponentu DS z ręcznie dopisanym stylem
+- warunkowy `className` w panelu symulujący brakujący wariant DS
+- ukrycie komponentu + własny HTML
+
+Przykład z B2B-10: `<Tabs>` nie miał wariantu ostrzegawczego dla licznika zakładki. Właściwe rozwiązanie:
+
+```typescript
+// packages/design-system-web/src/display/Tabs/Tabs.tsx
+export interface Tab {
+  key: string;
+  label: string;
+  count?: number;
+  countWarn?: boolean; // ← nowy prop dodany do DS
+}
+```
+
+```css
+/* Tabs.module.css */
+.count.countWarn {
+  background: var(--warning-muted);
+  border-color: var(--warning-border);
+  color: var(--warning);
+}
+```
+
+Zamiast CSS w panelu-app dla konkretnego użycia. Rozszerzenie DS jest wielokrotnego użytku i pozostaje w jednym miejscu.
 
 ### Najczęstsze zamienniki
 
@@ -644,6 +759,7 @@ Dostępne tokeny kolorów w `global.css`:
 --success, --success-muted, --success-border
 --warning, --warning-muted, --warning-border
 --danger, --danger-muted, --danger-border
+--info, --info-muted, --info-border         ← niebieski (stan „w trakcie"), analogicznie do success/warning
 
 /* shadows */
 --shadow-sm / --shadow-md / --shadow-lg   ← cienie neutralne (czarne)
@@ -653,6 +769,21 @@ Dostępne tokeny kolorów w `global.css`:
 ```
 
 Wartości bez tokenu (np. specyficzne przezroczystości w gradientach tła) mogą pozostać hardcoded — ale to wyjątek, nie reguła.
+
+#### Częściowa przezroczystość tokenu — `color-mix()`
+
+Gdy potrzebujesz tokenu z niestandardową przezroczystością i nie istnieje dedykowany token, użyj `color-mix()` zamiast `rgba()`:
+
+```css
+/* ✅ TAK */
+border-left: 1px solid color-mix(in srgb, var(--bg) 25%, transparent);
+background: color-mix(in srgb, var(--surface) 40%, transparent);
+
+/* ❌ NIE */
+border-left: 1px solid rgba(255, 255, 255, 0.25); /* hardcoded rgba zamiast tokenu */
+```
+
+`color-mix(in srgb, TOKEN X%, transparent)` oznacza: X% koloru tokenu, reszta przezroczysta.
 
 ### Kolory spoza palety DS — lokalne zmienne CSS
 
