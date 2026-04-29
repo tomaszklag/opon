@@ -580,6 +580,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/v1/providers/me/bookings': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List bookings for current week (provider) */
+    get: operations['BookingsController_list'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -864,6 +881,25 @@ export interface components {
       /** Format: date-time */
       createdAt: string;
     };
+    DayScheduleDto: {
+      /**
+       * @description Dzień tygodnia (0=niedziela, 6=sobota)
+       * @example 1
+       */
+      dayOfWeek: number;
+      /** @example true */
+      open: boolean;
+      /**
+       * @description Godzina otwarcia (HH:MM)
+       * @example 08:00
+       */
+      startTime: string;
+      /**
+       * @description Godzina zamknięcia (HH:MM)
+       * @example 17:00
+       */
+      endTime: string;
+    };
     CreateStationDto: {
       /** @example Stanowisko 1 */
       name: string;
@@ -880,7 +916,7 @@ export interface components {
        *       }
        *     ]
        */
-      schedule: string[];
+      schedule: components['schemas']['DayScheduleDto'][];
     };
     UpdateStationDto: {
       /** @example Stanowisko 1 */
@@ -897,7 +933,7 @@ export interface components {
        *       }
        *     ]
        */
-      schedule?: string[];
+      schedule?: components['schemas']['DayScheduleDto'][];
     };
     AssignWorkerDto: {
       /** @description ID pracownika do przypisania */
@@ -983,6 +1019,25 @@ export interface components {
       endDate: string;
       /** @example Urlop wypoczynkowy */
       note?: string;
+    };
+    BookingResponseDto: {
+      id: string;
+      referenceCode: string;
+      status: string;
+      startAt: string;
+      endAt: string;
+      clientName: string;
+      clientPhone: string;
+      tireSize?: string | null;
+      serviceType?: string | null;
+      sizeTier?: string | null;
+      tpmsRequired: boolean;
+      basePricePln?: number | null;
+      travelFeePln?: number | null;
+      totalPricePln?: number | null;
+      stationId?: string | null;
+      notes?: string | null;
+      createdAt: string;
     };
   };
   responses: never;
@@ -2131,6 +2186,25 @@ export interface operations {
           [name: string]: unknown;
         };
         content?: never;
+      };
+    };
+  };
+  BookingsController_list: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['BookingResponseDto'][];
+        };
       };
     };
   };

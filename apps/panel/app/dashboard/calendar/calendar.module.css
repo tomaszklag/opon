@@ -1,0 +1,814 @@
+/* ── Local colour tokens ────────────────────────────────────────────────── */
+/* Calendar uses a lighter blue (#5DA8FF) for in-progress bookings          */
+.main {
+  --cal-info: #5DA8FF;
+  --cal-info-muted: rgba(93, 168, 255, 0.14);
+  --cal-info-border: rgba(93, 168, 255, 0.32);
+}
+
+/* ── Shell ──────────────────────────────────────────────────────────────── */
+.main {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  height: 100%;
+}
+
+/* ── Topbar ─────────────────────────────────────────────────────────────── */
+.topbar {
+  height: 58px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 24px;
+  gap: 12px;
+  flex-shrink: 0;
+  background: var(--bg);
+}
+
+.topbarSpacer {
+  flex: 1;
+}
+
+/* ── View switcher ──────────────────────────────────────────────────────── */
+.viewSwitcher {
+  display: inline-flex;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 3px;
+  gap: 2px;
+}
+
+.viewBtn {
+  padding: 7px 14px;
+  border-radius: 7px;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  cursor: pointer;
+  transition: color 120ms ease;
+}
+
+.viewBtn:hover {
+  color: var(--text-primary);
+}
+
+.viewBtnActive {
+  background: var(--accent);
+  color: var(--text-on-accent);
+  box-shadow: 0 4px 10px rgba(255, 107, 26, 0.3);
+}
+
+/* ── Date nav ───────────────────────────────────────────────────────────── */
+.dateNav {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dateNavBtn {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 120ms ease, border-color 120ms ease;
+}
+
+.dateNavBtn:hover {
+  background: var(--surface-hover);
+  border-color: var(--border-strong);
+}
+
+.dateNavRange {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 4px 14px;
+  min-width: 180px;
+}
+
+.dateNavMain {
+  font-family: var(--font-display);
+  font-size: 20px;
+  letter-spacing: 1.5px;
+  line-height: 1;
+  color: var(--text-primary);
+  display: block;
+}
+
+.dateNavSub {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-muted);
+  letter-spacing: 0.5px;
+  margin-top: 3px;
+  display: block;
+}
+
+.todayBtn {
+  padding: 7px 12px;
+  border-radius: 8px;
+  background: var(--accent-muted);
+  border: 1px solid var(--accent-border);
+  color: var(--accent);
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 120ms ease;
+}
+
+.todayBtn:hover {
+  background: rgba(255, 107, 26, 0.22);
+}
+
+/* ── Content split ──────────────────────────────────────────────────────── */
+.content {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 1fr 280px;
+  overflow: hidden;
+}
+
+/* ── Calendar container ─────────────────────────────────────────────────── */
+.calContainer {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-right: 1px solid var(--border);
+}
+
+/* ── Day header row ─────────────────────────────────────────────────────── */
+.dayHeader {
+  display: grid;
+  grid-template-columns: 64px repeat(7, 1fr);
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  flex-shrink: 0;
+}
+
+.dayHeaderTz {
+  padding: 14px 6px;
+  border-right: 1px solid var(--border);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--text-muted);
+  letter-spacing: 0.5px;
+  text-align: center;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 12px;
+}
+
+.dayColHead {
+  padding: 12px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  border-left: 1px solid var(--border);
+  position: relative;
+}
+
+.today {
+  background: linear-gradient(180deg, var(--accent-muted), transparent);
+}
+
+.today::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--accent);
+}
+
+.closed {
+  background: repeating-linear-gradient(
+    -45deg,
+    transparent,
+    transparent 6px,
+    rgba(255, 87, 87, 0.04) 6px,
+    rgba(255, 87, 87, 0.04) 12px
+  );
+}
+
+.dayAbbr {
+  font-family: var(--font-display);
+  font-size: 18px;
+  letter-spacing: 1.5px;
+  line-height: 1;
+  color: var(--text-secondary);
+}
+
+.today .dayAbbr {
+  color: var(--accent);
+}
+
+.closed .dayAbbr {
+  opacity: 0.5;
+}
+
+.dayDate {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--text-primary);
+  line-height: 1;
+  letter-spacing: 0.3px;
+}
+
+.today .dayDate {
+  color: var(--accent);
+}
+
+.closed .dayDate {
+  color: var(--text-muted);
+}
+
+.dayStat {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--text-muted);
+  letter-spacing: 0.5px;
+  margin-top: 2px;
+}
+
+.dayStatActive {
+  color: var(--accent);
+  font-weight: 800;
+}
+
+.todayBadge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  padding: 1px 5px;
+  background: var(--accent);
+  color: var(--text-on-accent);
+  font-family: var(--font-body);
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  border-radius: 3px;
+}
+
+/* ── Calendar body grid ─────────────────────────────────────────────────── */
+.calBody {
+  flex: 1;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: 64px repeat(7, 1fr);
+  position: relative;
+  scrollbar-width: thin;
+}
+
+.calBody::-webkit-scrollbar {
+  width: 6px;
+}
+
+.calBody::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+
+/* ── Hour rail ──────────────────────────────────────────────────────────── */
+.hourRail {
+  grid-column: 1;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  position: sticky;
+  left: 0;
+  z-index: 5;
+}
+
+.hourCell {
+  height: 60px;
+  padding: 4px 8px 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-muted);
+  letter-spacing: 0.3px;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.hourCell:last-child {
+  border-bottom: none;
+}
+
+/* ── Day column ─────────────────────────────────────────────────────────── */
+.dayCol {
+  position: relative;
+  border-left: 1px solid var(--border);
+}
+
+.dayCol.today {
+  background: linear-gradient(180deg, rgba(255, 107, 26, 0.03), transparent);
+}
+
+.dayCol.closed {
+  background: repeating-linear-gradient(
+    -45deg,
+    transparent,
+    transparent 8px,
+    rgba(95, 99, 112, 0.05) 8px,
+    rgba(95, 99, 112, 0.05) 16px
+  );
+}
+
+.dayColInner {
+  position: relative;
+  height: 660px; /* 11 hours × 60px (8:00–18:00) */
+}
+
+.hourGridline {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--hairline);
+  pointer-events: none;
+}
+
+/* ── Booking blocks ─────────────────────────────────────────────────────── */
+.booking {
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  border-radius: 7px;
+  padding: 6px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform 140ms ease, filter 140ms ease;
+  font-family: var(--font-body);
+  font-size: 11px;
+}
+
+.booking:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.1);
+}
+
+.confirmed {
+  background: linear-gradient(135deg, rgba(255, 107, 26, 0.3), rgba(255, 107, 26, 0.15));
+  border: 1px solid var(--accent);
+  border-left: 3px solid var(--accent);
+}
+
+.pending {
+  background: linear-gradient(135deg, rgba(255, 176, 32, 0.25), rgba(255, 176, 32, 0.12));
+  border: 1px solid var(--warning-border);
+  border-left: 3px solid var(--warning);
+}
+
+.progress {
+  background: linear-gradient(135deg, var(--cal-info-muted), rgba(93, 168, 255, 0.08));
+  border: 1px solid var(--cal-info-border);
+  border-left: 3px solid var(--cal-info);
+}
+
+.completed {
+  background: rgba(46, 224, 160, 0.08);
+  border: 1px solid var(--success-border);
+  border-left: 3px solid var(--success);
+}
+
+.past {
+  opacity: 0.45;
+}
+
+.bookingTime {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 10px;
+  color: var(--text-primary);
+  letter-spacing: 0.3px;
+}
+
+.completed .bookingTime {
+  color: var(--success);
+}
+
+.pending .bookingTime {
+  color: var(--warning);
+}
+
+.progress .bookingTime {
+  color: var(--cal-info);
+}
+
+.bookingClient {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bookingMeta {
+  font-size: 9px;
+  color: var(--text-secondary);
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bookingBadge {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-family: var(--font-body);
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.pending .bookingBadge {
+  background: var(--warning);
+  color: var(--bg);
+}
+
+.progress .bookingBadge {
+  background: var(--cal-info);
+  color: var(--bg);
+}
+
+/* ── Current time indicator ─────────────────────────────────────────────── */
+@keyframes softPulse {
+  0%, 100% {
+    box-shadow: 0 0 0 3px var(--accent-muted);
+    opacity: 1;
+  }
+  50% {
+    box-shadow: 0 0 0 7px transparent;
+    opacity: 0.85;
+  }
+}
+
+.nowLine {
+  position: absolute;
+  left: 64px;
+  right: 0;
+  height: 2px;
+  background: var(--accent);
+  box-shadow: 0 0 10px var(--accent-glow);
+  z-index: 10;
+  pointer-events: none;
+}
+
+.nowLine::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: -5px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 3px var(--bg), 0 0 0 4px var(--accent), 0 0 12px var(--accent-glow);
+  animation: softPulse 1800ms ease-in-out infinite;
+}
+
+/* ── Now-line label ─────────────────────────────────────────────────────── */
+.nowLabel {
+  position: absolute;
+  left: 6px;
+  top: -9px;
+  padding: 3px 7px;
+  background: var(--accent);
+  color: var(--text-on-accent);
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 10px;
+  letter-spacing: 0.3px;
+  border-radius: 4px;
+  white-space: nowrap;
+  z-index: 11;
+  line-height: 1.4;
+}
+
+/* ── Closed day message ─────────────────────────────────────────────────── */
+.closedMsg {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-family: var(--font-body);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+/* ── Right sidebar ──────────────────────────────────────────────────────── */
+.side {
+  padding: 20px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  background: var(--bg);
+}
+
+.side::-webkit-scrollbar {
+  width: 5px;
+}
+
+.side::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+
+.sideSecTitle {
+  font-family: var(--font-display);
+  font-size: 16px;
+  letter-spacing: 1.8px;
+  color: var(--text-primary);
+  line-height: 1;
+  margin-bottom: 2px;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.sideSecHint {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-muted);
+  letter-spacing: 0.5px;
+  font-weight: 500;
+}
+
+/* ── Week stats ─────────────────────────────────────────────────────────── */
+.weekStats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.statBox {
+  padding: 10px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.statBoxAccent {
+  background: linear-gradient(135deg, var(--accent-muted), transparent);
+  border-color: var(--accent-border);
+}
+
+.statVal {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 20px;
+  color: var(--text-primary);
+  letter-spacing: 0.3px;
+  line-height: 1;
+}
+
+.statValAccent {
+  color: var(--accent);
+}
+
+.statValWarn {
+  color: var(--warning);
+}
+
+.statValSuccess {
+  color: var(--success);
+}
+
+.statUnit {
+  font-size: 10px;
+  color: var(--text-muted);
+  font-weight: 700;
+  margin-left: 2px;
+}
+
+.statLbl {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 1.1px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+/* ── Legend ─────────────────────────────────────────────────────────────── */
+.legend {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.legendSwatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  border-left: 3px solid transparent;
+  flex-shrink: 0;
+}
+
+.legendSwatchConfirmed {
+  background: rgba(255, 107, 26, 0.3);
+  border-left-color: var(--accent);
+}
+
+.legendSwatchPending {
+  background: rgba(255, 176, 32, 0.25);
+  border-left-color: var(--warning);
+}
+
+.legendSwatchProgress {
+  background: rgba(93, 168, 255, 0.25);
+  border-left-color: var(--cal-info);
+}
+
+.legendSwatchCompleted {
+  background: rgba(46, 224, 160, 0.08);
+  border-left-color: var(--success);
+}
+
+.legendCount {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  color: var(--text-primary);
+  font-size: 11px;
+  letter-spacing: 0.3px;
+}
+
+/* ── Filter chips ───────────────────────────────────────────────────────── */
+.filterChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.filterChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text-secondary);
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  letter-spacing: 0.3px;
+  transition: background 120ms ease, color 120ms ease;
+}
+
+.filterChip:hover {
+  background: var(--surface-hover);
+  color: var(--text-primary);
+}
+
+.filterChipActive {
+  background: var(--accent-muted);
+  border-color: var(--accent-border);
+  color: var(--accent);
+}
+
+/* ── Pending alert card ─────────────────────────────────────────────────── */
+.pendingCard {
+  padding: 12px 14px;
+  background: linear-gradient(135deg, var(--warning-muted), transparent);
+  border: 1px solid var(--warning-border);
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.pendingHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pendingIcon {
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  background: var(--warning);
+  color: var(--bg);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.pendingTitle {
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1.1px;
+  text-transform: uppercase;
+  color: var(--warning);
+}
+
+.pendingBody {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.pendingBodyStrong {
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.pendingBodyEm {
+  font-family: var(--font-mono);
+  color: var(--warning);
+  font-weight: 700;
+}
+
+.pendingCta {
+  padding: 8px 12px;
+  background: var(--warning);
+  color: var(--bg);
+  border: none;
+  border-radius: 8px;
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+}
+
+/* ── Footer hint ────────────────────────────────────────────────────────── */
+.calFootHint {
+  padding: 10px 12px;
+  background: var(--surface);
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.calFootHintStrong {
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+/* ── Loading / error states ─────────────────────────────────────────────── */
+.loadingWrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}

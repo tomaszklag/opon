@@ -9,6 +9,7 @@ import { useAuthGuard } from '../../../lib/hooks/use-auth-guard';
 import {
   IconDashboard,
   IconBookings,
+  IconCalendar,
   IconPricing,
   IconHours,
   IconProfile,
@@ -38,6 +39,7 @@ const STATUS_CLASS: Record<ProviderStatus, string> = {
 
 const PAGE_TITLE: Record<string, string> = {
   '/dashboard': 'Dashboard',
+  '/dashboard/calendar': 'Kalendarz',
   '/dashboard/hours': 'Godziny pracy',
   '/dashboard/pricing': 'Cennik',
   '/dashboard/stations': 'Stanowiska',
@@ -96,6 +98,13 @@ export default function DashboardNav() {
           >
             <IconDashboard width="15" height="15" />
             Dashboard
+          </a>
+          <a
+            href="/dashboard/calendar"
+            className={`${styles.navItem} ${isActive('/dashboard/calendar') ? styles.navActive : ''}`}
+          >
+            <IconCalendar width="15" height="15" />
+            Kalendarz
           </a>
           <a
             href="/dashboard/bookings"

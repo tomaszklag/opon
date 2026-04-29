@@ -93,6 +93,10 @@ export enum ErrorCode {
   /** Urlop nie istnieje */
   WORKER_LEAVE_NOT_FOUND = 'WORKER_LEAVE_NOT_FOUND',
 
+  // ── BOOKING ───────────────────────────────────────────────────────────────
+  /** Rezerwacja nie istnieje */
+  BOOKING_NOT_FOUND = 'BOOKING_NOT_FOUND',
+
   // ── VALIDATION ────────────────────────────────────────────────────────────
   /** Ogólny błąd walidacji danych wejściowych */
   VALIDATION_ERROR = 'VALIDATION_ERROR',

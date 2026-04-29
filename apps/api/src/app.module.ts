@@ -15,6 +15,7 @@ import { ProvidersModule } from './providers/providers.module';
 import { WorkingHoursModule } from './working-hours/working-hours.module';
 import { EmailModule } from './email/email.module';
 import { GusModule } from './gus/gus.module';
+import { BookingsModule } from './bookings/bookings.module';
 import { StationsModule } from './stations/stations.module';
 import { WorkersModule } from './workers/workers.module';
 
@@ -38,6 +39,7 @@ import { WorkersModule } from './workers/workers.module';
     AdminModule,
     StationsModule,
     WorkersModule,
+    BookingsModule,
   ],
   providers: [
     // Globalny guard — wszystkie endpointy wymagają JWT, chyba że @Public()
