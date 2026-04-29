@@ -3,12 +3,20 @@
 import { useEffect, useRef, useState } from 'react';
 import { getWorkingHours, saveWorkingHours } from '../../api-data-access/working-hours';
 
+export type CapacityBlock = {
+  from: string;
+  to: string;
+  workstations: number;
+};
+
 export type DayEntry = {
   dayOfWeek: number;
   isClosed: boolean;
   openTime: string;
   closeTime: string;
   slotMinutes: number;
+  workstations: number;
+  blocks: CapacityBlock[] | null;
 };
 
 export const DISPLAY_ORDER = [1, 2, 3, 4, 5, 6, 0];
@@ -20,12 +28,19 @@ export function defaultDay(dayOfWeek: number): DayEntry {
     openTime: dayOfWeek === 6 ? '09:00' : '08:00',
     closeTime: dayOfWeek === 6 ? '14:00' : '18:00',
     slotMinutes: 45,
+    workstations: 1,
+    blocks: null,
   };
 }
 
 function parseTime(time: string): [number, number] {
   const parts = time.split(':');
   return [parseInt(parts[0] ?? '0', 10), parseInt(parts[1] ?? '0', 10)];
+}
+
+function toMins(hhmm: string): number {
+  const [h, m] = parseTime(hhmm);
+  return h * 60 + m;
 }
 
 function validate(days: DayEntry[]): Record<number, string> {
@@ -44,6 +59,30 @@ function validate(days: DayEntry[]): Record<number, string> {
     const [ch, cm] = parseTime(day.closeTime);
     if (oh * 60 + om >= ch * 60 + cm) {
       errs[day.dayOfWeek] = 'Godzina otwarcia musi być przed godziną zamknięcia';
+      continue;
+    }
+    if (day.blocks && day.blocks.length > 0) {
+      const openMins = oh * 60 + om;
+      const closeMins = ch * 60 + cm;
+      const sorted = [...day.blocks].sort((a, b) => toMins(a.from) - toMins(b.from));
+      let prevEnd = openMins;
+      for (const block of sorted) {
+        const from = toMins(block.from);
+        const to = toMins(block.to);
+        if (from >= to) {
+          errs[day.dayOfWeek] = 'Błędny przedział bloku';
+          break;
+        }
+        if (from < openMins || to > closeMins) {
+          errs[day.dayOfWeek] = 'Blok wychodzi poza godziny dnia';
+          break;
+        }
+        if (from < prevEnd) {
+          errs[day.dayOfWeek] = 'Bloki obsady nakładają się';
+          break;
+        }
+        prevEnd = to;
+      }
     }
   }
   return errs;
@@ -93,6 +132,8 @@ export function useWorkingHours() {
             openTime: found.openTime ?? (dow === 6 ? '09:00' : '08:00'),
             closeTime: found.closeTime ?? (dow === 6 ? '14:00' : '18:00'),
             slotMinutes: found.slotMinutes,
+            workstations: found.workstations ?? 1,
+            blocks: (found.blocks as CapacityBlock[] | null | undefined) ?? null,
           };
         });
         const inferredSlot = inferDefaultSlot(mapped);
@@ -109,6 +150,74 @@ export function useWorkingHours() {
 
   function updateDay(dayOfWeek: number, patch: Partial<DayEntry>) {
     setDays((prev) => prev.map((d) => (d.dayOfWeek === dayOfWeek ? { ...d, ...patch } : d)));
+    setErrors((prev) => {
+      const next = { ...prev };
+      delete next[dayOfWeek];
+      return next;
+    });
+    setSaveError(null);
+    setDirty(true);
+  }
+
+  function toggleBlocks(dayOfWeek: number) {
+    setDays((prev) =>
+      prev.map((d) => {
+        if (d.dayOfWeek !== dayOfWeek) return d;
+        if (d.blocks !== null) return { ...d, blocks: null };
+        return {
+          ...d,
+          blocks: [{ from: d.openTime, to: d.closeTime, workstations: d.workstations }],
+        };
+      }),
+    );
+    setErrors((prev) => {
+      const next = { ...prev };
+      delete next[dayOfWeek];
+      return next;
+    });
+    setSaveError(null);
+    setDirty(true);
+  }
+
+  function updateBlock(dayOfWeek: number, index: number, patch: Partial<CapacityBlock>) {
+    setDays((prev) =>
+      prev.map((d) => {
+        if (d.dayOfWeek !== dayOfWeek || !d.blocks) return d;
+        const blocks = d.blocks.map((b, i) => (i === index ? { ...b, ...patch } : b));
+        return { ...d, blocks };
+      }),
+    );
+    setErrors((prev) => {
+      const next = { ...prev };
+      delete next[dayOfWeek];
+      return next;
+    });
+    setSaveError(null);
+    setDirty(true);
+  }
+
+  function addBlock(dayOfWeek: number) {
+    setDays((prev) =>
+      prev.map((d) => {
+        if (d.dayOfWeek !== dayOfWeek || !d.blocks || d.blocks.length >= 3) return d;
+        const lastBlock = d.blocks[d.blocks.length - 1];
+        const from = lastBlock?.to ?? d.openTime;
+        const newBlock: CapacityBlock = { from, to: d.closeTime, workstations: 1 };
+        return { ...d, blocks: [...d.blocks, newBlock] };
+      }),
+    );
+    setSaveError(null);
+    setDirty(true);
+  }
+
+  function removeBlock(dayOfWeek: number, index: number) {
+    setDays((prev) =>
+      prev.map((d) => {
+        if (d.dayOfWeek !== dayOfWeek || !d.blocks) return d;
+        const blocks = d.blocks.filter((_, i) => i !== index);
+        return { ...d, blocks: blocks.length > 0 ? blocks : null };
+      }),
+    );
     setErrors((prev) => {
       const next = { ...prev };
       delete next[dayOfWeek];
@@ -141,6 +250,8 @@ export function useWorkingHours() {
               openTime: from.openTime,
               closeTime: from.closeTime,
               slotMinutes: from.slotMinutes,
+              workstations: from.workstations,
+              blocks: from.blocks,
             }
           : d,
       ),
@@ -195,6 +306,10 @@ export function useWorkingHours() {
     updateDefaultSlot,
     applyDefaultSlotToAll,
     copyDayToAll,
+    toggleBlocks,
+    updateBlock,
+    addBlock,
+    removeBlock,
     revert,
     save,
   };

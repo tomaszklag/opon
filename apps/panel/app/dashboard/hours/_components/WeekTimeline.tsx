@@ -1,7 +1,7 @@
 import { Fragment } from 'react';
 import { Heading, Text } from '@opony/design-system-web';
 import { type DayEntry } from '../../../../lib/hooks/use-working-hours';
-import { DAY_META, parseTime, computeSlots, formatDuration } from './utils';
+import { DAY_META, parseTime, computeSlotsForDay, formatDuration } from './utils';
 import styles from '../hours.module.css';
 
 interface Props {
@@ -22,7 +22,7 @@ function computeWeekSummary(days: DayEntry[], defaultSlotMinutes: number) {
     const mins = ch * 60 + cm - (oh * 60 + om);
     if (mins > 0) {
       totalMinutes += mins;
-      const slots = computeSlots(day.openTime, day.closeTime, day.slotMinutes);
+      const slots = computeSlotsForDay(day);
       totalSlots += slots;
       if (day.slotMinutes !== defaultSlotMinutes) {
         const meta = DAY_META[day.dayOfWeek];

@@ -1,5 +1,5 @@
 import { Heading, Text } from '@opony/design-system-web';
-import { type DayEntry } from '../../../../lib/hooks/use-working-hours';
+import { type CapacityBlock, type DayEntry } from '../../../../lib/hooks/use-working-hours';
 import { DayRow } from './DayRow';
 import styles from '../hours.module.css';
 
@@ -10,6 +10,10 @@ interface Props {
   todayDow: number;
   onUpdate: (dayOfWeek: number, patch: Partial<DayEntry>) => void;
   onCopyToAll: (fromDow: number) => void;
+  onToggleBlocks: (dayOfWeek: number) => void;
+  onUpdateBlock: (dayOfWeek: number, index: number, patch: Partial<CapacityBlock>) => void;
+  onAddBlock: (dayOfWeek: number) => void;
+  onRemoveBlock: (dayOfWeek: number, index: number) => void;
 }
 
 export function DayList({
@@ -19,6 +23,10 @@ export function DayList({
   todayDow,
   onUpdate,
   onCopyToAll,
+  onToggleBlocks,
+  onUpdateBlock,
+  onAddBlock,
+  onRemoveBlock,
 }: Props) {
   return (
     <section className={styles.secCard}>
@@ -40,6 +48,10 @@ export function DayList({
           error={errors[day.dayOfWeek]}
           onUpdate={onUpdate}
           onCopyToAll={onCopyToAll}
+          onToggleBlocks={onToggleBlocks}
+          onUpdateBlock={onUpdateBlock}
+          onAddBlock={onAddBlock}
+          onRemoveBlock={onRemoveBlock}
         />
       ))}
     </section>

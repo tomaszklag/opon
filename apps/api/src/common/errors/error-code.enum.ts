@@ -76,6 +76,8 @@ export enum ErrorCode {
   WORKING_HOURS_MISSING_TIMES = 'WORKING_HOURS_MISSING_TIMES',
   /** openTime musi być wcześniejsza niż closeTime */
   WORKING_HOURS_INVALID_TIME_RANGE = 'WORKING_HOURS_INVALID_TIME_RANGE',
+  /** Bloki obsady nakładają się, wychodzą poza ramy dnia lub mają błędny czas */
+  WORKING_HOURS_INVALID_BLOCKS = 'WORKING_HOURS_INVALID_BLOCKS',
 
   // ── VALIDATION ────────────────────────────────────────────────────────────
   /** Ogólny błąd walidacji danych wejściowych */

@@ -251,6 +251,92 @@
   text-align: right;
 }
 
+/* Day row meta (workstation stepper + slot info) */
+.dayRowMeta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.workstationStepper {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.workstationValue {
+  min-width: 16px;
+  text-align: center;
+}
+
+/* Day expand area (split day) */
+.dayRowExpand {
+  grid-column: 1 / -1;
+  padding-top: 8px;
+  border-top: 1px dashed var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.splitBtn {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-muted);
+}
+
+.splitBtnActive {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--accent);
+}
+
+/* Capacity block editor */
+.blockEditorWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.blockEditorHint {
+  margin: 0;
+}
+
+.blockRow {
+  display: grid;
+  grid-template-columns: 118px 118px auto auto auto;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.blockStepper {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.blockSlotInfo {
+  min-width: 40px;
+  text-align: right;
+}
+
+.addBlockBtn {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-muted);
+}
+
 /* Closed label */
 .closedLabel {
   grid-column: 3 / 7;

@@ -1,3 +1,5 @@
+import type { DayEntry } from '../../../../lib/hooks/use-working-hours';
+
 export const DAY_META: Record<number, { abbr: string; full: string }> = {
   0: { abbr: 'NDZ', full: 'Niedziela' },
   1: { abbr: 'PON', full: 'Poniedziałek' },
@@ -21,6 +23,21 @@ export function computeSlots(openTime: string, closeTime: string, slotMinutes: n
   const totalMins = ch * 60 + cm - (oh * 60 + om);
   if (totalMins <= 0) return 0;
   return Math.floor(totalMins / slotMinutes);
+}
+
+export function computeSlotsForDay(
+  day: Pick<DayEntry, 'openTime' | 'closeTime' | 'slotMinutes' | 'workstations' | 'blocks'>,
+): number {
+  if (day.blocks && day.blocks.length > 0) {
+    return day.blocks.reduce((sum, block) => {
+      const [fh, fm] = parseTime(block.from);
+      const [th, tm] = parseTime(block.to);
+      const blockMins = th * 60 + tm - (fh * 60 + fm);
+      if (blockMins <= 0) return sum;
+      return sum + Math.floor(blockMins / day.slotMinutes) * block.workstations;
+    }, 0);
+  }
+  return computeSlots(day.openTime, day.closeTime, day.slotMinutes) * day.workstations;
 }
 
 export function formatDuration(openTime: string, closeTime: string): string {

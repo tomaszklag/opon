@@ -92,6 +92,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/v1/auth/verify-email': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Weryfikacja adresu email providera */
+    get: operations['AuthController_verifyEmail'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/v1/auth/me': {
     parameters: {
       query?: never;
@@ -154,6 +171,23 @@ export interface paths {
     };
     /** Szczegóły zatwierdzonej firmy (publiczne) */
     get: operations['ProvidersController_getById'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/providers/me/market-prices': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Ceny rynkowe sąsiednich dostawców w zasięgu bazy */
+    get: operations['PricingTiersController_getMarketPrices'];
     put?: never;
     post?: never;
     delete?: never;
@@ -250,16 +284,183 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/v1/gus/{nip}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Pobierz dane firmy z CEIDG po NIP */
+    get: operations['GusController_getByNip'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/providers/me/submit': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Wyślij zgłoszenie do weryfikacji — zmienia status na PENDING_APPROVAL */
+    post: operations['PhotosController_submitForApproval'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/providers/me/photos': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Lista zdjęć mojej firmy */
+    get: operations['PhotosController_getPhotos'];
+    put?: never;
+    /** Prześlij zdjęcie firmy */
+    post: operations['PhotosController_upload'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/providers/me/photos/{id}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /** Usuń zdjęcie firmy */
+    delete: operations['PhotosController_deletePhoto'];
+    options?: never;
+    head?: never;
+    /** Zmień nazwę zdjęcia */
+    patch: operations['PhotosController_rename'];
+    trace?: never;
+  };
+  '/v1/providers/me/photos/{id}/primary': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /** Ustaw zdjęcie jako główne */
+    patch: operations['PhotosController_setPrimary'];
+    trace?: never;
+  };
+  '/v1/admin/providers': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Lista firm (admin) — opcjonalne filtrowanie po statusie */
+    get: operations['AdminProvidersController_listProviders'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/admin/providers/{id}/approve': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /** Zatwierdź firmę (PENDING_APPROVAL → APPROVED) */
+    patch: operations['AdminProvidersController_approveProvider'];
+    trace?: never;
+  };
+  '/v1/admin/providers/{id}/reject': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /** Odrzuć firmę (PENDING_APPROVAL → REJECTED) */
+    patch: operations['AdminProvidersController_rejectProvider'];
+    trace?: never;
+  };
+  '/v1/admin/gus/health': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Sprawdź status połączenia z CEIDG (admin) */
+    get: operations['AdminGusController_getHealth'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
   schemas: {
+    HealthResponseDto: {
+      /** @example ok */
+      status: string;
+      /** @example 0.1.0 */
+      version: string;
+    };
     RequestOtpDto: {
       /**
        * @description Numer telefonu w formacie E.164
        * @example +48123456789
        */
       phone: string;
+    };
+    RequestOtpResponseDto: {
+      /** @example Kod OTP wysłany */
+      message: string;
+      /** @example 300 */
+      expiresIn: number;
     };
     VerifyOtpDto: {
       /** @example +48123456789 */
@@ -275,6 +476,10 @@ export interface components {
       /** @enum {string} */
       role: 'CLIENT' | 'PROVIDER_OWNER' | 'PROVIDER_STAFF' | 'ADMIN';
       providerId?: string;
+    };
+    MessageResponseDto: {
+      /** @example OK */
+      message: string;
     };
     AuthMeResponseDto: {
       sub: string;
@@ -362,6 +567,19 @@ export interface components {
       cityCenterLng?: number;
       serviceRadiusKm?: number;
     };
+    MarketPriceResponseDto: {
+      /**
+       * @description Kategoria rozmiaru: small (≤15"), medium (16–17"), large (≥18")
+       * @enum {string}
+       */
+      category: 'small' | 'medium' | 'large';
+      /** @description Minimalna cena wymiany wśród sąsiednich dostawców */
+      priceMin: number;
+      /** @description Maksymalna cena wymiany wśród sąsiednich dostawców */
+      priceMax: number;
+      /** @description Liczba unikalnych dostawców w próbce */
+      providerCount: number;
+    };
     PricingTierResponseDto: {
       id: string;
       providerId: string;
@@ -371,13 +589,6 @@ export interface components {
       priceBalancingPerWheelPln?: number | null;
       travelFeeFirstKmPln: number;
       travelFeeExtraKmPln: number;
-    };
-    MarketPriceResponseDto: {
-      /** @enum {string} */
-      category: 'small' | 'medium' | 'large';
-      priceMin: number;
-      priceMax: number;
-      providerCount: number;
     };
     CreatePricingTierDto: {
       /**
@@ -417,6 +628,14 @@ export interface components {
       travelFeeFirstKmPln?: number;
       travelFeeExtraKmPln?: number;
     };
+    CapacityBlockResponseDto: {
+      /** @example 08:00 */
+      from: string;
+      /** @example 13:00 */
+      to: string;
+      /** @example 2 */
+      workstations: number;
+    };
     WorkingHoursResponseDto: {
       id: string;
       providerId: string;
@@ -425,6 +644,20 @@ export interface components {
       openTime?: string | null;
       closeTime?: string | null;
       slotMinutes: number;
+      /** @default 1 */
+      workstations: number;
+      blocks?: components['schemas']['CapacityBlockResponseDto'][] | null;
+    };
+    CapacityBlockDto: {
+      /** @example 08:00 */
+      from: string;
+      /** @example 13:00 */
+      to: string;
+      /**
+       * @description Liczba równoległych stanowisk w bloku
+       * @example 2
+       */
+      workstations: number;
     };
     WorkingHoursDayDto: {
       /**
@@ -443,10 +676,40 @@ export interface components {
        * @default 45
        */
       slotMinutes: number;
+      /**
+       * @description Liczba równoległych stanowisk dla całego dnia
+       * @default 1
+       */
+      workstations: number;
+      /** @description Bloki obsady (max 3); null = cały dzień jednorodny */
+      blocks?: components['schemas']['CapacityBlockDto'][] | null;
     };
     UpsertWorkingHoursDto: {
       /** @description 1–7 dni (upsert po dayOfWeek) */
       days: components['schemas']['WorkingHoursDayDto'][];
+    };
+    UploadPhotoDto: {
+      /** @enum {string} */
+      type: 'LOGO' | 'VEHICLE' | 'WORKSPACE' | 'ADDITIONAL';
+    };
+    PhotoResponseDto: {
+      id: string;
+      url: string;
+      /** @enum {string} */
+      type: 'LOGO' | 'VEHICLE' | 'WORKSPACE' | 'ADDITIONAL';
+      isPrimary: boolean;
+      size: number;
+      mimeType: string;
+      originalName: string;
+      /** Format: date-time */
+      createdAt: string;
+    };
+    RenamePhotoDto: {
+      /** @example Logo warsztatu */
+      name: string;
+    };
+    RejectProviderDto: {
+      reason?: string;
     };
   };
   responses: never;
@@ -470,7 +733,9 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          'application/json': components['schemas']['HealthResponseDto'];
+        };
       };
     };
   };
@@ -487,12 +752,13 @@ export interface operations {
       };
     };
     responses: {
-      /** @description Kod wysłany */
       200: {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          'application/json': components['schemas']['RequestOtpResponseDto'];
+        };
       };
       /** @description Zbyt wiele prób */
       429: {
@@ -542,12 +808,13 @@ export interface operations {
     };
     requestBody?: never;
     responses: {
-      /** @description Tokeny zrotowane */
       200: {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          'application/json': components['schemas']['MessageResponseDto'];
+        };
       };
       /** @description Brak, nieprawidłowy lub skradziony refresh token */
       401: {
@@ -567,7 +834,27 @@ export interface operations {
     };
     requestBody?: never;
     responses: {
-      /** @description Wylogowano */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['MessageResponseDto'];
+        };
+      };
+    };
+  };
+  AuthController_verifyEmail: {
+    parameters: {
+      query: {
+        token: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
       200: {
         headers: {
           [name: string]: unknown;
@@ -746,6 +1033,25 @@ export interface operations {
       };
     };
   };
+  PricingTiersController_getMarketPrices: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['MarketPriceResponseDto'][];
+        };
+      };
+    };
+  };
   PricingTiersController_listMine: {
     parameters: {
       query?: never;
@@ -806,6 +1112,7 @@ export interface operations {
     };
     requestBody?: never;
     responses: {
+      /** @description Tier usunięty */
       204: {
         headers: {
           [name: string]: unknown;
@@ -920,6 +1227,349 @@ export interface operations {
         content: {
           'application/json': components['schemas']['WorkingHoursResponseDto'][];
         };
+      };
+    };
+  };
+  GusController_getByNip: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description 10-cyfrowy NIP */
+        nip: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Dane firmy z CEIDG */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Nieprawidłowy NIP */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description NIP nie znaleziony w CEIDG */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  PhotosController_submitForApproval: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': Record<string, never>;
+        };
+      };
+      /** @description Brakuje wymaganych zdjęć lub firma w złym stanie */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  PhotosController_getPhotos: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PhotoResponseDto'][];
+        };
+      };
+    };
+  };
+  PhotosController_upload: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'multipart/form-data': components['schemas']['UploadPhotoDto'];
+      };
+    };
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PhotoResponseDto'];
+        };
+      };
+      /** @description Nieprawidłowy plik lub przekroczono limit zdjęć */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  PhotosController_deletePhoto: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Zdjęcie usunięte */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Zdjęcie nie istnieje */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  PhotosController_rename: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['RenamePhotoDto'];
+      };
+    };
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PhotoResponseDto'];
+        };
+      };
+      /** @description Zdjęcie nie istnieje */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  PhotosController_setPrimary: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PhotoResponseDto'];
+        };
+      };
+      /** @description Zdjęcie nie istnieje */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  AdminProvidersController_listProviders: {
+    parameters: {
+      query?: {
+        status?:
+          | 'PENDING_NIP'
+          | 'PENDING_DOCS'
+          | 'PENDING_APPROVAL'
+          | 'APPROVED'
+          | 'SUSPENDED'
+          | 'REJECTED';
+        page?: number;
+        limit?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Paginowana lista firm */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Brak uprawnień */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  AdminProvidersController_approveProvider: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Firma zatwierdzona */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Firma nie jest w stanie oczekującym na weryfikację */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Brak uprawnień */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Firma nie istnieje */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  AdminProvidersController_rejectProvider: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['RejectProviderDto'];
+      };
+    };
+    responses: {
+      /** @description Firma odrzucona */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Firma nie jest w stanie oczekującym na weryfikację */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Brak uprawnień */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Firma nie istnieje */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  AdminGusController_getHealth: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Status CEIDG */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Brak uprawnień */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
       };
     };
   };

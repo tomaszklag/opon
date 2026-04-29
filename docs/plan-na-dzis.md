@@ -2,8 +2,6 @@ Zapisz tą regułę w dokumentacji aby była respektowana podczas dalszych prac.
 
 Zweryfikuj czy trzeba coś w oparciu o powyższe dodać do dokumentacji. Czy jest sens coś dopisywać aby takie niścisłości nie pojawiały się w przyszłości.
 
-Dodaj skrypt który pozwoli uruchamiać serwery potrzebne tylko do działania PANEL
-
 sprawdź zatem solucję w poszukiwaniu pozostałości w css po font-family, font-size,letter-spacing, line-height itp. Nie powinny się takie klasy pojawiać. Wszystko powinno być w DS
 
 porządki w stylach czcionki i komponent text

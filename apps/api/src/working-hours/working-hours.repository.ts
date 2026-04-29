@@ -8,6 +8,8 @@ type UpsertPayload = {
   openTime: Date;
   closeTime: Date;
   slotMinutes: number;
+  workstations: number;
+  blocks: unknown | null;
 };
 
 @Injectable()

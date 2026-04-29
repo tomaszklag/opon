@@ -533,3 +533,39 @@ export function IconHourglass(props: SVGProps<SVGSVGElement>) {
     </svg>
   );
 }
+
+export function IconMinus(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.4"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      {...props}
+    >
+      <line x1="5" y1="12" x2="19" y2="12" />
+    </svg>
+  );
+}
+
+export function IconSplit(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      {...props}
+    >
+      <path d="M21 3h-6l-3 3-3-3H3" />
+      <path d="M3 21h6l3-3 3 3h6" />
+      <path d="M12 6v12" />
+    </svg>
+  );
+}

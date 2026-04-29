@@ -210,13 +210,15 @@ model PricingTier {
 // ──────────────────────────────────────────────
 
 model WorkingHours {
-  id          String   @id @default(uuid())
-  providerId  String
-  dayOfWeek   Int      // 0=niedziela … 6=sobota
-  openTime    DateTime @db.Time(6)
-  closeTime   DateTime @db.Time(6)
-  slotMinutes Int      @default(45)
-  isClosed    Boolean  @default(false)
+  id           String   @id @default(uuid())
+  providerId   String
+  dayOfWeek    Int      // 0=niedziela … 6=sobota
+  openTime     DateTime @db.Time(6)
+  closeTime    DateTime @db.Time(6)
+  slotMinutes  Int      @default(45)
+  isClosed     Boolean  @default(false)
+  workstations Int      @default(1)
+  blocks       Json?    @db.JsonB
 
   provider Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
 

@@ -1,7 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { WorkingHours } from '@prisma/client';
 import { AppException, ErrorCode } from '../common/errors';
-import { WorkingHoursDayDto, UpsertWorkingHoursDto } from './dto/upsert-working-hours.dto';
+import {
+  CapacityBlockDto,
+  WorkingHoursDayDto,
+  UpsertWorkingHoursDto,
+} from './dto/upsert-working-hours.dto';
 import { WorkingHoursRepository } from './working-hours.repository';
 
 @Injectable()
@@ -35,12 +39,15 @@ export class WorkingHoursService {
           400,
         );
       }
+      const blocks = this.validateBlocks(day.blocks ?? null, day.dayOfWeek, open, close);
       return {
         dayOfWeek: day.dayOfWeek,
         isClosed: false,
         openTime: open,
         closeTime: close,
         slotMinutes: day.slotMinutes ?? 45,
+        workstations: day.workstations ?? 1,
+        blocks,
       };
     }
 
@@ -52,7 +59,59 @@ export class WorkingHoursService {
       openTime: midnight,
       closeTime: midnight,
       slotMinutes: day.slotMinutes ?? 45,
+      workstations: day.workstations ?? 1,
+      blocks: null,
     };
+  }
+
+  private validateBlocks(
+    blocks: CapacityBlockDto[] | null | undefined,
+    dayOfWeek: number,
+    open: Date,
+    close: Date,
+  ): unknown | null {
+    if (!blocks || blocks.length === 0) return null;
+
+    const openMins = open.getUTCHours() * 60 + open.getUTCMinutes();
+    const closeMins = close.getUTCHours() * 60 + close.getUTCMinutes();
+
+    const sorted = [...blocks].sort((a, b) => this.toMins(a.from) - this.toMins(b.from));
+
+    let prevEnd = openMins;
+    for (const block of sorted) {
+      const fromMins = this.toMins(block.from);
+      const toMins = this.toMins(block.to);
+
+      if (fromMins >= toMins) {
+        throw new AppException(
+          ErrorCode.WORKING_HOURS_INVALID_BLOCKS,
+          `Dzień ${dayOfWeek}: blok ${block.from}–${block.to} ma błędny przedział czasu.`,
+          400,
+        );
+      }
+      if (fromMins < openMins || toMins > closeMins) {
+        throw new AppException(
+          ErrorCode.WORKING_HOURS_INVALID_BLOCKS,
+          `Dzień ${dayOfWeek}: blok ${block.from}–${block.to} wychodzi poza ramy dnia.`,
+          400,
+        );
+      }
+      if (fromMins < prevEnd) {
+        throw new AppException(
+          ErrorCode.WORKING_HOURS_INVALID_BLOCKS,
+          `Dzień ${dayOfWeek}: bloki obsady nakładają się.`,
+          400,
+        );
+      }
+      prevEnd = toMins;
+    }
+
+    return sorted;
+  }
+
+  private toMins(hhmm: string): number {
+    const [h, m] = hhmm.split(':').map(Number) as [number, number];
+    return h * 60 + m;
   }
 
   /** Parsuje "HH:MM" do Date z datą epoch (tylko czas ma znaczenie przy @db.Time) */

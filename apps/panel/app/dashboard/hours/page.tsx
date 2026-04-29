@@ -28,6 +28,10 @@ export default function HoursPage() {
     updateDefaultSlot,
     applyDefaultSlotToAll,
     copyDayToAll,
+    toggleBlocks,
+    updateBlock,
+    addBlock,
+    removeBlock,
     revert,
     save,
   } = useWorkingHours();
@@ -133,6 +137,10 @@ export default function HoursPage() {
               todayDow={todayDow}
               onUpdate={updateDay}
               onCopyToAll={copyDayToAll}
+              onToggleBlocks={toggleBlocks}
+              onUpdateBlock={updateBlock}
+              onAddBlock={addBlock}
+              onRemoveBlock={removeBlock}
             />
 
             <ExceptionsSection />
