@@ -1,3 +1,4 @@
+import { Fragment } from 'react';
 import { Heading, Text } from '@opony/design-system-web';
 import { type DayEntry } from '../../../../lib/hooks/use-working-hours';
 import { DAY_META, parseTime, computeSlots, formatDuration } from './utils';
@@ -152,7 +153,7 @@ export function WeekTimeline({ days, defaultSlotMinutes, todayDow }: Props) {
           <div className={styles.statBox}>
             <Text variant="body-md" as="span" mono weight="bold">
               {totalHours}
-              <Text variant="nano" as="span" className={styles.statUnit}>
+              <Text variant="nano" as="span" color="accent" className={styles.statUnit}>
                 {' '}
                 h
               </Text>
@@ -164,7 +165,7 @@ export function WeekTimeline({ days, defaultSlotMinutes, todayDow }: Props) {
           <div className={styles.statBox}>
             <Text variant="body-md" as="span" mono weight="bold">
               {totalSlots}
-              <Text variant="nano" as="span" className={styles.statUnit}>
+              <Text variant="nano" as="span" color="accent" className={styles.statUnit}>
                 {' '}
                 sl.
               </Text>
@@ -178,12 +179,12 @@ export function WeekTimeline({ days, defaultSlotMinutes, todayDow }: Props) {
         {overrides.length > 0 && (
           <Text variant="nano" as="p" color="muted">
             {overrides.map((o) => (
-              <span key={o.abbr}>
+              <Fragment key={o.abbr}>
                 <Text variant="nano" as="span" color="accent" weight="bold">
                   {o.abbr}
                 </Text>
                 {`: ${o.slotMinutes} min (${o.slots} sl.) · `}
-              </span>
+              </Fragment>
             ))}
             reszta {defaultSlotMinutes} min
           </Text>

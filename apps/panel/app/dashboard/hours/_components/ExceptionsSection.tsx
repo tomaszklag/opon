@@ -78,15 +78,15 @@ const VISIBLE_HOLIDAYS = HOLIDAYS.filter((h) => h.date >= TODAY).slice(0, 4);
 function ExceptionIcon({ type }: { type: HolidayType }) {
   if (type === 'vacation') {
     return (
-      <span className={[styles.exceptionIco, styles.exceptionIcoVacation].join(' ')}>
+      <div className={[styles.exceptionIco, styles.exceptionIcoVacation].join(' ')}>
         <IconBriefcase width="14" height="14" />
-      </span>
+      </div>
     );
   }
   return (
-    <span className={[styles.exceptionIco, styles.exceptionIcoHoliday].join(' ')}>
+    <div className={[styles.exceptionIco, styles.exceptionIcoHoliday].join(' ')}>
       <IconCalendarOff width="14" height="14" />
-    </span>
+    </div>
   );
 }
 
@@ -96,6 +96,7 @@ function ExceptionTag({ type }: { type: HolidayType }) {
       <Text
         variant="nano"
         as="span"
+        color="accent"
         className={[styles.exceptionTag, styles.exceptionTagVacation].join(' ')}
       >
         Urlop
@@ -133,12 +134,12 @@ export function ExceptionsSection() {
           >
             <ExceptionIcon type={h.type} />
             <div className={styles.exceptionInfo}>
-              <span className={styles.exceptionName}>
+              <div className={styles.exceptionName}>
                 <Text variant="body-sm" as="span" weight="bold">
                   {h.name}
                 </Text>
                 <ExceptionTag type={h.type} />
-              </span>
+              </div>
               {h.meta && (
                 <Text variant="nano" as="p" color="muted" mono>
                   {h.meta}

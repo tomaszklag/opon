@@ -83,7 +83,7 @@ export function DayRow({ day, defaultSlotMinutes, isToday, error, onUpdate, onCo
               aria-label="Długość slotu"
             />
             {isOverride && (
-              <Text variant="nano" as="span" className={styles.overrideTag}>
+              <Text variant="nano" as="span" color="accent" className={styles.overrideTag}>
                 Nadpisane
               </Text>
             )}

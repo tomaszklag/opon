@@ -41,7 +41,7 @@ export function SlotSizeSection({ defaultSlotMinutes, onUpdate, onApplyToAll }: 
           Zastosuj do wszystkich dni
         </Button>
       </div>
-      <Text variant="nano" as="p" color="muted" className={styles.slotInfoNote}>
+      <Text variant="nano" as="p" color="accent" className={styles.slotInfoNote}>
         <IconInfo width="12" height="12" />
         Krótszy slot (30 min) w weekend to sposób na zmieszczenie więcej wizyt — sprawdzone przez
         warsztaty w Krakowie i Tarnowie.
