@@ -568,6 +568,32 @@ Elementy o podwójnej roli (pudełko + tekst z typografią) — np. numerki sekc
 }
 ```
 
+#### Wyjątek: dekoracyjne pseudoelementy CSS (`::after` / `::before`)
+
+Reguła „no typography in CSS" dotyczy **elementów DOM z treścią w JSX**. Pseudoelementy CSS (`::after`/`::before` z `content:`) są generowane wyłącznie przez CSS, nie mają odpowiednika komponentu DS i podlegają wyjątkowi — mogą zawierać `font-family`, `font-size`, `letter-spacing` itp.:
+
+```css
+/* ✅ TAK — watermark dekoracyjny, brak node DOM, brak odpowiednika DS */
+/* (dodaj komentarz wyjaśniający cel pseudoelementu) */
+.hero::after {
+  content: 'NS'; /* dekoracyjny watermark — wyjątek od reguły typografii */
+  font-family: var(--font-display);
+  font-size: 280px;
+  color: var(--accent);
+  opacity: 0.05;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* ❌ NIE — pseudoelement z treścią semantyczną zastępującą JSX */
+.status::before {
+  content: 'Aktywny';
+  font-size: 12px; /* użyj <Text> w JSX zamiast tego */
+}
+```
+
+Gdy dodajesz taki pseudoelement, zawsze dołącz komentarz wskazujący że to świadomy wyjątek (analogicznie jak przy `color: var(--success)` dla sukcesu).
+
 #### CSS Modules + noUncheckedIndexedAccess
 
 `tsconfig.base.json` ma `noUncheckedIndexedAccess: true` — `styles.foo` zwraca `string | undefined`. Przy budowaniu map wariantów w komponentach DS wymagany cast:
@@ -1016,6 +1042,33 @@ Możliwe wartości `status` (`ProviderStatus`):
 | `REJECTED`         | Odrzucony — nie może korzystać z panelu                                                           |
 
 Typ w kodzie: `AuthUser.status?: ProviderStatus` z `lib/auth.tsx`.
+
+### 9.3.1. Nawigacja wewnętrzna — `<Link>` zamiast `<a>`
+
+W aplikacji Next.js App Router natywny `<a href="...">` powoduje **pełny reload strony** (SPA transition nie działa). Dla wszystkich wewnętrznych linków używaj `<Link>` z `next/link`:
+
+```tsx
+// ✅ TAK — client-side navigation, bez reloadu
+import Link from 'next/link';
+<Link href="/dashboard/profile" className={styles.myLink}>
+  Profil
+</Link>;
+
+// ✅ TAK — programmatyczna nawigacja
+import { useRouter } from 'next/navigation';
+const router = useRouter();
+router.push('/dashboard/profile');
+
+// ❌ NIE — pełny reload strony
+<a href="/dashboard/profile">Profil</a>;
+
+// ❌ NIE — pełny reload + pomija Next.js router
+window.location.href = '/dashboard/profile';
+```
+
+Wyjątek: `<a>` jest prawidłowy dla **linków zewnętrznych** (`href` zaczyna się od `http`) oraz plików do pobrania (`download`).
+
+`router.push` (z `next/navigation`) stosuj do nawigacji programmatycznej (po submit formularza, po akcji itp.). `canonicalRoute` + `router.replace` — wyłącznie do przekierowań auth-aware (zob. sekcja 9.3).
 
 ### 9.4. Guardy — dwie warstwy
 

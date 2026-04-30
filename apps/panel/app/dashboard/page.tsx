@@ -4,7 +4,10 @@ import { useDashboard, STATUS_LABEL } from '../../lib/hooks/use-dashboard';
 import { StatusBanners } from './_components/StatusBanners';
 import { StatCard } from './_components/StatCard';
 import { ActionTile } from './_components/ActionTile';
+import { WaitingForClients } from './_components/WaitingForClients';
 import styles from './dashboard.module.css';
+
+const CLIENT_LAUNCH_DATE = new Date(process.env.NEXT_PUBLIC_CLIENT_LAUNCH_DATE ?? '2026-05-14');
 
 export default function DashboardPage() {
   const { provider, loading, authLoading } = useDashboard();
@@ -18,6 +21,12 @@ export default function DashboardPage() {
   }
 
   if (!provider) return null;
+
+  // TODO: dodać warunek bookingCount === 0 (ADR-009) — wymaga endpointu /v1/bookings?limit=1
+  // Fallback do normalnego dashboardu nastąpi automatycznie po minięciu CLIENT_LAUNCH_DATE.
+  if (provider.status === 'APPROVED' && new Date() < CLIENT_LAUNCH_DATE) {
+    return <WaitingForClients launchDate={CLIENT_LAUNCH_DATE} />;
+  }
 
   const locked = provider.status !== 'APPROVED';
 

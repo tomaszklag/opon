@@ -101,10 +101,16 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ): Promise<MessageResponseDto> {
     const oldRefreshToken = req.cookies?.['refresh_token'] as string | undefined;
-    if (!oldRefreshToken) throw new UnauthorizedException('Brak refresh token.');
+    if (!oldRefreshToken)
+      throw new AppException(ErrorCode.AUTH_UNAUTHORIZED, 'Brak refresh token.', 401);
 
     const payload = this.authService.verifyRefreshToken(oldRefreshToken);
-    if (!payload.jti) throw new UnauthorizedException('Sesja nieważna — zaloguj się ponownie.');
+    if (!payload.jti)
+      throw new AppException(
+        ErrorCode.AUTH_UNAUTHORIZED,
+        'Sesja nieważna — zaloguj się ponownie.',
+        401,
+      );
 
     // Upewnij się że użytkownik nadal istnieje i jest aktywny — nigdy nie twórz nowego
     const user = await this.authService.findUser(payload.phone);

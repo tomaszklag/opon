@@ -11,3 +11,9 @@ co ze ścieżką ze zgłoszenie zostało odrzucone?
 Co z flow wysyłki mail do weryfikacji? Jest to już zaimplementowe i zaprojektowane? Jak nie to zaimplementuj. Zbierajmy też daty zdażeń czyli kiedy jaki mail został wysłany. Zleć doświadczonemu architektowy projekt aby mieć prostą i niezawodną architekturę tego flow
 
 otpToken powinien być jakoś unieważniany. Wygasa po 5 minutach chyba. Powinno to być też w bazie
+
+Operator powinien mieć możliwość ręcznego dodania wizyty wraz z opisem oraz szacowanym zajęciem slotu
+
+teraz przedźmy do implementacji b2b-11-profil
+
+zleć wyspecjalizowanym agentom weryfikację tego rozwiazania. Głównie zależy mi na respektowaniu wcześniejszych postanowień oraz zaplanowanego design

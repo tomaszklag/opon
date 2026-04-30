@@ -1,0 +1,308 @@
+/* ── Animations ── */
+
+@keyframes pulse {
+  0%, 100% { box-shadow: 0 0 0 4px var(--accent-muted); opacity: 1; }
+  50%       { box-shadow: 0 0 0 8px transparent; opacity: 0.6; }
+}
+
+@keyframes countdownBreath {
+  0%, 100% { transform: scale(1); }
+  50%       { transform: scale(1.015); }
+}
+
+/* ── Root grid ── */
+
+.root {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 24px 28px 32px;
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  grid-template-rows: auto auto auto;
+  gap: 16px;
+  align-content: start;
+  scrollbar-width: thin;
+}
+
+/* ── Hero countdown card ── */
+
+.hero {
+  grid-column: 1 / -1;
+  position: relative;
+  padding: 28px 32px;
+  background: linear-gradient(135deg, rgba(255, 107, 26, 0.12) 0%, var(--surface) 55%);
+  border: 1px solid var(--accent-border);
+  border-radius: 16px;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 28px;
+  align-items: center;
+}
+
+/* Top gradient line */
+.hero::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--accent-border), transparent);
+}
+
+/* City watermark — dekoracyjny pseudoelement CSS, brak odpowiednika DS; wyjątek analogiczny do .waitlistTrend */
+.hero::after {
+  content: 'NS';
+  position: absolute;
+  bottom: -60px;
+  right: 40px;
+  font-family: var(--font-display);
+  font-size: 280px;
+  letter-spacing: -6px;
+  color: var(--accent);
+  opacity: 0.05;
+  line-height: 1;
+  pointer-events: none;
+  user-select: none;
+}
+
+.heroCol {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 11px;
+  background: var(--accent-muted);
+  border: 1px solid var(--accent-border);
+  border-radius: 999px;
+  width: fit-content;
+}
+
+.eyebrow::before {
+  content: '';
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: var(--accent);
+  flex-shrink: 0;
+  animation: pulse 1800ms ease-in-out infinite;
+}
+
+.heroSub {
+  max-width: 520px;
+}
+
+/* ── Countdown block ── */
+
+.countdown {
+  position: relative;
+  z-index: 1;
+  padding: 20px 24px;
+  background: var(--bg);
+  border: 1px solid var(--accent-border);
+  border-radius: 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  animation: countdownBreath 4000ms ease-in-out infinite;
+  min-width: 140px;
+}
+
+.countdownVal {
+  /* text-shadow is a visual effect, not a typography property */
+  text-shadow: 0 0 24px var(--accent-glow);
+}
+
+.countdownDate {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px dashed var(--border);
+  width: 100%;
+  text-align: center;
+}
+
+/* ── Common card styles ── */
+
+.cardHead {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 12px;
+  border-bottom: 1px dashed var(--border);
+}
+
+.cardKicker {
+  padding: 3px 7px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  display: inline-flex;
+  align-items: center;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+/* ── Timeline card ── */
+
+.timelineCard {
+  grid-column: 1 / 2;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 20px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ── Right column ── */
+
+.rightCol {
+  grid-column: 2 / 3;
+  grid-row: 2 / 3;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ── Setup card ── */
+
+.setupCard {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 20px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.setupTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+/* ── Setup checklist ── */
+
+.checklist {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--border);
+}
+
+.checkItem {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.checkBox {
+  width: 14px; height: 14px;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.checkDone .checkBox {
+  background: var(--success);
+  color: var(--bg);
+}
+
+.checkPending .checkBox {
+  border: 1.5px solid var(--warning);
+  background: var(--warning-muted);
+}
+
+.checkLink {
+  margin-left: auto;
+  text-decoration: none;
+  flex-shrink: 0;
+}
+
+/* ── Waitlist card ── */
+
+.waitlistCard {
+  background: linear-gradient(135deg, rgba(46, 224, 160, 0.08) 0%, var(--surface) 55%);
+  border: 1px solid var(--success-border);
+  border-radius: 14px;
+  padding: 16px 18px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.waitlistIco {
+  width: 42px; height: 42px;
+  border-radius: 10px;
+  background: var(--success);
+  color: var(--bg);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.waitlistCol {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.waitlistTrend {
+  color: var(--success); /* documented exception: success not in TextColor */
+  margin-top: 2px;
+}
+
+/* ── Tips card ── */
+
+.tipsCard {
+  grid-column: 1 / -1;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 20px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.tipsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.tipCard {
+  padding: 16px 18px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tipDesc {
+  flex: 1;
+}
+
+.tipCtaStrip {
+  padding-top: 8px;
+  border-top: 1px dashed var(--border);
+  margin-top: auto;
+}
