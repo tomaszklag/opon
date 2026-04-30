@@ -1,18 +1,18 @@
 .form {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: var(--space-5);
 }
 
 .formSection {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 .row {
   display: grid;
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 .row2 {
@@ -27,7 +27,7 @@
   padding: 10px 14px;
   background: var(--danger-muted);
   border: 1px solid var(--danger-border);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   margin: 0;
 }
 
@@ -35,13 +35,13 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 12px 0;
+  padding: var(--space-3) 0;
 }
 
 .slotGrid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .slotBtn {
@@ -49,13 +49,13 @@
   flex-direction: column;
   gap: 2px;
   height: auto;
-  padding: 8px 6px;
+  padding: var(--space-2) 6px;
 }
 
 .slotConflict {
   width: 6px;
   height: 6px;
-  border-radius: 50%;
+  border-radius: var(--radius-full);
   background: var(--warning);
   display: inline-block;
 }
@@ -64,22 +64,22 @@
   padding: 10px 14px;
   background: var(--warning-muted);
   border: 1px solid var(--warning-border);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
 }
 
 .closedDayMsg {
-  padding: 20px;
+  padding: var(--space-5);
   text-align: center;
 }
 
 .slotSection {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 .spinnerRow {
   display: flex;
   justify-content: center;
-  padding: 16px 0;
+  padding: var(--space-4) 0;
 }
