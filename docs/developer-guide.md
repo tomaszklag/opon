@@ -304,6 +304,37 @@ export class StationsService {
 
 Moduły z repozytoriami: `providers`, `pricing-tiers`, `working-hours`, `stations`, `workers`.
 
+#### Wyjątek: złożone zapytania wielotabelowe w serwisie
+
+Reguła „wszystkie zapytania Prisma → repository" ma jeden wyjątek: **analityczne i dostępnościowe zapytania obejmujące wiele niezwiązanych agregatów**, których nie da się sensownie przypisać do jednego repozytorium.
+
+Kryteria dopuszczające bezpośredni `PrismaService` w serwisie:
+
+1. Zapytanie łączy **≥ 3 różne modele** bez wspólnego właściciela (np. `WorkingHours` + `ScheduleException` + `WorkerLeave` + `Booking`).
+2. Wynik jest **obliczany/agregowany** w locie — nie mapuje 1:1 na istniejący model.
+3. Umieszczenie w dowolnym istniejącym repozytorium byłoby arbitralne i myląco sugerowałoby własność.
+
+```ts
+// ✅ TAK — wieloagregacyjne zapytanie dostępności bezpośrednio w serwisie
+@Injectable()
+export class BookingsService {
+  constructor(
+    private readonly bookingsRepository: BookingsRepository,
+    private readonly prisma: PrismaService, // tylko dla getAvailability
+  ) {}
+
+  async getAvailability(providerId: string, query: AvailabilityQueryDto) {
+    const wh = await this.prisma.workingHours.findUnique({ ... });
+    const exc = await this.prisma.scheduleException.findUnique({ ... });
+    const leave = await this.prisma.workerLeave.findFirst({ ... });
+    const bookings = await this.prisma.booking.findMany({ ... });
+    // ... generowanie slotów
+  }
+}
+```
+
+Standardowe CRUD zapytania (findMany, create, update) zawsze idą przez repository — nawet jeśli dotyczą wielu tabel przez `include`.
+
 ### 5.2. Krok po kroku
 
 ```
@@ -876,6 +907,38 @@ Dostępne tokeny kolorów w `global.css`:
 ```
 
 Wartości bez tokenu (np. specyficzne przezroczystości w gradientach tła) mogą pozostać hardcoded — ale to wyjątek, nie reguła.
+
+### Reguła: spacing i border-radius — tokeny gdzie istnieje dopasowanie
+
+Dla właściwości layoutowych (`gap`, `padding`, `margin`, `border-radius`) używaj tokenów z `global.css` **wszędzie tam, gdzie istnieje dokładne dopasowanie wartości**. Hardcoded `px` jest akceptowalny tylko gdy token o tej wartości nie istnieje.
+
+Dostępne tokeny spacing i radius:
+
+```
+--space-1: 4px   --space-2: 8px   --space-3: 12px  --space-4: 16px
+--space-5: 20px  --space-6: 24px  --space-8: 32px  --space-10: 40px
+
+--radius-xs: 2px  --radius-sm: 4px  --radius-md: 8px   --radius-lg: 12px
+--radius-xl: 16px --radius-2xl: 18px --radius-full: 9999px
+```
+
+```css
+/* ✅ TAK */
+gap: var(--space-3); /* 12px */
+padding: var(--space-5); /* 20px */
+border-radius: var(--radius-md); /* 8px */
+
+/* ❌ NIE — gdy token istnieje */
+gap: 12px;
+padding: 20px;
+border-radius: 8px;
+
+/* ✅ TAK — gdy token nie istnieje */
+gap: 2px; /* brak --space-0.5 */
+padding: 10px 14px; /* brak tokenów dla 10px i 14px */
+```
+
+Zasada nie dotyczy `width`, `height`, `min-width` i wartości specyficznych dla siatki (np. `minmax(110px, 1fr)`) — tam hardcoded `px` jest normą.
 
 #### Częściowa przezroczystość tokenu — `color-mix()`
 
