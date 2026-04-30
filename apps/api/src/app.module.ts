@@ -20,6 +20,7 @@ import { BookingsModule } from './bookings/bookings.module';
 import { ReviewsModule } from './reviews/reviews.module';
 import { StationsModule } from './stations/stations.module';
 import { WorkersModule } from './workers/workers.module';
+import { WorkerTasksModule } from './worker-tasks/worker-tasks.module';
 import { RealtimeModule } from './realtime/realtime.module';
 
 @Module({
@@ -43,6 +44,7 @@ import { RealtimeModule } from './realtime/realtime.module';
     AdminModule,
     StationsModule,
     WorkersModule,
+    WorkerTasksModule,
     BookingsModule,
     ReviewsModule,
     RealtimeModule,

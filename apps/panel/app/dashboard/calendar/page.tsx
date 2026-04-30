@@ -5,8 +5,10 @@ import { Button, Heading, SegmentedControl, Spinner, Text } from '@opony/design-
 import { useAuthGuard } from '../../../lib/hooks/use-auth-guard';
 import { useBookings } from '../../../lib/hooks/use-bookings';
 import { useBookingsMonth } from '../../../lib/hooks/use-bookings-month';
+import { useWorkerTasks } from '../../../lib/hooks/use-worker-tasks';
 import { IconChevronLeft, IconChevronRight } from '../../../components/icons';
 import { ManualBookingModal } from '../_components/ManualBookingModal';
+import { WorkerTaskModal } from '../_components/WorkerTaskModal';
 import {
   CalendarView,
   getWeekStart,
@@ -40,11 +42,13 @@ export default function CalendarPage() {
   const [nowLineTop, setNowLineTop] = useState<number>(getNowLineTop);
   const [nowTime, setNowTime] = useState<string>(() => formatTime(new Date().toISOString()));
   const [isManualOpen, setIsManualOpen] = useState(false);
+  const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
 
   // Week/day data — disabled in month view
   const weekStart = getWeekStart(currentDate);
   const weekStartStr = view !== 'month' ? formatWeekStart(weekStart) : null;
   const { bookings, isLoading, mutate } = useBookings(weekStartStr);
+  const { tasks, mutate: mutateTasks } = useWorkerTasks(weekStartStr);
 
   // Month data — parallel SWR per week, disabled outside month view
   const monthWeekStarts =
@@ -165,7 +169,11 @@ export default function CalendarPage() {
 
         <div className={styles.topbarSpacer} />
 
-        <BookingTopbarActions exportLabel="Eksport .ics" onAdd={() => setIsManualOpen(true)} />
+        <BookingTopbarActions
+          exportLabel="Eksport .ics"
+          onAdd={() => setIsManualOpen(true)}
+          onAddTask={() => setIsTaskModalOpen(true)}
+        />
       </header>
 
       {/* ── View ── */}
@@ -175,6 +183,7 @@ export default function CalendarPage() {
           weekNum={weekNum}
           year={year}
           bookings={bookings}
+          tasks={tasks}
           isLoading={isLoading}
           nowLineTop={nowLineTop}
           nowTime={nowTime}
@@ -184,6 +193,7 @@ export default function CalendarPage() {
         <DayView
           day={currentDate}
           bookings={bookings}
+          tasks={tasks}
           isLoading={isLoading}
           nowLineTop={nowLineTop}
           nowTime={nowTime}
@@ -197,6 +207,14 @@ export default function CalendarPage() {
         isOpen={isManualOpen}
         onClose={() => setIsManualOpen(false)}
         onSuccess={() => mutate()}
+      />
+      <WorkerTaskModal
+        isOpen={isTaskModalOpen}
+        onClose={() => setIsTaskModalOpen(false)}
+        onSuccess={() => {
+          void mutateTasks();
+        }}
+        weekStart={weekStartStr ?? ''}
       />
     </main>
   );

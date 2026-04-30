@@ -8,6 +8,7 @@ interface BookingTopbarActionsProps {
   addLabel?: string;
   onExport?: () => void;
   onAdd?: () => void;
+  onAddTask?: () => void;
 }
 
 export function BookingTopbarActions({
@@ -15,6 +16,7 @@ export function BookingTopbarActions({
   addLabel = 'Wizyta ręczna',
   onExport,
   onAdd,
+  onAddTask,
 }: BookingTopbarActionsProps) {
   return (
     <>
@@ -22,6 +24,12 @@ export function BookingTopbarActions({
         <IconDownload width="13" height="13" />
         {exportLabel}
       </Button>
+      {onAddTask && (
+        <Button variant="secondary" size="sm" onClick={onAddTask}>
+          <IconPlus width="13" height="13" />
+          Dodaj zadanie
+        </Button>
+      )}
       <Button variant="primary" size="sm" onClick={onAdd}>
         <IconPlus width="13" height="13" />
         {addLabel}

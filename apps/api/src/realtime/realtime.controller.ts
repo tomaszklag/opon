@@ -1,5 +1,4 @@
-import { Controller, ForbiddenException, Header, Res, Sse, MessageEvent } from '@nestjs/common';
-import { Response } from 'express';
+import { Controller, ForbiddenException, Header, Sse, MessageEvent } from '@nestjs/common';
 import { Observable, merge, interval } from 'rxjs';
 import { map, finalize } from 'rxjs/operators';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
@@ -12,20 +11,13 @@ export class RealtimeController {
 
   @Sse('events')
   @Header('X-Accel-Buffering', 'no')
-  onConnect(
-    @CurrentUser() user: JwtPayload,
-    @Res({ passthrough: true }) res: Response,
-  ): Observable<MessageEvent> {
+  onConnect(@CurrentUser() user: JwtPayload): Observable<MessageEvent> {
     if (!user.providerId) {
       throw new ForbiddenException('Brak dostępu do SSE — wymagane konto warsztatu.');
     }
 
     const providerId = user.providerId;
     const subject = this.realtimeService.getOrCreate(providerId);
-
-    res.on('close', () => {
-      this.realtimeService.release(providerId);
-    });
 
     const heartbeat$ = interval(25_000).pipe(
       map(

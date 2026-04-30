@@ -1,0 +1,22 @@
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.row {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.row3 {
+  grid-template-columns: 1fr 1fr 1fr;
+}
+
+.errorMsg {
+  padding: 10px 14px;
+  background: var(--danger-muted);
+  border: 1px solid var(--danger-border);
+  border-radius: var(--radius-md);
+  margin: 0;
+}

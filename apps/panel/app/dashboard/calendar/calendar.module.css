@@ -964,3 +964,34 @@
   cursor: pointer;
   flex-shrink: 0;
 }
+
+/* ── Worker task blocks ──────────────────────────────────────────────────── */
+.workerTask {
+  position: absolute;
+  left: 2px;
+  right: 2px;
+  padding: 3px 6px;
+  border-radius: var(--radius-sm);
+  background: var(--warning-muted);
+  border: 1px solid var(--warning-border);
+  border-left: 3px solid var(--warning);
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  overflow: hidden;
+  cursor: default;
+  pointer-events: all;
+  z-index: 1;
+}
+
+.workerTaskTitle {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.workerTaskWorker {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

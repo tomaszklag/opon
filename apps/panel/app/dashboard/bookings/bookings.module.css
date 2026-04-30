@@ -401,3 +401,40 @@
   padding: 48px;
   text-align: center;
 }
+
+/* ── Worker Tasks Section ───────────────────────────────────────────────────── */
+.tasksSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4) 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.tasksSectionTitle {
+  padding: 0 4px;
+}
+
+.tasksTable {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.tasksTh {
+  text-align: left;
+  padding: 8px 12px;
+  white-space: nowrap;
+}
+
+.tasksTr {
+  border-bottom: 1px solid var(--border);
+}
+
+.tasksTr:last-child {
+  border-bottom: none;
+}
+
+.tasksTd {
+  padding: 10px 12px;
+  vertical-align: middle;
+}

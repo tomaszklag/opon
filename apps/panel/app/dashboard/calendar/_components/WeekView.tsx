@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Spinner, Text } from '@opony/design-system-web';
 import type { Booking, BookingStatus } from '../../../../api-data-access/bookings';
+import type { WorkerTask } from '../../../../api-data-access/worker-tasks';
 import { IconInfo, IconArrowRight } from '../../../../components/icons';
 import {
   HOURS,
@@ -30,6 +31,7 @@ interface WeekViewProps {
   weekNum: number;
   year: number;
   bookings: Booking[];
+  tasks: WorkerTask[];
   isLoading: boolean;
   nowLineTop: number;
   nowTime: string;
@@ -55,6 +57,7 @@ export function WeekView({
   weekNum,
   year,
   bookings,
+  tasks,
   isLoading,
   nowLineTop,
   nowTime,
@@ -70,6 +73,10 @@ export function WeekView({
 
   function getDayBookings(day: Date): Booking[] {
     return filteredBookings.filter((b) => isSameDay(new Date(b.startAt), day));
+  }
+
+  function getDayTasks(day: Date): WorkerTask[] {
+    return tasks.filter((t) => isSameDay(new Date(t.startAt), day));
   }
 
   // Stats (unfiltered)
@@ -134,6 +141,34 @@ export function WeekView({
                     <div key={top} className={styles.hourGridline} style={{ top: `${top}px` }} />
                   ))}
                   {isSunday && <span className={styles.closedMsg}>Niedziela · nieczynne</span>}
+                  {!isSunday &&
+                    getDayTasks(day).map((task) => (
+                      <div
+                        key={task.id}
+                        className={styles.workerTask}
+                        style={getBookingStyle(task.startAt, task.endAt)}
+                        title={`${task.title}${task.workerName ? ` — ${task.workerName}` : ''} · ${formatTime(task.startAt)}–${formatTime(task.endAt)}`}
+                      >
+                        <Text
+                          variant="nano"
+                          as="span"
+                          weight="bold"
+                          className={styles.workerTaskTitle}
+                        >
+                          {task.title}
+                        </Text>
+                        {task.workerName && (
+                          <Text
+                            variant="nano"
+                            as="span"
+                            color="muted"
+                            className={styles.workerTaskWorker}
+                          >
+                            {task.workerName}
+                          </Text>
+                        )}
+                      </div>
+                    ))}
                   {!isSunday &&
                     dayBookings.map((booking) => {
                       const showPendingBadge = booking.status === 'PENDING';

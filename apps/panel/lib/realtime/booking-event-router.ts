@@ -13,14 +13,9 @@ interface BookingStatusChangedPayload {
   newStatus: string;
 }
 
-interface BookingBulkStatusChangedPayload {
-  ids: string[];
-  action: string;
-}
-
 interface RealtimeEvent {
   type: string;
-  payload: BookingCreatedPayload | BookingStatusChangedPayload | BookingBulkStatusChangedPayload;
+  payload: unknown;
   ts: string;
 }
 
@@ -48,5 +43,11 @@ export function routeBookingEvent(event: RealtimeEvent): void {
     mutate('booking-stats');
     mutate((key: unknown) => Array.isArray(key) && key[0] === 'booking-count');
     mutate((key: unknown) => Array.isArray(key) && key[0] === 'booking-admin');
+  } else if (type === 'worker-task.created') {
+    const p = payload as unknown as { taskId: string; weekStart: string };
+    void mutate(['worker-tasks', p.weekStart]);
+  } else if (type === 'worker-task.deleted') {
+    const p = payload as unknown as { taskId: string; weekStart: string };
+    void mutate(['worker-tasks', p.weekStart]);
   }
 }

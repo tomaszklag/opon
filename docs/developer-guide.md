@@ -2688,3 +2688,80 @@ export default function DashboardLayout({ children }) {
 - Nie przekazuj `providerId` jako parametru URL endpointu SSE
 
 Cena w UI to **szacunek** (oznaczony "(szacunek)") — ostateczna cena potwierdzona jest po stronie backendu przy `POST /v1/bookings`.
+
+---
+
+## 24. WorkerTask — zadania warsztatu
+
+Zadania warsztatu to wewnętrzne bloki czasu tworzone przez providera (np. „Przerwa techniczna", „Szkolenie BHP"). Nie są rezerwacjami — nie mają klienta, usługi ani ceny.
+
+### Model Prisma
+
+```prisma
+model WorkerTask {
+  id         String    @id @default(cuid())
+  providerId String
+  workerId   String?   // null = zadanie ogólne warsztatu, nie blokuje slotów
+  title      String    @db.VarChar(200)
+  startAt    DateTime
+  endAt      DateTime
+  notes      String?   @db.Text
+  createdAt  DateTime  @default(now())
+
+  provider Provider  @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  worker   Worker?   @relation(fields: [workerId], references: [id], onDelete: SetNull)
+
+  @@index([providerId, startAt])
+  @@map("worker_tasks")
+}
+```
+
+**Kluczowe różnice wobec `Booking`:**
+
+| Cecha                  | Booking                                   | WorkerTask                        |
+| ---------------------- | ----------------------------------------- | --------------------------------- |
+| Klient                 | wymagany (`clientId` NOT NULL)            | brak                              |
+| Status / state machine | tak                                       | brak — tylko tworzenie i usuwanie |
+| Cena                   | tak                                       | brak                              |
+| Blokuje sloty          | wszystkim pracownikom (wg `workstations`) | tylko przypisanemu pracownikowi   |
+| `id`                   | `uuid()`                                  | `cuid()`                          |
+
+### Endpointy API
+
+| Metoda   | Ścieżka                                       | Opis                 |
+| -------- | --------------------------------------------- | -------------------- |
+| `POST`   | `/v1/providers/me/tasks`                      | Utwórz zadanie       |
+| `GET`    | `/v1/providers/me/tasks?weekStart=YYYY-MM-DD` | Lista zadań tygodnia |
+| `DELETE` | `/v1/providers/me/tasks/:id`                  | Usuń zadanie         |
+
+Zadania nie mają endpointu PATCH — są niemutowalne po utworzeniu.
+
+### Blokowanie dostępności slotów
+
+`getAvailability()` w `BookingsService` uwzględnia zadania tylko gdy żądanie podaje `workerId`. Zadanie bez `workerId` (`null`) nie koliduje z żadnym slotem — traktowane jest jako notatka organizacyjna.
+
+```
+workerTaskConflicts = workerId
+  ? workerTasksService.findActiveInRange(workerId, dayStart, dayEnd)
+  : []
+```
+
+### SWR — klucz i invalidacja
+
+Hook: `useWorkerTasks(weekStart: string | null)` — klucz `['worker-tasks', weekStart]`.
+
+SSE eventy invalidujące ten klucz: `worker-task.created`, `worker-task.deleted` (obsługiwane w `booking-event-router.ts`).
+
+### Wizualizacja w kalendarzu
+
+Zadania renderowane są na siatce kalendarza (WeekView, DayView) obok rezerwacji — z odrębnym stylem:
+
+```css
+.workerTask {
+  background: var(--warning-muted);
+  border: 1px solid var(--warning-border);
+  border-left: 3px solid var(--warning);
+}
+```
+
+Tekst wewnątrz bloku zadania — obowiązuje zasada DS: `<Text variant="nano">` z propsami `weight` i `color`, nigdy `font-size` w CSS module.

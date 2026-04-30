@@ -6,6 +6,7 @@ import {
   BookingStatusChangedEvent,
   BookingBulkStatusChangedEvent,
 } from './events/booking.events';
+import { WorkerTaskCreatedEvent, WorkerTaskDeletedEvent } from './events/worker-task.events';
 
 interface RealtimeEntry {
   subject: Subject<MessageEvent>;
@@ -69,6 +70,22 @@ export class RealtimeService implements OnModuleDestroy {
     this.push(event.providerId, BookingBulkStatusChangedEvent.EVENT, {
       ids: event.ids,
       action: event.action,
+    });
+  }
+
+  @OnEvent(WorkerTaskCreatedEvent.EVENT)
+  onWorkerTaskCreated(event: WorkerTaskCreatedEvent): void {
+    this.push(event.providerId, WorkerTaskCreatedEvent.EVENT, {
+      taskId: event.taskId,
+      weekStart: event.weekStart,
+    });
+  }
+
+  @OnEvent(WorkerTaskDeletedEvent.EVENT)
+  onWorkerTaskDeleted(event: WorkerTaskDeletedEvent): void {
+    this.push(event.providerId, WorkerTaskDeletedEvent.EVENT, {
+      taskId: event.taskId,
+      weekStart: event.weekStart,
     });
   }
 

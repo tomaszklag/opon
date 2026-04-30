@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { BookingStatus, Prisma } from '@prisma/client';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { AppException, ErrorCode } from '../common/errors';
+import { WorkerTasksService } from '../worker-tasks/worker-tasks.service';
 import { BookingDetailResponseDto } from './dto/booking-detail-response.dto';
 import { BookingResponseDto } from './dto/booking-response.dto';
 import { UpdateBookingStatusDto } from './dto/update-booking-status.dto';
@@ -37,6 +38,7 @@ export class BookingsService {
     private readonly bookingsRepository: BookingsRepository,
     private readonly prisma: PrismaService,
     private readonly eventEmitter: EventEmitter2,
+    private readonly workerTasksService: WorkerTasksService,
   ) {}
 
   // ── helpers ───────────────────────────────────────────────────────────────
@@ -465,6 +467,16 @@ export class BookingsService {
       workerOnLeave = !!leave;
     }
 
+    // Check worker task conflicts if workerId provided
+    let workerTaskConflicts: { startAt: Date; endAt: Date }[] = [];
+    if (query.workerId) {
+      workerTaskConflicts = await this.workerTasksService.findActiveInRange(
+        query.workerId,
+        fullDayStart,
+        fullDayEnd,
+      );
+    }
+
     // Fetch existing bookings for that day (excluding cancelled/rejected statuses)
     const existingBookings = await this.prisma.booking.findMany({
       where: {
@@ -497,7 +509,11 @@ export class BookingsService {
         (b) => b.startAt < slotEnd && b.endAt > slotStart,
       ).length;
 
-      const isAvailable = !workerOnLeave && conflictCount < workstations;
+      const taskConflict = workerTaskConflicts.some(
+        (t) => t.startAt < slotEnd && t.endAt > slotStart,
+      );
+
+      const isAvailable = !workerOnLeave && !taskConflict && conflictCount < workstations;
 
       slots.push({
         startAt: slotStart.toISOString(),

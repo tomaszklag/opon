@@ -2,12 +2,14 @@
 import React, { useState } from 'react';
 import {
   Text,
+  Heading,
   KPICard,
   SearchInput,
   Tabs,
   Badge,
   Checkbox,
   Pagination,
+  Button,
 } from '@opony/design-system-web';
 import {
   IconCalendar,
@@ -34,7 +36,16 @@ import {
 } from '../../../lib/hooks/use-booking-admin';
 import { BookingTopbarActions } from '../_components/BookingTopbarActions';
 import { ManualBookingModal } from '../_components/ManualBookingModal';
+import { useWorkerTasks } from '../../../lib/hooks/use-worker-tasks';
+import { workerTasksApi } from '../../../api-data-access/worker-tasks';
 import styles from './bookings.module.css';
+
+function getTodayWeekStart(): string {
+  const d = new Date();
+  const day = d.getUTCDay();
+  d.setUTCDate(d.getUTCDate() + (day === 0 ? -6 : 1 - day));
+  return d.toISOString().slice(0, 10);
+}
 
 // ── Status helpers ───────────────────────────────────────────────────────────
 
@@ -393,6 +404,91 @@ function BulkBar({ count, onConfirm, onCancel, onDeselect, onExport }: BulkBarPr
   );
 }
 
+// ── Worker Tasks Section ─────────────────────────────────────────────────────
+
+function WorkerTasksSection() {
+  const { tasks, mutate } = useWorkerTasks(getTodayWeekStart());
+
+  if (tasks.length === 0) return null;
+
+  async function handleDelete(id: string) {
+    await workerTasksApi.remove(id);
+    void mutate();
+  }
+
+  function formatTaskTime(startAt: string, endAt: string): string {
+    const fmt = (iso: string) =>
+      new Date(iso).toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' });
+    const d = new Date(startAt).toLocaleDateString('pl-PL', {
+      day: 'numeric',
+      month: 'short',
+    });
+    return `${d} · ${fmt(startAt)}–${fmt(endAt)}`;
+  }
+
+  return (
+    <div className={styles.tasksSection}>
+      <Heading variant="subsection" as="h2" className={styles.tasksSectionTitle}>
+        Zadania bieżącego tygodnia
+      </Heading>
+      <table className={styles.tasksTable} aria-label="Zadania warsztatu">
+        <thead>
+          <tr>
+            <th className={styles.tasksTh}>
+              <Text variant="nano" mono weight="extrabold" color="muted" as="span">
+                Tytuł
+              </Text>
+            </th>
+            <th className={styles.tasksTh}>
+              <Text variant="nano" mono weight="extrabold" color="muted" as="span">
+                Pracownik
+              </Text>
+            </th>
+            <th className={styles.tasksTh}>
+              <Text variant="nano" mono weight="extrabold" color="muted" as="span">
+                Czas
+              </Text>
+            </th>
+            <th className={styles.tasksTh} />
+          </tr>
+        </thead>
+        <tbody>
+          {tasks.map((task) => (
+            <tr key={task.id} className={styles.tasksTr}>
+              <td className={styles.tasksTd}>
+                <Text variant="body-sm" weight="semibold" as="span">
+                  {task.title}
+                </Text>
+              </td>
+              <td className={styles.tasksTd}>
+                <Text variant="body-sm" color="muted" as="span">
+                  {task.workerName ?? '—'}
+                </Text>
+              </td>
+              <td className={styles.tasksTd}>
+                <Text variant="body-sm" mono color="muted" as="span">
+                  {formatTaskTime(task.startAt, task.endAt)}
+                </Text>
+              </td>
+              <td className={styles.tasksTd}>
+                <Button
+                  variant="neutral"
+                  size="sm"
+                  type="button"
+                  onClick={() => void handleDelete(task.id)}
+                >
+                  <IconTrash width={12} height={12} />
+                  Usuń
+                </Button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 // ── Main page ────────────────────────────────────────────────────────────────
 
 export default function BookingsPage() {
@@ -478,6 +574,8 @@ export default function BookingsPage() {
 
       <div className={styles.content}>
         <KpiStrip />
+
+        <WorkerTasksSection />
 
         {/* Filter bar */}
         <div className={styles.filterBar} role="search">
