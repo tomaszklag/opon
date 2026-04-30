@@ -5,6 +5,7 @@ import { NestFactory } from '@nestjs/core';
 const cookieParser = require('cookie-parser') as () => ReturnType<typeof import('cookie-parser')>;
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/errors';
+import { LoggingInterceptor } from './common/logging.interceptor';
 import { setupSwagger } from './swagger.config';
 
 async function bootstrap() {
@@ -33,6 +34,7 @@ async function bootstrap() {
   );
 
   app.useGlobalFilters(new HttpExceptionFilter());
+  app.useGlobalInterceptors(new LoggingInterceptor());
 
   setupSwagger(app);
 

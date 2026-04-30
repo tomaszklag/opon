@@ -7,7 +7,7 @@
     "declarationMap": true,
     "module": "CommonJS",
     "moduleResolution": "node",
-    "ignoreDeprecations": "5.0",
+    "ignoreDeprecations": "6.0",
     "noEmit": true,
     "types": ["node"]
   },
