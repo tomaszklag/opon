@@ -7,6 +7,7 @@ export type ButtonVariant =
   | 'secondary'
   | 'ghost'
   | 'danger'
+  | 'neutral-danger'
   | 'link'
   | 'cta'
   | 'neutral';
@@ -19,6 +20,17 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
   fullWidth?: boolean;
   iconOnly?: boolean;
 }
+
+const VARIANT_CLASS: Record<ButtonVariant, string> = {
+  primary: styles.primary as string,
+  secondary: styles.secondary as string,
+  ghost: styles.ghost as string,
+  danger: styles.danger as string,
+  'neutral-danger': styles.neutralDanger as string,
+  link: styles.link as string,
+  cta: styles.cta as string,
+  neutral: styles.neutral as string,
+};
 
 export function Button({
   variant = 'primary',
@@ -33,7 +45,7 @@ export function Button({
 }: ButtonProps) {
   const cls = [
     styles.button,
-    styles[variant],
+    VARIANT_CLASS[variant],
     styles[size],
     fullWidth ? styles.fullWidth : null,
     iconOnly ? styles.iconOnly : null,

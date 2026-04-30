@@ -8,7 +8,7 @@ export type HeadingVariant =
   | 'display'
   | 'section'
   | 'subsection';
-export type HeadingColor = 'primary' | 'secondary' | 'muted' | 'accent';
+export type HeadingColor = 'primary' | 'secondary' | 'muted' | 'accent' | 'danger';
 type HeadingElement = 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6' | 'span' | 'div';
 
 export interface HeadingProps extends HTMLAttributes<HTMLHeadingElement> {
@@ -30,6 +30,7 @@ const colorClass: Partial<Record<HeadingColor, string>> = {
   secondary: styles.colorSecondary as string,
   muted: styles.colorMuted as string,
   accent: styles.colorAccent as string,
+  danger: styles.colorDanger as string,
 };
 
 export function Heading({

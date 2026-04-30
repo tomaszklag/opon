@@ -113,6 +113,18 @@
   box-shadow: 0 0 16px var(--danger-muted);
 }
 
+/* Neutral-danger — outlined style for secondary destructive actions */
+.neutralDanger {
+  background: transparent;
+  color: var(--danger);
+  border-color: var(--danger-border);
+}
+
+.neutralDanger:hover:not(:disabled) {
+  background: var(--danger-muted);
+  border-color: var(--danger);
+}
+
 .link {
   background: transparent;
   color: var(--accent);

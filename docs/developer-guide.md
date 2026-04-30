@@ -419,11 +419,11 @@ import { Heading, Text } from '@opony/design-system-web';
 | --------- | ------------------------------------------------------------------------------- | ------------------------------------------------------------- |
 | `variant` | `body \| body-md \| body-sm \| caption \| label \| nano \| kicker \| kicker-sm` | Rozmiar i styl                                                |
 | `as`      | `p \| span \| div \| label \| li \| strong \| em`                               | Tag HTML (domyślnie `p`)                                      |
-| `color`   | `primary \| secondary \| muted \| accent`                                       | Kolor tekstu — zamiast `color:` w CSS                         |
+| `color`   | `primary \| secondary \| muted \| accent \| warning \| danger`                  | Kolor tekstu — zamiast `color:` w CSS                         |
 | `weight`  | `regular \| medium \| semibold \| bold \| extrabold`                            | Grubość — zamiast `font-weight:` w CSS                        |
 | `mono`    | `boolean`                                                                       | Czcionka mono (JetBrains Mono) — zamiast `font-family:` w CSS |
 
-> **Ograniczenie `TextColor`:** typ obejmuje wyłącznie `primary | secondary | muted | accent`. Dla `success`, `warning`, `danger` prop `color` nie istnieje — jedynym wyjątkiem od reguły „no color in CSS" jest właśnie ten przypadek: zachowaj `color: var(--success)` w CSS module dla danego elementu.
+> **`TextColor`** obejmuje: `primary | secondary | muted | accent | warning | danger`. Dla `success` prop `color` nie istnieje — jedynym wyjątkiem od reguły „no color in CSS" jest ten przypadek: zachowaj `color: var(--success)` w CSS module dla danego elementu.
 
 #### Heading — warianty
 
@@ -438,7 +438,7 @@ import { Heading, Text } from '@opony/design-system-web';
 
 `as` akceptuje: `h1 h2 h3 h4 h5 h6 span div`
 
-`Heading` akceptuje też prop **`color`** o tych samych wartościach co `Text.color`: `primary | secondary | muted | accent`. Używaj go zamiast `color:` w CSS dla elementów nagłówkowych.
+`Heading` akceptuje też prop **`color`** o tych samych wartościach co `Text.color`: `primary | secondary | muted | accent | danger`. Używaj go zamiast `color:` w CSS dla elementów nagłówkowych.
 
 ```tsx
 // ✅ TAK
@@ -505,6 +505,67 @@ Reguła obowiązuje **dwustronnie**: nie tylko dla klas na rodzicach, ale równi
 // ✅ TAK — typography przez propsy, className tylko dla geometrii
 <Text as="span" variant="body-md" color="accent" className={styles.respUnit}>%</Text>
 // .respUnit { margin-left: 2px; }   ← tylko layout
+```
+
+#### Anty-wzorzec: `<strong>` wewnątrz `<Text>`
+
+Wbudowany tag `<strong>` wewnątrz `<Text>` stosuje bold poza kontrolą DS (browser default, nie zmienna DS). Zamiast tego zagnieżdź `<Text as="span" weight="bold">`:
+
+```tsx
+// ❌ NIE — bold poza DS
+<Text variant="nano" as="span" mono>
+  Panel <strong>v0.1.0</strong> · pilot
+</Text>
+
+// ✅ TAK — bold przez prop DS
+<Text variant="nano" as="span" mono>
+  Panel{' '}
+  <Text variant="nano" as="span" weight="bold" mono>v0.1.0</Text>
+  {' '}· pilot
+</Text>
+```
+
+#### Wzorzec: badge/pill z DS `<Text>`
+
+Elementy o podwójnej roli (pudełko + tekst z typografią) — np. numerki sekcji, status-pille, etykiety — powinny renderować treść przez `<Text>`, a klasę CSS module zarezerwować wyłącznie dla geometrii pudełka:
+
+```tsx
+// ✅ TAK — CSS module tylko layout, typografia w DS
+<Text variant="nano" as="span" weight="extrabold" mono className={styles.secNum}>
+  01
+</Text>
+
+// Jeśli badge ma kilka stanów kolorystycznych (np. normalny / accent / danger),
+// kolory stanu definiuj w CSS module — nie przez prop color na <Text>:
+<Text variant="nano" as="span" weight="extrabold" mono className={`${styles.secNum} ${styles.secNumAccent}`}>
+  02
+</Text>
+```
+
+```css
+/* ✅ TAK — CSS module bez typografii (font-*, color usunięte) */
+.secNum {
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  flex-shrink: 0; /* color OK — stan pudełka, nie treść */
+}
+.secNumAccent {
+  background: var(--accent);
+  color: var(--text-on-accent);
+  border-color: transparent;
+}
+.secNumDanger {
+  background: var(--danger);
+  color: var(--bg);
+  border-color: transparent;
+}
 ```
 
 #### CSS Modules + noUncheckedIndexedAccess
@@ -628,15 +689,16 @@ Wariant określa **wyłącznie schemat kolorów**. Rozmiar określa **wyłączni
 
 #### Warianty
 
-| Wariant     | Kiedy używać                                                        |
-| ----------- | ------------------------------------------------------------------- |
-| `primary`   | Główna akcja strony (submit, Dalej, Zapisz). Zawsze tylko jeden.    |
-| `secondary` | Akcja alternatywna z akcentem — np. „Dodaj kolejny".                |
-| `neutral`   | Nawigacja wstecz, Anuluj — przezroczysty, obramowanie `--border`.   |
-| `ghost`     | Akcja w toolbarze/nagłówku — przezroczysty, bez obramowania.        |
-| `danger`    | Destruktywne operacje (Usuń konto, Odrzuć).                         |
-| `link`      | Inline link-button — bez obramowania, kolor akcentu.                |
-| `cta`       | Jednorazowe hero-CTA na stronach auth (Bebas Neue, persistent glow) |
+| Wariant          | Kiedy używać                                                                  |
+| ---------------- | ----------------------------------------------------------------------------- |
+| `primary`        | Główna akcja strony (submit, Dalej, Zapisz). Zawsze tylko jeden.              |
+| `secondary`      | Akcja alternatywna z akcentem — np. „Dodaj kolejny".                          |
+| `neutral`        | Nawigacja wstecz, Anuluj — przezroczysty, obramowanie `--border`.             |
+| `ghost`          | Akcja w toolbarze/nagłówku — przezroczysty, bez obramowania.                  |
+| `danger`         | Destruktywne operacje (Usuń konto, Odrzuć) — wypełnienie czerwienią.          |
+| `neutral-danger` | Wtórne destruktywne akcje — outline czerwony (transparent bg, danger border). |
+| `link`           | Inline link-button — bez obramowania, kolor akcentu.                          |
+| `cta`            | Jednorazowe hero-CTA na stronach auth (Bebas Neue, persistent glow)           |
 
 #### Rozmiary
 
