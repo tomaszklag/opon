@@ -86,4 +86,18 @@ export const bookingsApi = {
   getStats: () => api.get<BookingStats>('/v1/providers/me/bookings/stats'),
   bulkUpdate: (ids: string[], action: 'confirm' | 'cancel') =>
     api.patch<void>('/v1/providers/me/bookings/bulk-status', { ids, action }),
+  createManual: (payload: ManualBookingPayload) =>
+    api.post<Booking>('/v1/providers/me/bookings/manual', payload),
 };
+
+export interface ManualBookingPayload {
+  clientName: string;
+  clientPhone: string;
+  startAt: string;
+  endAt: string;
+  tireSize?: string;
+  totalPricePln?: number;
+  serviceType?: string;
+  notes?: string;
+  autoConfirm?: boolean;
+}

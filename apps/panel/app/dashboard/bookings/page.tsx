@@ -33,6 +33,7 @@ import {
   useBookingTabCounts,
 } from '../../../lib/hooks/use-booking-admin';
 import { BookingTopbarActions } from '../_components/BookingTopbarActions';
+import { ManualBookingModal } from '../_components/ManualBookingModal';
 import styles from './bookings.module.css';
 
 // ── Status helpers ───────────────────────────────────────────────────────────
@@ -400,6 +401,7 @@ export default function BookingsPage() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [isManualOpen, setIsManualOpen] = useState(false);
 
   const params: BookingListParams = {
     status: statusFilter,
@@ -471,7 +473,7 @@ export default function BookingsPage() {
           </Text>
         </div>
         <div className={styles.topbarSpacer} />
-        <BookingTopbarActions exportLabel="Eksport CSV" />
+        <BookingTopbarActions exportLabel="Eksport CSV" onAdd={() => setIsManualOpen(true)} />
       </div>
 
       <div className={styles.content}>
@@ -669,6 +671,12 @@ export default function BookingsPage() {
           </div>
         </div>
       </div>
+
+      <ManualBookingModal
+        isOpen={isManualOpen}
+        onClose={() => setIsManualOpen(false)}
+        onSuccess={() => void mutate()}
+      />
     </div>
   );
 }

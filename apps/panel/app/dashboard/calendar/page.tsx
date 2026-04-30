@@ -1,11 +1,12 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Button, SegmentedControl, Spinner } from '@opony/design-system-web';
+import { Button, Heading, SegmentedControl, Spinner, Text } from '@opony/design-system-web';
 import { useAuthGuard } from '../../../lib/hooks/use-auth-guard';
 import { useBookings } from '../../../lib/hooks/use-bookings';
 import { useBookingsMonth } from '../../../lib/hooks/use-bookings-month';
 import { IconChevronLeft, IconChevronRight } from '../../../components/icons';
+import { ManualBookingModal } from '../_components/ManualBookingModal';
 import {
   CalendarView,
   getWeekStart,
@@ -38,11 +39,12 @@ export default function CalendarPage() {
   });
   const [nowLineTop, setNowLineTop] = useState<number>(getNowLineTop);
   const [nowTime, setNowTime] = useState<string>(() => formatTime(new Date().toISOString()));
+  const [isManualOpen, setIsManualOpen] = useState(false);
 
   // Week/day data — disabled in month view
   const weekStart = getWeekStart(currentDate);
   const weekStartStr = view !== 'month' ? formatWeekStart(weekStart) : null;
-  const { bookings, isLoading } = useBookings(weekStartStr);
+  const { bookings, isLoading, mutate } = useBookings(weekStartStr);
 
   // Month data — parallel SWR per week, disabled outside month view
   const monthWeekStarts =
@@ -146,20 +148,24 @@ export default function CalendarPage() {
             <IconChevronLeft width="14" height="14" />
           </Button>
           <div className={styles.dateNavRange}>
-            <span className={styles.dateNavMain}>{dateNavMain}</span>
-            <span className={styles.dateNavSub}>{dateNavSub}</span>
+            <Heading variant="subsection" as="span">
+              {dateNavMain}
+            </Heading>
+            <Text variant="kicker-sm" as="span" color="muted" className={styles.dateNavSub}>
+              {dateNavSub}
+            </Text>
           </div>
           <Button variant="neutral" size="sm" iconOnly aria-label={nextLabel} onClick={goToNext}>
             <IconChevronRight width="14" height="14" />
           </Button>
-          <button className={styles.todayBtn} type="button" onClick={goToToday}>
+          <Button variant="secondary" size="sm" className={styles.todayBtn} onClick={goToToday}>
             Dziś
-          </button>
+          </Button>
         </div>
 
         <div className={styles.topbarSpacer} />
 
-        <BookingTopbarActions exportLabel="Eksport .ics" />
+        <BookingTopbarActions exportLabel="Eksport .ics" onAdd={() => setIsManualOpen(true)} />
       </header>
 
       {/* ── View ── */}
@@ -186,6 +192,12 @@ export default function CalendarPage() {
       {view === 'month' && (
         <MonthView month={currentDate} bookings={monthBookings} isLoading={monthLoading} />
       )}
+
+      <ManualBookingModal
+        isOpen={isManualOpen}
+        onClose={() => setIsManualOpen(false)}
+        onSuccess={() => mutate()}
+      />
     </main>
   );
 }

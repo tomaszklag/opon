@@ -9,6 +9,7 @@ import { BookingAdminListQueryDto } from './dto/booking-admin-list-query.dto';
 import { BookingPageResponseDto } from './dto/booking-page-response.dto';
 import { BookingStatsResponseDto } from './dto/booking-stats-response.dto';
 import { BulkUpdateStatusDto } from './dto/bulk-update-status.dto';
+import { CreateManualBookingDto } from './dto/create-manual-booking.dto';
 
 type BookingWithClient = Prisma.BookingGetPayload<{
   include: {
@@ -97,12 +98,36 @@ export class BookingsService {
       notes: booking.notes ?? null,
       rejectReason: booking.rejectReason ?? null,
       cancelReason: booking.cancelReason ?? null,
+      isManual: booking.isManual,
       createdAt: booking.createdAt.toISOString(),
       confirmedAt: booking.confirmedAt?.toISOString() ?? null,
       startedAt: booking.startedAt?.toISOString() ?? null,
       completedAt: booking.completedAt?.toISOString() ?? null,
       cancelledAt: booking.cancelledAt?.toISOString() ?? null,
     };
+  }
+
+  // ── create manual ─────────────────────────────────────────────────────────
+
+  async createManual(providerId: string, dto: CreateManualBookingDto): Promise<BookingResponseDto> {
+    const status = dto.autoConfirm !== false ? BookingStatus.CONFIRMED : BookingStatus.PENDING;
+    const confirmedAt = status === BookingStatus.CONFIRMED ? new Date() : null;
+
+    const booking = await this.bookingsRepository.createManual({
+      clientPhone: dto.clientPhone,
+      clientName: dto.clientName,
+      providerId,
+      startAt: new Date(dto.startAt),
+      endAt: new Date(dto.endAt),
+      tireSize: dto.tireSize ?? null,
+      totalPricePln: dto.totalPricePln ?? null,
+      serviceType: dto.serviceType ?? null,
+      notes: dto.notes ?? null,
+      status,
+      confirmedAt,
+    });
+
+    return this.toResponseDto(booking);
   }
 
   // ── get detail ────────────────────────────────────────────────────────────

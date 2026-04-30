@@ -1,4 +1,14 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, Patch, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Patch,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { ApiCookieAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { JwtPayload } from '../auth/types/jwt-payload.interface';
@@ -12,6 +22,7 @@ import { BookingAdminListQueryDto } from './dto/booking-admin-list-query.dto';
 import { BookingPageResponseDto } from './dto/booking-page-response.dto';
 import { BookingStatsResponseDto } from './dto/booking-stats-response.dto';
 import { BulkUpdateStatusDto } from './dto/bulk-update-status.dto';
+import { CreateManualBookingDto } from './dto/create-manual-booking.dto';
 
 @ApiTags('bookings')
 @ApiCookieAuth('access_token')
@@ -69,6 +80,20 @@ export class BookingsController {
   ): Promise<void> {
     const provider = await this.providersService.getMyProvider(user.sub);
     return this.service.bulkUpdateStatus(provider.id, dto);
+  }
+
+  // ── POST /v1/providers/me/bookings/manual ────────────────────────────────
+
+  @Post('manual')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Create manual booking (provider-initiated)' })
+  @ApiResponse({ status: 201, type: BookingResponseDto })
+  async createManual(
+    @CurrentUser() user: JwtPayload,
+    @Body() dto: CreateManualBookingDto,
+  ): Promise<BookingResponseDto> {
+    const provider = await this.providersService.getMyProvider(user.sub);
+    return this.service.createManual(provider.id, dto);
   }
 
   // ── GET /v1/providers/me/bookings/:referenceCode ──────────────────────────

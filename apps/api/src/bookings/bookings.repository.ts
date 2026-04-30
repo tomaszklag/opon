@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { BookingStatus, Prisma } from '@prisma/client';
+import { BookingStatus, Prisma, UserRole } from '@prisma/client';
+import { randomBytes } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { AdminStatusFilter } from './dto/booking-admin-list-query.dto';
 
@@ -21,6 +22,62 @@ export type BookingWithDetail = Prisma.BookingGetPayload<{
 @Injectable()
 export class BookingsRepository {
   constructor(private readonly prisma: PrismaService) {}
+
+  private generateReferenceCode(): string {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    const bytes = randomBytes(10);
+    return Array.from(bytes)
+      .map((b) => chars[b % chars.length])
+      .join('');
+  }
+
+  async createManual(data: {
+    clientPhone: string;
+    clientName: string;
+    providerId: string;
+    startAt: Date;
+    endAt: Date;
+    tireSize: string | null;
+    totalPricePln: number | null;
+    serviceType: string | null;
+    notes: string | null;
+    status: BookingStatus;
+    confirmedAt: Date | null;
+  }): Promise<BookingWithClient> {
+    const client = await this.prisma.user.upsert({
+      where: { phone: data.clientPhone },
+      create: {
+        phone: data.clientPhone,
+        firstName: data.clientName,
+        role: UserRole.CLIENT,
+      },
+      update: {},
+    });
+
+    const referenceCode = this.generateReferenceCode();
+
+    return this.prisma.booking.create({
+      data: {
+        referenceCode,
+        clientId: client.id,
+        providerId: data.providerId,
+        startAt: data.startAt,
+        endAt: data.endAt,
+        tireSize: data.tireSize,
+        totalPricePln: data.totalPricePln,
+        serviceType: data.serviceType as any,
+        notes: data.notes,
+        isManual: true,
+        status: data.status,
+        confirmedAt: data.confirmedAt,
+      },
+      include: {
+        client: {
+          select: { phone: true, firstName: true, lastName: true },
+        },
+      },
+    });
+  }
 
   findByProviderAndWeek(
     providerId: string,

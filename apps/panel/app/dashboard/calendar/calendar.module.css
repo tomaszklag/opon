@@ -43,64 +43,11 @@
   flex: 1;
 }
 
-/* ── View switcher ──────────────────────────────────────────────────────── */
-.viewSwitcher {
-  display: inline-flex;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 3px;
-  gap: 2px;
-}
-
-.viewBtn {
-  padding: 7px 14px;
-  border-radius: 7px;
-  background: transparent;
-  border: none;
-  color: var(--text-secondary);
-  font-family: var(--font-body);
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.3px;
-  cursor: pointer;
-  transition: color 120ms ease;
-}
-
-.viewBtn:hover {
-  color: var(--text-primary);
-}
-
-.viewBtnActive {
-  background: var(--accent);
-  color: var(--text-on-accent);
-  box-shadow: var(--cal-btn-active-shadow);
-}
-
 /* ── Date nav ───────────────────────────────────────────────────────────── */
 .dateNav {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-}
-
-.dateNavBtn {
-  width: 34px;
-  height: 34px;
-  border-radius: 8px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  color: var(--text-primary);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: background 120ms ease, border-color 120ms ease;
-}
-
-.dateNavBtn:hover {
-  background: var(--surface-hover);
-  border-color: var(--border-strong);
 }
 
 .dateNavRange {
@@ -111,41 +58,18 @@
   min-width: 180px;
 }
 
-.dateNavMain {
-  font-family: var(--font-display);
-  font-size: 20px;
-  letter-spacing: 1.5px;
-  line-height: 1;
-  color: var(--text-primary);
-  display: block;
-}
-
 .dateNavSub {
-  font-family: var(--font-mono);
-  font-size: 10px;
-  color: var(--text-muted);
-  letter-spacing: 0.5px;
   margin-top: 3px;
   display: block;
 }
 
 .todayBtn {
-  padding: 7px 12px;
-  border-radius: 8px;
-  background: var(--accent-muted);
-  border: 1px solid var(--accent-border);
-  color: var(--accent);
-  font-family: var(--font-body);
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  cursor: pointer;
-  transition: background 120ms ease;
+  background: var(--accent-muted) !important;
+  border-color: var(--accent-border) !important;
 }
 
-.todayBtn:hover {
-  background: var(--cal-today-btn-hover);
+.todayBtn:hover:not(:disabled) {
+  background: var(--cal-today-btn-hover) !important;
 }
 
 /* ── Content split ──────────────────────────────────────────────────────── */
