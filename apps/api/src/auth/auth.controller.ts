@@ -36,8 +36,12 @@ export class AuthController {
   @ApiResponse({ status: 200, type: RequestOtpResponseDto })
   @ApiResponse({ status: 429, description: 'Zbyt wiele prób' })
   async requestOtp(@Body() dto: RequestOtpDto): Promise<RequestOtpResponseDto> {
-    await this.otpService.requestOtp(dto.phone);
-    return { message: 'Kod OTP wysłany', expiresIn: 300 };
+    const result = await this.otpService.requestOtp(dto.phone);
+    return {
+      message: result.alreadySent ? 'Kod OTP już wysłany' : 'Kod OTP wysłany',
+      expiresIn: result.expiresIn,
+      alreadySent: result.alreadySent,
+    };
   }
 
   // ── POST /v1/auth/verify-otp ───────────────────────────────────────────────

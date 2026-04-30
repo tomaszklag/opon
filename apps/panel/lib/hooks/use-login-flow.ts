@@ -77,9 +77,9 @@ export function useLoginFlow() {
     setPhoneHint('none');
     setLoading(true);
     try {
-      await requestOtp({ phone });
+      const res = await requestOtp({ phone });
       setStep('otp');
-      setOtpCountdown(300);
+      setOtpCountdown(res.expiresIn);
     } catch (err) {
       if (err instanceof ApiError && (err.code === 'AUTH_USER_NOT_FOUND' || err.status === 404)) {
         setPhoneHint('not-registered');
@@ -130,8 +130,8 @@ export function useLoginFlow() {
     setError('');
     setLoading(true);
     try {
-      await requestOtp({ phone });
-      setOtpCountdown(300);
+      const res = await requestOtp({ phone });
+      setOtpCountdown(res.expiresIn);
     } catch (err) {
       if (err instanceof ApiError && err.isTooManyRequests) {
         setRateLimitCountdown(600);

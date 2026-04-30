@@ -16,6 +16,19 @@ export class OtpRepository {
     });
   }
 
+  async findActiveToken(phone: string): Promise<{ expiresAt: Date } | null> {
+    const token = await this.prisma.otpToken.findFirst({
+      where: {
+        phone,
+        usedAt: null,
+        expiresAt: { gt: new Date() },
+        attempts: { lt: 3 },
+      },
+      orderBy: { expiresAt: 'desc' },
+    });
+    return token ? { expiresAt: token.expiresAt } : null;
+  }
+
   /**
    * Weryfikuje kod OTP w transakcji: odczytuje aktywny token, porównuje hash,
    * inkrementuje próby lub oznacza jako użyty. Transakcja w repozytorium bo

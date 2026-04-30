@@ -51,7 +51,7 @@ export function OtpStep({
       </Heading>
       <Text variant="body-md" as="p" className={styles.subtitle}>
         {'Wysłaliśmy 6-cyfrowy kod na '}
-        <strong>{phone}</strong>. Kod jest ważny przez 5 minut.
+        <strong>{phone}</strong>.
       </Text>
 
       <OTPInput length={6} value={code} onChange={onCodeChange} error={!!error} autoFocus />
@@ -75,7 +75,7 @@ export function OtpStep({
         variant="cta"
         fullWidth
         loading={loading}
-        disabled={code.length !== 6 || isRateLimited}
+        disabled={code.length !== 6 || isRateLimited || loading}
       >
         ZALOGUJ SIĘ
         {!loading && <IconArrowRight className={styles.arr} />}
@@ -85,6 +85,7 @@ export function OtpStep({
         {isRateLimited ? null : otpCountdown > 0 ? (
           <span className={styles.timerPill}>
             <span className={styles.timerDot} aria-hidden="true" />
+            {'Kod wygaśnie za: '}
             {otpTimerLabel}
           </span>
         ) : (

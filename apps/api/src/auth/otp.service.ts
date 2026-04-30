@@ -19,7 +19,17 @@ export class OtpService {
     private readonly config: ConfigService,
   ) {}
 
-  async requestOtp(phone: string): Promise<void> {
+  async requestOtp(phone: string): Promise<{ alreadySent: boolean; expiresIn: number }> {
+    const existing = await this.otpRepository.findActiveToken(phone);
+    this.logger.warn(
+      `[OTP] findActiveToken(${phone}) → ${existing ? `found, expiresAt=${existing.expiresAt.toISOString()}` : 'null'}`,
+    );
+    if (existing) {
+      const secondsLeft = Math.ceil((existing.expiresAt.getTime() - Date.now()) / 1000);
+      this.logger.warn(`[OTP] alreadySent=true, secondsLeft=${secondsLeft}`);
+      return { alreadySent: true, expiresIn: secondsLeft };
+    }
+
     await this.checkRateLimit(phone);
 
     const code = this.generateCode();
@@ -34,6 +44,8 @@ export class OtpService {
     } else {
       await this.sendSms(phone, code);
     }
+
+    return { alreadySent: false, expiresIn: OTP_TTL_SECONDS };
   }
 
   async verifyOtp(phone: string, code: string): Promise<boolean> {
