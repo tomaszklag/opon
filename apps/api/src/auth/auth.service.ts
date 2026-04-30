@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { ProviderStatus, UserRole } from '@prisma/client';
 import { createHash } from 'crypto';
-import { Response } from 'express';
+import type { Response } from 'express';
 import { AppException, ErrorCode } from '../common/errors';
 import { AuthRepository } from './auth.repository';
 import { JwtPayload } from './types/jwt-payload.interface';
