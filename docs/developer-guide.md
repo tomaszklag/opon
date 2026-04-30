@@ -1846,6 +1846,35 @@ const upload = useCallback(
 
 SWR jest właściwy gdy: dane mogą się zmieniać w tle, wiele komponentów potrzebuje tych samych danych, albo po akcji użytkownika chcemy odświeżyć listę.
 
+### 15.4. Globalny mutate — rejestr kluczy SWR
+
+`mutate` z `swr` (bez hooka) invaliduje cache globalnie — z dowolnego miejsca, bez dostępu do instancji hooka.
+
+```ts
+import { mutate } from 'swr';
+
+// Konkretny klucz — tablicowy lub string
+mutate(['bookings', weekStart]);
+mutate('booking-stats');
+
+// Pattern matching (SWR 2.x) — invaliduje wszystkie klucze pasujące do warunku
+mutate((key: unknown) => Array.isArray(key) && key[0] === 'booking-count');
+```
+
+**Rejestr wszystkich kluczy SWR w `apps/panel`:**
+
+| Hook                    | Klucz                                       |
+| ----------------------- | ------------------------------------------- |
+| `use-bookings.ts`       | `['bookings', weekStart]`                   |
+| `use-bookings-month.ts` | `['bookings-month', ...weekStarts]`         |
+| `use-booking-admin.ts`  | `['booking-admin', JSON.stringify(params)]` |
+| `use-booking-detail.ts` | `['booking-detail', referenceCode]`         |
+| `use-availability.ts`   | `['availability', date, workerId]`          |
+| `useBookingStats()`     | `'booking-stats'`                           |
+| `useBookingTabCounts()` | `['booking-count', status]` (×5 statusów)   |
+
+Gdy dodajesz nowy hook SWR — dopisz klucz do tej tabeli. Klucze są wymagane do poprawnego działania real-time invalidacji (§23).
+
 ---
 
 ## 18. Strony z edycją ręczną — dirty state i navigation guard
@@ -2511,5 +2540,151 @@ function previewPrice(config: ServiceConfig, tier: SizeTier, tpms: boolean): num
   return (base ?? 0) + tpmsExtra;
 }
 ```
+
+---
+
+## 23. Real-time — SSE i live updates
+
+Kalendarz i lista rezerwacji odświeżają się automatycznie bez przeładowania strony. Mechanizm oparty jest na Server-Sent Events (SSE), EventEmitter2 i globalnym `mutate` SWR.
+
+### Architektura
+
+```
+BookingsService
+    │  eventEmitter.emit('booking.created', ...)
+    ▼
+EventEmitter2 (@nestjs/event-emitter)
+    │  @OnEvent('booking.created')
+    ▼
+RealtimeService          ← mapa Subject<MessageEvent> per providerId
+    │  subject.next(event)
+    ▼
+GET /v1/providers/me/realtime/events   ← SSE endpoint (RealtimeController)
+    │  text/event-stream
+    ▼
+RealtimeProvider (Client Component)   ← jeden EventSource per sesja dashboardu
+    │  JSON.parse(e.data)
+    ▼
+booking-event-router.ts
+    │  mutate(...)
+    ▼
+SWR hooks — automatyczne odświeżenie komponentów
+```
+
+### Pliki systemu real-time
+
+| Plik                                              | Rola                                                 |
+| ------------------------------------------------- | ---------------------------------------------------- |
+| `apps/api/src/realtime/events/booking.events.ts`  | Klasy eventów (typy danych)                          |
+| `apps/api/src/realtime/realtime.service.ts`       | Mapa połączeń, `@OnEvent` listenery, push do Subject |
+| `apps/api/src/realtime/realtime.controller.ts`    | SSE endpoint, heartbeat co 25s                       |
+| `apps/panel/lib/realtime/realtime-context.tsx`    | `RealtimeProvider` — EventSource lifecycle           |
+| `apps/panel/lib/realtime/booking-event-router.ts` | Routing event → SWR mutate                           |
+
+### Dodawanie nowego eventu — krok po kroku
+
+**1. Zdefiniuj klasę eventu** w `booking.events.ts`:
+
+```ts
+export class BookingNotesUpdatedEvent {
+  static readonly EVENT = 'booking.notes_updated'; // nazwa tylko tutaj
+
+  constructor(
+    public readonly providerId: string,
+    public readonly bookingId: string,
+    public readonly referenceCode: string,
+    public readonly weekStart: string,
+  ) {}
+}
+```
+
+Nazwa eventu jest `static readonly EVENT` na klasie — nigdy nie używaj string literałów bezpośrednio w `emit()` ani `@OnEvent()`.
+
+**2. Wyemituj event w serwisie** (np. `BookingsService`):
+
+```ts
+this.eventEmitter.emit(
+  BookingNotesUpdatedEvent.EVENT,
+  new BookingNotesUpdatedEvent(
+    providerId,
+    booking.id,
+    booking.referenceCode,
+    this.getWeekStart(booking.startAt),
+  ),
+);
+```
+
+**3. Nasłuchuj w `RealtimeService`** (`@OnEvent`):
+
+```ts
+@OnEvent(BookingNotesUpdatedEvent.EVENT)
+onBookingNotesUpdated(event: BookingNotesUpdatedEvent): void {
+  this.push(event.providerId, BookingNotesUpdatedEvent.EVENT, {
+    bookingId: event.bookingId,
+    referenceCode: event.referenceCode,
+    weekStart: event.weekStart,
+  });
+}
+```
+
+**4. Dodaj routing w `booking-event-router.ts`**:
+
+```ts
+// Frontend — string musi zgadzać się z BookingNotesUpdatedEvent.EVENT
+} else if (type === 'booking.notes_updated') {
+  const p = payload as { referenceCode: string; weekStart: string };
+  mutate(['booking-detail', p.referenceCode]);
+  mutate(['bookings', p.weekStart]);
+}
+```
+
+### Zasady bezpieczeństwa SSE
+
+- `providerId` pochodzi **wyłącznie z JWT** (`@CurrentUser()`) — nigdy z query params ani URL
+- Endpoint jest chroniony globalnym `JwtAuthGuard` — brak `@Public()`
+- Jeśli `user.providerId` jest `undefined` (konto bez warsztatu) → `ForbiddenException`
+- Każdy provider widzi **tylko swoje** eventy — Subject jest izolowany per `providerId`
+
+### Wzorzec NestJS — SSE endpoint
+
+SSE endpoint musi używać `@Res({ passthrough: true })` (identycznie jak w `auth.controller.ts`), inaczej NestJS przejmuje pełną kontrolę nad response i interceptory nie działają poprawnie. Dodaj też `@Header('X-Accel-Buffering', 'no')` dla kompatybilności z reverse proxy (nginx).
+
+```ts
+@Sse('events')
+@Header('X-Accel-Buffering', 'no')
+onConnect(
+  @CurrentUser() user: JwtPayload,
+  @Res({ passthrough: true }) res: Response,
+): Observable<MessageEvent> { ... }
+```
+
+### Wzorzec Next.js — RealtimeProvider w layoucie
+
+`dashboard/layout.tsx` jest Server Component — to poprawne. Next.js App Router pozwala Server Component importować Client Component (`RealtimeProvider` ma `'use client'` na górze swojego pliku). Nie dodawaj `'use client'` do `layout.tsx`.
+
+```tsx
+// apps/panel/app/dashboard/layout.tsx — Server Component, bez 'use client'
+import { RealtimeProvider } from '../../lib/realtime/realtime-context'; // Client Component
+
+export default function DashboardLayout({ children }) {
+  return (
+    <RealtimeProvider>
+      {' '}
+      {/* Client boundary zaczyna się tu */}
+      <div className={styles.shell}>
+        <DashboardNav />
+        <div className={styles.contentArea}>{children}</div>
+      </div>
+    </RealtimeProvider>
+  );
+}
+```
+
+### Czego NIE robić
+
+- Nie twórz oddzielnego `EventSource` per strona — jest jeden na cały dashboard (`RealtimeProvider`)
+- Nie używaj pollingu (setInterval + fetch) jako alternatywy
+- Nie emituj eventów bezpośrednio z kontrolera — tylko przez serwis z `eventEmitter.emit`
+- Nie przekazuj `providerId` jako parametru URL endpointu SSE
 
 Cena w UI to **szacunek** (oznaczony "(szacunek)") — ostateczna cena potwierdzona jest po stronie backendu przy `POST /v1/bookings`.

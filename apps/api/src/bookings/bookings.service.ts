@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { BookingStatus, Prisma } from '@prisma/client';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { AppException, ErrorCode } from '../common/errors';
 import { BookingDetailResponseDto } from './dto/booking-detail-response.dto';
 import { BookingResponseDto } from './dto/booking-response.dto';
@@ -13,6 +14,11 @@ import { CreateManualBookingDto } from './dto/create-manual-booking.dto';
 import { AvailabilityQueryDto } from './dto/availability-query.dto';
 import { AvailabilityResponseDto, AvailabilitySlotDto } from './dto/availability-response.dto';
 import { PrismaService } from '../prisma/prisma.service';
+import {
+  BookingCreatedEvent,
+  BookingStatusChangedEvent,
+  BookingBulkStatusChangedEvent,
+} from '../realtime/events/booking.events';
 
 type BookingWithClient = Prisma.BookingGetPayload<{
   include: {
@@ -30,9 +36,18 @@ export class BookingsService {
   constructor(
     private readonly bookingsRepository: BookingsRepository,
     private readonly prisma: PrismaService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   // ── helpers ───────────────────────────────────────────────────────────────
+
+  private getWeekStart(date: Date): string {
+    const d = new Date(date);
+    const day = d.getUTCDay();
+    const diff = day === 0 ? -6 : 1 - day;
+    d.setUTCDate(d.getUTCDate() + diff);
+    return d.toISOString().slice(0, 10);
+  }
 
   private toResponseDto(booking: BookingWithClient): BookingResponseDto {
     const { client } = booking;
@@ -139,6 +154,16 @@ export class BookingsService {
       stationId: dto.stationId ?? null,
     });
 
+    this.eventEmitter.emit(
+      BookingCreatedEvent.EVENT,
+      new BookingCreatedEvent(
+        providerId,
+        booking.id,
+        booking.referenceCode,
+        this.getWeekStart(booking.startAt),
+      ),
+    );
+
     return this.toResponseDto(booking);
   }
 
@@ -226,6 +251,17 @@ export class BookingsService {
       timestamps,
       dto.reason,
       isReject,
+    );
+
+    this.eventEmitter.emit(
+      BookingStatusChangedEvent.EVENT,
+      new BookingStatusChangedEvent(
+        providerId,
+        booking.id,
+        booking.referenceCode,
+        this.getWeekStart(booking.startAt),
+        newStatus,
+      ),
     );
 
     return this.getDetail(providerId, referenceCode);
@@ -317,7 +353,15 @@ export class BookingsService {
   }
 
   async bulkUpdateStatus(providerId: string, dto: BulkUpdateStatusDto): Promise<void> {
-    await this.bookingsRepository.bulkUpdateStatus(providerId, dto.ids, dto.action);
+    const updatedIds = await this.bookingsRepository.bulkUpdateStatus(
+      providerId,
+      dto.ids,
+      dto.action,
+    );
+    this.eventEmitter.emit(
+      BookingBulkStatusChangedEvent.EVENT,
+      new BookingBulkStatusChangedEvent(providerId, updatedIds, dto.action),
+    );
   }
 
   // ── availability ──────────────────────────────────────────────────────────

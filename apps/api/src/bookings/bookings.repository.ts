@@ -241,7 +241,7 @@ export class BookingsRepository {
     providerId: string,
     ids: string[],
     action: 'confirm' | 'cancel',
-  ): Promise<void> {
+  ): Promise<string[]> {
     const now = new Date();
     if (action === 'confirm') {
       await this.prisma.booking.updateMany({
@@ -258,6 +258,7 @@ export class BookingsRepository {
         data: { status: BookingStatus.CANCELLED_BY_PROVIDER, cancelledAt: now },
       });
     }
+    return ids;
   }
 
   async updateStatus(

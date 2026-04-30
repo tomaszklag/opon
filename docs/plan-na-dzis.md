@@ -16,4 +16,8 @@ Operator powinien mieć możliwość ręcznego dodania wizyty wraz z opisem oraz
 
 teraz przedźmy do implementacji b2b-11-profil
 
-zleć wyspecjalizowanym agentom weryfikację tego rozwiazania. Głównie zależy mi na respektowaniu wcześniejszych postanowień oraz zaplanowanego design
+zleć wyspecjalizowanym agentom weryfikację tego rozwiazania. Głównie zależy mi na respektowaniu wcześniejszych postanowień oraz
+przyjętej architektury
+zaplanowanego design
+
+Może z poiomu panelu b2b powinna być opcja dodania custom zadania gdzie określimy custom czas oraz przypiszemy pracownika. takie zadanie powinno być wyróżnione w kalendarzu i na liście zleceń.
