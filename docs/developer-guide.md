@@ -594,6 +594,25 @@ Reguła „no typography in CSS" dotyczy **elementów DOM z treścią w JSX**. P
 
 Gdy dodajesz taki pseudoelement, zawsze dołącz komentarz wskazujący że to świadomy wyjątek (analogicznie jak przy `color: var(--success)` dla sukcesu).
 
+#### Wyjątek: wewnętrzne komórki komponentów data-dense
+
+Komponenty typu **siatka kalendarza, tabela, timeline, kompaktowe karty** zawierają komórki z bardzo specyficzną typografią (8–11 px, tight letter-spacing, mono) dla której DS `<Text>` nie ma odpowiednich wariantów. W takich przypadkach dopuszczalne jest użycie surowych elementów HTML (`<span>`, `<div>`) z typografią w CSS module, pod warunkiem że:
+
+1. Element jest **wewnętrzną częścią komponentu** — nie jest UI chrome, sidebarem, etykietą formularza ani nagłówkiem sekcji.
+2. Żaden wariant `<Text>` nie mapuje na wymagany rozmiar / spacing.
+3. Zasada jest stosowana **spójnie wewnątrz komponentu** — albo wszystkie komórki siatki używają `<Text>`, albo żadna.
+
+Reguła „każdy tekst = DS `<Text>`" obowiązuje bezwzględnie dla:
+
+- nawigacji, topbara, sidebara
+- etykiet i pól formularzy
+- nagłówków sekcji
+- kart podsumowań (statystyki, opisy, alerty)
+
+Komórki wewnętrzne siatki (`.bookingTime`, `.monthChipName`, `.hourCell` w kalendarzu) to świadomy wyjątek analogiczny do pseudoelementów — po stronie JSX. Wzorzec referencyjny: `_components/WeekView.tsx`, `DayView.tsx`, `MonthView.tsx` (booking chips, day number, hour labels) vs. ich sidebar (wyłącznie DS `<Text>`).
+
+> **Dla reviewerów:** W komponencie data-dense rozróżniaj sidebar/wrapper (musi używać `<Text>`) od komórek samej siatki (wyjątek dozwolony). Flaguj naruszenie tylko gdy typografia jest poza siatką — np. w legendzie, nagłówku, stopce.
+
 #### CSS Modules + noUncheckedIndexedAccess
 
 `tsconfig.base.json` ma `noUncheckedIndexedAccess: true` — `styles.foo` zwraca `string | undefined`. Przy budowaniu map wariantów w komponentach DS wymagany cast:
@@ -872,6 +891,32 @@ border-left: 1px solid rgba(255, 255, 255, 0.25); /* hardcoded rgba zamiast toke
 ```
 
 `color-mix(in srgb, TOKEN X%, transparent)` oznacza: X% koloru tokenu, reszta przezroczysta.
+
+`color-mix()` jest właściwym wyborem dla **jednorazowych** przypadków (jeden selektor, jeden token z niestandardową opacity). Gdy komponent potrzebuje **wielu powiązanych wariantów opacity** tego samego tokenu (tło 30%, jaśniejsze tło 15%, border 25%, cień), zdefiniuj je jako feature-scoped local vars w selektorze korzenia modułu zamiast powtarzać `color-mix()` w każdym selektorze:
+
+```css
+/* ✅ TAK — feature-scoped vars w selektorze .main (lub analogicznym), rgba jako wartość zmiennej */
+.main {
+  --cal-confirmed-bg: rgba(255, 107, 26, 0.3);
+  --cal-confirmed-bg-light: rgba(255, 107, 26, 0.15);
+}
+.confirmed {
+  background: var(--cal-confirmed-bg);
+}
+.confirmed:hover {
+  background: var(--cal-confirmed-bg-light);
+}
+
+/* ❌ NIE — color-mix() powielony, trudny do zmiany przy zmianie opacity */
+.confirmed {
+  background: color-mix(in srgb, var(--accent) 30%, transparent);
+}
+.confirmed:hover {
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
+}
+```
+
+Zasada: hardcoded `rgba()` dozwolone **wyłącznie jako wartości CSS variable** — nigdy bezpośrednio w selektorze właściwości. Dzięki temu wszystkie opacity modułu są w jednym miejscu.
 
 ### Kolory spoza palety DS — lokalne zmienne CSS
 

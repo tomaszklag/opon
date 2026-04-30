@@ -17,7 +17,6 @@ import {
   IconEye,
   IconFilter,
   IconMoreHoriz,
-  IconPlus,
   IconSMS,
   IconTrash,
   IconXClose,
@@ -33,6 +32,7 @@ import {
   useBookingStats,
   useBookingTabCounts,
 } from '../../../lib/hooks/use-booking-admin';
+import { BookingTopbarActions } from '../_components/BookingTopbarActions';
 import styles from './bookings.module.css';
 
 // ── Status helpers ───────────────────────────────────────────────────────────
@@ -471,18 +471,7 @@ export default function BookingsPage() {
           </Text>
         </div>
         <div className={styles.topbarSpacer} />
-        <button type="button" className={styles.tbBtn}>
-          <IconDownload width={13} height={13} />
-          <Text variant="nano" weight="bold" as="span">
-            Eksport CSV
-          </Text>
-        </button>
-        <button type="button" className={[styles.tbBtn, styles.tbBtnPrimary].join(' ')}>
-          <IconPlus width={13} height={13} />
-          <Text variant="nano" weight="bold" as="span">
-            Rezerwacja ręczna
-          </Text>
-        </button>
+        <BookingTopbarActions exportLabel="Eksport CSV" />
       </div>
 
       <div className={styles.content}>

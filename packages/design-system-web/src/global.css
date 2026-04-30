@@ -37,6 +37,9 @@
   --info: #3B8EEA;
   --info-muted: rgba(59, 142, 234, 0.14);
   --info-border: rgba(59, 142, 234, 0.32);
+  --progress: #5DA8FF;
+  --progress-muted: rgba(93, 168, 255, 0.14);
+  --progress-border: rgba(93, 168, 255, 0.32);
   /* fonts */
   --font-display: 'Bebas Neue', sans-serif;
   --font-body: 'Archivo', system-ui, sans-serif;

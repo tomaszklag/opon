@@ -63,6 +63,13 @@ export default function DashboardNav() {
   const [provider, setProvider] = useState<ProviderMini | null>(null);
 
   useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, []);
+
+  useEffect(() => {
     if (!user) return;
     api
       .get<ProviderMini>('/v1/providers/me')

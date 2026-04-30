@@ -29,32 +29,6 @@
   flex: 1;
 }
 
-.tbBtn {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  padding: 7px 12px;
-  border-radius: 8px;
-  border: 1px solid var(--border);
-  background: transparent;
-  cursor: pointer;
-  transition: background 120ms;
-}
-
-.tbBtn:hover {
-  background: var(--surface-hover);
-  border-color: var(--border-strong);
-}
-
-.tbBtnPrimary {
-  background: var(--accent);
-  border-color: transparent;
-  color: var(--text-on-accent);
-}
-
-.tbBtnPrimary:hover {
-  background: var(--accent-hover);
-}
 
 /* Content area */
 .content {

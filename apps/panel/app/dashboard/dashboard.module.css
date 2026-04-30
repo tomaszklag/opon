@@ -19,6 +19,16 @@
   to { transform: rotate(360deg); }
 }
 
+/* ── Page root ── */
+.page {
+  height: 100%;
+  overflow-y: auto;
+  padding: 28px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
 /* ── Layout ── */
 .layout {
   display: flex;
