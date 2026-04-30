@@ -1,5 +1,5 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   Modal,
   Button,
@@ -9,8 +9,13 @@ import {
   Textarea,
   Toggle,
   Text,
+  Spinner,
 } from '@opony/design-system-web';
 import { useCreateManualBooking } from '../../../lib/hooks/use-create-manual-booking';
+import { useProvider } from '../../../lib/hooks/use-provider';
+import { useWorkersList } from '../../../lib/hooks/use-workers-list';
+import { useAvailability } from '../../../lib/hooks/use-availability';
+import type { AvailabilitySlot } from '../../../api-data-access/bookings';
 import styles from './ManualBookingModal.module.css';
 
 interface ManualBookingModalProps {
@@ -23,68 +28,105 @@ function getDefaultDate(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-function getDefaultStartTime(): string {
-  const now = new Date();
-  now.setMinutes(0, 0, 0);
-  now.setHours(now.getHours() + 1);
-  return now.toTimeString().slice(0, 5);
+const SERVICE_TYPE_OPTIONS = [
+  { value: '', label: 'Wybierz usługę…' },
+  { value: 'SEASONAL_SWAP', label: 'Wymiana sezonowa' },
+  { value: 'WHEEL_SWAP', label: 'Wymiana kół' },
+  { value: 'BALANCING', label: 'Wyważanie' },
+  { value: 'PUNCTURE_REPAIR', label: 'Naprawa przebitej opony' },
+];
+
+function formatSlotTime(iso: string): string {
+  return new Date(iso).toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' });
 }
 
-const DURATION_OPTIONS = [
-  { value: '30', label: '30 minut' },
-  { value: '45', label: '45 minut' },
-  { value: '60', label: '60 minut' },
-  { value: '90', label: '90 minut' },
-  { value: '120', label: '2 godziny' },
-  { value: '180', label: '3 godziny' },
-];
+function pluralConflicts(n: number): string {
+  if (n === 1) return 'rezerwację';
+  if (n >= 2 && n <= 4) return 'rezerwacje';
+  return 'rezerwacji';
+}
 
 export function ManualBookingModal({ isOpen, onClose, onSuccess }: ManualBookingModalProps) {
   const { createBooking, isLoading, error } = useCreateManualBooking();
+  const { provider } = useProvider();
+  const { workers } = useWorkersList();
 
   const [clientName, setClientName] = useState('');
   const [clientPhone, setClientPhone] = useState('');
-  const [date, setDate] = useState(getDefaultDate);
-  const [startTime, setStartTime] = useState(getDefaultStartTime);
-  const [duration, setDuration] = useState(60);
+  const [serviceType, setServiceType] = useState('');
   const [tireSize, setTireSize] = useState('');
+  const [customTireSize, setCustomTireSize] = useState('');
+  const [workerId, setWorkerId] = useState('');
+  const [date, setDate] = useState(getDefaultDate);
+  const [selectedSlot, setSelectedSlot] = useState<AvailabilitySlot | null>(null);
   const [totalPricePln, setTotalPricePln] = useState('');
   const [notes, setNotes] = useState('');
   const [autoConfirm, setAutoConfirm] = useState(true);
   const [validationError, setValidationError] = useState<string | null>(null);
 
-  function resetForm() {
+  const { availability, isLoading: availLoading } = useAvailability(date, workerId || undefined);
+
+  const tireSizeOptions = [
+    { value: '', label: 'Wybierz rozmiar…' },
+    ...(provider?.tireSizes ?? []).map((s) => ({ value: s, label: s })),
+    { value: '__custom__', label: 'Inna…' },
+  ];
+
+  const workerOptions = [
+    { value: '', label: 'Dowolny pracownik' },
+    ...workers.map((w) => ({ value: w.id, label: w.name })),
+  ];
+
+  const resetForm = useCallback(() => {
     setClientName('');
     setClientPhone('');
-    setDate(getDefaultDate());
-    setStartTime(getDefaultStartTime());
-    setDuration(60);
+    setServiceType('');
     setTireSize('');
+    setCustomTireSize('');
+    setWorkerId('');
+    setDate(getDefaultDate());
+    setSelectedSlot(null);
     setTotalPricePln('');
     setNotes('');
     setAutoConfirm(true);
     setValidationError(null);
+  }, []);
+
+  function handleDateChange(newDate: string) {
+    setDate(newDate);
+    setSelectedSlot(null);
+  }
+
+  function handleWorkerChange(newWorkerId: string) {
+    setWorkerId(newWorkerId);
+    setSelectedSlot(null);
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
 
-    if (!clientName.trim() || !clientPhone.trim() || !date || !startTime) {
+    if (!clientName.trim() || !clientPhone.trim()) {
       setValidationError('Wypełnij wszystkie wymagane pola.');
+      return;
+    }
+    if (!selectedSlot) {
+      setValidationError('Wybierz slot czasowy.');
       return;
     }
 
     setValidationError(null);
 
-    const startAt = new Date(`${date}T${startTime}`).toISOString();
-    const endAt = new Date(new Date(startAt).getTime() + duration * 60000).toISOString();
+    const resolvedTireSize =
+      tireSize === '__custom__' ? customTireSize.trim() || undefined : tireSize || undefined;
 
     const ok = await createBooking({
       clientName: clientName.trim(),
       clientPhone: `+48${clientPhone.trim()}`,
-      startAt,
-      endAt,
-      tireSize: tireSize.trim() || undefined,
+      startAt: selectedSlot.startAt,
+      endAt: selectedSlot.endAt,
+      tireSize: resolvedTireSize,
+      serviceType: serviceType || undefined,
+      workerId: workerId || undefined,
       totalPricePln: totalPricePln ? Number(totalPricePln) : undefined,
       notes: notes.trim() || undefined,
       autoConfirm,
@@ -143,33 +185,106 @@ export function ManualBookingModal({ isOpen, onClose, onSuccess }: ManualBooking
           </div>
         </div>
 
+        {/* Sekcja: Usługa */}
+        <div className={styles.formSection}>
+          <Text variant="kicker-sm" color="muted">
+            Usługa
+          </Text>
+          <div className={[styles.row, styles.row2].join(' ')}>
+            <Select
+              label="Rodzaj usługi"
+              value={serviceType}
+              onChange={(e) => setServiceType(e.target.value)}
+              options={SERVICE_TYPE_OPTIONS}
+            />
+            <Select
+              label="Rozmiar opon"
+              value={tireSize}
+              onChange={(e) => setTireSize(e.target.value)}
+              options={tireSizeOptions}
+            />
+          </div>
+          {tireSize === '__custom__' && (
+            <Input
+              label="Podaj rozmiar opon"
+              value={customTireSize}
+              onChange={(e) => setCustomTireSize(e.target.value)}
+              placeholder="205/55 R16"
+            />
+          )}
+        </div>
+
         {/* Sekcja: Termin */}
         <div className={styles.formSection}>
           <Text variant="kicker-sm" color="muted">
             Termin
           </Text>
-          <div className={[styles.row, styles.row3].join(' ')}>
+          <div className={[styles.row, styles.row2].join(' ')}>
             <Input
               label="Data"
               type="date"
               value={date}
-              onChange={(e) => setDate(e.target.value)}
-              required
-            />
-            <Input
-              label="Godzina rozpoczęcia"
-              type="time"
-              value={startTime}
-              onChange={(e) => setStartTime(e.target.value)}
+              onChange={(e) => handleDateChange(e.target.value)}
               required
             />
             <Select
-              label="Czas trwania"
-              value={String(duration)}
-              onChange={(e) => setDuration(Number(e.target.value))}
-              options={DURATION_OPTIONS}
+              label="Pracownik"
+              value={workerId}
+              onChange={(e) => handleWorkerChange(e.target.value)}
+              options={workerOptions}
             />
           </div>
+
+          {/* Slot picker */}
+          <div className={styles.slotSection}>
+            {availLoading && (
+              <div className={styles.spinnerRow}>
+                <Spinner size="md" />
+              </div>
+            )}
+            {!availLoading && availability?.isClosedDay && (
+              <div className={styles.closedDayMsg}>
+                <Text variant="body-sm" color="muted" as="p">
+                  Warsztat nieczynny tego dnia
+                </Text>
+              </div>
+            )}
+            {!availLoading && availability && !availability.isClosedDay && (
+              <div className={styles.slotGrid}>
+                {availability.slots.map((slot) => {
+                  const isSelected =
+                    selectedSlot?.startAt === slot.startAt && selectedSlot?.endAt === slot.endAt;
+                  const hasConflict = !slot.isAvailable || slot.conflictCount > 0;
+                  return (
+                    <Button
+                      key={slot.startAt}
+                      type="button"
+                      variant={isSelected ? 'primary' : 'neutral'}
+                      size="sm"
+                      className={styles.slotBtn}
+                      onClick={() => setSelectedSlot(slot)}
+                    >
+                      {formatSlotTime(slot.startAt)}
+                      {' – '}
+                      {formatSlotTime(slot.endAt)}
+                      {hasConflict && <span className={styles.slotConflict} />}
+                    </Button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Conflict warning */}
+          {selectedSlot && (!selectedSlot.isAvailable || selectedSlot.conflictCount > 0) && (
+            <div className={styles.conflictBanner}>
+              <Text variant="body-sm" color="warning" as="p">
+                Ten slot ma {selectedSlot.conflictCount}{' '}
+                {pluralConflicts(selectedSlot.conflictCount)} — zapis możliwy, ale może być
+                konflikt.
+              </Text>
+            </div>
+          )}
         </div>
 
         {/* Sekcja: Szczegóły */}
@@ -177,21 +292,13 @@ export function ManualBookingModal({ isOpen, onClose, onSuccess }: ManualBooking
           <Text variant="kicker-sm" color="muted">
             Szczegóły
           </Text>
-          <div className={[styles.row, styles.row2].join(' ')}>
-            <Input
-              label="Rozmiar opon"
-              value={tireSize}
-              onChange={(e) => setTireSize(e.target.value)}
-              placeholder="205/55 R16"
-            />
-            <Input
-              label="Cena (zł)"
-              type="number"
-              value={totalPricePln}
-              onChange={(e) => setTotalPricePln(e.target.value)}
-              min={0}
-            />
-          </div>
+          <Input
+            label="Cena (zł)"
+            type="number"
+            value={totalPricePln}
+            onChange={(e) => setTotalPricePln(e.target.value)}
+            min={0}
+          />
           <Textarea
             label="Notatki"
             value={notes}

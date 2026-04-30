@@ -23,6 +23,8 @@ import { BookingPageResponseDto } from './dto/booking-page-response.dto';
 import { BookingStatsResponseDto } from './dto/booking-stats-response.dto';
 import { BulkUpdateStatusDto } from './dto/bulk-update-status.dto';
 import { CreateManualBookingDto } from './dto/create-manual-booking.dto';
+import { AvailabilityQueryDto } from './dto/availability-query.dto';
+import { AvailabilityResponseDto } from './dto/availability-response.dto';
 
 @ApiTags('bookings')
 @ApiCookieAuth('access_token')
@@ -94,6 +96,19 @@ export class BookingsController {
   ): Promise<BookingResponseDto> {
     const provider = await this.providersService.getMyProvider(user.sub);
     return this.service.createManual(provider.id, dto);
+  }
+
+  // ── GET /v1/providers/me/bookings/availability ────────────────────────────
+
+  @Get('availability')
+  @ApiOperation({ summary: 'Get available time slots for a given date' })
+  @ApiResponse({ status: 200, type: AvailabilityResponseDto })
+  async getAvailability(
+    @CurrentUser() user: JwtPayload,
+    @Query() query: AvailabilityQueryDto,
+  ): Promise<AvailabilityResponseDto> {
+    const provider = await this.providersService.getMyProvider(user.sub);
+    return this.service.getAvailability(provider.id, query);
   }
 
   // ── GET /v1/providers/me/bookings/:referenceCode ──────────────────────────

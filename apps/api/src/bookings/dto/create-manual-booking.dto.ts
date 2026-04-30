@@ -52,6 +52,16 @@ export class CreateManualBookingDto {
   @MaxLength(1000)
   notes?: string;
 
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  workerId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  stationId?: string;
+
   @ApiPropertyOptional({ example: true, default: true })
   @IsOptional()
   @IsBoolean()

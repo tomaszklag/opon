@@ -16,6 +16,7 @@ export class BookingResponseDto {
   @ApiPropertyOptional({ type: Number, nullable: true }) travelFeePln!: number | null;
   @ApiPropertyOptional({ type: Number, nullable: true }) totalPricePln!: number | null;
   @ApiPropertyOptional({ type: String, nullable: true }) stationId!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) workerName!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) notes!: string | null;
   @ApiProperty() createdAt!: string;
   @ApiProperty() isManual!: boolean;

@@ -10,18 +10,27 @@ import { BookingPageResponseDto } from './dto/booking-page-response.dto';
 import { BookingStatsResponseDto } from './dto/booking-stats-response.dto';
 import { BulkUpdateStatusDto } from './dto/bulk-update-status.dto';
 import { CreateManualBookingDto } from './dto/create-manual-booking.dto';
+import { AvailabilityQueryDto } from './dto/availability-query.dto';
+import { AvailabilityResponseDto, AvailabilitySlotDto } from './dto/availability-response.dto';
+import { PrismaService } from '../prisma/prisma.service';
 
 type BookingWithClient = Prisma.BookingGetPayload<{
   include: {
     client: {
       select: { phone: true; firstName: true; lastName: true };
     };
+    worker: {
+      select: { name: true };
+    };
   };
 }>;
 
 @Injectable()
 export class BookingsService {
-  constructor(private readonly bookingsRepository: BookingsRepository) {}
+  constructor(
+    private readonly bookingsRepository: BookingsRepository,
+    private readonly prisma: PrismaService,
+  ) {}
 
   // ── helpers ───────────────────────────────────────────────────────────────
 
@@ -48,6 +57,7 @@ export class BookingsService {
       travelFeePln: booking.travelFeePln != null ? Number(booking.travelFeePln) : null,
       totalPricePln: booking.totalPricePln != null ? Number(booking.totalPricePln) : null,
       stationId: booking.stationId ?? null,
+      workerName: booking.worker?.name ?? null,
       notes: booking.notes ?? null,
       createdAt: booking.createdAt.toISOString(),
       isManual: booking.isManual,
@@ -125,6 +135,8 @@ export class BookingsService {
       notes: dto.notes ?? null,
       status,
       confirmedAt,
+      workerId: dto.workerId ?? null,
+      stationId: dto.stationId ?? null,
     });
 
     return this.toResponseDto(booking);
@@ -306,5 +318,153 @@ export class BookingsService {
 
   async bulkUpdateStatus(providerId: string, dto: BulkUpdateStatusDto): Promise<void> {
     await this.bookingsRepository.bulkUpdateStatus(providerId, dto.ids, dto.action);
+  }
+
+  // ── availability ──────────────────────────────────────────────────────────
+
+  async getAvailability(
+    providerId: string,
+    query: AvailabilityQueryDto,
+  ): Promise<AvailabilityResponseDto> {
+    const parsedDate = new Date(query.date);
+    // dayOfWeek: 0=Sun…6=Sat
+    const dayOfWeek = parsedDate.getUTCDay();
+
+    // Fetch working hours for this day
+    const workingHours = await this.prisma.workingHours.findUnique({
+      where: { providerId_dayOfWeek: { providerId, dayOfWeek } },
+    });
+
+    // Fetch schedule exception for this date
+    const exception = await this.prisma.scheduleException.findUnique({
+      where: { providerId_date: { providerId, date: parsedDate } },
+    });
+
+    // If exception exists with no custom open time → closed day
+    if (exception && !exception.customOpenTime) {
+      return { slots: [], slotMinutes: 0, isClosedDay: true };
+    }
+
+    // If no working hours at all or marked closed (and no exception override)
+    if (!workingHours || (workingHours.isClosed && !exception?.customOpenTime)) {
+      return { slots: [], slotMinutes: 0, isClosedDay: true };
+    }
+
+    // Determine effective open/close times
+    const openTimeRaw = exception?.customOpenTime ?? workingHours.openTime;
+    const closeTimeRaw = exception?.customCloseTime ?? workingHours.closeTime;
+    const slotMinutes = workingHours.slotMinutes;
+    const workstations = workingHours.workstations ?? 1;
+
+    // Extract HH:MM from stored DateTime (Time type stored as 1970-01-01THH:MM:SS.000Z)
+    const openHour = openTimeRaw.getUTCHours();
+    const openMin = openTimeRaw.getUTCMinutes();
+    const closeHour = closeTimeRaw.getUTCHours();
+    const closeMin = closeTimeRaw.getUTCMinutes();
+
+    // Build slot boundaries as full ISO strings for the given date (UTC)
+    const dayStart = new Date(
+      Date.UTC(
+        parsedDate.getUTCFullYear(),
+        parsedDate.getUTCMonth(),
+        parsedDate.getUTCDate(),
+        openHour,
+        openMin,
+        0,
+        0,
+      ),
+    );
+    const dayClose = new Date(
+      Date.UTC(
+        parsedDate.getUTCFullYear(),
+        parsedDate.getUTCMonth(),
+        parsedDate.getUTCDate(),
+        closeHour,
+        closeMin,
+        0,
+        0,
+      ),
+    );
+    const fullDayStart = new Date(
+      Date.UTC(
+        parsedDate.getUTCFullYear(),
+        parsedDate.getUTCMonth(),
+        parsedDate.getUTCDate(),
+        0,
+        0,
+        0,
+        0,
+      ),
+    );
+    const fullDayEnd = new Date(
+      Date.UTC(
+        parsedDate.getUTCFullYear(),
+        parsedDate.getUTCMonth(),
+        parsedDate.getUTCDate() + 1,
+        0,
+        0,
+        0,
+        0,
+      ),
+    );
+
+    // Check worker leave if workerId provided
+    let workerOnLeave = false;
+    if (query.workerId) {
+      const leave = await this.prisma.workerLeave.findFirst({
+        where: {
+          workerId: query.workerId,
+          startDate: { lte: parsedDate },
+          endDate: { gte: parsedDate },
+        },
+      });
+      workerOnLeave = !!leave;
+    }
+
+    // Fetch existing bookings for that day (excluding cancelled/rejected statuses)
+    const existingBookings = await this.prisma.booking.findMany({
+      where: {
+        providerId,
+        startAt: { gte: fullDayStart, lt: fullDayEnd },
+        status: {
+          notIn: [
+            BookingStatus.CANCELLED_BY_CLIENT,
+            BookingStatus.CANCELLED_BY_PROVIDER,
+            BookingStatus.CANCELLED_BY_SYSTEM,
+            BookingStatus.REJECTED,
+            BookingStatus.NO_SHOW,
+          ],
+        },
+      },
+      select: { startAt: true, endAt: true },
+    });
+
+    // Generate slots
+    const slots: AvailabilitySlotDto[] = [];
+    let cursor = dayStart.getTime();
+    const closeMs = dayClose.getTime();
+    const slotMs = slotMinutes * 60 * 1000;
+
+    while (cursor + slotMs <= closeMs) {
+      const slotStart = new Date(cursor);
+      const slotEnd = new Date(cursor + slotMs);
+
+      const conflictCount = existingBookings.filter(
+        (b) => b.startAt < slotEnd && b.endAt > slotStart,
+      ).length;
+
+      const isAvailable = !workerOnLeave && conflictCount < workstations;
+
+      slots.push({
+        startAt: slotStart.toISOString(),
+        endAt: slotEnd.toISOString(),
+        isAvailable,
+        conflictCount,
+      });
+
+      cursor += slotMs;
+    }
+
+    return { slots, slotMinutes, isClosedDay: false };
   }
 }

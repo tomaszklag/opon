@@ -9,6 +9,9 @@ type BookingWithClient = Prisma.BookingGetPayload<{
     client: {
       select: { phone: true; firstName: true; lastName: true };
     };
+    worker: {
+      select: { name: true };
+    };
   };
 }>;
 
@@ -43,6 +46,8 @@ export class BookingsRepository {
     notes: string | null;
     status: BookingStatus;
     confirmedAt: Date | null;
+    workerId: string | null;
+    stationId: string | null;
   }): Promise<BookingWithClient> {
     const client = await this.prisma.user.upsert({
       where: { phone: data.clientPhone },
@@ -70,10 +75,15 @@ export class BookingsRepository {
         isManual: true,
         status: data.status,
         confirmedAt: data.confirmedAt,
+        workerId: data.workerId,
+        stationId: data.stationId,
       },
       include: {
         client: {
           select: { phone: true, firstName: true, lastName: true },
+        },
+        worker: {
+          select: { name: true },
         },
       },
     });
@@ -92,6 +102,9 @@ export class BookingsRepository {
       include: {
         client: {
           select: { phone: true, firstName: true, lastName: true },
+        },
+        worker: {
+          select: { name: true },
         },
       },
       orderBy: { startAt: 'asc' },
@@ -165,7 +178,10 @@ export class BookingsRepository {
     const [items, total] = await this.prisma.$transaction([
       this.prisma.booking.findMany({
         where,
-        include: { client: { select: { phone: true, firstName: true, lastName: true } } },
+        include: {
+          client: { select: { phone: true, firstName: true, lastName: true } },
+          worker: { select: { name: true } },
+        },
         orderBy: { [opts.sortBy]: opts.sortDir },
         skip: (opts.page - 1) * opts.pageSize,
         take: opts.pageSize,

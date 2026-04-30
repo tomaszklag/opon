@@ -309,6 +309,7 @@ model Booking {
   cancelledAt     DateTime?
 
   stationId       String?
+  workerId        String?       @db.VarChar(36)
   serviceType     ServiceType?
   sizeTier        SizeTier?
   tpmsRequired    Boolean      @default(false)
@@ -319,6 +320,7 @@ model Booking {
   vehicle     Vehicle?     @relation("VehicleBookings", fields: [vehicleId], references: [id])
   pricingTier PricingTier? @relation("TierBookings", fields: [pricingTierId], references: [id])
   station     Station?     @relation(fields: [stationId], references: [id])
+  worker      Worker?      @relation(fields: [workerId], references: [id], onDelete: SetNull)
   review      Review?
 
   @@index([providerId, startAt])
@@ -527,6 +529,7 @@ model Worker {
   provider   Provider        @relation(fields: [providerId], references: [id], onDelete: Cascade)
   stations   StationWorker[]
   leaves     WorkerLeave[]
+  bookings   Booking[]
 
   @@map("workers")
 }

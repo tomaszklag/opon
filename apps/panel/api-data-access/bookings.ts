@@ -88,6 +88,10 @@ export const bookingsApi = {
     api.patch<void>('/v1/providers/me/bookings/bulk-status', { ids, action }),
   createManual: (payload: ManualBookingPayload) =>
     api.post<Booking>('/v1/providers/me/bookings/manual', payload),
+  getAvailability: (date: string, workerId?: string) => {
+    const qs = workerId ? `?date=${date}&workerId=${workerId}` : `?date=${date}`;
+    return api.get<AvailabilityResponse>(`/v1/providers/me/availability${qs}`);
+  },
 };
 
 export interface ManualBookingPayload {
@@ -98,6 +102,20 @@ export interface ManualBookingPayload {
   tireSize?: string;
   totalPricePln?: number;
   serviceType?: string;
+  workerId?: string;
   notes?: string;
   autoConfirm?: boolean;
+}
+
+export interface AvailabilitySlot {
+  startAt: string;
+  endAt: string;
+  isAvailable: boolean;
+  conflictCount: number;
+}
+
+export interface AvailabilityResponse {
+  slots: AvailabilitySlot[];
+  slotMinutes: number;
+  isClosedDay: boolean;
 }
