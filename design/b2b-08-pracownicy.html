@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Opony Panel — B2B-08 Pracownicy</title>
+<!--
+  Screen: Panel providera — Pracownicy (nowy ekran)
+  URL:    /settings/workers
+  Model:
+    Pracownik = osoba wykonująca usługi
+      · przypisany do 1 lub więcej stanowisk
+      · własny grafik (godziny pracy per stanowisko) — zarządzany przez urlopy
+      · urlopy/nieobecności → slot engine pomija pracownika w tym oknie
+    Typy nieobecności: urlop wypoczynkowy, bezpłatny, zwolnienie lekarskie, inna
+    Wpływ na sloty: jeśli wszyscy pracownicy stanowiska są nieobecni → stanowisko unavailable
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Bebas+Neue&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#0A0B0E; --bg-tint-top:#12141A; --surface:#14171D;
+    --surface-raised:#1B1E26;
+    --border:#262A34; --border-strong:#363B47;
+    --hairline:rgba(255,255,255,0.06);
+    --text-primary:#F5F4EF; --text-secondary:#9EA2AD;
+    --text-muted:#60646F; --text-on-accent:#0A0B0E;
+    --accent:#FF6B1A; --accent-hover:#FF8039;
+    --accent-muted:rgba(255,107,26,0.14); --accent-border:rgba(255,107,26,0.32);
+    --accent-glow:rgba(255,107,26,0.45);
+    --success:#2EE0A0; --success-muted:rgba(46,224,160,0.14); --success-border:rgba(46,224,160,0.32);
+    --info:#3B82F6; --info-muted:rgba(59,130,246,0.14); --info-border:rgba(59,130,246,0.32);
+    --warning:#FFB020; --warning-muted:rgba(255,176,32,0.14); --warning-border:rgba(255,176,32,0.32);
+    --font-display:'Bebas Neue',sans-serif;
+    --font-body:'Archivo',system-ui,sans-serif;
+    --font-mono:'JetBrains Mono',monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{height:100%;overflow-x:hidden;max-width:100vw;}
+  body{
+    --desktop-scale:min(1,calc((100vh - 200px)/900px),calc((100vw - 80px)/1440px));
+    font-family:var(--font-body);background:var(--bg);color:var(--text-primary);
+    -webkit-font-smoothing:antialiased;
+    background-image:
+      radial-gradient(ellipse 70% 50% at 50% 0%,rgba(255,107,26,0.05) 0%,transparent 60%),
+      linear-gradient(180deg,var(--bg-tint-top) 0%,var(--bg) 30%);
+    background-attachment:fixed;
+    min-height:100vh;display:flex;flex-direction:column;
+    align-items:center;padding:40px 40px 60px;gap:24px;
+  }
+  @keyframes pulse{0%,100%{box-shadow:0 0 0 4px var(--accent-muted);opacity:1;}50%{box-shadow:0 0 0 8px transparent;opacity:0.6;}}
+
+  /* ── Canvas chrome ── */
+  .canvas-label{width:100%;max-width:1440px;display:grid;grid-template-columns:auto 1fr auto;align-items:baseline;gap:20px;padding-bottom:14px;border-bottom:1px solid var(--border);}
+  .film-strip{font-family:var(--font-display);font-size:32px;letter-spacing:3px;line-height:1;}
+  .slug{font-family:var(--font-mono);font-size:11px;color:var(--text-muted);letter-spacing:1.5px;text-transform:uppercase;border-left:1px solid var(--border);padding-left:18px;}
+  .canvas-meta{font-family:var(--font-mono);font-size:11px;color:var(--text-secondary);letter-spacing:1px;display:inline-flex;align-items:center;gap:10px;}
+  .canvas-meta .pulse{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 4px var(--accent-muted);animation:pulse 1800ms ease-in-out infinite;}
+
+  /* ── Desktop frame ── */
+  .desktop-frame{width:1440px;height:900px;background:var(--bg);border-radius:14px;border:1px solid #1C1E24;box-shadow:0 40px 120px rgba(0,0,0,0.6),0 20px 40px rgba(0,0,0,0.4);overflow:hidden;flex-shrink:0;transform:scale(var(--desktop-scale));transform-origin:top center;margin-bottom:calc((var(--desktop-scale)-1)*900px);display:flex;flex-direction:column;}
+  .browser-chrome{height:44px;background:linear-gradient(180deg,#1A1D23,#14171D);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 16px;gap:16px;flex-shrink:0;}
+  .traffic-lights{display:inline-flex;gap:8px;}
+  .light{width:12px;height:12px;border-radius:50%;}
+  .light.red{background:#FF5F57;}.light.yellow{background:#FEBC2E;}.light.green{background:#28C840;}
+  .browser-tab{display:inline-flex;align-items:center;gap:8px;padding:6px 14px;background:var(--surface);border:1px solid var(--border);border-bottom:none;border-radius:8px 8px 0 0;font-size:12px;color:var(--text-primary);position:relative;top:6px;}
+  .favicon{width:14px;height:14px;border-radius:3px;background:var(--accent);display:inline-flex;align-items:center;justify-content:center;font-family:var(--font-display);font-size:9px;color:var(--text-on-accent);}
+  .browser-address{flex:1;max-width:480px;display:inline-flex;align-items:center;gap:8px;padding:6px 14px;background:var(--bg);border:1px solid var(--border);border-radius:8px;font-family:var(--font-mono);font-size:12px;color:var(--text-secondary);}
+
+  /* ── App layout ── */
+  .app-root{flex:1;min-height:0;display:grid;grid-template-columns:220px 1fr;}
+  .sidebar{background:var(--surface);border-right:1px solid var(--border);padding:20px 14px 14px;display:flex;flex-direction:column;gap:6px;}
+  .sb-brand{display:flex;align-items:center;gap:10px;padding:8px 10px 18px;}
+  .wordmark{font-family:var(--font-display);font-size:26px;letter-spacing:3px;line-height:1;color:var(--text-primary);display:inline-flex;align-items:baseline;gap:3px;}
+  .dot-accent{display:inline-block;width:6px;height:6px;background:var(--accent);border-radius:50%;transform:translateY(-2px);box-shadow:0 0 10px var(--accent-glow);}
+  .panel-tag{font-family:var(--font-mono);font-size:9px;padding:2px 5px;border-radius:4px;background:var(--bg);border:1px solid var(--border);color:var(--text-muted);letter-spacing:1px;text-transform:uppercase;font-weight:700;margin-left:auto;}
+  .sb-section-label{font-size:10px;font-weight:800;letter-spacing:1.3px;text-transform:uppercase;color:var(--text-muted);padding:8px 10px 4px;}
+  .sb-item{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;background:transparent;border:1px solid transparent;color:var(--text-secondary);font-size:13px;font-weight:600;cursor:pointer;text-align:left;width:100%;}
+  .sb-item.active{background:var(--accent-muted);color:var(--accent);border-color:var(--accent-border);}
+  .sb-badge{margin-left:auto;min-width:20px;height:18px;padding:0 6px;background:var(--accent);color:var(--text-on-accent);font-family:var(--font-mono);font-size:10px;font-weight:700;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;}
+  .sb-spacer{flex:1;}
+  .sb-user{display:flex;align-items:center;gap:10px;padding:10px;background:var(--bg);border:1px solid var(--border);border-radius:10px;}
+  .sb-avatar{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,#FF8039,#C73F0A);display:inline-flex;align-items:center;justify-content:center;font-family:var(--font-display);font-size:15px;color:var(--text-on-accent);letter-spacing:1.5px;flex-shrink:0;}
+  .sb-user-col{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;}
+  .sb-user-name{font-size:12px;font-weight:700;color:var(--text-primary);line-height:1.1;}
+  .sb-user-role{font-family:var(--font-mono);font-size:9px;color:var(--accent);letter-spacing:0.5px;text-transform:uppercase;font-weight:700;}
+
+  .main{display:flex;flex-direction:column;overflow:hidden;}
+  .topbar{height:52px;border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 28px;gap:16px;flex-shrink:0;}
+  .tb-breadcrumb{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--text-muted);font-weight:600;}
+  .tb-breadcrumb .sep{color:var(--border-strong);}
+  .tb-breadcrumb .current{color:var(--text-primary);font-weight:700;}
+  .tb-spacer{flex:1;}
+  .saved-chip{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:5px;background:var(--success-muted);border:1px solid var(--success-border);color:var(--success);font-size:10px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase;}
+  .saved-chip::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--success);}
+  .tb-btn{display:inline-flex;align-items:center;gap:7px;padding:7px 12px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--text-primary);}
+  .tb-btn.primary{background:var(--accent);color:var(--text-on-accent);border-color:var(--accent);font-weight:800;box-shadow:0 4px 12px rgba(255,107,26,0.3);}
+
+  /* ── Content layout ── */
+  .content{flex:1;min-height:0;overflow-y:auto;padding:20px 28px 28px;scrollbar-width:thin;display:grid;grid-template-columns:1fr 360px;gap:22px;align-items:start;}
+  .content::-webkit-scrollbar{width:6px;}
+  .content::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+  .col-form{display:flex;flex-direction:column;gap:14px;}
+
+  .page-hero{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;padding-bottom:14px;border-bottom:1px solid var(--border);}
+  .page-title{font-family:var(--font-display);font-size:38px;letter-spacing:2px;line-height:1;}
+  .page-sub{font-size:12px;color:var(--text-secondary);margin-top:6px;display:inline-flex;align-items:center;gap:10px;}
+  .stat-pill{display:inline-flex;align-items:center;gap:5px;padding:3px 8px;border-radius:5px;background:var(--accent-muted);border:1px solid var(--accent-border);font-family:var(--font-mono);font-size:11px;font-weight:700;color:var(--accent);}
+
+  /* ── Worker avatars ── */
+  .worker-avatar{width:36px;height:36px;border-radius:9px;display:inline-flex;align-items:center;justify-content:center;font-family:var(--font-display);font-size:14px;font-weight:700;letter-spacing:1px;flex-shrink:0;}
+  .av-orange{background:linear-gradient(135deg,#FF8039,#C73F0A);color:var(--text-on-accent);}
+  .av-blue{background:linear-gradient(135deg,#3B82F6,#1D4ED8);color:#fff;}
+  .av-green{background:linear-gradient(135deg,#2EE0A0,#059669);color:#0A0B0E;}
+  .av-purple{background:linear-gradient(135deg,#A855F7,#7C3AED);color:#fff;}
+  .av-empty{background:var(--surface-raised);border:1px dashed var(--border-strong);color:var(--text-muted);}
+
+  /* ── Worker card ── */
+  .wrk-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;position:relative;transition:border-color 0.14s;}
+  .wrk-card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:var(--hairline);border-radius:14px 14px 0 0;pointer-events:none;}
+  .wrk-card.expanded{border-color:var(--accent-border);}
+  .wrk-card.expanded::after{content:'';position:absolute;left:-1px;top:20px;bottom:20px;width:3px;background:var(--accent);border-radius:2px;}
+
+  .wrk-header{display:flex;align-items:center;gap:12px;padding:13px 16px;cursor:pointer;}
+  .wrk-header-info{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px;}
+  .wrk-name{font-family:var(--font-display);font-size:18px;letter-spacing:2px;color:var(--text-primary);line-height:1;}
+  .wrk-role{font-size:12px;color:var(--text-secondary);font-weight:600;}
+
+  /* Stanowiska chips */
+  .stn-chips{display:inline-flex;gap:5px;flex-wrap:wrap;align-items:center;}
+  .stn-chip{display:inline-flex;align-items:center;padding:2px 8px;border-radius:5px;background:var(--bg);border:1px solid var(--border);font-size:10px;font-weight:600;color:var(--text-secondary);}
+  .stn-chip.active{background:var(--accent-muted);border-color:var(--accent-border);color:var(--accent);}
+
+  /* Leave quick badge (collapsed) */
+  .leave-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 8px;border-radius:5px;font-family:var(--font-mono);font-size:10px;font-weight:700;}
+  .leave-badge.vacation{background:var(--info-muted);border:1px solid var(--info-border);color:var(--info);}
+  .leave-badge.soon{background:var(--warning-muted);border:1px solid var(--warning-border);color:var(--warning);}
+  .leave-badge.none{color:var(--text-muted);font-size:10px;font-weight:500;border:none;background:none;padding-left:0;}
+
+  .wrk-chevron{color:var(--text-muted);flex-shrink:0;transition:transform 0.2s;}
+  .wrk-card.expanded .wrk-chevron{transform:rotate(180deg);}
+
+  /* ── Card body ── */
+  .wrk-body{padding:0 16px 16px;display:flex;flex-direction:column;gap:14px;border-top:1px solid var(--border);}
+
+  .section-label{font-size:10px;font-weight:800;letter-spacing:1.3px;text-transform:uppercase;color:var(--text-muted);padding-bottom:4px;border-bottom:1px solid var(--border);margin-bottom:2px;}
+
+  /* Basic info fields */
+  .fields-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .field-group{display:flex;flex-direction:column;gap:5px;}
+  .field-lbl{font-size:10px;font-weight:800;letter-spacing:1.1px;text-transform:uppercase;color:var(--text-muted);}
+  .field-input{padding:8px 12px;background:var(--surface-raised);border:1px solid var(--border-strong);border-radius:8px;font-size:13px;font-weight:600;color:var(--text-primary);font-family:inherit;}
+
+  /* Leave list */
+  .leave-list{display:flex;flex-direction:column;gap:8px;}
+  .leave-item{display:flex;align-items:center;gap:12px;padding:10px 12px;background:var(--bg);border:1px solid var(--border);border-radius:10px;position:relative;}
+  .leave-item.upcoming{border-color:var(--info-border);background:var(--info-muted);}
+  .leave-item.soon{border-color:var(--warning-border);background:var(--warning-muted);}
+  .leave-ico{width:34px;height:34px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .leave-ico.vacation{background:var(--info-muted);color:var(--info);}
+  .leave-ico.soon-ico{background:var(--warning-muted);color:var(--warning);}
+  .leave-info{flex:1;display:flex;flex-direction:column;gap:3px;}
+  .leave-name{font-size:13px;font-weight:700;color:var(--text-primary);}
+  .leave-dates{font-family:var(--font-mono);font-size:11px;color:var(--text-secondary);}
+  .leave-dur{font-family:var(--font-mono);font-size:10px;color:var(--text-muted);}
+  .leave-type-tag{padding:2px 7px;border-radius:4px;font-family:var(--font-mono);font-size:9px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;}
+  .leave-type-tag.vacation{background:var(--info-muted);color:var(--info);}
+  .leave-type-tag.sick{background:var(--warning-muted);color:var(--warning);}
+  .leave-actions{display:flex;gap:5px;flex-shrink:0;}
+  .leave-action-btn{width:26px;height:26px;border-radius:6px;background:transparent;border:1px solid var(--border);color:var(--text-muted);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;font-size:12px;}
+
+  .add-leave-btn{display:flex;align-items:center;gap:8px;padding:9px 12px;border:1px dashed var(--accent-border);border-radius:10px;background:transparent;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;width:100%;}
+
+  /* Add worker card (dashed) */
+  .add-wrk-btn{display:flex;align-items:center;justify-content:center;gap:8px;padding:14px;border:1px dashed var(--accent-border);border-radius:14px;background:transparent;color:var(--accent);font-size:13px;font-weight:700;cursor:pointer;width:100%;}
+
+  /* ── Right: absence timeline ── */
+  .col-preview{position:sticky;top:0;display:flex;flex-direction:column;gap:12px;}
+  .preview-panel{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:12px;position:relative;}
+  .preview-panel::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:var(--hairline);border-radius:14px 14px 0 0;pointer-events:none;}
+  .preview-head{display:flex;align-items:baseline;justify-content:space-between;}
+  .preview-title{font-family:var(--font-display);font-size:17px;letter-spacing:1.8px;color:var(--text-primary);line-height:1;}
+  .preview-sub{font-family:var(--font-mono);font-size:10px;color:var(--text-muted);}
+
+  /* Gantt-style timeline */
+  .timeline-wrap{display:flex;flex-direction:column;gap:0;}
+  .timeline-head{display:grid;grid-template-columns:68px 1fr 1fr 1fr 1fr;gap:0;border-bottom:1px solid var(--border);padding-bottom:5px;margin-bottom:4px;}
+  .tl-month{font-family:var(--font-display);font-size:12px;letter-spacing:1.5px;color:var(--text-muted);text-align:center;line-height:1;padding:0 2px;}
+  .timeline-row{display:grid;grid-template-columns:68px 1fr 1fr 1fr 1fr;gap:0;margin-bottom:4px;align-items:center;}
+  .tl-name{font-size:10px;font-weight:700;color:var(--text-secondary);padding-right:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .tl-cell{height:20px;position:relative;border-right:1px solid var(--border);overflow:hidden;}
+  .tl-cell:last-child{border-right:none;}
+  .tl-bar{position:absolute;top:2px;bottom:2px;border-radius:4px;}
+  .tl-bar.vacation{background:var(--info);opacity:0.8;}
+  .tl-bar.soon-bar{background:var(--warning);opacity:0.85;}
+  .tl-bar.accent-bar{background:var(--accent);opacity:0.8;}
+  .tl-empty{font-family:var(--font-mono);font-size:9px;color:var(--border-strong);text-align:center;line-height:20px;}
+
+  .timeline-legend{display:flex;gap:12px;flex-wrap:wrap;}
+  .tl-legend-item{display:flex;align-items:center;gap:5px;font-family:var(--font-mono);font-size:10px;color:var(--text-muted);}
+  .tl-legend-dot{width:8px;height:8px;border-radius:2px;}
+  .tl-legend-dot.vacation{background:var(--info);}
+  .tl-legend-dot.soon-bar{background:var(--warning);}
+
+  /* Today status */
+  .today-list{display:flex;flex-direction:column;gap:6px;}
+  .today-item{display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--bg);border:1px solid var(--border);border-radius:9px;}
+  .today-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+  .today-dot.active{background:var(--success);}
+  .today-dot.absent{background:var(--border-strong);}
+  .today-wrk-name{font-size:12px;font-weight:700;color:var(--text-primary);flex:1;}
+  .today-note{font-family:var(--font-mono);font-size:10px;color:var(--text-muted);}
+  .today-stanowisko{font-size:10px;color:var(--text-muted);font-weight:600;}
+
+  .info-note{display:flex;align-items:flex-start;gap:9px;padding:9px 11px;background:transparent;border:1px dashed var(--border);border-radius:9px;font-size:11px;line-height:1.5;color:var(--text-muted);}
+  .info-note svg{color:var(--accent);flex-shrink:0;margin-top:1px;}
+  .info-note strong{color:var(--text-primary);}
+
+  .caption{max-width:1440px;width:100%;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;padding-top:12px;border-top:1px solid var(--border);font-family:var(--font-mono);font-size:11px;color:var(--text-muted);letter-spacing:0.5px;}
+  .caption strong{color:var(--text-secondary);font-weight:500;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:1.2px;font-size:10px;}
+  .caption em{color:var(--accent);font-style:normal;}
+</style>
+</head>
+<body>
+
+<header class="canvas-label">
+  <span class="film-strip">OPONY PANEL — B2B-08</span>
+  <span class="slug">pracownicy · urlopy · nieobecności</span>
+  <span class="canvas-meta"><span class="pulse"></span>W:13.x · nowy ekran</span>
+</header>
+
+<main class="desktop-frame">
+  <div class="browser-chrome" aria-hidden="true">
+    <span class="traffic-lights"><span class="light red"></span><span class="light yellow"></span><span class="light green"></span></span>
+    <span class="browser-tab"><span class="favicon">O</span>Opony Panel — Pracownicy</span>
+    <span class="browser-address">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#2EE0A0" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+      <span>panel.opony.app</span><span style="color:var(--text-muted)">/settings/workers</span>
+    </span>
+  </div>
+
+  <div class="app-root">
+    <aside class="sidebar">
+      <div class="sb-brand"><div class="wordmark">OPONY<span class="dot-accent"></span></div><span class="panel-tag">PANEL</span></div>
+      <span class="sb-section-label">Dziś</span>
+      <button class="sb-item"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>Dashboard</button>
+      <button class="sb-item"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 10h18M8 2v4M16 2v4"/></svg>Kalendarz</button>
+      <button class="sb-item"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11H5a2 2 0 0 0-2 2v7h18v-7a2 2 0 0 0-2-2h-4M9 11V5a3 3 0 0 1 6 0v6M9 11h6"/></svg>Rezerwacje<span class="sb-badge">12</span></button>
+      <span class="sb-section-label">Warsztat</span>
+      <button class="sb-item"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>Cennik</button>
+      <button class="sb-item"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/></svg>Stanowiska</button>
+      <button class="sb-item active"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>Pracownicy</button>
+      <button class="sb-item"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Godziny pracy</button>
+      <div class="sb-spacer"></div>
+      <div class="sb-user"><div class="sb-avatar">MK</div><div class="sb-user-col"><span class="sb-user-name">MobilOpony Kasia</span><span class="sb-user-role">Provider · APPROVED</span></div></div>
+    </aside>
+
+    <section class="main">
+      <header class="topbar">
+        <nav class="tb-breadcrumb"><span>Panel</span><span class="sep">/</span><span>Warsztat</span><span class="sep">/</span><span class="current">Pracownicy</span></nav>
+        <span class="tb-spacer"></span>
+        <span class="saved-chip">Zapisano</span>
+        <button class="tb-btn primary">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          Dodaj pracownika
+        </button>
+      </header>
+
+      <div class="content">
+        <div class="col-form">
+
+          <header class="page-hero">
+            <div>
+              <h1 class="page-title">Pracownicy</h1>
+              <div class="page-sub">
+                <span class="stat-pill">4 pracownicy</span>
+                <span style="color:var(--text-secondary)">2 zaplanowane urlopy · wszyscy aktywni dziś</span>
+              </div>
+            </div>
+          </header>
+
+          <!-- ── PIOTR KOWALSKI — EXPANDED ── -->
+          <div class="wrk-card expanded">
+            <div class="wrk-header">
+              <div class="worker-avatar av-orange">PK</div>
+              <div class="wrk-header-info">
+                <div class="wrk-name">Piotr Kowalski</div>
+                <div class="wrk-role">Mechanik · St.1 (zmiana poranna)</div>
+              </div>
+              <div class="stn-chips">
+                <span class="stn-chip active">St.1</span>
+              </div>
+              <div style="margin-left:12px;">
+                <span class="leave-badge vacation">Urlop lip–sie</span>
+              </div>
+              <svg class="wrk-chevron" style="margin-left:10px;" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+            </div>
+
+            <div class="wrk-body">
+
+              <!-- Basic info -->
+              <div>
+                <div class="section-label">Dane</div>
+                <div class="fields-row" style="margin-top:8px;">
+                  <div class="field-group">
+                    <label class="field-lbl">Imię i nazwisko</label>
+                    <input class="field-input" value="Piotr Kowalski" readonly />
+                  </div>
+                  <div class="field-group">
+                    <label class="field-lbl">Stanowisko / rola</label>
+                    <input class="field-input" value="Mechanik" readonly />
+                  </div>
+                </div>
+              </div>
+
+              <!-- Assigned stanowiska -->
+              <div>
+                <div class="section-label">Stanowiska</div>
+                <div style="margin-top:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                  <span class="stn-chip active" style="font-size:12px;padding:4px 10px;">Stanowisko 1 · zmiana poranna (08:00–14:00)</span>
+                  <span style="font-size:11px;color:var(--text-muted);">Zarządzaj w ekranie Stanowiska</span>
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                </div>
+              </div>
+
+              <!-- Leave/absence -->
+              <div>
+                <div class="section-label" style="display:flex;align-items:center;justify-content:space-between;">
+                  <span>Urlopy i nieobecności</span>
+                  <span style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);text-transform:none;letter-spacing:0;">2 zaplanowane</span>
+                </div>
+                <div class="leave-list" style="margin-top:8px;">
+
+                  <!-- Upcoming long vacation -->
+                  <div class="leave-item upcoming">
+                    <div class="leave-ico vacation">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 20h20M4.93 4.93l4.24 4.24M12 2v2M19.07 4.93l-4.24 4.24M20 12h2M17.66 17.66l-1.41-1.41M12 20v2M6.34 17.66l1.41-1.41M4 12H2"/></svg>
+                    </div>
+                    <div class="leave-info">
+                      <div style="display:flex;align-items:center;gap:8px;">
+                        <span class="leave-name">Urlop letni</span>
+                        <span class="leave-type-tag vacation">Wypoczynkowy</span>
+                      </div>
+                      <span class="leave-dates">20 lip 2026 – 2 sie 2026</span>
+                      <span class="leave-dur">14 dni roboczych · nowe rezerwacje blokowane · istniejące: anuluj ręcznie w Rezerwacjach</span>
+                    </div>
+                    <div class="leave-actions">
+                      <button class="leave-action-btn" title="Edytuj">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                      </button>
+                      <button class="leave-action-btn" title="Usuń" style="color:var(--warning);">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- Future holiday -->
+                  <div class="leave-item">
+                    <div class="leave-ico vacation">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 10h18M8 2v4M16 2v4"/></svg>
+                    </div>
+                    <div class="leave-info">
+                      <div style="display:flex;align-items:center;gap:8px;">
+                        <span class="leave-name">Boże Narodzenie</span>
+                        <span class="leave-type-tag vacation">Wypoczynkowy</span>
+                      </div>
+                      <span class="leave-dates">24 gru 2026 – 2 sty 2027</span>
+                      <span class="leave-dur">9 dni roboczych</span>
+                    </div>
+                    <div class="leave-actions">
+                      <button class="leave-action-btn" title="Edytuj">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                      </button>
+                      <button class="leave-action-btn" title="Usuń" style="color:var(--warning);">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+                      </button>
+                    </div>
+                  </div>
+
+                  <button class="add-leave-btn">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+                    Dodaj urlop lub nieobecność
+                  </button>
+
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── MARTA MICHALAK — collapsed ── -->
+          <div class="wrk-card">
+            <div class="wrk-header">
+              <div class="worker-avatar av-blue">MM</div>
+              <div class="wrk-header-info">
+                <div class="wrk-name">Marta Michalak</div>
+                <div class="wrk-role">Mechanik · St.2</div>
+              </div>
+              <div class="stn-chips">
+                <span class="stn-chip active">St.2</span>
+              </div>
+              <div style="margin-left:12px;">
+                <span class="leave-badge none">Brak zaplanowanych urlopów</span>
+              </div>
+              <svg class="wrk-chevron" style="margin-left:10px;" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+            </div>
+          </div>
+
+          <!-- ── ADAM WIŚNIEWSKI — collapsed, urlop wkrótce ── -->
+          <div class="wrk-card">
+            <div class="wrk-header">
+              <div class="worker-avatar av-green">AW</div>
+              <div class="wrk-header-info">
+                <div class="wrk-name">Adam Wiśniewski</div>
+                <div class="wrk-role">Specjalista wyważania · Wyważarka</div>
+              </div>
+              <div class="stn-chips">
+                <span class="stn-chip active">Wyważarka</span>
+              </div>
+              <div style="margin-left:12px;">
+                <span class="leave-badge soon">Urlop za 16 dni</span>
+              </div>
+              <svg class="wrk-chevron" style="margin-left:10px;" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+            </div>
+          </div>
+
+          <!-- ── KAMIL ZAJĄC — collapsed ── -->
+          <div class="wrk-card">
+            <div class="wrk-header">
+              <div class="worker-avatar av-purple">KZ</div>
+              <div class="wrk-header-info">
+                <div class="wrk-name">Kamil Zając</div>
+                <div class="wrk-role">Mechanik · St.1 (zmiana popołudniowa)</div>
+              </div>
+              <div class="stn-chips">
+                <span class="stn-chip active">St.1</span>
+              </div>
+              <div style="margin-left:12px;">
+                <span class="leave-badge none">Brak zaplanowanych urlopów</span>
+              </div>
+              <svg class="wrk-chevron" style="margin-left:10px;" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+            </div>
+          </div>
+
+          <button class="add-wrk-btn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+            Dodaj pracownika
+          </button>
+
+        </div>
+
+        <!-- ── RIGHT PANEL ── -->
+        <div class="col-preview">
+
+          <!-- Absence timeline -->
+          <div class="preview-panel">
+            <div class="preview-head">
+              <h3 class="preview-title">Nieobecności</h3>
+              <span class="preview-sub">maj – sie 2026</span>
+            </div>
+
+            <div class="timeline-wrap">
+              <!-- Month headers -->
+              <div class="timeline-head">
+                <div></div>
+                <div class="tl-month">MAJ</div>
+                <div class="tl-month">CZE</div>
+                <div class="tl-month">LIP</div>
+                <div class="tl-month">SIE</div>
+              </div>
+
+              <!-- Piotr: urlop 20 lip – 2 sie -->
+              <div class="timeline-row">
+                <div class="tl-name">Piotr K.</div>
+                <div class="tl-cell"><div class="tl-empty">·</div></div>
+                <div class="tl-cell"><div class="tl-empty">·</div></div>
+                <!-- LIP: 20/31 = 64% start → 100% end -->
+                <div class="tl-cell"><div class="tl-bar vacation" style="left:62%;right:0%;"></div></div>
+                <!-- SIE: 0% → 2/31 = 6% -->
+                <div class="tl-cell"><div class="tl-bar vacation" style="left:0%;width:8%;"></div></div>
+              </div>
+
+              <!-- Marta: brak -->
+              <div class="timeline-row">
+                <div class="tl-name">Marta M.</div>
+                <div class="tl-cell"><div class="tl-empty">·</div></div>
+                <div class="tl-cell"><div class="tl-empty">·</div></div>
+                <div class="tl-cell"><div class="tl-empty">·</div></div>
+                <div class="tl-cell"><div class="tl-empty">·</div></div>
+              </div>
+
+              <!-- Adam: urlop 15-20 maj -->
+              <div class="timeline-row">
+                <div class="tl-name">Adam W.</div>
+                <!-- MAJ: 15/31 = 48% start, 20/31 = 64% end -->
+                <div class="tl-cell"><div class="tl-bar soon-bar" style="left:46%;width:20%;"></div></div>
+                <div class="tl-cell"><div class="tl-empty">·</div></div>
+                <div class="tl-cell"><div class="tl-empty">·</div></div>
+                <div class="tl-cell"><div class="tl-empty">·</div></div>
+              </div>
+
+              <!-- Kamil: brak -->
+              <div class="timeline-row">
+                <div class="tl-name">Kamil Z.</div>
+                <div class="tl-cell"><div class="tl-empty">·</div></div>
+                <div class="tl-cell"><div class="tl-empty">·</div></div>
+                <div class="tl-cell"><div class="tl-empty">·</div></div>
+                <div class="tl-cell"><div class="tl-empty">·</div></div>
+              </div>
+            </div>
+
+            <div class="timeline-legend">
+              <div class="tl-legend-item"><div class="tl-legend-dot vacation"></div>Urlop wypoczynkowy</div>
+              <div class="tl-legend-item"><div class="tl-legend-dot soon-bar"></div>Urlop (wkrótce)</div>
+            </div>
+
+            <div class="info-note">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/></svg>
+              <span style="font-size:10px;">W oknie nieobecności slot engine <strong>nie przydziela</strong> tego pracownika do stanowiska. Jeśli stanowisko nie ma innego pracownika — sloty blokowane automatycznie.</span>
+            </div>
+          </div>
+
+          <!-- Today status -->
+          <div class="preview-panel">
+            <div class="preview-head">
+              <h3 class="preview-title">Dziś</h3>
+              <span class="preview-sub">29 kwi 2026 · Wt</span>
+            </div>
+            <div class="today-list">
+              <div class="today-item">
+                <div class="today-dot active"></div>
+                <span class="today-wrk-name">Piotr Kowalski</span>
+                <span class="today-stanowisko">St.1</span>
+                <span class="today-note">08:00–14:00</span>
+              </div>
+              <div class="today-item">
+                <div class="today-dot active"></div>
+                <span class="today-wrk-name">Marta Michalak</span>
+                <span class="today-stanowisko">St.2</span>
+                <span class="today-note">10:00–18:00</span>
+              </div>
+              <div class="today-item">
+                <div class="today-dot active"></div>
+                <span class="today-wrk-name">Adam Wiśniewski</span>
+                <span class="today-stanowisko">Wyważarka</span>
+                <span class="today-note">08:00–16:00</span>
+              </div>
+              <div class="today-item">
+                <div class="today-dot active"></div>
+                <span class="today-wrk-name">Kamil Zając</span>
+                <span class="today-stanowisko">St.1</span>
+                <span class="today-note">13:00–19:00</span>
+              </div>
+            </div>
+
+            <!-- Example: how it looks during Adam's leave -->
+            <div style="margin-top:4px;padding-top:10px;border-top:1px solid var(--border);">
+              <div style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);margin-bottom:7px;text-transform:uppercase;letter-spacing:1px;">Przykład · 15 maja 2026</div>
+              <div class="today-list">
+                <div class="today-item">
+                  <div class="today-dot active"></div>
+                  <span class="today-wrk-name">Piotr Kowalski</span>
+                  <span class="today-stanowisko">St.1</span>
+                  <span class="today-note">08:00–14:00</span>
+                </div>
+                <div class="today-item">
+                  <div class="today-dot active"></div>
+                  <span class="today-wrk-name">Marta Michalak</span>
+                  <span class="today-stanowisko">St.2</span>
+                  <span class="today-note">10:00–18:00</span>
+                </div>
+                <div class="today-item" style="opacity:0.5;background:var(--warning-muted);border-color:var(--warning-border);">
+                  <div class="today-dot absent"></div>
+                  <span class="today-wrk-name" style="color:var(--text-muted);text-decoration:line-through;">Adam Wiśniewski</span>
+                  <span class="today-stanowisko" style="color:var(--warning);">Wyważarka</span>
+                  <span class="today-note" style="color:var(--warning);">Urlop</span>
+                </div>
+                <div class="today-item">
+                  <div class="today-dot active"></div>
+                  <span class="today-wrk-name">Kamil Zając</span>
+                  <span class="today-stanowisko">St.1</span>
+                  <span class="today-note">13:00–19:00</span>
+                </div>
+              </div>
+              <div class="info-note" style="margin-top:8px;">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                <span style="font-size:10px;color:var(--warning);">Wyważarka bez pracownika → <strong style="color:var(--warning);">Wyważanie kół i Naprawa opony niedostępne</strong> tego dnia · nowe rezerwacje blokowane, istniejące anuluj ręcznie</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+  </div>
+</main>
+
+<footer class="caption">
+  <div>
+    <strong>Model pracownika i urlopów</strong>
+    Pracownik przypisany do 1+ stanowisk. Każdy urlop/nieobecność = blokada okna w slot engine.
+    Jeśli <em>wszyscy pracownicy stanowiska</em> są nieobecni → stanowisko automatycznie niedostępne.
+    Typy: <em>wypoczynkowy · bezpłatny · zwolnienie lekarskie · inna nieobecność</em>.
+  </div>
+  <div>
+    <strong>Wpływ na inne ekrany</strong>
+    <em>Stanowiska (B2B-07)</em>: przypisanie pracowników do stanowisk · kilku pracowników = zmiany.
+    <em>Kalendarz</em>: widok per-stanowisko automatycznie uwzględnia urlopy.
+    <em>Slot engine</em>: urlop = twardy blok — klient nie zobaczy slotów bez dostępnego pracownika.
+  </div>
+</footer>
+
+</body>
+</html>

@@ -3,1610 +3,510 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Opony Panel — B2B-06 Godziny pracy · W:12.7</title>
+<title>Opony Panel — B2B-06 Godziny pracy</title>
 <!--
-  Screen: Panel providera — Godziny pracy (7 dni + slot size + wyjątki)
-  Ref:    docs/plan-sprintow.md → W:12.7 mid (panel.opony.app — desktop-first)
-  US:     US-24 (edycja godzin + wyjątki)
-  Tone:   industrial-dark · 2-kol form + weekly timeline preview · amber hour bars
+  Screen: Panel providera — Godziny pracy
+  Ref:    docs/plan-sprintow.md → W:12.9
+  US:     US-24
+  Model:
+    Godziny pracy = kiedy warsztat jest OTWARTY (zewnętrzna granica slotów).
+    Capacity (ile równolegle) wynika ze Stanowisk i ich pracowników — NIE stąd.
+    Fix #1: usunięto workstation-stepper z każdego day-row i block-row.
+    Fix #3: zunifikowana polityka cancellation — nowe blokowane, istniejące ręcznie.
 -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Bebas+Neue&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #0A0B0E;
-    --bg-tint-top: #12141A;
-    --surface: #14171D;
-    --surface-raised: #1B1E26;
-    --surface-hover: #23272F;
-    --border: #262A34;
-    --border-strong: #363B47;
-    --hairline: rgba(255, 255, 255, 0.06);
-    --text-primary: #F5F4EF;
-    --text-secondary: #9EA2AD;
-    --text-muted: #60646F;
-    --text-on-accent: #0A0B0E;
-    --accent: #FF6B1A;
-    --accent-hover: #FF8039;
-    --accent-muted: rgba(255, 107, 26, 0.14);
-    --accent-border: rgba(255, 107, 26, 0.32);
-    --accent-glow: rgba(255, 107, 26, 0.45);
-    --success: #2EE0A0;
-    --success-muted: rgba(46, 224, 160, 0.14);
-    --success-border: rgba(46, 224, 160, 0.32);
-    --warning: #FFB020;
-    --warning-muted: rgba(255, 176, 32, 0.14);
-    --warning-border: rgba(255, 176, 32, 0.32);
-    --danger: #FF5757;
-    --danger-muted: rgba(255, 87, 87, 0.12);
-    --danger-border: rgba(255, 87, 87, 0.32);
-    --font-display: 'Bebas Neue', sans-serif;
-    --font-body: 'Archivo', system-ui, sans-serif;
-    --font-mono: 'JetBrains Mono', monospace;
+    --bg:#0A0B0E; --bg-tint-top:#12141A; --surface:#14171D;
+    --surface-raised:#1B1E26; --surface-hover:#23272F;
+    --border:#262A34; --border-strong:#363B47;
+    --hairline:rgba(255,255,255,0.06);
+    --text-primary:#F5F4EF; --text-secondary:#9EA2AD;
+    --text-muted:#60646F; --text-on-accent:#0A0B0E;
+    --accent:#FF6B1A; --accent-hover:#FF8039;
+    --accent-muted:rgba(255,107,26,0.14); --accent-border:rgba(255,107,26,0.32);
+    --accent-glow:rgba(255,107,26,0.45);
+    --success:#2EE0A0; --success-muted:rgba(46,224,160,0.14); --success-border:rgba(46,224,160,0.32);
+    --warning:#FFB020; --warning-muted:rgba(255,176,32,0.14); --warning-border:rgba(255,176,32,0.32);
+    --font-display:'Bebas Neue',sans-serif;
+    --font-body:'Archivo',system-ui,sans-serif;
+    --font-mono:'JetBrains Mono',monospace;
   }
-
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body { height: 100%; overflow-x: hidden; max-width: 100vw; }
-  body {
-    --desktop-scale: min(1, calc((100vh - 200px) / 900px), calc((100vw - 80px) / 1440px));
-    font-family: var(--font-body);
-    background: var(--bg);
-    color: var(--text-primary);
-    -webkit-font-smoothing: antialiased;
-    text-rendering: optimizeLegibility;
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{height:100%;overflow-x:hidden;max-width:100vw;}
+  body{
+    --desktop-scale:min(1,calc((100vh - 200px)/900px),calc((100vw - 80px)/1440px));
+    font-family:var(--font-body);background:var(--bg);color:var(--text-primary);
+    -webkit-font-smoothing:antialiased;
     background-image:
-      radial-gradient(ellipse 70% 50% at 50% 0%, rgba(255, 107, 26, 0.05) 0%, transparent 60%),
-      radial-gradient(ellipse 50% 30% at 90% 100%, rgba(46, 224, 160, 0.02) 0%, transparent 60%),
-      linear-gradient(180deg, var(--bg-tint-top) 0%, var(--bg) 30%);
-    background-attachment: fixed;
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 40px 40px 60px;
-    gap: 24px;
+      radial-gradient(ellipse 70% 50% at 50% 0%,rgba(255,107,26,0.05) 0%,transparent 60%),
+      linear-gradient(180deg,var(--bg-tint-top) 0%,var(--bg) 30%);
+    background-attachment:fixed;
+    min-height:100vh;display:flex;flex-direction:column;
+    align-items:center;padding:40px 40px 60px;gap:24px;
   }
-  @keyframes pulse {
-    0%, 100% { box-shadow: 0 0 0 4px var(--accent-muted); opacity: 1; }
-    50%      { box-shadow: 0 0 0 8px transparent; opacity: 0.6; }
-  }
+  @keyframes pulse{0%,100%{box-shadow:0 0 0 4px var(--accent-muted);opacity:1;}50%{box-shadow:0 0 0 8px transparent;opacity:0.6;}}
 
-  .canvas-label {
-    width: 100%;
-    max-width: 1440px;
-    display: grid;
-    grid-template-columns: auto 1fr auto;
-    align-items: baseline;
-    gap: 20px;
-    padding-bottom: 14px;
-    border-bottom: 1px solid var(--border);
-  }
-  .film-strip { font-family: var(--font-display); font-size: 32px; letter-spacing: 3px; line-height: 1; }
-  .slug {
-    font-family: var(--font-mono);
-    font-size: 11px;
-    color: var(--text-muted);
-    letter-spacing: 1.5px;
-    text-transform: uppercase;
-    border-left: 1px solid var(--border);
-    padding-left: 18px;
-  }
-  .canvas-meta {
-    font-family: var(--font-mono);
-    font-size: 11px;
-    color: var(--text-secondary);
-    letter-spacing: 1px;
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-  }
-  .canvas-meta .pulse {
-    display: inline-block;
-    width: 8px; height: 8px;
-    border-radius: 50%;
-    background: var(--accent);
-    box-shadow: 0 0 0 4px var(--accent-muted);
-    animation: pulse 1800ms ease-in-out infinite;
-  }
+  .canvas-label{width:100%;max-width:1440px;display:grid;grid-template-columns:auto 1fr auto;align-items:baseline;gap:20px;padding-bottom:14px;border-bottom:1px solid var(--border);}
+  .film-strip{font-family:var(--font-display);font-size:32px;letter-spacing:3px;line-height:1;}
+  .slug{font-family:var(--font-mono);font-size:11px;color:var(--text-muted);letter-spacing:1.5px;text-transform:uppercase;border-left:1px solid var(--border);padding-left:18px;}
+  .canvas-meta{font-family:var(--font-mono);font-size:11px;color:var(--text-secondary);letter-spacing:1px;display:inline-flex;align-items:center;gap:10px;}
+  .canvas-meta .pulse{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 4px var(--accent-muted);animation:pulse 1800ms ease-in-out infinite;}
 
-  /* Desktop frame */
-  .desktop-frame {
-    width: 1440px;
-    height: 900px;
-    background: var(--bg);
-    border-radius: 14px;
-    border: 1px solid #1C1E24;
-    box-shadow: 0 40px 120px rgba(0, 0, 0, 0.6), 0 20px 40px rgba(0, 0, 0, 0.4);
-    overflow: hidden;
-    position: relative;
-    flex-shrink: 0;
-    transform: scale(var(--desktop-scale));
-    transform-origin: top center;
-    margin-bottom: calc((var(--desktop-scale) - 1) * 900px);
-    display: flex;
-    flex-direction: column;
-  }
+  .desktop-frame{width:1440px;height:900px;background:var(--bg);border-radius:14px;border:1px solid #1C1E24;box-shadow:0 40px 120px rgba(0,0,0,0.6),0 20px 40px rgba(0,0,0,0.4);overflow:hidden;position:relative;flex-shrink:0;transform:scale(var(--desktop-scale));transform-origin:top center;margin-bottom:calc((var(--desktop-scale)-1)*900px);display:flex;flex-direction:column;}
+  .browser-chrome{height:44px;background:linear-gradient(180deg,#1A1D23,#14171D);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 16px;gap:16px;flex-shrink:0;}
+  .traffic-lights{display:inline-flex;gap:8px;}
+  .light{width:12px;height:12px;border-radius:50%;}
+  .light.red{background:#FF5F57;}.light.yellow{background:#FEBC2E;}.light.green{background:#28C840;}
+  .browser-tab{display:inline-flex;align-items:center;gap:8px;padding:6px 14px;background:var(--surface);border:1px solid var(--border);border-bottom:none;border-radius:8px 8px 0 0;font-size:12px;color:var(--text-primary);position:relative;top:6px;}
+  .favicon{width:14px;height:14px;border-radius:3px;background:var(--accent);display:inline-flex;align-items:center;justify-content:center;font-family:var(--font-display);font-size:9px;color:var(--text-on-accent);}
+  .browser-address{flex:1;max-width:480px;display:inline-flex;align-items:center;gap:8px;padding:6px 14px;background:var(--bg);border:1px solid var(--border);border-radius:8px;font-family:var(--font-mono);font-size:12px;color:var(--text-secondary);}
 
-  .browser-chrome {
-    height: 44px;
-    background: linear-gradient(180deg, #1A1D23, #14171D);
-    border-bottom: 1px solid var(--border);
-    display: flex;
-    align-items: center;
-    padding: 0 16px;
-    gap: 16px;
-    flex-shrink: 0;
-  }
-  .traffic-lights { display: inline-flex; gap: 8px; }
-  .light { width: 12px; height: 12px; border-radius: 50%; }
-  .light.red { background: #FF5F57; }
-  .light.yellow { background: #FEBC2E; }
-  .light.green { background: #28C840; }
+  .app-root{flex:1;min-height:0;display:grid;grid-template-columns:220px 1fr;}
+  .sidebar{background:var(--surface);border-right:1px solid var(--border);padding:20px 14px 14px;display:flex;flex-direction:column;gap:6px;}
+  .sb-brand{display:flex;align-items:center;gap:10px;padding:8px 10px 18px;}
+  .wordmark{font-family:var(--font-display);font-size:26px;letter-spacing:3px;line-height:1;color:var(--text-primary);display:inline-flex;align-items:baseline;gap:3px;}
+  .dot{display:inline-block;width:6px;height:6px;background:var(--accent);border-radius:50%;transform:translateY(-2px);box-shadow:0 0 10px var(--accent-glow);}
+  .panel-tag{font-family:var(--font-mono);font-size:9px;padding:2px 5px;border-radius:4px;background:var(--bg);border:1px solid var(--border);color:var(--text-muted);letter-spacing:1px;text-transform:uppercase;font-weight:700;margin-left:auto;}
+  .sb-section-label{font-family:var(--font-body);font-size:10px;font-weight:800;letter-spacing:1.3px;text-transform:uppercase;color:var(--text-muted);padding:8px 10px 4px;}
+  .sb-item{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;background:transparent;border:1px solid transparent;color:var(--text-secondary);font-family:var(--font-body);font-size:13px;font-weight:600;cursor:pointer;text-align:left;width:100%;}
+  .sb-item.active{background:var(--accent-muted);color:var(--accent);border-color:var(--accent-border);}
+  .sb-badge{margin-left:auto;min-width:20px;height:18px;padding:0 6px;background:var(--accent);color:var(--text-on-accent);font-family:var(--font-mono);font-size:10px;font-weight:700;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;}
+  .sb-spacer{flex:1;}
+  .sb-user{display:flex;align-items:center;gap:10px;padding:10px;background:var(--bg);border:1px solid var(--border);border-radius:10px;}
+  .sb-avatar{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,#FF8039 0%,#C73F0A 100%);display:inline-flex;align-items:center;justify-content:center;font-family:var(--font-display);font-size:15px;color:var(--text-on-accent);letter-spacing:1.5px;flex-shrink:0;}
+  .sb-user-col{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;}
+  .sb-user-name{font-size:12px;font-weight:700;color:var(--text-primary);line-height:1.1;}
+  .sb-user-role{font-family:var(--font-mono);font-size:9px;color:var(--accent);letter-spacing:0.5px;text-transform:uppercase;font-weight:700;}
 
-  .browser-tabs { display: inline-flex; gap: 2px; }
-  .browser-tab {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 6px 14px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-bottom: none;
-    border-radius: 8px 8px 0 0;
-    font-size: 12px;
-    color: var(--text-primary);
-    position: relative;
-    top: 6px;
-  }
-  .browser-tab .favicon {
-    width: 14px; height: 14px;
-    border-radius: 3px;
-    background: var(--accent);
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-family: var(--font-display);
-    font-size: 9px;
-    color: var(--text-on-accent);
-    letter-spacing: 0.5px;
-  }
-  .browser-address {
-    flex: 1;
-    max-width: 480px;
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 6px 14px;
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    font-family: var(--font-mono);
-    font-size: 12px;
-    color: var(--text-secondary);
-  }
-  .browser-address .lock { color: var(--success); }
-  .browser-address .url { color: var(--text-primary); }
-  .browser-address .path { color: var(--text-secondary); }
+  .main{display:flex;flex-direction:column;overflow:hidden;}
+  .topbar{height:52px;border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 28px;gap:16px;flex-shrink:0;}
+  .tb-breadcrumb{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--text-muted);font-weight:600;}
+  .tb-breadcrumb .sep{color:var(--border-strong);}
+  .tb-breadcrumb .current{color:var(--text-primary);font-weight:700;}
+  .tb-spacer{flex:1;}
+  .saved-chip{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:5px;background:var(--success-muted);border:1px solid var(--success-border);color:var(--success);font-size:10px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase;}
+  .saved-chip::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--success);}
+  .tb-btn{display:inline-flex;align-items:center;gap:7px;padding:7px 12px;border-radius:8px;font-family:var(--font-body);font-size:12px;font-weight:700;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--text-primary);}
+  .tb-btn.primary{background:var(--accent);color:var(--text-on-accent);border-color:var(--accent);font-weight:800;box-shadow:0 4px 12px rgba(255,107,26,0.3);}
 
-  /* Sidebar */
-  .app-root {
-    flex: 1;
-    min-height: 0;
-    display: grid;
-    grid-template-columns: 220px 1fr;
-  }
-  .sidebar {
-    background: var(--surface);
-    border-right: 1px solid var(--border);
-    padding: 20px 14px 14px;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-  }
-  .sb-brand {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 8px 10px 18px;
-  }
-  .sb-brand .wordmark {
-    font-family: var(--font-display);
-    font-size: 26px;
-    letter-spacing: 3px;
-    line-height: 1;
-    color: var(--text-primary);
-    display: inline-flex;
-    align-items: baseline;
-    gap: 3px;
-  }
-  .sb-brand .dot {
-    display: inline-block;
-    width: 6px; height: 6px;
-    background: var(--accent);
-    border-radius: 50%;
-    transform: translateY(-2px);
-    box-shadow: 0 0 10px var(--accent-glow);
-  }
-  .sb-brand .panel-tag {
-    font-family: var(--font-mono);
-    font-size: 9px;
-    padding: 2px 5px;
-    border-radius: 4px;
-    background: var(--bg);
-    border: 1px solid var(--border);
-    color: var(--text-muted);
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    font-weight: 700;
-    margin-left: auto;
-  }
-  .sb-section-label {
-    font-family: var(--font-body);
-    font-size: 10px;
-    font-weight: 800;
-    letter-spacing: 1.3px;
-    text-transform: uppercase;
-    color: var(--text-muted);
-    padding: 8px 10px 4px;
-  }
-  .sb-item {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 9px 10px;
-    border-radius: 8px;
-    background: transparent;
-    border: 1px solid transparent;
-    color: var(--text-secondary);
-    font-family: var(--font-body);
-    font-size: 13px;
-    font-weight: 600;
-    cursor: pointer;
-    text-align: left;
-    width: 100%;
-    transition: background 140ms ease, color 140ms ease;
-  }
-  .sb-item:hover { background: var(--surface-hover); color: var(--text-primary); }
-  .sb-item.active {
-    background: var(--accent-muted);
-    color: var(--accent);
-    border-color: var(--accent-border);
-  }
-  .sb-badge {
-    margin-left: auto;
-    min-width: 20px; height: 18px;
-    padding: 0 6px;
-    background: var(--accent);
-    color: var(--text-on-accent);
-    font-family: var(--font-mono);
-    font-size: 10px;
-    font-weight: 700;
-    border-radius: 6px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-  }
-  .sb-spacer { flex: 1; }
-  .sb-user {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 10px;
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    cursor: pointer;
-  }
-  .sb-avatar {
-    width: 34px; height: 34px;
-    border-radius: 9px;
-    background: linear-gradient(135deg, #FF8039 0%, #C73F0A 100%);
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-family: var(--font-display);
-    font-size: 15px;
-    color: var(--text-on-accent);
-    letter-spacing: 1.5px;
-    flex-shrink: 0;
-  }
-  .sb-user-col { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-  .sb-user-name {
-    font-size: 12px;
-    font-weight: 700;
-    color: var(--text-primary);
-    line-height: 1.1;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  .sb-user-role {
-    font-family: var(--font-mono);
-    font-size: 9px;
-    color: var(--accent);
-    letter-spacing: 0.5px;
-    text-transform: uppercase;
-    font-weight: 700;
-  }
+  .content{flex:1;min-height:0;overflow-y:auto;padding:20px 28px 28px;scrollbar-width:thin;display:grid;grid-template-columns:1fr 380px;gap:22px;align-items:start;}
+  .content::-webkit-scrollbar{width:6px;}
+  .content::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+  .col-form{display:flex;flex-direction:column;gap:16px;}
 
-  /* Main */
-  .main { display: flex; flex-direction: column; overflow: hidden; }
-  .topbar {
-    height: 58px;
-    border-bottom: 1px solid var(--border);
-    display: flex;
-    align-items: center;
-    padding: 0 28px;
-    gap: 16px;
-    flex-shrink: 0;
-  }
-  .tb-breadcrumb {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 12px;
-    color: var(--text-muted);
-    font-weight: 600;
-  }
-  .tb-breadcrumb .sep { color: var(--border-strong); }
-  .tb-breadcrumb .current { color: var(--text-primary); font-weight: 700; }
-  .tb-spacer { flex: 1; }
+  .page-hero{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;padding-bottom:14px;border-bottom:1px solid var(--border);}
+  .page-title{font-family:var(--font-display);font-size:36px;letter-spacing:2px;line-height:1;color:var(--text-primary);}
+  .page-sub{font-size:13px;color:var(--text-secondary);margin-top:6px;display:inline-flex;align-items:center;gap:10px;}
 
-  .saved-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 5px 10px;
-    border-radius: 5px;
-    background: var(--success-muted);
-    border: 1px solid var(--success-border);
-    color: var(--success);
-    font-size: 10px;
-    font-weight: 800;
-    letter-spacing: 1.2px;
-    text-transform: uppercase;
-  }
-  .saved-chip::before {
-    content: '';
-    width: 6px; height: 6px;
-    border-radius: 50%;
-    background: var(--success);
-  }
+  .sec-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:10px;position:relative;}
+  .sec-card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:var(--hairline);border-radius:14px 14px 0 0;pointer-events:none;}
+  .sec-head{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+  .sec-title{font-family:var(--font-display);font-size:19px;letter-spacing:2px;color:var(--text-primary);line-height:1;}
+  .sec-sub{font-size:11px;color:var(--text-muted);font-weight:600;}
 
-  .tb-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 7px;
-    padding: 8px 12px;
-    border-radius: 8px;
-    font-family: var(--font-body);
-    font-size: 12px;
-    font-weight: 700;
-    letter-spacing: 0.3px;
-    cursor: pointer;
-    border: 1px solid var(--border);
-    background: transparent;
-    color: var(--text-primary);
-  }
-  .tb-btn:hover { background: var(--surface); border-color: var(--border-strong); }
-  .tb-btn.primary {
-    background: var(--accent);
-    color: var(--text-on-accent);
-    border-color: var(--accent);
-    font-weight: 800;
-    box-shadow: 0 4px 12px rgba(255, 107, 26, 0.3);
-  }
-  .tb-btn.primary:hover { background: var(--accent-hover); }
+  .cennik-link{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:6px;background:var(--accent-muted);border:1px solid var(--accent-border);color:var(--accent);font-family:var(--font-mono);font-size:10px;font-weight:700;letter-spacing:0.3px;cursor:pointer;text-decoration:none;}
 
-  /* CONTENT split */
-  .content {
-    flex: 1;
-    min-height: 0;
-    overflow-y: auto;
-    padding: 24px 28px 28px;
-    scrollbar-width: thin;
-    display: grid;
-    grid-template-columns: 1fr 380px;
-    gap: 22px;
-    align-items: start;
+  /* ── Day row — bez stepperów stanowisk ── */
+  .day-row{
+    display:grid;
+    /* name(72) | toggle(44) | Od(118) | Do(118) | godziny(auto) | copy(auto) */
+    grid-template-columns:72px 44px 118px 118px auto auto;
+    align-items:center;gap:10px;
+    padding:12px 14px;
+    background:var(--bg);border:1px solid var(--border);border-radius:10px;
+    position:relative;transition:border-color 140ms ease;
   }
-  .content::-webkit-scrollbar { width: 6px; }
-  .content::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  .day-row:hover{border-color:var(--border-strong);}
+  .day-row.closed{opacity:0.6;}
+  .day-row.today{border-color:var(--accent-border);background:linear-gradient(135deg,rgba(255,107,26,0.04),transparent);}
+  .day-row.today::before{content:'';position:absolute;left:-1px;top:12px;bottom:12px;width:3px;background:var(--accent);border-radius:2px;}
 
-  .col-form {
-    display: flex;
-    flex-direction: column;
-    gap: 18px;
-  }
+  .day-name{display:flex;flex-direction:column;gap:2px;}
+  .day-abbr{font-family:var(--font-display);font-size:19px;letter-spacing:1.5px;color:var(--text-primary);line-height:1;}
+  .day-full{font-size:9px;color:var(--text-muted);letter-spacing:1px;text-transform:uppercase;font-weight:700;}
+  .today-tag{display:inline-block;margin-top:3px;padding:1px 5px;background:var(--accent);color:var(--text-on-accent);font-size:8px;font-weight:800;letter-spacing:1px;text-transform:uppercase;border-radius:3px;}
 
-  /* Page hero */
-  .page-hero {
-    display: flex;
-    align-items: flex-end;
-    justify-content: space-between;
-    gap: 16px;
-    padding-bottom: 14px;
-    border-bottom: 1px solid var(--border);
-  }
-  .page-title {
-    font-family: var(--font-display);
-    font-size: 38px;
-    letter-spacing: 2px;
-    line-height: 1;
-    color: var(--text-primary);
-  }
-  .page-sub {
-    font-size: 13px;
-    color: var(--text-secondary);
-    margin-top: 6px;
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-  }
-  .page-sub strong { color: var(--text-primary); font-weight: 700; }
-  .page-sub .stat-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    padding: 3px 8px;
-    border-radius: 5px;
-    background: var(--accent-muted);
-    border: 1px solid var(--accent-border);
-    color: var(--accent);
-    font-family: var(--font-mono);
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.3px;
-  }
+  .toggle{width:38px;height:21px;border-radius:999px;background:var(--border);border:1px solid var(--border-strong);position:relative;cursor:pointer;flex-shrink:0;}
+  .toggle::after{content:'';position:absolute;top:2px;left:2px;width:15px;height:15px;border-radius:50%;background:var(--text-secondary);}
+  .toggle.on{background:var(--accent);border-color:var(--accent);}
+  .toggle.on::after{left:19px;background:var(--text-on-accent);}
 
-  .quick-actions {
-    display: inline-flex;
-    gap: 6px;
-  }
+  .time-input{display:inline-flex;align-items:center;background:var(--surface-raised);border:1px solid var(--border-strong);border-radius:8px;padding:7px 10px;gap:6px;}
+  .time-input input{width:52px;background:transparent;border:none;outline:none;color:var(--text-primary);font-family:var(--font-mono);font-weight:700;font-size:13px;letter-spacing:0.5px;text-align:center;}
+  .time-label{font-size:9px;font-weight:800;letter-spacing:1.1px;text-transform:uppercase;color:var(--text-muted);}
 
-  /* Section card (reused) */
-  .sec-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    padding: 18px;
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
-    position: relative;
-  }
-  .sec-card::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0;
-    height: 1px;
-    background: var(--hairline);
-  }
-  .sec-head {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 10px;
-  }
-  .sec-title {
-    font-family: var(--font-display);
-    font-size: 20px;
-    letter-spacing: 2px;
-    color: var(--text-primary);
-    line-height: 1;
-  }
-  .sec-sub {
-    font-size: 11px;
-    color: var(--text-muted);
-    font-weight: 600;
-  }
+  .day-hours-info{display:flex;flex-direction:column;gap:2px;text-align:right;min-width:40px;}
+  .day-hours-val{font-family:var(--font-mono);font-size:12px;font-weight:700;color:var(--text-primary);}
+  .day-hours-val.accent{color:var(--accent);}
+  .day-hours-sub{font-size:10px;color:var(--text-muted);}
 
-  /* Slot size chips */
-  .slot-size-row {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-  .slot-size-label {
-    font-family: var(--font-body);
-    font-size: 10px;
-    font-weight: 800;
-    letter-spacing: 1.2px;
-    text-transform: uppercase;
-    color: var(--text-muted);
-  }
-  .slot-chips {
-    display: inline-flex;
-    gap: 4px;
-    padding: 3px;
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-  }
-  .slot-chip {
-    padding: 6px 12px;
-    border-radius: 7px;
-    background: transparent;
-    border: none;
-    color: var(--text-secondary);
-    font-family: var(--font-mono);
-    font-size: 12px;
-    font-weight: 700;
-    letter-spacing: 0.3px;
-    cursor: pointer;
-    transition: all 140ms ease;
-  }
-  .slot-chip:hover { color: var(--text-primary); }
-  .slot-chip.active {
-    background: var(--accent);
-    color: var(--text-on-accent);
-    box-shadow: 0 4px 10px rgba(255, 107, 26, 0.35);
-  }
+  .copy-btn{padding:6px 8px;border-radius:6px;background:transparent;border:1px solid var(--border);color:var(--text-muted);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;}
 
-  /* Day rows */
-  .day-row {
-    display: grid;
-    grid-template-columns: 62px auto 100px 100px 112px auto auto;
-    align-items: center;
-    gap: 10px;
-    padding: 12px 14px;
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    position: relative;
-    transition: border-color 140ms ease;
-  }
-  .day-row:hover { border-color: var(--border-strong); }
-  .day-row.closed { opacity: 0.6; }
-  .day-row.today {
-    border-color: var(--accent-border);
-    background: linear-gradient(135deg, rgba(255, 107, 26, 0.04), transparent);
-  }
-  .day-row.today::before {
-    content: '';
-    position: absolute;
-    left: -1px; top: 12px; bottom: 12px;
-    width: 3px;
-    background: var(--accent);
-    border-radius: 2px;
-  }
+  .closed-label{font-family:var(--font-body);font-size:11px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-muted);grid-column:3/6;}
 
-  .day-name {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-  }
-  .day-abbr {
-    font-family: var(--font-display);
-    font-size: 20px;
-    letter-spacing: 1.5px;
-    color: var(--text-primary);
-    line-height: 1;
-  }
-  .day-full {
-    font-size: 9px;
-    color: var(--text-muted);
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    font-weight: 700;
-  }
-  .today-tag {
-    display: inline-block;
-    margin-top: 3px;
-    padding: 1px 5px;
-    background: var(--accent);
-    color: var(--text-on-accent);
-    font-size: 8px;
-    font-weight: 800;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    border-radius: 3px;
-  }
+  /* Split day */
+  .day-row-expand{grid-column:1/-1;padding-top:8px;border-top:1px dashed var(--border);display:flex;flex-direction:column;gap:10px;}
+  .split-btn{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:7px;border:1px solid transparent;background:transparent;color:var(--text-muted);font-family:var(--font-body);font-size:12px;font-weight:700;cursor:pointer;align-self:flex-start;}
+  .split-btn-active{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:7px;border:1px solid var(--accent-border);background:var(--accent-muted);color:var(--accent);font-family:var(--font-body);font-size:12px;font-weight:700;cursor:pointer;align-self:flex-start;}
+  .block-editor-wrap{display:flex;flex-direction:column;gap:8px;}
+  .block-editor-hint{font-size:11px;color:var(--text-muted);font-weight:600;padding:0 2px;}
+  /* block-row: Od | Do | czas | trash */
+  .block-row{display:grid;grid-template-columns:118px 118px auto auto;align-items:center;gap:8px;padding:9px 12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;}
+  .block-duration{font-family:var(--font-mono);font-size:11px;color:var(--text-muted);min-width:32px;text-align:right;}
+  .trash-btn{width:24px;height:24px;border-radius:5px;background:transparent;border:1px solid var(--border);color:var(--text-muted);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;}
+  .add-block-btn{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:7px;border:1px dashed var(--border-strong);background:transparent;color:var(--text-muted);font-family:var(--font-body);font-size:12px;font-weight:700;cursor:pointer;align-self:flex-start;}
 
-  /* Toggle */
-  .toggle {
-    width: 40px; height: 22px;
-    border-radius: 999px;
-    background: var(--border);
-    border: 1px solid var(--border-strong);
-    position: relative;
-    cursor: pointer;
-    transition: all 160ms ease;
-    flex-shrink: 0;
-  }
-  .toggle::after {
-    content: '';
-    position: absolute;
-    top: 2px; left: 2px;
-    width: 16px; height: 16px;
-    border-radius: 50%;
-    background: var(--text-secondary);
-    transition: all 160ms ease;
-  }
-  .toggle.on {
-    background: var(--accent);
-    border-color: var(--accent);
-  }
-  .toggle.on::after {
-    left: 20px;
-    background: var(--text-on-accent);
-  }
+  /* Right panel */
+  .col-preview{position:sticky;top:0;display:flex;flex-direction:column;gap:12px;}
+  .preview-panel{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:12px;position:relative;}
+  .preview-panel::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:var(--hairline);border-radius:14px 14px 0 0;pointer-events:none;}
+  .preview-head{display:flex;align-items:baseline;justify-content:space-between;}
+  .preview-title{font-family:var(--font-display);font-size:18px;letter-spacing:1.8px;color:var(--text-primary);line-height:1;}
+  .preview-sub{font-family:var(--font-mono);font-size:10px;color:var(--text-muted);}
+  .timeline{display:flex;flex-direction:column;gap:5px;}
+  .tl-day{display:grid;grid-template-columns:36px 1fr auto;align-items:center;gap:8px;}
+  .tl-day-label{font-family:var(--font-display);font-size:13px;letter-spacing:1.3px;color:var(--text-secondary);line-height:1;}
+  .tl-day.today .tl-day-label{color:var(--accent);}
+  .tl-day.closed .tl-day-label{opacity:0.4;}
+  .tl-bar-wrap{position:relative;height:20px;background:var(--bg);border:1px solid var(--border);border-radius:4px;overflow:hidden;}
+  .tl-bar-fill{position:absolute;top:0;bottom:0;background:linear-gradient(90deg,var(--accent),var(--accent-hover));border-radius:3px;box-shadow:0 0 8px var(--accent-glow);}
+  .tl-bar-fill.dim{opacity:0.5;}
+  .tl-bar-wrap.closed .tl-bar-fill{display:none;}
+  .tl-day-hours{font-family:var(--font-mono);font-size:10px;font-weight:700;color:var(--text-primary);white-space:nowrap;min-width:58px;text-align:right;}
+  .tl-day.today .tl-day-hours{color:var(--accent);}
+  .tl-day.closed .tl-day-hours{color:var(--text-muted);font-weight:500;}
 
-  /* Time input */
-  .time-input {
-    display: inline-flex;
-    align-items: center;
-    background: var(--surface-raised);
-    border: 1px solid var(--border-strong);
-    border-radius: 8px;
-    padding: 8px 10px;
-    gap: 6px;
-    transition: all 140ms ease;
-  }
-  .time-input:focus-within {
-    border-color: var(--accent);
-    box-shadow: 0 0 0 3px var(--accent-muted);
-  }
-  .time-input input {
-    width: 54px;
-    background: transparent;
-    border: none;
-    outline: none;
-    color: var(--text-primary);
-    font-family: var(--font-mono);
-    font-weight: 700;
-    font-size: 14px;
-    letter-spacing: 0.5px;
-    text-align: center;
-  }
-  .time-input .label {
-    font-size: 9px;
-    font-weight: 800;
-    letter-spacing: 1.1px;
-    text-transform: uppercase;
-    color: var(--text-muted);
-  }
+  .preview-summary{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding-top:10px;border-top:1px dashed var(--border);}
+  .stat-box{padding:8px 10px;background:var(--bg);border:1px solid var(--border);border-radius:8px;display:flex;flex-direction:column;gap:3px;}
+  .stat-value{font-family:var(--font-mono);font-weight:700;font-size:16px;color:var(--text-primary);}
+  .stat-value .unit{font-size:10px;color:var(--accent);margin-left:2px;}
+  .stat-label{font-size:9px;font-weight:800;letter-spacing:1.1px;text-transform:uppercase;color:var(--text-muted);}
 
-  .time-arrow {
-    color: var(--text-muted);
-    display: inline-flex;
-    align-items: center;
-  }
+  .info-note{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;background:transparent;border:1px dashed var(--border);border-radius:10px;font-size:11px;line-height:1.5;color:var(--text-muted);}
+  .info-note svg{color:var(--accent);flex-shrink:0;margin-top:1px;}
+  .info-note strong{color:var(--text-primary);font-weight:700;}
+  .info-note a{color:var(--accent);font-weight:700;text-decoration:none;}
 
-  /* Slot info */
-  .slot-info {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    text-align: right;
-  }
-  .slot-count {
-    font-family: var(--font-mono);
-    font-size: 13px;
-    font-weight: 700;
-    color: var(--text-primary);
-    letter-spacing: 0.3px;
-  }
-  .slot-count.accent { color: var(--accent); }
-  .slot-hint {
-    font-size: 10px;
-    color: var(--text-muted);
-    letter-spacing: 0.3px;
-  }
+  /* Exceptions */
+  .exceptions{display:flex;flex-direction:column;gap:8px;}
+  .exception-item{display:grid;grid-template-columns:auto 1fr auto auto;align-items:center;gap:12px;padding:10px 14px;background:var(--bg);border:1px solid var(--border);border-radius:10px;}
+  .exception-item.auto{border-style:dashed;}
+  .exception-ico{width:30px;height:30px;border-radius:8px;background:var(--surface);border:1px solid var(--border);display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .exception-ico.holiday{color:var(--warning);background:var(--warning-muted);border-color:var(--warning-border);}
+  .exception-ico.vacation{color:var(--accent);background:var(--accent-muted);border-color:var(--accent-border);}
+  .exception-info{display:flex;flex-direction:column;gap:3px;}
+  .exception-name{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--text-primary);}
+  .exception-meta{font-size:10px;color:var(--text-muted);font-family:var(--font-mono);}
+  .exception-tag{padding:2px 6px;border-radius:3px;font-size:8px;font-weight:800;letter-spacing:1.1px;text-transform:uppercase;}
+  .exception-tag.holiday-tag{background:var(--warning-muted);border:1px solid var(--warning-border);color:var(--warning);}
+  .exception-tag.vacation-tag{background:var(--accent-muted);border:1px solid var(--accent-border);color:var(--accent);}
+  .add-exception-btn{padding:10px 16px;background:transparent;border:1px dashed var(--accent-border);border-radius:10px;color:var(--accent);font-family:var(--font-body);font-size:12px;font-weight:800;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px;}
 
-  /* Closed label */
-  .closed-label {
-    font-family: var(--font-body);
-    font-size: 11px;
-    font-weight: 800;
-    letter-spacing: 1.2px;
-    text-transform: uppercase;
-    color: var(--text-muted);
-    grid-column: 3 / 7;
-  }
+  /* Upcoming closures */
+  .upcoming-list{display:flex;flex-direction:column;gap:6px;}
+  .upcoming-item{display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--bg);border:1px solid var(--border);border-radius:8px;}
+  .upcoming-date{font-family:var(--font-mono);font-weight:700;font-size:11px;color:var(--text-primary);min-width:64px;}
+  .upcoming-name{flex:1;font-size:12px;color:var(--text-secondary);}
+  .upcoming-name strong{color:var(--text-primary);font-weight:700;}
+  .upcoming-badge{padding:2px 6px;border-radius:3px;font-size:8px;font-weight:800;letter-spacing:1px;text-transform:uppercase;}
+  .upcoming-badge.holiday{background:var(--warning-muted);border:1px solid var(--warning-border);color:var(--warning);}
+  .upcoming-badge.vacation{background:var(--accent-muted);border:1px solid var(--accent-border);color:var(--accent);}
 
-  /* Slot select per day */
-  .slot-select {
-    display: inline-flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 8px 10px;
-    background: var(--surface-raised);
-    border: 1px solid var(--border-strong);
-    border-radius: 8px;
-    font-family: var(--font-mono);
-    font-weight: 700;
-    font-size: 13px;
-    color: var(--text-primary);
-    cursor: pointer;
-    transition: all 140ms ease;
-    gap: 6px;
-    letter-spacing: 0.3px;
-  }
-  .slot-select:hover {
-    border-color: var(--accent);
-  }
-  .slot-select.override {
-    border-color: var(--accent-border);
-    background: var(--accent-muted);
-    color: var(--accent);
-  }
-  .slot-select .unit {
-    font-size: 10px;
-    color: var(--text-muted);
-    font-weight: 600;
-    margin-left: -2px;
-  }
-  .slot-select.override .unit { color: var(--accent); }
-  .slot-select .chev {
-    color: var(--text-muted);
-    display: inline-flex;
-    align-items: center;
-    margin-left: auto;
-  }
-  .slot-select-wrap {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-  }
-  .slot-override-tag {
-    font-family: var(--font-body);
-    font-size: 8px;
-    font-weight: 800;
-    letter-spacing: 1.1px;
-    text-transform: uppercase;
-    color: var(--accent);
-  }
-
-  .copy-btn {
-    padding: 6px 8px;
-    border-radius: 6px;
-    background: transparent;
-    border: 1px solid var(--border);
-    color: var(--text-muted);
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: all 140ms ease;
-  }
-  .copy-btn:hover { color: var(--accent); border-color: var(--accent-border); background: var(--accent-muted); }
-
-  /* Wyjątki */
-  .exceptions {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-  }
-  .exception-item {
-    display: grid;
-    grid-template-columns: auto 1fr auto auto;
-    align-items: center;
-    gap: 12px;
-    padding: 12px 14px;
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-  }
-  .exception-item.auto {
-    border-style: dashed;
-  }
-  .exception-ico {
-    width: 32px; height: 32px;
-    border-radius: 8px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--text-secondary);
-    flex-shrink: 0;
-  }
-  .exception-ico.holiday { color: var(--warning); background: var(--warning-muted); border-color: var(--warning-border); }
-  .exception-ico.vacation { color: var(--accent); background: var(--accent-muted); border-color: var(--accent-border); }
-
-  .exception-info { display: flex; flex-direction: column; gap: 3px; }
-  .exception-name {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 13px;
-    font-weight: 700;
-    color: var(--text-primary);
-  }
-  .exception-meta {
-    font-size: 11px;
-    color: var(--text-muted);
-    font-family: var(--font-mono);
-    letter-spacing: 0.3px;
-  }
-  .exception-tag {
-    padding: 2px 6px;
-    border-radius: 3px;
-    font-family: var(--font-body);
-    font-size: 9px;
-    font-weight: 800;
-    letter-spacing: 1.1px;
-    text-transform: uppercase;
-  }
-  .exception-tag.holiday-tag {
-    background: var(--warning-muted);
-    border: 1px solid var(--warning-border);
-    color: var(--warning);
-  }
-  .exception-tag.vacation-tag {
-    background: var(--accent-muted);
-    border: 1px solid var(--accent-border);
-    color: var(--accent);
-  }
-  .add-exception-btn {
-    padding: 12px 16px;
-    background: transparent;
-    border: 1px dashed var(--accent-border);
-    border-radius: 10px;
-    color: var(--accent);
-    font-family: var(--font-body);
-    font-size: 13px;
-    font-weight: 800;
-    letter-spacing: 0.5px;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    transition: all 140ms ease;
-  }
-  .add-exception-btn:hover {
-    background: var(--accent-muted);
-    border-color: var(--accent);
-  }
-
-  /* RIGHT — weekly preview */
-  .col-preview {
-    position: sticky;
-    top: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-  }
-
-  .preview-panel {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    padding: 16px;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    position: relative;
-  }
-  .preview-panel::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0;
-    height: 1px;
-    background: var(--hairline);
-  }
-
-  .preview-head {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-  }
-  .preview-title {
-    font-family: var(--font-display);
-    font-size: 18px;
-    letter-spacing: 1.8px;
-    color: var(--text-primary);
-    line-height: 1;
-  }
-  .preview-sub {
-    font-family: var(--font-mono);
-    font-size: 10px;
-    color: var(--text-muted);
-    letter-spacing: 0.3px;
-  }
-
-  /* Timeline */
-  .timeline {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-  }
-  .tl-hours-row {
-    display: grid;
-    grid-template-columns: 30px 1fr;
-    align-items: center;
-    gap: 8px;
-    font-family: var(--font-mono);
-    font-size: 9px;
-    color: var(--text-muted);
-    letter-spacing: 0.3px;
-    padding-bottom: 2px;
-  }
-  .tl-hours-scale {
-    display: grid;
-    grid-template-columns: repeat(12, 1fr);
-    gap: 0;
-  }
-  .tl-hours-scale span {
-    text-align: left;
-    padding-left: 2px;
-  }
-
-  .tl-day {
-    display: grid;
-    grid-template-columns: 30px 1fr auto;
-    align-items: center;
-    gap: 8px;
-  }
-  .tl-day-label {
-    font-family: var(--font-display);
-    font-size: 13px;
-    letter-spacing: 1.3px;
-    color: var(--text-secondary);
-    line-height: 1;
-  }
-  .tl-day.today .tl-day-label { color: var(--accent); }
-  .tl-day.closed .tl-day-label { opacity: 0.4; }
-
-  .tl-bar-wrap {
-    position: relative;
-    height: 22px;
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: 5px;
-    overflow: hidden;
-  }
-  .tl-bar-fill {
-    position: absolute;
-    top: 0; bottom: 0;
-    background: linear-gradient(90deg, var(--accent), var(--accent-hover));
-    border-radius: 3px;
-    box-shadow: 0 0 8px rgba(255, 107, 26, 0.3);
-  }
-  .tl-bar-wrap.closed .tl-bar-fill { display: none; }
-  .tl-bar-grid {
-    position: absolute;
-    inset: 0;
-    display: grid;
-    grid-template-columns: repeat(24, 1fr);
-    pointer-events: none;
-  }
-  .tl-bar-grid span {
-    border-right: 1px solid var(--hairline);
-  }
-  .tl-bar-grid span:nth-child(6n) {
-    border-right-color: var(--border);
-  }
-
-  .tl-day-hours {
-    font-family: var(--font-mono);
-    font-size: 10px;
-    font-weight: 700;
-    color: var(--text-primary);
-    letter-spacing: 0.3px;
-    white-space: nowrap;
-  }
-  .tl-day.today .tl-day-hours { color: var(--accent); }
-  .tl-day.closed .tl-day-hours { color: var(--text-muted); font-weight: 500; }
-
-  /* Summary */
-  .preview-summary {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-    padding-top: 10px;
-    border-top: 1px dashed var(--border);
-  }
-  .stat-box {
-    padding: 8px 10px;
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-  }
-  .stat-value {
-    font-family: var(--font-mono);
-    font-weight: 700;
-    font-size: 18px;
-    color: var(--text-primary);
-    letter-spacing: 0.3px;
-    line-height: 1.1;
-  }
-  .stat-value .unit { font-size: 10px; color: var(--accent); margin-left: 2px; }
-  .stat-label {
-    font-size: 9px;
-    font-weight: 800;
-    letter-spacing: 1.1px;
-    text-transform: uppercase;
-    color: var(--text-muted);
-    margin-top: 3px;
-  }
-
-  /* Upcoming exceptions preview */
-  .upcoming-list {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-  }
-  .upcoming-item {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 10px;
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-  }
-  .upcoming-date {
-    font-family: var(--font-mono);
-    font-weight: 700;
-    font-size: 11px;
-    color: var(--text-primary);
-    min-width: 54px;
-    letter-spacing: 0.3px;
-  }
-  .upcoming-name {
-    flex: 1;
-    font-size: 12px;
-    color: var(--text-secondary);
-  }
-  .upcoming-name strong { color: var(--text-primary); font-weight: 700; }
-
-  /* footer caption */
-  .caption {
-    max-width: 1440px;
-    width: 100%;
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 16px;
-    padding-top: 12px;
-    border-top: 1px solid var(--border);
-    font-family: var(--font-mono);
-    font-size: 11px;
-    color: var(--text-muted);
-    letter-spacing: 0.5px;
-  }
-  .caption strong {
-    color: var(--text-secondary);
-    font-weight: 500;
-    display: block;
-    margin-bottom: 4px;
-    text-transform: uppercase;
-    letter-spacing: 1.2px;
-    font-size: 10px;
-  }
-  .caption em { color: var(--accent); font-style: normal; }
+  .caption{max-width:1440px;width:100%;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;padding-top:12px;border-top:1px solid var(--border);font-family:var(--font-mono);font-size:11px;color:var(--text-muted);letter-spacing:0.5px;}
+  .caption strong{color:var(--text-secondary);font-weight:500;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:1.2px;font-size:10px;}
+  .caption em{color:var(--accent);font-style:normal;}
 </style>
 </head>
 <body>
 
-  <header class="canvas-label">
-    <span class="film-strip">OPONY PANEL — B2B-06</span>
-    <span class="slug">godziny pracy · 7 dni + wyjątki</span>
-    <span class="canvas-meta"><span class="pulse"></span>W:12.7 · US-24</span>
-  </header>
+<header class="canvas-label">
+  <span class="film-strip">OPONY PANEL — B2B-06</span>
+  <span class="slug">godziny pracy · otwarcie warsztatu + wyjątki</span>
+  <span class="canvas-meta"><span class="pulse"></span>W:12.9 · fix #1 stepper usunięty · fix #3 cancellation</span>
+</header>
 
-  <main class="desktop-frame" role="region" aria-label="Mockup — panel godzin pracy">
+<main class="desktop-frame">
+  <div class="browser-chrome" aria-hidden="true">
+    <span class="traffic-lights"><span class="light red"></span><span class="light yellow"></span><span class="light green"></span></span>
+    <span class="browser-tab"><span class="favicon">O</span>Opony Panel — Godziny pracy</span>
+    <span class="browser-address">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#2EE0A0" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+      <span>panel.opony.app</span><span style="color:var(--text-muted)">/settings/hours</span>
+    </span>
+  </div>
 
-    <div class="browser-chrome" aria-hidden="true">
-      <span class="traffic-lights">
-        <span class="light red"></span>
-        <span class="light yellow"></span>
-        <span class="light green"></span>
-      </span>
-      <span class="browser-tabs">
-        <span class="browser-tab active">
-          <span class="favicon">O</span>
-          Opony Panel — Godziny pracy
-        </span>
-      </span>
-      <span class="browser-address">
-        <svg class="lock" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
-        <span class="url">panel.opony.app</span><span class="path">/settings/hours</span>
-      </span>
-    </div>
+  <div class="app-root">
+    <aside class="sidebar">
+      <div class="sb-brand"><div class="wordmark">OPONY<span class="dot"></span></div><span class="panel-tag">PANEL</span></div>
+      <span class="sb-section-label">Dziś</span>
+      <button class="sb-item"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>Dashboard</button>
+      <button class="sb-item"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 10h18M8 2v4M16 2v4"/></svg>Kalendarz</button>
+      <button class="sb-item"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11H5a2 2 0 0 0-2 2v7h18v-7a2 2 0 0 0-2-2h-4M9 11V5a3 3 0 0 1 6 0v6M9 11h6"/></svg>Rezerwacje<span class="sb-badge">12</span></button>
+      <span class="sb-section-label">Warsztat</span>
+      <button class="sb-item"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>Cennik</button>
+      <button class="sb-item"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/></svg>Stanowiska</button>
+      <button class="sb-item"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>Pracownicy</button>
+      <button class="sb-item active"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Godziny pracy</button>
+      <div class="sb-spacer"></div>
+      <div class="sb-user"><div class="sb-avatar">MK</div><div class="sb-user-col"><span class="sb-user-name">MobilOpony Kasia</span><span class="sb-user-role">Provider · APPROVED</span></div></div>
+    </aside>
 
-    <div class="app-root">
+    <section class="main">
+      <header class="topbar">
+        <nav class="tb-breadcrumb"><span>Panel</span><span class="sep">/</span><span>Warsztat</span><span class="sep">/</span><span class="current">Godziny pracy</span></nav>
+        <span class="tb-spacer"></span>
+        <span class="saved-chip">Zapisano</span>
+        <button class="tb-btn">Przywróć</button>
+        <button class="tb-btn primary"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/></svg>Zapisz zmiany</button>
+      </header>
 
-      <!-- SIDEBAR -->
-      <aside class="sidebar" aria-label="Nawigacja główna">
-        <div class="sb-brand">
-          <div class="wordmark">OPONY<span class="dot"></span></div>
-          <span class="panel-tag">PANEL</span>
-        </div>
+      <div class="content">
+        <div class="col-form">
 
-        <span class="sb-section-label">Dziś</span>
-        <button class="sb-item">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>
-          Dashboard
-        </button>
-        <button class="sb-item">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 10h18M8 2v4M16 2v4"/></svg>
-          Kalendarz
-        </button>
-        <button class="sb-item">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11H5a2 2 0 0 0-2 2v7h18v-7a2 2 0 0 0-2-2h-4M9 11V5a3 3 0 0 1 6 0v6M9 11h6"/></svg>
-          Rezerwacje
-          <span class="sb-badge">12</span>
-        </button>
+          <header class="page-hero">
+            <div>
+              <h1 class="page-title">Godziny pracy</h1>
+              <div class="page-sub" style="color:var(--text-secondary)">6 dni aktywnych · capacity zarządzana w Stanowiskach</div>
+            </div>
+            <button class="tb-btn"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>Skopiuj Pon do wszystkich</button>
+          </header>
 
-        <span class="sb-section-label">Warsztat</span>
-        <button class="sb-item">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-          Cennik
-        </button>
-        <button class="sb-item active">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
-          Godziny pracy
-        </button>
-        <button class="sb-item">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
-          Strefa obsługi
-        </button>
-        <button class="sb-item">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15 9 22 9.5 17 14 18.5 21 12 17.5 5.5 21 7 14 2 9.5 9 9 12 2"/></svg>
-          Opinie
-          <span class="sb-badge">2</span>
-        </button>
-
-        <span class="sb-section-label">Konto</span>
-        <button class="sb-item">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
-          Ustawienia
-        </button>
-
-        <div class="sb-spacer"></div>
-
-        <div class="sb-user" role="button">
-          <div class="sb-avatar">MK</div>
-          <div class="sb-user-col">
-            <span class="sb-user-name">MobilOpony Kasia</span>
-            <span class="sb-user-role">Provider · APPROVED</span>
-          </div>
-        </div>
-      </aside>
-
-      <!-- MAIN -->
-      <section class="main">
-
-        <!-- TOPBAR -->
-        <header class="topbar">
-          <nav class="tb-breadcrumb">
-            <span>Panel</span>
-            <span class="sep">/</span>
-            <span>Warsztat</span>
-            <span class="sep">/</span>
-            <span class="current">Godziny pracy</span>
-          </nav>
-
-          <span class="tb-spacer"></span>
-
-          <span class="saved-chip">Zapisano · 2 min temu</span>
-
-          <button class="tb-btn">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 4v5h-5"/></svg>
-            Przywróć domyślne
-          </button>
-
-          <button class="tb-btn primary">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/></svg>
-            Zapisz zmiany
-          </button>
-        </header>
-
-        <!-- CONTENT -->
-        <div class="content">
-
-          <!-- LEFT: FORM -->
-          <div class="col-form">
-
-            <header class="page-hero">
+          <section class="sec-card">
+            <div class="sec-head">
               <div>
-                <h1 class="page-title">Godziny pracy</h1>
-                <div class="page-sub">
-                  <span class="stat-pill">45 min · domyślnie</span>
-                  <span><strong>85 slotów / tydz</strong> · 62 h tygodniowo · <span style="color: var(--accent); font-weight: 700;">2 dni z overrideem</span></span>
-                </div>
-              </div>
-              <div class="quick-actions">
-                <button class="tb-btn">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>
-                  Skopiuj Pon do wszystkich
-                </button>
-              </div>
-            </header>
-
-            <!-- Section: Domyślna długość wizyty -->
-            <section class="sec-card">
-              <div class="sec-head">
-                <h2 class="sec-title">Domyślna długość wizyty</h2>
-                <span class="sec-sub">Ustawiana dla nowych dni · możesz nadpisać indywidualnie w tabeli niżej</span>
-              </div>
-              <div class="slot-size-row">
-                <span class="slot-size-label">Standard:</span>
-                <div class="slot-chips" role="tablist">
-                  <button class="slot-chip" role="tab">30 min</button>
-                  <button class="slot-chip active" role="tab" aria-selected="true">45 min</button>
-                  <button class="slot-chip" role="tab">60 min</button>
-                  <button class="slot-chip" role="tab">90 min</button>
-                </div>
-                <button class="tb-btn" style="margin-left: auto;" type="button">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-8 8-8 8s-8-3-8-8V5l8-3 8 3v8Z"/></svg>
-                  Zastosuj do wszystkich dni
-                </button>
-              </div>
-              <div style="font-size: 11px; color: var(--text-muted); display: inline-flex; align-items: center; gap: 6px;">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="var(--accent)"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="16" r="0.5" fill="currentColor"/><path d="M12 8v5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-                Krótszy slot (30 min) w weekend to sposób na zmieszczenie więcej wizyt gdy masz mniej godzin pracy — sprawdzone przez warsztaty w Krakowie i Tarnowie.
-              </div>
-            </section>
-
-            <!-- Section: Week rows -->
-            <section class="sec-card">
-              <div class="sec-head">
                 <h2 class="sec-title">Tydzień</h2>
-                <span class="sec-sub">Toggle aby włączyć/wyłączyć dzień · Pn–Pt 8–18, Sb 9–14, Nd nieczynne</span>
+                <div class="sec-sub" style="margin-top:2px;">Godziny otwarcia warsztatu — zewnętrzna granica rezerwacji</div>
               </div>
+              <a class="cennik-link" href="#">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+                Czas wizyty → Cennik
+              </a>
+            </div>
 
-              <!-- PONIEDZIAŁEK — today -->
-              <div class="day-row today">
-                <div class="day-name">
-                  <span class="day-abbr">PON</span>
-                  <span class="day-full">Poniedziałek</span>
-                  <span class="today-tag">Dziś</span>
-                </div>
-                <span class="toggle on" role="switch" aria-checked="true" aria-label="Poniedziałek otwarte"></span>
-                <label class="time-input">
-                  <span class="label">Od</span>
-                  <input type="time" value="08:00" />
-                </label>
-                <label class="time-input">
-                  <span class="label">Do</span>
-                  <input type="time" value="18:00" />
-                </label>
-                <button class="slot-select" aria-label="Długość slotu: 45 min (domyślna)">
-                  45<span class="unit">min</span>
-                  <span class="chev" aria-hidden="true">
-                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
-                  </span>
-                </button>
-                <div class="slot-info">
-                  <span class="slot-count accent">13 slotów</span>
-                  <span class="slot-hint">10 h pracy</span>
-                </div>
-                <button class="copy-btn" aria-label="Skopiuj do innych dni">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>
-                </button>
+            <!-- PON — today -->
+            <div class="day-row today">
+              <div class="day-name"><span class="day-abbr">PON</span><span class="day-full">Poniedziałek</span><span class="today-tag">Dziś</span></div>
+              <span class="toggle on" role="switch" aria-checked="true"></span>
+              <label class="time-input"><span class="time-label">Od</span><input type="time" value="08:00"/></label>
+              <label class="time-input"><span class="time-label">Do</span><input type="time" value="18:00"/></label>
+              <div class="day-hours-info"><span class="day-hours-val accent">10 h</span></div>
+              <button class="copy-btn"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></button>
+              <div class="day-row-expand">
+                <button class="split-btn"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3m8 0h3a2 2 0 0 0 2-2v-3"/><line x1="12" y1="8" x2="12" y2="16"/></svg>Podziel dzień (przerwa)</button>
               </div>
+            </div>
 
-              <!-- Wt -->
-              <div class="day-row">
-                <div class="day-name">
-                  <span class="day-abbr">WT</span>
-                  <span class="day-full">Wtorek</span>
+            <!-- WT — split active, no stanowiska stepper -->
+            <div class="day-row" style="border-color:var(--accent-border);">
+              <div class="day-name"><span class="day-abbr">WT</span><span class="day-full">Wtorek</span></div>
+              <span class="toggle on" role="switch" aria-checked="true"></span>
+              <label class="time-input"><span class="time-label">Od</span><input type="time" value="08:00"/></label>
+              <label class="time-input"><span class="time-label">Do</span><input type="time" value="18:00"/></label>
+              <div class="day-hours-info"><span class="day-hours-val">10 h</span><span class="day-hours-sub">z przerwą</span></div>
+              <button class="copy-btn"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></button>
+              <div class="day-row-expand">
+                <button class="split-btn-active"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3m8 0h3a2 2 0 0 0 2-2v-3"/><line x1="12" y1="8" x2="12" y2="16"/></svg>Usuń podział</button>
+                <div class="block-editor-wrap">
+                  <p class="block-editor-hint">Podziel na bloki (np. przerwa obiadowa). Capacity wynika ze Stanowisk.</p>
+                  <div class="block-row">
+                    <label class="time-input"><span class="time-label">Od</span><input type="time" value="08:00"/></label>
+                    <label class="time-input"><span class="time-label">Do</span><input type="time" value="13:00"/></label>
+                    <span class="block-duration">5 h</span>
+                    <button class="trash-btn"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
+                  </div>
+                  <div class="block-row">
+                    <label class="time-input"><span class="time-label">Od</span><input type="time" value="14:00"/></label>
+                    <label class="time-input"><span class="time-label">Do</span><input type="time" value="18:00"/></label>
+                    <span class="block-duration">4 h</span>
+                    <button class="trash-btn"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
+                  </div>
+                  <button class="add-block-btn"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>Dodaj blok</button>
                 </div>
-                <span class="toggle on" role="switch" aria-checked="true"></span>
-                <label class="time-input"><span class="label">Od</span><input type="time" value="08:00" /></label>
-                <label class="time-input"><span class="label">Do</span><input type="time" value="18:00" /></label>
-                <button class="slot-select">45<span class="unit">min</span><span class="chev"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></span></button>
-                <div class="slot-info">
-                  <span class="slot-count">13 slotów</span>
-                  <span class="slot-hint">10 h pracy</span>
-                </div>
-                <button class="copy-btn" aria-label="Skopiuj">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>
-                </button>
               </div>
+            </div>
 
-              <!-- Śr -->
-              <div class="day-row">
-                <div class="day-name">
-                  <span class="day-abbr">ŚR</span>
-                  <span class="day-full">Środa</span>
-                </div>
-                <span class="toggle on" role="switch" aria-checked="true"></span>
-                <label class="time-input"><span class="label">Od</span><input type="time" value="08:00" /></label>
-                <label class="time-input"><span class="label">Do</span><input type="time" value="18:00" /></label>
-                <button class="slot-select">45<span class="unit">min</span><span class="chev"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></span></button>
-                <div class="slot-info">
-                  <span class="slot-count">13 slotów</span>
-                  <span class="slot-hint">10 h pracy</span>
-                </div>
-                <button class="copy-btn">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>
-                </button>
-              </div>
+            <!-- ŚR CZW PT -->
+            <div class="day-row">
+              <div class="day-name"><span class="day-abbr">ŚR</span><span class="day-full">Środa</span></div>
+              <span class="toggle on"></span>
+              <label class="time-input"><span class="time-label">Od</span><input type="time" value="08:00"/></label>
+              <label class="time-input"><span class="time-label">Do</span><input type="time" value="18:00"/></label>
+              <div class="day-hours-info"><span class="day-hours-val">10 h</span></div>
+              <button class="copy-btn"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></button>
+              <div class="day-row-expand"><button class="split-btn"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3m8 0h3a2 2 0 0 0 2-2v-3"/><line x1="12" y1="8" x2="12" y2="16"/></svg>Podziel dzień (przerwa)</button></div>
+            </div>
+            <div class="day-row">
+              <div class="day-name"><span class="day-abbr">CZW</span><span class="day-full">Czwartek</span></div>
+              <span class="toggle on"></span>
+              <label class="time-input"><span class="time-label">Od</span><input type="time" value="08:00"/></label>
+              <label class="time-input"><span class="time-label">Do</span><input type="time" value="18:00"/></label>
+              <div class="day-hours-info"><span class="day-hours-val">10 h</span></div>
+              <button class="copy-btn"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></button>
+              <div class="day-row-expand"><button class="split-btn"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3m8 0h3a2 2 0 0 0 2-2v-3"/><line x1="12" y1="8" x2="12" y2="16"/></svg>Podziel dzień (przerwa)</button></div>
+            </div>
+            <div class="day-row">
+              <div class="day-name"><span class="day-abbr">PT</span><span class="day-full">Piątek</span></div>
+              <span class="toggle on"></span>
+              <label class="time-input"><span class="time-label">Od</span><input type="time" value="08:00"/></label>
+              <label class="time-input"><span class="time-label">Do</span><input type="time" value="18:00"/></label>
+              <div class="day-hours-info"><span class="day-hours-val">10 h</span></div>
+              <button class="copy-btn"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></button>
+              <div class="day-row-expand"><button class="split-btn"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3m8 0h3a2 2 0 0 0 2-2v-3"/><line x1="12" y1="8" x2="12" y2="16"/></svg>Podziel dzień (przerwa)</button></div>
+            </div>
 
-              <!-- Cz — with override 60 min -->
-              <div class="day-row">
-                <div class="day-name">
-                  <span class="day-abbr">CZ</span>
-                  <span class="day-full">Czwartek</span>
-                </div>
-                <span class="toggle on" role="switch" aria-checked="true"></span>
-                <label class="time-input"><span class="label">Od</span><input type="time" value="08:00" /></label>
-                <label class="time-input"><span class="label">Do</span><input type="time" value="18:00" /></label>
-                <div class="slot-select-wrap">
-                  <button class="slot-select override">60<span class="unit">min</span><span class="chev"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></span></button>
-                  <span class="slot-override-tag">Nadpisane</span>
-                </div>
-                <div class="slot-info">
-                  <span class="slot-count">10 slotów</span>
-                  <span class="slot-hint">10 h pracy</span>
-                </div>
-                <button class="copy-btn">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>
-                </button>
-              </div>
+            <!-- SOB -->
+            <div class="day-row">
+              <div class="day-name"><span class="day-abbr">SOB</span><span class="day-full">Sobota</span></div>
+              <span class="toggle on"></span>
+              <label class="time-input"><span class="time-label">Od</span><input type="time" value="09:00"/></label>
+              <label class="time-input"><span class="time-label">Do</span><input type="time" value="14:00"/></label>
+              <div class="day-hours-info"><span class="day-hours-val">5 h</span></div>
+              <button class="copy-btn"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></button>
+              <div class="day-row-expand"><button class="split-btn"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3m8 0h3a2 2 0 0 0 2-2v-3"/><line x1="12" y1="8" x2="12" y2="16"/></svg>Podziel dzień (przerwa)</button></div>
+            </div>
 
-              <!-- Pt -->
-              <div class="day-row">
-                <div class="day-name">
-                  <span class="day-abbr">PT</span>
-                  <span class="day-full">Piątek</span>
-                </div>
-                <span class="toggle on" role="switch" aria-checked="true"></span>
-                <label class="time-input"><span class="label">Od</span><input type="time" value="08:00" /></label>
-                <label class="time-input"><span class="label">Do</span><input type="time" value="18:00" /></label>
-                <button class="slot-select">45<span class="unit">min</span><span class="chev"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></span></button>
-                <div class="slot-info">
-                  <span class="slot-count">13 slotów</span>
-                  <span class="slot-hint">10 h pracy</span>
-                </div>
-                <button class="copy-btn">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>
-                </button>
-              </div>
+            <!-- ND -->
+            <div class="day-row closed">
+              <div class="day-name"><span class="day-abbr">ND</span><span class="day-full">Niedziela</span></div>
+              <span class="toggle" role="switch" aria-checked="false"></span>
+              <span class="closed-label">— Nieczynne —</span>
+              <button class="copy-btn"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></button>
+            </div>
 
-              <!-- Sb — override 30 min (weekend quick change) -->
-              <div class="day-row">
-                <div class="day-name">
-                  <span class="day-abbr">SB</span>
-                  <span class="day-full">Sobota</span>
-                </div>
-                <span class="toggle on" role="switch" aria-checked="true"></span>
-                <label class="time-input"><span class="label">Od</span><input type="time" value="09:00" /></label>
-                <label class="time-input"><span class="label">Do</span><input type="time" value="14:00" /></label>
-                <div class="slot-select-wrap">
-                  <button class="slot-select override">30<span class="unit">min</span><span class="chev"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></span></button>
-                  <span class="slot-override-tag">Nadpisane</span>
-                </div>
-                <div class="slot-info">
-                  <span class="slot-count accent">10 slotów</span>
-                  <span class="slot-hint">5 h pracy</span>
-                </div>
-                <button class="copy-btn">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>
-                </button>
-              </div>
+            <div class="info-note">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/></svg>
+              <span>Tutaj ustawiasz <strong>kiedy warsztat jest otwarty</strong> — zewnętrzna granica rezerwacji. Liczba równoległych wizyt wynika ze <a href="#">Stanowisk →</a>. Czas wizyty — z <a href="#">Cennika →</a></span>
+            </div>
+          </section>
 
-              <!-- Nd -->
-              <div class="day-row closed">
-                <div class="day-name">
-                  <span class="day-abbr">ND</span>
-                  <span class="day-full">Niedziela</span>
-                </div>
-                <span class="toggle" role="switch" aria-checked="false"></span>
-                <span class="closed-label">— Nieczynne —</span>
-                <button class="copy-btn">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>
-                </button>
-              </div>
-            </section>
-
-            <!-- Section: Wyjątki -->
-            <section class="sec-card">
-              <div class="sec-head">
+          <!-- Wyjątki i urlopy -->
+          <section class="sec-card">
+            <div class="sec-head">
+              <div>
                 <h2 class="sec-title">Wyjątki i urlopy</h2>
-                <span class="sec-sub">Dni zamknięte poza cyklem · święta PL dodane automatycznie</span>
-              </div>
-
-              <div class="exceptions">
-
-                <!-- Polish holiday — auto -->
-                <div class="exception-item auto">
-                  <span class="exception-ico holiday" aria-hidden="true">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M2 12h20"/><circle cx="12" cy="12" r="9"/></svg>
-                  </span>
-                  <div class="exception-info">
-                    <span class="exception-name">Wielkanoc · Pon wielkanocny <span class="exception-tag holiday-tag">Święto PL · auto</span></span>
-                    <span class="exception-meta">05 kwi – 06 kwi 2026 · cały dzień nieczynne</span>
-                  </div>
-                  <span class="toggle on" role="switch" aria-checked="true" aria-label="Uwzględnij święto"></span>
-                  <button class="copy-btn" aria-label="Szczegóły">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg>
-                  </button>
-                </div>
-
-                <div class="exception-item auto">
-                  <span class="exception-ico holiday" aria-hidden="true">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M2 12h20"/><circle cx="12" cy="12" r="9"/></svg>
-                  </span>
-                  <div class="exception-info">
-                    <span class="exception-name">Święto Pracy · Konstytucja 3 Maja <span class="exception-tag holiday-tag">Święto PL · auto</span></span>
-                    <span class="exception-meta">01 maja – 03 maja 2026 · cały dzień nieczynne</span>
-                  </div>
-                  <span class="toggle on" role="switch" aria-checked="true"></span>
-                  <button class="copy-btn"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></button>
-                </div>
-
-                <!-- Custom vacation -->
-                <div class="exception-item">
-                  <span class="exception-ico vacation" aria-hidden="true">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12V8a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v4M3 12h18l-1 9H4l-1-9Z"/><path d="M9 6V4a2 2 0 0 1 4 0v2M14 6V4a2 2 0 0 1 4 0v2"/></svg>
-                  </span>
-                  <div class="exception-info">
-                    <span class="exception-name">Urlop letni <span class="exception-tag vacation-tag">Urlop</span></span>
-                    <span class="exception-meta">20 lip – 02 sie 2026 · 14 dni</span>
-                  </div>
-                  <span class="toggle on" role="switch" aria-checked="true"></span>
-                  <button class="copy-btn" aria-label="Edytuj">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4Z"/></svg>
-                  </button>
-                </div>
-
-                <button class="add-exception-btn" type="button">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
-                  Dodaj urlop lub zmianę godzin
-                </button>
-              </div>
-            </section>
-
-          </div>
-
-          <!-- RIGHT: WEEKLY TIMELINE PREVIEW -->
-          <aside class="col-preview">
-
-            <div class="preview-panel">
-              <div class="preview-head">
-                <h3 class="preview-title">Twój tydzień</h3>
-                <span class="preview-sub">14–20 kwi 2026</span>
-              </div>
-
-              <div class="timeline">
-                <div class="tl-hours-row">
-                  <span></span>
-                  <span class="tl-hours-scale" aria-hidden="true">
-                    <span>0</span><span>2</span><span>4</span><span>6</span><span>8</span><span>10</span><span>12</span><span>14</span><span>16</span><span>18</span><span>20</span><span>22</span>
-                  </span>
-                </div>
-
-                <!-- Pn today -->
-                <div class="tl-day today">
-                  <span class="tl-day-label">PON</span>
-                  <div class="tl-bar-wrap">
-                    <div class="tl-bar-fill" style="left: 33.3%; width: 41.7%;"></div>
-                    <div class="tl-bar-grid" aria-hidden="true">
-                      <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
-                    </div>
-                  </div>
-                  <span class="tl-day-hours">8:00 – 18:00</span>
-                </div>
-
-                <div class="tl-day">
-                  <span class="tl-day-label">WT</span>
-                  <div class="tl-bar-wrap">
-                    <div class="tl-bar-fill" style="left: 33.3%; width: 41.7%;"></div>
-                    <div class="tl-bar-grid" aria-hidden="true">
-                      <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
-                    </div>
-                  </div>
-                  <span class="tl-day-hours">8:00 – 18:00</span>
-                </div>
-
-                <div class="tl-day">
-                  <span class="tl-day-label">ŚR</span>
-                  <div class="tl-bar-wrap">
-                    <div class="tl-bar-fill" style="left: 33.3%; width: 41.7%;"></div>
-                    <div class="tl-bar-grid" aria-hidden="true">
-                      <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
-                    </div>
-                  </div>
-                  <span class="tl-day-hours">8:00 – 18:00</span>
-                </div>
-
-                <div class="tl-day">
-                  <span class="tl-day-label">CZ</span>
-                  <div class="tl-bar-wrap">
-                    <div class="tl-bar-fill" style="left: 33.3%; width: 41.7%;"></div>
-                    <div class="tl-bar-grid" aria-hidden="true">
-                      <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
-                    </div>
-                  </div>
-                  <span class="tl-day-hours">8:00 – 18:00</span>
-                </div>
-
-                <div class="tl-day">
-                  <span class="tl-day-label">PT</span>
-                  <div class="tl-bar-wrap">
-                    <div class="tl-bar-fill" style="left: 33.3%; width: 41.7%;"></div>
-                    <div class="tl-bar-grid" aria-hidden="true">
-                      <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
-                    </div>
-                  </div>
-                  <span class="tl-day-hours">8:00 – 18:00</span>
-                </div>
-
-                <div class="tl-day">
-                  <span class="tl-day-label">SB</span>
-                  <div class="tl-bar-wrap">
-                    <div class="tl-bar-fill" style="left: 37.5%; width: 20.8%;"></div>
-                    <div class="tl-bar-grid" aria-hidden="true">
-                      <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
-                    </div>
-                  </div>
-                  <span class="tl-day-hours">9:00 – 14:00</span>
-                </div>
-
-                <div class="tl-day closed">
-                  <span class="tl-day-label">ND</span>
-                  <div class="tl-bar-wrap closed">
-                    <div class="tl-bar-grid" aria-hidden="true">
-                      <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
-                    </div>
-                  </div>
-                  <span class="tl-day-hours">Nieczynne</span>
-                </div>
-              </div>
-
-              <div class="preview-summary">
-                <div class="stat-box">
-                  <div class="stat-value">62<span class="unit">h</span></div>
-                  <div class="stat-label">tygodniowo</div>
-                </div>
-                <div class="stat-box">
-                  <div class="stat-value">85<span class="unit">slotów</span></div>
-                  <div class="stat-label">na tydzień</div>
-                </div>
-              </div>
-              <div style="font-size: 10px; color: var(--text-muted); line-height: 1.5; text-align: center; padding: 6px 0 2px;">
-                <span style="color: var(--accent); font-weight: 700;">Cz:</span> 60 min (10 slotów) · <span style="color: var(--accent); font-weight: 700;">Sb:</span> 30 min (10 slotów) — reszta 45 min
+                <div class="sec-sub" style="margin-top:2px;">Dni zamknięte poza cyklem · święta PL dodawane automatycznie</div>
               </div>
             </div>
-
-            <!-- Upcoming -->
-            <div class="preview-panel">
-              <div class="preview-head">
-                <h3 class="preview-title">Najbliższe zamknięcia</h3>
-                <span class="preview-sub">3 / 12</span>
+            <div class="exceptions">
+              <div class="exception-item auto">
+                <span class="exception-ico holiday">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M2 12h20"/><circle cx="12" cy="12" r="9"/></svg>
+                </span>
+                <div class="exception-info">
+                  <span class="exception-name">Święto Pracy · Konstytucja 3 Maja <span class="exception-tag holiday-tag">Święto PL · auto</span></span>
+                  <span class="exception-meta">01 maj – 03 maj 2026 · cały dzień nieczynne</span>
+                </div>
+                <span class="toggle on" role="switch" aria-checked="true"></span>
+                <button class="copy-btn"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></button>
               </div>
-              <div class="upcoming-list">
-                <div class="upcoming-item">
-                  <span class="upcoming-date">05 kwi</span>
-                  <span class="upcoming-name"><strong>Pon wielkanocny</strong> · święto</span>
+              <div class="exception-item">
+                <span class="exception-ico vacation">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12V8a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v4M3 12h18l-1 9H4l-1-9Z"/></svg>
+                </span>
+                <div class="exception-info">
+                  <span class="exception-name">Urlop letni <span class="exception-tag vacation-tag">Urlop</span></span>
+                  <span class="exception-meta">20 lip – 02 sie 2026 · 14 dni</span>
                 </div>
-                <div class="upcoming-item">
-                  <span class="upcoming-date">01 maj</span>
-                  <span class="upcoming-name"><strong>Święto Pracy</strong> · święto</span>
-                </div>
-                <div class="upcoming-item">
-                  <span class="upcoming-date">20–02 sie</span>
-                  <span class="upcoming-name"><strong>Urlop letni</strong> · 14 dni</span>
-                </div>
+                <span class="toggle on" role="switch" aria-checked="true"></span>
+                <button class="copy-btn"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4Z"/></svg></button>
               </div>
+              <button class="add-exception-btn">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+                Dodaj urlop lub zmianę godzin
+              </button>
             </div>
-
-          </aside>
+          </section>
 
         </div>
 
-      </section>
-    </div>
+        <aside class="col-preview">
+          <div class="preview-panel">
+            <div class="preview-head">
+              <h3 class="preview-title">Twój tydzień</h3>
+              <span class="preview-sub">wg bieżących ustawień</span>
+            </div>
+            <div class="timeline">
+              <div class="tl-day today">
+                <span class="tl-day-label">PON</span>
+                <div class="tl-bar-wrap"><div class="tl-bar-fill" style="left:33.3%;width:41.7%;"></div></div>
+                <span class="tl-day-hours">08–18</span>
+              </div>
+              <div class="tl-day">
+                <span class="tl-day-label">WT</span>
+                <div class="tl-bar-wrap">
+                  <div class="tl-bar-fill" style="left:33.3%;width:20.8%;"></div>
+                  <div class="tl-bar-fill dim" style="left:62.5%;width:16.7%;"></div>
+                </div>
+                <span class="tl-day-hours">08–13, 14–18</span>
+              </div>
+              <div class="tl-day"><span class="tl-day-label">ŚR</span><div class="tl-bar-wrap"><div class="tl-bar-fill" style="left:33.3%;width:41.7%;"></div></div><span class="tl-day-hours">08–18</span></div>
+              <div class="tl-day"><span class="tl-day-label">CZW</span><div class="tl-bar-wrap"><div class="tl-bar-fill" style="left:33.3%;width:41.7%;"></div></div><span class="tl-day-hours">08–18</span></div>
+              <div class="tl-day"><span class="tl-day-label">PT</span><div class="tl-bar-wrap"><div class="tl-bar-fill" style="left:33.3%;width:41.7%;"></div></div><span class="tl-day-hours">08–18</span></div>
+              <div class="tl-day"><span class="tl-day-label">SOB</span><div class="tl-bar-wrap"><div class="tl-bar-fill" style="left:37.5%;width:20.8%;"></div></div><span class="tl-day-hours">09–14</span></div>
+              <div class="tl-day closed"><span class="tl-day-label">ND</span><div class="tl-bar-wrap closed"></div><span class="tl-day-hours">—</span></div>
+            </div>
+            <div class="preview-summary">
+              <div class="stat-box">
+                <div class="stat-value">55<span class="unit">h</span></div>
+                <div class="stat-label">tygodniowo</div>
+              </div>
+              <div class="stat-box">
+                <div class="stat-value">6<span class="unit">dni</span></div>
+                <div class="stat-label">aktywnych</div>
+              </div>
+            </div>
+            <div class="info-note">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/></svg>
+              <span style="font-size:10px;">Capacity (ile wizyt równolegle) wynika z aktywnych <strong>Stanowisk</strong> i ich pracowników — nie z tego ekranu.</span>
+            </div>
+          </div>
 
-  </main>
+          <div class="preview-panel">
+            <div class="preview-head">
+              <h3 class="preview-title">Najbliższe zamknięcia</h3>
+              <span class="preview-sub">2 wpisy</span>
+            </div>
+            <div class="upcoming-list">
+              <div class="upcoming-item">
+                <span class="upcoming-date">1–3 maj</span>
+                <span class="upcoming-name"><strong>Święto Pracy / Konstytucja</strong></span>
+                <span class="upcoming-badge holiday">Święto</span>
+              </div>
+              <div class="upcoming-item">
+                <span class="upcoming-date">20 lip–2 sie</span>
+                <span class="upcoming-name"><strong>Urlop letni</strong> · 14 dni</span>
+                <span class="upcoming-badge vacation">Urlop</span>
+              </div>
+            </div>
+            <!-- Fix #3: ujednolicona polityka cancellation -->
+            <div class="info-note" style="padding:8px 10px;">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              <span style="font-size:10px;color:var(--warning);">Nowe rezerwacje blokowane automatycznie. <strong style="color:var(--warning);">Istniejące wymagają ręcznego anulowania</strong> — przejdź do <a href="#" style="color:var(--warning);">Rezerwacji →</a></span>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </section>
+  </div>
+</main>
 
-  <footer class="caption">
-    <div>
-      <strong>Layout</strong>
-      Sidebar z <em>Godziny pracy aktywny</em> · Topbar: breadcrumb + „Zapisano · 2 min temu" (success green) + Przywróć domyślne / Zapisz zmiany · 2-kol content: Form (lewa 1fr) + <em>Weekly timeline preview 380px sticky</em> · Hero „GODZINY PRACY" (Bebas 38px) + stat-pill <em>45 min/slot</em> + „51 slotów/tydz · 62h"
-    </div>
-    <div>
-      <strong>Form sekcje</strong>
-      Slot size chips (30/45/<em>45 active amber</em>/60/90 min) + wpływ „~13 slotów/dzień" · Tydzień: 7 day-rows z toggle/time-input/slot-count, Pon <em>today</em> (amber left stripe + „Dziś" tag), Nd closed (opacity 0.6) · Wyjątki: 2 auto święta PL (dashed border, warning yellow icon + badge) + 1 custom urlop letni (amber icon + badge) + dashed „+ Dodaj urlop"
-    </div>
-  </footer>
+<footer class="caption">
+  <div>
+    <strong>Model danych — godziny pracy</strong>
+    WorkingHours: <em>dayOfWeek · openTime · closeTime · isClosed · blocks[]</em>.
+    Blocks = okna dostępności (dla przerw). <em>Brak workstations/capacity</em> — wynika ze Stanowisk.
+    Godziny warsztatu = zewnętrzna granica; stanowisko nie może mieć slotów poza tym oknem.
+  </div>
+  <div>
+    <strong>Polityka cancellation (fix #3)</strong>
+    Wyjątek/urlop warsztatu: <em>nowe rezerwacje blokowane automatycznie</em>.
+    Istniejące: provider anuluje ręcznie w Rezerwacjach (brak auto-cancel — klient nie dostaje niespodziewanego anulowania).
+    Urlop pracownika (B2B-08): ta sama polityka — spójna.
+  </div>
+</footer>
 
 </body>
 </html>

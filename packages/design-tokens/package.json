@@ -1,0 +1,14 @@
+{
+  "name": "@opony/design-tokens",
+  "version": "0.1.0",
+  "private": true,
+  "main": "./tokens.json",
+  "exports": {
+    ".": "./tokens.json",
+    "./ts": "./src/index.ts"
+  },
+  "scripts": {
+    "build": "echo \"design-tokens: no build step\"",
+    "lint": "echo \"design-tokens: no lint\""
+  }
+}

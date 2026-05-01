@@ -506,6 +506,15 @@
       <strong>Stany cell</strong>
       <em>Empty</em>: surface + border muted · <em>Filled</em>: amber muted bg + amber border + amber digit w mono · <em>Active</em>: amber pełny border + 3px glow ring + 6px shadow + pulsujący 2px cursor (blink 1s)
     </div>
+    <div style="grid-column: 1 / -1; border-top: 1px solid var(--border); padding-top: 12px; margin-top: 4px;">
+      <strong>DS Components</strong>
+      <code style="font-family:var(--font-mono);color:var(--text-secondary);font-size:10px">Button</code> iconOnly secondary (back) ·
+      <code style="font-family:var(--font-mono);color:var(--text-secondary);font-size:10px">OTPInput</code> 6 komórek (stany: empty / filled amber / active z glow + kursorem) ·
+      <em>❌ TimerPill</em> ("Kod ważny 4:47" + zielona pulsująca kropka, stan urgent: wartość w --warning) ·
+      <code style="font-family:var(--font-mono);color:var(--text-secondary);font-size:10px">Button</code> variant="link" disabled+countdown "Wyślij ponownie (za 47s)" ·
+      <code style="font-family:var(--font-mono);color:var(--text-secondary);font-size:10px">Chip</code> lub <code style="font-family:var(--font-mono);color:var(--text-secondary);font-size:10px">Badge</code> "Próba 2/3" warning yellow (<em>⚠️ Chip/Badge bez wariantu warning</em>) ·
+      <code style="font-family:var(--font-mono);color:var(--text-secondary);font-size:10px">Button</code> variant="link" "Potrzebujesz pomocy?"
+    </div>
   </footer>
 
   <!-- States preview — before/after timer -->

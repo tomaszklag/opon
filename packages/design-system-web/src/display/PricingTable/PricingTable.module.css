@@ -1,0 +1,95 @@
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.table {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.row:last-child {
+  border-bottom: none;
+}
+
+.row.highlight {
+  background: var(--accent-muted);
+  padding-left: 19px;
+}
+
+.row.highlight::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--accent);
+}
+
+.sizeCol {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.size {
+  font-size: var(--text-md);
+  font-weight: var(--font-semibold);
+  color: var(--text-primary);
+}
+
+.yourTag {
+  padding: 2px 6px;
+  background: var(--accent);
+  color: var(--text-on-accent);
+  font-family: var(--font-body);
+  font-size: var(--text-2xs);
+  font-weight: var(--font-extrabold);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  border-radius: var(--radius-xs);
+}
+
+.price {
+  font-family: var(--font-mono);
+  font-weight: var(--font-bold);
+  font-size: var(--text-2xl);
+  color: var(--text-primary);
+}
+
+.highlight .price {
+  color: var(--accent);
+  font-size: var(--text-4xl);
+}
+
+.surcharge {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-avatar);
+  font-size: var(--text-base);
+  color: var(--text-secondary);
+}
+
+.surchargeValue {
+  font-family: var(--font-mono);
+  font-weight: var(--font-bold);
+  font-size: var(--text-base);
+  color: var(--success);
+  letter-spacing: 0.5px;
+}

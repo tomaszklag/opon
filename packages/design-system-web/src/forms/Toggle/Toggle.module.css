@@ -1,0 +1,121 @@
+.wrapper {
+  display: inline-flex;
+}
+
+.wrapper.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.label {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  cursor: pointer;
+  user-select: none;
+}
+
+.disabled .label {
+  cursor: not-allowed;
+}
+
+.input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* Track */
+.track {
+  position: relative;
+  flex-shrink: 0;
+  border-radius: var(--radius-full);
+  background: var(--surface-hover);
+  border: 1px solid var(--border);
+  transition: background var(--transition-fast), border-color var(--transition-fast);
+}
+
+.track.md {
+  width: 44px;
+  height: 24px;
+}
+
+.track.sm {
+  width: 36px;
+  height: 20px;
+}
+
+.input:checked + .track {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.input:checked + .track.error {
+  background: var(--danger);
+  border-color: var(--danger);
+}
+
+.input:focus-visible + .track {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Dot */
+.dot {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%) translateX(3px);
+  border-radius: 50%;
+  background: var(--text-muted);
+  transition: transform var(--transition-fast), background var(--transition-fast);
+}
+
+.md .dot {
+  width: 18px;
+  height: 18px;
+}
+
+.sm .dot {
+  width: 14px;
+  height: 14px;
+}
+
+.input:checked + .track .dot {
+  background: var(--text-on-accent);
+}
+
+.input:checked + .track.md .dot {
+  transform: translateY(-50%) translateX(21px);
+}
+
+.input:checked + .track.sm .dot {
+  transform: translateY(-50%) translateX(17px);
+}
+
+/* Label content */
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-top: 2px;
+}
+
+.labelText {
+  font-family: var(--font-body);
+  font-size: var(--text-lg);
+  color: var(--text-primary);
+  line-height: var(--leading-snug);
+}
+
+.description {
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  color: var(--text-muted);
+  line-height: 1.4;
+}

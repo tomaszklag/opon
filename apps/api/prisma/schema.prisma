@@ -1,0 +1,594 @@
+// ============================================================
+//  opony.app — Prisma schema
+//  BE-1a / Sprint 1
+// ============================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ──────────────────────────────────────────────
+// ENUMS
+// ──────────────────────────────────────────────
+
+enum UserRole {
+  CLIENT
+  PROVIDER_OWNER
+  PROVIDER_STAFF
+  ADMIN
+}
+
+enum ProviderType {
+  MOBILE
+  STATIONARY
+  BOTH
+}
+
+enum ProviderStatus {
+  PENDING_NIP
+  PENDING_DOCS
+  PENDING_APPROVAL
+  APPROVED
+  SUSPENDED
+  REJECTED
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED_BY_CLIENT
+  CANCELLED_BY_PROVIDER
+  CANCELLED_BY_SYSTEM
+  NO_SHOW
+  REJECTED
+}
+
+enum ConsentType {
+  TERMS
+  PRIVACY
+  MARKETING
+}
+
+enum EmailType {
+  EMAIL_VERIFICATION
+  SUBMISSION_RECEIVED
+  ACCOUNT_APPROVED
+  ACCOUNT_REJECTED
+}
+
+enum ServiceType {
+  SEASONAL_SWAP
+  WHEEL_SWAP
+  BALANCING
+  PUNCTURE_REPAIR
+}
+
+enum SizeTier {
+  S
+  M
+  L
+}
+
+enum LeaveType {
+  VACATION
+  UNPAID
+  SICK
+  OTHER
+}
+
+enum WaitlistRole {
+  CLIENT
+  PROVIDER
+}
+
+// ──────────────────────────────────────────────
+// USER
+// ──────────────────────────────────────────────
+
+model User {
+  id           String    @id @default(uuid())
+  phone        String    @unique @db.VarChar(20)
+  email        String?   @unique @db.VarChar(254)
+  role         UserRole  @default(CLIENT)
+  firstName    String?   @db.VarChar(100)
+  lastName     String?   @db.VarChar(100)
+  noShowCount  Int       @default(0)
+  isBanned     Boolean   @default(false)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  deletedAt    DateTime?
+
+  vehicles     Vehicle[]
+  provider     Provider?    @relation("ProviderOwner")
+  bookings     Booking[]    @relation("ClientBookings")
+  reviews      Review[]     @relation("ClientReviews")
+  consentLogs  ConsentLog[]
+  auditLogs    AuditLog[]
+  sessions     Session[]
+
+  @@map("users")
+}
+
+// ──────────────────────────────────────────────
+// VEHICLE (klient)
+// ──────────────────────────────────────────────
+
+model Vehicle {
+  id        String   @id @default(uuid())
+  userId    String
+  nickname  String   @db.VarChar(100)
+  tireSize  String   @db.VarChar(20)
+  createdAt DateTime @default(now())
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bookings Booking[] @relation("VehicleBookings")
+
+  @@index([userId])
+  @@map("vehicles")
+}
+
+// ──────────────────────────────────────────────
+// PROVIDER (firma)
+// ──────────────────────────────────────────────
+
+model Provider {
+  id               String         @id @default(uuid())
+  name             String         @db.VarChar(200)
+  slug             String?        @unique @db.VarChar(100)
+  nip              String         @unique @db.VarChar(10)
+  type             ProviderType   @default(MOBILE)
+  status           ProviderStatus @default(PENDING_NIP)
+  description      String?        @db.Text
+  logoUrl          String?        @db.VarChar(500)
+  phone            String?        @db.VarChar(20)
+  email            String?        @db.VarChar(254)
+  ownerId          String         @unique
+  cityCenterLat    Decimal?       @db.Decimal(9, 6)
+  cityCenterLng    Decimal?       @db.Decimal(9, 6)
+  serviceRadiusKm  Int            @default(10)
+  avgRating        Decimal        @default(0) @db.Decimal(3, 2)
+  reviewCount      Int            @default(0)
+  bankAccountIban  String?        @db.VarChar(34)
+  tagline         String?        @db.VarChar(80)
+  foundedYear     Int?
+  showPhone       Boolean        @default(true)
+  address         String?        @db.VarChar(300)
+  vehicleTypes    String[]       @default([])
+  tireSizes       String[]       @default([])
+  additionalServices String[]    @default([])
+  createdAt        DateTime       @default(now())
+  submittedAt      DateTime?
+  approvedAt       DateTime?
+  updatedAt        DateTime       @updatedAt
+
+  emailVerifiedAt  DateTime?
+
+  owner              User                       @relation("ProviderOwner", fields: [ownerId], references: [id], onDelete: Restrict)
+  photos             ProviderPhoto[]
+  pricingTiers       PricingTier[]
+  workingHours       WorkingHours[]
+  scheduleExceptions ScheduleException[]
+  bookings           Booking[]                  @relation("ProviderBookings")
+  reviews            Review[]                   @relation("ProviderReviews")
+  consentLogs        ConsentLog[]
+  emailVerificationTokens EmailVerificationToken[]
+  emailLogs          EmailLog[]
+  stations           Station[]
+  workers            Worker[]
+  workerTasks        WorkerTask[]
+
+  @@map("providers")
+}
+
+// ──────────────────────────────────────────────
+// PROVIDER PHOTO
+// ──────────────────────────────────────────────
+
+enum PhotoType {
+  LOGO
+  VEHICLE
+  WORKSPACE
+  ADDITIONAL
+}
+
+model ProviderPhoto {
+  id           String    @id @default(uuid())
+  providerId   String
+  provider     Provider  @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  url          String    @db.VarChar(500)
+  storageKey   String    @db.VarChar(500)
+  type         PhotoType
+  isPrimary    Boolean   @default(false)
+  size         Int
+  mimeType     String    @db.VarChar(100)
+  originalName String    @db.VarChar(255)
+  createdAt    DateTime  @default(now())
+
+  @@index([providerId])
+  @@map("provider_photos")
+}
+
+// ──────────────────────────────────────────────
+// PRICING TIER — 3 widelki rozmiaru felgi (S/M/L)
+// ──────────────────────────────────────────────
+
+model PricingTier {
+  id                        String   @id @default(uuid())
+  providerId                String
+  sizeTier                  SizeTier
+  priceSwapPln              Decimal  @db.Decimal(10, 2)
+  priceBalancingPerWheelPln Decimal? @db.Decimal(10, 2)
+  travelFeeFirstKmPln       Decimal  @default(0) @db.Decimal(10, 2)
+  travelFeeExtraKmPln       Decimal  @default(0) @db.Decimal(10, 2)
+
+  provider Provider  @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  bookings  Booking[] @relation("TierBookings")
+
+  @@unique([providerId, sizeTier])
+  @@map("pricing_tiers")
+}
+
+// ──────────────────────────────────────────────
+// WORKING HOURS
+// ──────────────────────────────────────────────
+
+model WorkingHours {
+  id           String   @id @default(uuid())
+  providerId   String
+  dayOfWeek    Int      // 0=niedziela … 6=sobota
+  openTime     DateTime @db.Time(6)
+  closeTime    DateTime @db.Time(6)
+  slotMinutes  Int      @default(45)
+  isClosed     Boolean  @default(false)
+  workstations Int      @default(1)
+  blocks       Json?    @db.JsonB
+
+  provider Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+
+  @@unique([providerId, dayOfWeek])
+  @@map("working_hours")
+}
+
+// ──────────────────────────────────────────────
+// SCHEDULE EXCEPTION — urlopy, święta
+// ──────────────────────────────────────────────
+
+model ScheduleException {
+  id              String    @id @default(uuid())
+  providerId      String
+  date            DateTime  @db.Date
+  reason          String    @db.VarChar(200)
+  customOpenTime  DateTime? @db.Time(6)
+  customCloseTime DateTime? @db.Time(6)
+
+  provider Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+
+  @@unique([providerId, date])
+  @@map("schedule_exceptions")
+}
+
+// ──────────────────────────────────────────────
+// BOOKING — serce systemu
+// ──────────────────────────────────────────────
+
+model Booking {
+  id              String        @id @default(uuid())
+  referenceCode   String        @unique @db.VarChar(10)
+  clientId        String
+  providerId      String
+  vehicleId       String?
+  pricingTierId   String?
+  status          BookingStatus @default(PENDING)
+  startAt         DateTime
+  endAt           DateTime
+  // adres klienta (mobile provider)
+  addressLine     String?       @db.VarChar(300)
+  addressCity     String?       @db.VarChar(100)
+  addressLat      Decimal?      @db.Decimal(9, 6)
+  addressLng      Decimal?      @db.Decimal(9, 6)
+  // snapshot cen z momentu rezerwacji (immutable po created)
+  tireSize        String?       @db.VarChar(20)
+  basePricePln    Decimal?      @db.Decimal(10, 2)
+  travelFeePln    Decimal?      @db.Decimal(10, 2)
+  totalPricePln   Decimal?      @db.Decimal(10, 2)
+  // notatki i powody
+  notes           String?       @db.Text
+  rejectReason    String?       @db.VarChar(500)
+  cancelReason    String?       @db.VarChar(500)
+  // timestamps
+  createdAt       DateTime      @default(now())
+  confirmedAt     DateTime?
+  startedAt       DateTime?
+  completedAt     DateTime?
+  cancelledAt     DateTime?
+
+  stationId       String?
+  workerId        String?       @db.VarChar(36)
+  serviceType     ServiceType?
+  sizeTier        SizeTier?
+  tpmsRequired    Boolean      @default(false)
+  isManual        Boolean      @default(false)
+
+  client      User         @relation("ClientBookings", fields: [clientId], references: [id])
+  provider    Provider     @relation("ProviderBookings", fields: [providerId], references: [id])
+  vehicle     Vehicle?     @relation("VehicleBookings", fields: [vehicleId], references: [id])
+  pricingTier PricingTier? @relation("TierBookings", fields: [pricingTierId], references: [id])
+  station     Station?     @relation(fields: [stationId], references: [id])
+  worker      Worker?      @relation(fields: [workerId], references: [id], onDelete: SetNull)
+  review      Review?
+
+  @@index([providerId, startAt])
+  @@index([clientId, startAt(sort: Desc)])
+  // UWAGA: partial unique index zapobiegający double-booking dodany w migracji SQL:
+  // CREATE UNIQUE INDEX bookings_no_double_booking
+  //   ON bookings (provider_id, start_at)
+  //   WHERE status IN ('PENDING','CONFIRMED','IN_PROGRESS');
+  @@map("bookings")
+}
+
+// ──────────────────────────────────────────────
+// REVIEW — ocena po rezerwacji
+// ──────────────────────────────────────────────
+
+model Review {
+  id                String    @id @default(uuid())
+  bookingId         String    @unique
+  clientId          String
+  providerId        String
+  rating            Int       // 1–5; CHECK (rating BETWEEN 1 AND 5) dodany w migracji SQL
+  comment           String?   @db.Text
+  providerReply     String?   @db.Text
+  providerRepliedAt DateTime?
+  isReported        Boolean   @default(false)
+  isHidden          Boolean   @default(false)
+  seenByProvider    Boolean   @default(false)
+  editCount         Int       @default(0)
+  lastEditedAt      DateTime?
+  createdAt         DateTime  @default(now())
+
+  booking  Booking  @relation(fields: [bookingId], references: [id])
+  client   User     @relation("ClientReviews", fields: [clientId], references: [id])
+  provider Provider @relation("ProviderReviews", fields: [providerId], references: [id])
+
+  @@index([providerId, createdAt(sort: Desc)])
+  @@map("reviews")
+}
+
+// ──────────────────────────────────────────────
+// OTP TOKEN — weryfikacja telefonu (phone-keyed)
+// ──────────────────────────────────────────────
+
+model OtpToken {
+  id        String    @id @default(uuid())
+  phone     String    @db.VarChar(20)
+  codeHash  String    @db.VarChar(200)
+  createdAt DateTime  @default(now())
+  expiresAt DateTime
+  usedAt    DateTime?
+  attempts  Int       @default(0)
+
+  @@index([phone, createdAt])
+  @@index([phone, expiresAt])
+  @@map("otp_tokens")
+}
+
+// ──────────────────────────────────────────────
+// CONSENT LOG — RODO / regulamin
+// ──────────────────────────────────────────────
+
+model ConsentLog {
+  id          String      @id @default(uuid())
+  userId      String?
+  providerId  String?
+  consentType ConsentType
+  version     String      @db.VarChar(20)
+  accepted    Boolean
+  ipAddress   String?     @db.VarChar(45)
+  createdAt   DateTime    @default(now())
+
+  user     User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  provider Provider? @relation(fields: [providerId], references: [id], onDelete: SetNull)
+
+  @@index([userId, consentType])
+  @@map("consent_logs")
+}
+
+// ──────────────────────────────────────────────
+// WAITLIST — miasta poza zasięgiem v0
+// ──────────────────────────────────────────────
+
+model WaitlistSignup {
+  id        String       @id @default(uuid())
+  email     String       @db.VarChar(254)
+  city      String       @db.VarChar(100)
+  role      WaitlistRole
+  createdAt DateTime     @default(now())
+
+  @@unique([email, city, role])
+  @@index([city, role])
+  @@map("waitlist_signups")
+}
+
+// ──────────────────────────────────────────────
+// AUDIT LOG — log zmian statusów (soft audit)
+// ──────────────────────────────────────────────
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  actorId   String?
+  entity    String   @db.VarChar(50)
+  entityId  String   @db.VarChar(36)
+  action    String   @db.VarChar(50)
+  payload   Json
+  createdAt DateTime @default(now())
+
+  actor User? @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([entity, entityId])
+  @@index([actorId])
+  @@map("audit_logs")
+}
+
+// ──────────────────────────────────────────────
+// EMAIL VERIFICATION TOKEN
+// ──────────────────────────────────────────────
+
+model EmailVerificationToken {
+  id         String    @id @default(uuid())
+  providerId String
+  email      String    @db.VarChar(254)
+  tokenHash  String    @unique @db.VarChar(64)
+  expiresAt  DateTime
+  usedAt     DateTime?
+  createdAt  DateTime  @default(now())
+
+  provider Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+
+  @@index([providerId])
+  @@map("email_verification_tokens")
+}
+
+// ──────────────────────────────────────────────
+// EMAIL LOG
+// ──────────────────────────────────────────────
+
+model EmailLog {
+  id         String    @id @default(uuid())
+  providerId String
+  type       EmailType
+  to         String    @db.VarChar(254)
+  sentAt     DateTime  @default(now())
+  error      String?   @db.Text
+
+  provider Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+
+  @@index([providerId, sentAt(sort: Desc)])
+  @@map("email_logs")
+}
+
+// ──────────────────────────────────────────────
+// SESSION — refresh-token rotation z detekcją kradzieży
+// ──────────────────────────────────────────────
+
+model Session {
+  id         String    @id                       // = jti z JWT
+  userId     String
+  tokenHash  String    @unique @db.VarChar(64)   // SHA-256(refreshToken) hex
+  userAgent  String?   @db.VarChar(500)
+  ipAddress  String?   @db.VarChar(45)
+  createdAt  DateTime  @default(now())
+  lastUsedAt DateTime  @default(now())
+  expiresAt  DateTime
+  revokedAt  DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, revokedAt])
+  @@map("sessions")
+}
+
+// ──────────────────────────────────────────────
+// STATION — fizyczne stanowisko warsztatu
+// ──────────────────────────────────────────────
+
+model Station {
+  id         String        @id @default(cuid())
+  providerId String
+  name       String        @db.VarChar(100)
+  services   ServiceType[]
+  schedule   Json          // DaySchedule[] — grafik tygodniowy
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+
+  provider   Provider        @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  workers    StationWorker[]
+  bookings   Booking[]
+
+  @@map("stations")
+}
+
+// ──────────────────────────────────────────────
+// WORKER — pracownik warsztatu
+// ──────────────────────────────────────────────
+
+model Worker {
+  id          String          @id @default(cuid())
+  providerId  String
+  name        String          @db.VarChar(100)
+  role        String?         @db.VarChar(100)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  provider    Provider        @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  stations    StationWorker[]
+  leaves      WorkerLeave[]
+  bookings    Booking[]
+  workerTasks WorkerTask[]
+
+  @@map("workers")
+}
+
+// ──────────────────────────────────────────────
+// STATION WORKER — powiązanie stanowisko ↔ pracownik
+// ──────────────────────────────────────────────
+
+model StationWorker {
+  stationId  String
+  workerId   String
+  shiftStart String? @db.VarChar(5) // "08:00", null = cały grafik stanowiska
+  shiftEnd   String? @db.VarChar(5) // "14:00"
+
+  station Station @relation(fields: [stationId], references: [id], onDelete: Cascade)
+  worker  Worker  @relation(fields: [workerId], references: [id], onDelete: Cascade)
+
+  @@id([stationId, workerId])
+  @@index([workerId])
+  @@map("station_workers")
+}
+
+// ──────────────────────────────────────────────
+// WORKER LEAVE — urlopy / nieobecności
+// ──────────────────────────────────────────────
+
+model WorkerLeave {
+  id        String    @id @default(cuid())
+  workerId  String
+  type      LeaveType
+  startDate DateTime  @db.Date
+  endDate   DateTime  @db.Date
+  note      String?   @db.VarChar(500)
+  createdAt DateTime  @default(now())
+
+  worker Worker @relation(fields: [workerId], references: [id], onDelete: Cascade)
+
+  @@map("worker_leaves")
+}
+
+// ──────────────────────────────────────────────
+// WORKER TASK — własne zadania warsztatu
+// ──────────────────────────────────────────────
+
+model WorkerTask {
+  id         String    @id @default(cuid())
+  providerId String
+  workerId   String?
+  title      String    @db.VarChar(200)
+  startAt    DateTime
+  endAt      DateTime
+  notes      String?   @db.Text
+  createdAt  DateTime  @default(now())
+
+  provider Provider  @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  worker   Worker?   @relation(fields: [workerId], references: [id], onDelete: SetNull)
+
+  @@index([providerId, startAt])
+  @@map("worker_tasks")
+}

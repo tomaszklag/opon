@@ -809,6 +809,15 @@
       — „Czemu NS pierwszy?" → modal z ADR-005 (mniejszy rynek, szybszy feedback, 1000 happy &gt; 100k frustrated).<br>
       — A11y: main H1 opisuje stan, <code>aria-live="polite"</code> na counterze, form ma <code>autocomplete="email"</code>, submit rozszerzony focus-ring.
     </div>
+    <div style="grid-column: 1 / -1; border-top: 1px solid var(--border); padding-top: 12px; margin-top: 4px;">
+      <strong>DS Components</strong>
+      <code style="font-family:var(--font-mono);color:var(--text-secondary);font-size:10px">AppHeader</code> (wordmark + city-chip klikalny → BottomSheet miast) ·
+      <code style="font-family:var(--font-mono);color:var(--text-secondary);font-size:10px">EmptyState</code> (brak providerów w mieście — ikona + tytuł + sub) (<em>⚠️ EmptyState nie ma wariantu z liveCounter</em>) ·
+      live counter "<strong>187</strong> osób czeka" z <code>aria-live</code> — inline ·
+      <code style="font-family:var(--font-mono);color:var(--text-secondary);font-size:10px">Input</code> type=email "Twój e-mail" + <code style="font-family:var(--font-mono);color:var(--text-secondary);font-size:10px">Button</code> primary "Zapisz mnie na listę" ·
+      <code style="font-family:var(--font-mono);color:var(--text-secondary);font-size:10px">BottomTabBar</code> (active="home") ·
+      post-submit: <code style="font-family:var(--font-mono);color:var(--text-secondary);font-size:10px">Toast</code> success + inline pozycja "Jesteś na liście · 188"
+    </div>
   </footer>
 
 </body>

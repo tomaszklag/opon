@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Opony.app — 03b Wybór terminu · Czas per usługa</title>
+<!--
+  Screen: Wybór terminu (krok 2/3) — po refaktorze czasu per usługa
+  Ref:    docs/plan-sprintow.md → W:12.9
+  US:     US-08a (wybór terminu), US-08b (adres mobilny)
+  Tone:   industrial-dark · mobile · step 2/3
+  Zmiany vs 03:
+    · Context strip pokazuje obliczony czas wizyty (z cennika + parametrów)
+    · Klient widzi "~60 min" zamiast "1 slot"
+    · Sloty to konkretne godziny startu (nie numeryczne sloty)
+    · Każdy chip: godzina startu + szacowana godzina końca
+    · Możliwość wyboru kilku usług (wymiana + wyważanie) → sumaryczny czas
+    · Widok z 2 stanami: wybór usług → wybór terminu
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Bebas+Neue&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#0A0B0E; --bg-tint-top:#12141A; --surface:#14171D;
+    --surface-raised:#1B1E26;
+    --border:#262A34; --border-strong:#363B47;
+    --hairline:rgba(255,255,255,0.06);
+    --text-primary:#F5F4EF; --text-secondary:#9EA2AD;
+    --text-muted:#60646F; --text-on-accent:#0A0B0E;
+    --accent:#FF6B1A; --accent-hover:#FF8039;
+    --accent-muted:rgba(255,107,26,0.14); --accent-border:rgba(255,107,26,0.32);
+    --accent-glow:rgba(255,107,26,0.45);
+    --success:#2EE0A0; --success-muted:rgba(46,224,160,0.14); --success-border:rgba(46,224,160,0.32);
+    --warning:#FFB020; --warning-muted:rgba(255,176,32,0.14); --warning-border:rgba(255,176,32,0.32);
+    --danger:#FF5757;
+    --font-display:'Bebas Neue',sans-serif;
+    --font-body:'Archivo',system-ui,sans-serif;
+    --font-mono:'JetBrains Mono',monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{height:100%;}
+  body{
+    --phone-scale:min(1,calc((100vh - 240px)/852px),calc((100vw - 60px)/393px));
+    font-family:var(--font-body);background:var(--bg);color:var(--text-primary);
+    -webkit-font-smoothing:antialiased;
+    background-image:
+      radial-gradient(ellipse 70% 50% at 50% 0%,rgba(255,107,26,0.07) 0%,transparent 60%),
+      linear-gradient(180deg,var(--bg-tint-top) 0%,var(--bg) 30%);
+    background-attachment:fixed;
+    min-height:100vh;display:flex;flex-direction:column;
+    align-items:center;padding:48px 24px 80px;gap:40px;
+  }
+  @keyframes pulse{0%,100%{box-shadow:0 0 0 4px var(--accent-muted);opacity:1;}50%{box-shadow:0 0 0 8px transparent;opacity:0.6;}}
+
+  .canvas-label{width:100%;max-width:560px;display:grid;grid-template-columns:auto 1fr auto;align-items:baseline;gap:20px;padding-bottom:18px;border-bottom:1px solid var(--border);}
+  .film-strip{font-family:var(--font-display);font-size:34px;letter-spacing:3px;line-height:1;}
+  .slug{font-family:var(--font-mono);font-size:11px;color:var(--text-muted);letter-spacing:1.5px;text-transform:uppercase;border-left:1px solid var(--border);padding-left:18px;}
+  .canvas-meta{font-family:var(--font-mono);font-size:11px;color:var(--text-secondary);letter-spacing:1px;display:inline-flex;align-items:center;gap:10px;}
+  .canvas-meta .pulse{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 4px var(--accent-muted);animation:pulse 1800ms ease-in-out infinite;}
+
+  /* Two phones side by side */
+  .phones-row{display:flex;gap:40px;align-items:flex-start;justify-content:center;flex-wrap:wrap;}
+  .phone-wrap{display:flex;flex-direction:column;align-items:center;gap:14px;}
+  .phone-label{font-family:var(--font-mono);font-size:11px;color:var(--text-muted);letter-spacing:1.2px;text-transform:uppercase;}
+
+  .phone{
+    width:393px;height:852px;border-radius:54px;
+    background:var(--bg);border:10px solid #0D0E12;
+    box-shadow:0 0 0 1px #1C1E24,0 40px 120px rgba(0,0,0,0.7),0 24px 48px rgba(0,0,0,0.45),inset 0 0 0 1px rgba(255,255,255,0.03);
+    overflow:hidden;position:relative;isolation:isolate;flex-shrink:0;
+    transform:scale(var(--phone-scale));transform-origin:top center;
+    margin-bottom:calc((var(--phone-scale)-1)*852px);
+  }
+  .phone::before{content:'';position:absolute;top:12px;left:50%;transform:translateX(-50%);width:124px;height:36px;border-radius:24px;background:#000;z-index:100;}
+  .phone::after{content:'';position:absolute;bottom:8px;left:50%;transform:translateX(-50%);width:134px;height:5px;border-radius:3px;background:var(--text-primary);opacity:0.28;z-index:100;}
+
+  .status-bar{display:flex;align-items:center;justify-content:space-between;padding:18px 36px 0;height:54px;font-weight:700;font-size:15px;}
+  .status-bar .right{display:inline-flex;gap:6px;align-items:center;}
+
+  .screen{position:absolute;top:54px;left:0;right:0;bottom:0;display:flex;flex-direction:column;overflow:hidden;}
+
+  /* Nav */
+  .nav-row{display:flex;align-items:center;gap:12px;padding:10px 20px 6px;}
+  .back-btn{width:40px;height:40px;border-radius:10px;display:inline-flex;align-items:center;justify-content:center;background:transparent;border:1px solid var(--border);color:var(--text-primary);cursor:pointer;}
+  .nav-title{font-family:var(--font-display);font-size:26px;letter-spacing:2.5px;line-height:1;color:var(--text-primary);}
+
+  /* Stepper */
+  .stepper{padding:10px 20px 12px;display:flex;align-items:center;gap:6px;}
+  .step{display:flex;flex-direction:column;align-items:center;gap:4px;flex:0 0 auto;}
+  .step-num{width:22px;height:22px;border-radius:50%;border:1.5px solid var(--border-strong);background:var(--bg);color:var(--text-muted);font-family:var(--font-mono);font-size:11px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;}
+  .step.done .step-num{background:var(--accent-muted);border-color:var(--accent-border);color:var(--accent);}
+  .step.active .step-num{background:var(--accent);border-color:var(--accent);color:var(--text-on-accent);box-shadow:0 0 0 4px var(--accent-muted);}
+  .step-label{font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);}
+  .step.done .step-label{color:var(--text-secondary);}
+  .step.active .step-label{color:var(--accent);}
+  .step-line{flex:1;height:1.5px;background:var(--border);min-width:18px;margin:0 2px;margin-top:-14px;border-radius:2px;}
+  .step-line.done{background:var(--accent);}
+
+  /* Scroll area */
+  .scroll-area{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:0;scrollbar-width:none;}
+  .scroll-area::-webkit-scrollbar{display:none;}
+
+  /* Context strip */
+  .context{padding:12px 20px;display:flex;align-items:flex-start;gap:12px;border-top:1px solid var(--border);background:var(--surface);}
+  .ctx-ico{width:42px;height:42px;border-radius:10px;background:var(--accent-muted);border:1px solid var(--accent-border);display:inline-flex;align-items:center;justify-content:center;color:var(--accent);flex-shrink:0;}
+  .ctx-col{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px;}
+  .ctx-provider{font-size:12px;font-weight:700;color:var(--text-primary);line-height:1.2;}
+  .ctx-services{font-size:11px;color:var(--text-secondary);}
+  .ctx-change{font-size:10px;font-weight:800;letter-spacing:1.1px;text-transform:uppercase;color:var(--accent);background:transparent;border:none;padding:0;cursor:pointer;}
+
+  /* Duration summary bar */
+  .duration-bar{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:10px 20px;
+    background:var(--bg);border-bottom:1px solid var(--border);
+    gap:8px;
+  }
+  .duration-services{display:flex;flex-direction:column;gap:3px;flex:1;}
+  .duration-services-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+  .service-chip{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:5px;background:var(--surface-raised);border:1px solid var(--border-strong);font-size:11px;font-weight:600;color:var(--text-secondary);}
+  .service-chip.checked{background:var(--accent-muted);border-color:var(--accent-border);color:var(--accent);}
+  .duration-total{
+    display:flex;flex-direction:column;align-items:flex-end;gap:1px;
+    flex-shrink:0;
+  }
+  .duration-val{font-family:var(--font-mono);font-size:18px;font-weight:700;color:var(--accent);line-height:1;}
+  .duration-sub{font-size:10px;color:var(--text-muted);text-align:right;}
+
+  /* Section header */
+  .sec-header{padding:16px 20px 8px;display:flex;align-items:baseline;justify-content:space-between;}
+  .sec-title{font-family:var(--font-display);font-size:18px;letter-spacing:1.8px;color:var(--text-primary);line-height:1;}
+  .sec-sub{font-family:var(--font-mono);font-size:10px;color:var(--text-muted);}
+
+  /* Mini calendar */
+  .cal-nav{display:flex;align-items:center;justify-content:space-between;padding:4px 20px 10px;}
+  .cal-month{font-family:var(--font-display);font-size:16px;letter-spacing:1.5px;color:var(--text-primary);}
+  .cal-arrow{width:28px;height:28px;border-radius:6px;background:transparent;border:1px solid var(--border);color:var(--text-secondary);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;}
+
+  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;padding:0 20px;}
+  .cal-wd{font-size:10px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);text-align:center;padding:2px 0 6px;}
+  .cal-day{
+    aspect-ratio:1;border-radius:9px;
+    display:flex;align-items:center;justify-content:center;
+    font-family:var(--font-mono);font-size:13px;font-weight:700;
+    cursor:pointer;position:relative;
+    color:var(--text-secondary);background:transparent;border:none;
+  }
+  .cal-day.empty{pointer-events:none;}
+  .cal-day.past{opacity:0.25;pointer-events:none;}
+  .cal-day.available{color:var(--text-primary);}
+  .cal-day.available::after{content:'';position:absolute;bottom:4px;left:50%;transform:translateX(-50%);width:4px;height:4px;border-radius:50%;background:var(--accent);opacity:0.7;}
+  .cal-day.selected{background:var(--accent);color:var(--text-on-accent);}
+  .cal-day.selected::after{display:none;}
+  .cal-day.today{border:1px solid var(--border-strong);}
+
+  /* Time slots */
+  .slots-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:0 20px 20px;}
+  .slot-chip{
+    padding:10px 8px;
+    border-radius:10px;
+    background:var(--surface);border:1px solid var(--border);
+    display:flex;flex-direction:column;align-items:center;gap:3px;
+    cursor:pointer;transition:all 140ms ease;
+  }
+  .slot-chip:hover{border-color:var(--border-strong);}
+  .slot-chip.selected{background:var(--accent-muted);border-color:var(--accent-border);}
+  .slot-chip.taken{opacity:0.3;pointer-events:none;}
+  .slot-time{font-family:var(--font-mono);font-size:14px;font-weight:700;color:var(--text-primary);}
+  .slot-chip.selected .slot-time{color:var(--accent);}
+  .slot-end{font-size:10px;color:var(--text-muted);}
+  .slot-chip.selected .slot-end{color:var(--text-secondary);}
+  .slot-tag{font-size:9px;font-weight:800;letter-spacing:0.8px;text-transform:uppercase;padding:1px 5px;border-radius:3px;}
+  .slot-tag.free{color:var(--success);background:var(--success-muted);}
+  .slot-tag.last{color:var(--warning);background:var(--warning-muted);}
+
+  /* CTA */
+  .cta-bar{padding:12px 20px 28px;display:flex;flex-direction:column;gap:8px;}
+  .btn-primary{width:100%;padding:15px 20px;border-radius:14px;background:var(--accent);color:var(--text-on-accent);border:none;font-family:var(--font-body);font-size:14px;font-weight:800;letter-spacing:0.3px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 6px 20px rgba(255,107,26,0.35);}
+  .btn-ghost{width:100%;padding:12px 20px;border-radius:14px;background:transparent;color:var(--text-secondary);border:1px solid var(--border);font-family:var(--font-body);font-size:13px;font-weight:700;cursor:pointer;text-align:center;}
+
+  /* Service selector (screen 1) */
+  .service-section{padding:16px 20px;display:flex;flex-direction:column;gap:8px;}
+  .service-card{
+    display:flex;align-items:center;gap:12px;
+    padding:12px 14px;
+    background:var(--surface);border:1px solid var(--border);border-radius:12px;
+    cursor:pointer;transition:all 140ms ease;
+  }
+  .service-card.selected{border-color:var(--accent-border);background:var(--accent-muted);}
+  .service-card-ico{width:36px;height:36px;border-radius:8px;background:var(--surface-raised);border:1px solid var(--border-strong);display:inline-flex;align-items:center;justify-content:center;color:var(--text-secondary);flex-shrink:0;}
+  .service-card.selected .service-card-ico{background:var(--accent-muted);border-color:var(--accent-border);color:var(--accent);}
+  .service-card-info{flex:1;min-width:0;}
+  .service-card-name{font-size:14px;font-weight:700;color:var(--text-primary);}
+  .service-card-dur{font-family:var(--font-mono);font-size:11px;color:var(--text-muted);margin-top:2px;}
+  .service-card.selected .service-card-dur{color:var(--accent);}
+  .service-card-price{font-family:var(--font-mono);font-size:14px;font-weight:700;color:var(--text-primary);white-space:nowrap;}
+  .check-ico{width:22px;height:22px;border-radius:50%;background:transparent;border:2px solid var(--border-strong);flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;}
+  .service-card.selected .check-ico{background:var(--accent);border-color:var(--accent);color:var(--text-on-accent);}
+
+  /* Vehicle strip */
+  .vehicle-strip{padding:10px 20px 14px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border);}
+  .vehicle-chip{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:7px;background:var(--surface-raised);border:1px solid var(--border-strong);font-family:var(--font-mono);font-size:12px;font-weight:700;color:var(--text-primary);}
+  .vehicle-detail{font-size:11px;color:var(--text-muted);}
+
+  /* Params strip */
+  .params-strip{padding:6px 20px 14px;display:flex;align-items:center;gap:8px;}
+  .param-btn{padding:5px 10px;border-radius:7px;background:var(--surface-raised);border:1px solid var(--border-strong);font-family:var(--font-body);font-size:11px;font-weight:700;color:var(--text-secondary);cursor:pointer;display:inline-flex;align-items:center;gap:5px;}
+  .param-btn.active{background:var(--surface);border-color:var(--border-strong);color:var(--text-primary);}
+  .param-sep{color:var(--text-muted);font-size:11px;}
+
+  .caption{max-width:880px;width:100%;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;padding-top:12px;border-top:1px solid var(--border);font-family:var(--font-mono);font-size:11px;color:var(--text-muted);letter-spacing:0.5px;}
+  .caption strong{color:var(--text-secondary);font-weight:500;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:1.2px;font-size:10px;}
+  .caption em{color:var(--accent);font-style:normal;}
+</style>
+</head>
+<body>
+
+<header class="canvas-label">
+  <span class="film-strip">OPONY — 03b</span>
+  <span class="slug">wybór terminu · czas per usługa</span>
+  <span class="canvas-meta"><span class="pulse"></span>W:12.9 · US-08a</span>
+</header>
+
+<div class="phones-row">
+
+  <!-- EKRAN A: Wybór usług + parametrów -->
+  <div class="phone-wrap">
+    <span class="phone-label">A — Wybór usług</span>
+    <div class="phone">
+      <div class="status-bar"><span>9:41</span><div class="right"><svg width="16" height="12" viewBox="0 0 24 18" fill="currentColor"><rect x="0" y="6" width="4" height="12" rx="1"/><rect x="5" y="4" width="4" height="14" rx="1"/><rect x="10" y="2" width="4" height="16" rx="1"/><rect x="15" y="0" width="4" height="18" rx="1"/></svg><svg width="16" height="12" viewBox="0 0 24 18" fill="currentColor"><path d="M12 2C8.5 2 5.5 3.5 3.5 6L5 7.5C6.5 5.5 9 4.5 12 4.5s5.5 1 7 3L20.5 6C18.5 3.5 15.5 2 12 2z"/><path d="M12 7c-2 0-3.8.8-5 2l1.5 1.5C9.5 9.5 10.7 9 12 9s2.5.5 3.5 1.5L17 9c-1.2-1.2-3-2-5-2z"/><circle cx="12" cy="14" r="2"/></svg><svg width="26" height="12" viewBox="0 0 40 18" fill="none"><rect x="0.5" y="0.5" width="36" height="17" rx="4.5" stroke="currentColor" stroke-opacity="0.35"/><rect x="2" y="2" width="29" height="14" rx="3" fill="currentColor" opacity="0.9"/><rect x="37" y="6" width="3" height="6" rx="1.5" fill="currentColor" opacity="0.4"/></svg></div></div>
+
+      <div class="screen">
+        <div class="nav-row">
+          <button class="back-btn"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button>
+          <span class="nav-title">USŁUGI</span>
+        </div>
+
+        <div class="stepper">
+          <div class="step done"><div class="step-num"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div><span class="step-label">Warsztat</span></div>
+          <div class="step-line done"></div>
+          <div class="step active"><div class="step-num">2</div><span class="step-label">Usługi</span></div>
+          <div class="step-line"></div>
+          <div class="step"><div class="step-num">3</div><span class="step-label">Termin</span></div>
+        </div>
+
+        <div class="scroll-area">
+          <!-- Vehicle -->
+          <div class="vehicle-strip">
+            <div class="vehicle-chip">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 17H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v7a2 2 0 0 1-2 2h-2"/><circle cx="7.5" cy="17.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg>
+              WU 5E743
+            </div>
+            <span class="vehicle-detail">Renault Megane · 16" · Aluminium</span>
+          </div>
+
+          <!-- Params (koła) -->
+          <div class="params-strip">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/></svg>
+            <button class="param-btn">2 koła</button>
+            <button class="param-btn active">4 koła ✓</button>
+            <span class="param-sep">·</span>
+            <button class="param-btn active">Alu ✓</button>
+          </div>
+
+          <!-- Service cards -->
+          <div class="service-section">
+            <div style="font-size:10px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-muted);padding-bottom:4px;">Usługa główna</div>
+
+            <div class="service-card selected">
+              <div class="service-card-ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2"/></svg></div>
+              <div class="service-card-info">
+                <div class="service-card-name">Wymiana kół</div>
+                <div class="service-card-dur">4 koła alu · (12+3) × 4 = <strong style="color:var(--accent)">60 min</strong></div>
+              </div>
+              <span class="service-card-price">160 zł</span>
+              <div class="check-ico"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
+            </div>
+
+            <div class="service-card">
+              <div class="service-card-ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2"/></svg></div>
+              <div class="service-card-info">
+                <div class="service-card-name">Przełożenie opon</div>
+                <div class="service-card-dur">4 koła alu · (8+2) × 4 = <strong>40 min</strong></div>
+              </div>
+              <span class="service-card-price">110 zł</span>
+              <div class="check-ico"></div>
+            </div>
+
+            <div style="font-size:10px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-muted);padding:10px 0 4px;">Usługi dodatkowe</div>
+
+            <div class="service-card selected">
+              <div class="service-card-ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg></div>
+              <div class="service-card-info">
+                <div class="service-card-name">Wyważanie</div>
+                <div class="service-card-dur">7 min/koło · 4 koła = <strong style="color:var(--accent)">28 min</strong></div>
+              </div>
+              <span class="service-card-price">100 zł</span>
+              <div class="check-ico"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
+            </div>
+
+            <div class="service-card">
+              <div class="service-card-ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg></div>
+              <div class="service-card-info">
+                <div class="service-card-name">Wymiana wentyli</div>
+                <div class="service-card-dur">2 min/koło · 4 koła = 8 min</div>
+              </div>
+              <span class="service-card-price">40 zł</span>
+              <div class="check-ico"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- CTA with total -->
+        <div class="cta-bar">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--surface);border:1px solid var(--border);border-radius:10px;">
+            <div>
+              <div style="font-size:11px;color:var(--text-muted);">Szacowany czas wizyty</div>
+              <div style="font-family:var(--font-mono);font-size:20px;font-weight:700;color:var(--accent);line-height:1.2;">88 min</div>
+              <div style="font-size:10px;color:var(--text-muted);">Wymiana kół 60 + wyważanie 28</div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-size:11px;color:var(--text-muted);">Razem</div>
+              <div style="font-family:var(--font-mono);font-size:20px;font-weight:700;color:var(--text-primary);">260 zł</div>
+            </div>
+          </div>
+          <button class="btn-primary">
+            Wybierz termin
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- EKRAN B: Wybór terminu (z obliczonym czasem) -->
+  <div class="phone-wrap">
+    <span class="phone-label">B — Wybór terminu</span>
+    <div class="phone">
+      <div class="status-bar"><span>9:41</span><div class="right"><svg width="16" height="12" viewBox="0 0 24 18" fill="currentColor"><rect x="0" y="6" width="4" height="12" rx="1"/><rect x="5" y="4" width="4" height="14" rx="1"/><rect x="10" y="2" width="4" height="16" rx="1"/><rect x="15" y="0" width="4" height="18" rx="1"/></svg><svg width="16" height="12" viewBox="0 0 24 18" fill="currentColor"><path d="M12 2C8.5 2 5.5 3.5 3.5 6L5 7.5C6.5 5.5 9 4.5 12 4.5s5.5 1 7 3L20.5 6C18.5 3.5 15.5 2 12 2z"/><path d="M12 7c-2 0-3.8.8-5 2l1.5 1.5C9.5 9.5 10.7 9 12 9s2.5.5 3.5 1.5L17 9c-1.2-1.2-3-2-5-2z"/><circle cx="12" cy="14" r="2"/></svg><svg width="26" height="12" viewBox="0 0 40 18" fill="none"><rect x="0.5" y="0.5" width="36" height="17" rx="4.5" stroke="currentColor" stroke-opacity="0.35"/><rect x="2" y="2" width="29" height="14" rx="3" fill="currentColor" opacity="0.9"/><rect x="37" y="6" width="3" height="6" rx="1.5" fill="currentColor" opacity="0.4"/></svg></div></div>
+
+      <div class="screen">
+        <div class="nav-row">
+          <button class="back-btn"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button>
+          <span class="nav-title">TERMIN</span>
+        </div>
+
+        <div class="stepper">
+          <div class="step done"><div class="step-num"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div><span class="step-label">Warsztat</span></div>
+          <div class="step-line done"></div>
+          <div class="step done"><div class="step-num"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div><span class="step-label">Usługi</span></div>
+          <div class="step-line done"></div>
+          <div class="step active"><div class="step-num">3</div><span class="step-label">Termin</span></div>
+        </div>
+
+        <div class="scroll-area">
+          <!-- Context: provider + usługi -->
+          <div class="context">
+            <div class="ctx-ico">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+            </div>
+            <div class="ctx-col">
+              <div class="ctx-provider">MobilOpony Kasia · ul. Stalowa 14</div>
+              <div class="ctx-services">Wymiana kół + wyważanie · 4 koła alu</div>
+              <button class="ctx-change">Zmień usługi</button>
+            </div>
+          </div>
+
+          <!-- Duration summary -->
+          <div class="duration-bar">
+            <div class="duration-services">
+              <div class="duration-services-row">
+                <span class="service-chip checked">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  Wymiana kół · 60 min
+                </span>
+              </div>
+              <div class="duration-services-row" style="margin-top:4px;">
+                <span class="service-chip checked">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  Wyważanie · 28 min
+                </span>
+              </div>
+            </div>
+            <div class="duration-total">
+              <span class="duration-val">88 min</span>
+              <span class="duration-sub">szacowany czas</span>
+              <span style="font-size:10px;color:var(--text-muted);">260 zł łącznie</span>
+            </div>
+          </div>
+
+          <!-- Calendar -->
+          <div class="sec-header">
+            <span class="sec-title">Maj 2026</span>
+            <div style="display:inline-flex;gap:6px;">
+              <button class="cal-arrow"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button>
+              <button class="cal-arrow"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></button>
+            </div>
+          </div>
+          <div class="cal-grid">
+            <div class="cal-wd">Pn</div><div class="cal-wd">Wt</div><div class="cal-wd">Śr</div><div class="cal-wd">Cz</div><div class="cal-wd">Pt</div><div class="cal-wd">Sb</div><div class="cal-wd">Nd</div>
+            <!-- row 1 -->
+            <div class="cal-day empty"></div><div class="cal-day empty"></div><div class="cal-day empty"></div><div class="cal-day past">1</div><div class="cal-day past">2</div><div class="cal-day past">3</div><div class="cal-day past">4</div>
+            <!-- row 2 -->
+            <div class="cal-day past">5</div><div class="cal-day past">6</div><div class="cal-day past">7</div><div class="cal-day past">8</div><div class="cal-day past">9</div><div class="cal-day past">10</div><div class="cal-day past">11</div>
+            <!-- row 3 -->
+            <div class="cal-day past">12</div><div class="cal-day past">13</div><div class="cal-day past">14</div><div class="cal-day today past">15</div><div class="cal-day available">16</div><div class="cal-day available">17</div><div class="cal-day">18</div>
+            <!-- row 4 -->
+            <div class="cal-day available">19</div><div class="cal-day available">20</div><div class="cal-day available selected">21</div><div class="cal-day available">22</div><div class="cal-day available">23</div><div class="cal-day available">24</div><div class="cal-day">25</div>
+            <!-- row 5 -->
+            <div class="cal-day available">26</div><div class="cal-day available">27</div><div class="cal-day available">28</div><div class="cal-day available">29</div><div class="cal-day available">30</div><div class="cal-day available">31</div><div class="cal-day empty"></div>
+          </div>
+
+          <!-- Time slots — Środa 21 maja -->
+          <div class="sec-header" style="padding-top:10px;">
+            <span class="sec-title">Śr, 21 maja</span>
+            <span class="sec-sub">5 dostępnych · ~88 min/wizyta</span>
+          </div>
+          <div class="slots-grid">
+            <button class="slot-chip taken"><span class="slot-time">8:00</span><span class="slot-end">do 9:28</span><span class="slot-tag" style="background:var(--border);color:var(--text-muted)">Zajęty</span></button>
+            <button class="slot-chip taken"><span class="slot-time">9:00</span><span class="slot-end">do 10:28</span><span class="slot-tag" style="background:var(--border);color:var(--text-muted)">Zajęty</span></button>
+            <button class="slot-chip"><span class="slot-time">10:00</span><span class="slot-end">do 11:28</span><span class="slot-tag free">Wolny</span></button>
+            <button class="slot-chip"><span class="slot-time">11:00</span><span class="slot-end">do 12:28</span><span class="slot-tag free">Wolny</span></button>
+            <button class="slot-chip selected"><span class="slot-time">13:00</span><span class="slot-end">do 14:28</span><span class="slot-tag free">Wolny</span></button>
+            <button class="slot-chip"><span class="slot-time">14:00</span><span class="slot-end">do 15:28</span><span class="slot-tag last">Ostatni</span></button>
+            <button class="slot-chip taken"><span class="slot-time">15:00</span><span class="slot-end">do 16:28</span><span class="slot-tag" style="background:var(--border);color:var(--text-muted)">Zajęty</span></button>
+            <button class="slot-chip taken"><span class="slot-time">16:00</span><span class="slot-end">do 17:28</span><span class="slot-tag" style="background:var(--border);color:var(--text-muted)">Zajęty</span></button>
+            <button class="slot-chip"><span class="slot-time">16:30</span><span class="slot-end">do 17:58</span><span class="slot-tag free">Wolny</span></button>
+          </div>
+        </div>
+
+        <!-- CTA -->
+        <div class="cta-bar">
+          <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--accent-muted);border:1px solid var(--accent-border);border-radius:10px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 10h18M8 2v4M16 2v4"/></svg>
+            <div>
+              <div style="font-size:11px;color:var(--accent);font-weight:700;">Środa, 21 maja · 13:00–14:28</div>
+              <div style="font-size:10px;color:var(--text-muted);">Wymiana kół + wyważanie · ~88 min</div>
+            </div>
+          </div>
+          <button class="btn-primary">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 10h18M8 2v4M16 2v4"/></svg>
+            Zarezerwuj termin
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<footer class="caption">
+  <div>
+    <strong>Ekran A — wybór usług</strong>
+    Klient wybiera: usługę główną (wymiana kół lub przełożenie) + dodatki (wyważanie, wentyl).
+    Parametry: liczba kół (2/4) + typ felgi (stal/alu) — wpływają na czas.
+    Formuła: <em>(durationPerWheel + alloyMod) × wheelCount</em> per usługa, suma = totalDuration.
+    Wyświetlane live: "88 min · 260 zł" zanim klient przejdzie do terminu.
+  </div>
+  <div>
+    <strong>Ekran B — wybór terminu</strong>
+    Sloty = godziny startu. Każdy chip: <em>start · do end (= start + 88 min)</em>.
+    Widoczność terminu: start + 88 min ≤ closeTime danego bloku obsady.
+    Kolor: <em>Wolny</em> (zielony) / <em>Ostatni</em> (żółty, zajmuje ostatnie wolne stanowisko) / <em>Zajęty</em>.
+    Granularność: co 30 min lub co 60 min (konfigurowalne globalnie przez providera — nowy param).
+  </div>
+  <div style="grid-column:1/-1;border-top:1px solid var(--border);padding-top:12px;margin-top:4px;">
+    <strong>Silnik slotów (uproszczony opis)</strong>
+    Wejście: <em>providerId + date + serviceIds + wheelCount + rimType</em>.
+    Oblicz: <em>totalDuration = ∑ serviceDurationPerWheel(rimType) × wheelCount</em>.
+    Dla każdego możliwego startu t (co granularity): sprawdź czy w WorkingHours w przedziale [t, t+totalDuration]
+    jest dostępne stanowisko (uwzględniając istniejące rezerwacje i podział dnia / capacity blocks).
+    Zwróć listę wolnych startów.
+  </div>
+</footer>
+
+</body>
+</html>

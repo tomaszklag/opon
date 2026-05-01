@@ -1,0 +1,16 @@
+{
+  "name": "@opony/design-system-native",
+  "version": "0.1.0",
+  "private": true,
+  "main": "./src/index.ts",
+  "scripts": {
+    "build": "echo \"design-system-native: wypełnia DS-0\"",
+    "lint": "echo \"design-system-native: no lint yet\""
+  },
+  "dependencies": {
+    "@opony/design-tokens": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3"
+  }
+}

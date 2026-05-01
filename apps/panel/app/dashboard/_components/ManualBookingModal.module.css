@@ -1,0 +1,85 @@
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.formSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.row {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.row2 {
+  grid-template-columns: 1fr 1fr;
+}
+
+.row3 {
+  grid-template-columns: 1fr 1fr 1fr;
+}
+
+.errorMsg {
+  padding: 10px 14px;
+  background: var(--danger-muted);
+  border: 1px solid var(--danger-border);
+  border-radius: var(--radius-md);
+  margin: 0;
+}
+
+.toggleRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: var(--space-3) 0;
+}
+
+.slotGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: var(--space-2);
+}
+
+.slotBtn {
+  width: 100%;
+  flex-direction: column;
+  gap: 2px;
+  height: auto;
+  padding: var(--space-2) 6px;
+}
+
+.slotConflict {
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-full);
+  background: var(--warning);
+  display: inline-block;
+}
+
+.conflictBanner {
+  padding: 10px 14px;
+  background: var(--warning-muted);
+  border: 1px solid var(--warning-border);
+  border-radius: var(--radius-md);
+}
+
+.closedDayMsg {
+  padding: var(--space-5);
+  text-align: center;
+}
+
+.slotSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.spinnerRow {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-4) 0;
+}

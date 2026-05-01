@@ -1,0 +1,24 @@
+.inlineInput {
+  font-family: var(--font-body, 'Archivo'), system-ui, sans-serif;
+  font-size: var(--text-base);
+  font-weight: var(--font-bold);
+  color: var(--text-primary);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 2px 6px;
+  outline: none;
+  width: 100%;
+  line-height: var(--leading-cozy);
+  transition: border-color 140ms ease, box-shadow 140ms ease;
+}
+
+.inlineInput:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-muted);
+}
+
+.inlineInput::placeholder {
+  color: var(--text-muted);
+  font-weight: var(--font-regular);
+}

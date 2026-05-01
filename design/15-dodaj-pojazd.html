@@ -840,6 +840,16 @@
       — „Przełącz na Wymiar" — escape hatch dla tuning / custom felg (deep-link do tabu Wymiar z przenoszeniem kontekstu).<br>
       — A11y: <code>role="tablist"</code>, <code>aria-selected</code>, <code>aria-disabled</code> dla Skan; selecty jako <code>button</code> otwierające native bottom-sheet.
     </div>
+    <div style="grid-column: 1 / -1; border-top: 1px solid var(--border); padding-top: 12px; margin-top: 4px;">
+      <strong>DS Components</strong>
+      <code style="font-family:var(--font-mono);color:var(--text-secondary);font-size:10px">Tabs</code> ×3 (Marka/Model/Rok · Wymiar · Skan — Skan <code>disabled</code> z <em>⚠️ Badge "WKRÓTCE" warning</em>) ·
+      metoda Marka: <code style="font-family:var(--font-mono);color:var(--text-secondary);font-size:10px">Select</code> ×3 cascading (Marka → Model → Rok) ·
+      metoda Wymiar: <em>❌ WheelPicker</em> 3-column (szerokość / profil / felga — brak w DS) ·
+      result-bar live: <code style="font-family:var(--font-mono);color:var(--text-secondary);font-size:10px">Chip</code> success "Producent ✓ · 205/55 R16" ·
+      <em>❌ AddButton</em> dashed (wróć do wzorca z 07 — + Dodaj pojazd) ·
+      <code style="font-family:var(--font-mono);color:var(--text-secondary);font-size:10px">Button</code> primary fullWidth "Zapisz pojazd" ·
+      <code style="font-family:var(--font-mono);color:var(--text-secondary);font-size:10px">Button</code> variant="link" "Pomiń na razie"
+    </div>
   </footer>
 
 </body>

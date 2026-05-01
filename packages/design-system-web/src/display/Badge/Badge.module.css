@@ -1,0 +1,57 @@
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 3px var(--space-3);
+  border-radius: var(--radius-full);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: var(--font-medium);
+  letter-spacing: var(--tracking-widest);
+  text-transform: uppercase;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+
+/* PENDING — yellow/warning */
+.pending {
+  color: var(--warning);
+  background: rgba(255, 176, 32, 0.12);
+  border-color: rgba(255, 176, 32, 0.28);
+}
+
+/* CONFIRMED — green/success */
+.confirmed {
+  color: var(--success);
+  background: rgba(46, 224, 160, 0.12);
+  border-color: rgba(46, 224, 160, 0.28);
+}
+
+/* COMPLETED — blue/info */
+.completed {
+  color: var(--info);
+  background: rgba(59, 142, 234, 0.12);
+  border-color: rgba(59, 142, 234, 0.28);
+}
+
+/* CANCELLED — red/danger */
+.cancelled {
+  color: var(--danger);
+  background: rgba(255, 87, 87, 0.12);
+  border-color: rgba(255, 87, 87, 0.28);
+}
+
+/* NO_SHOW — muted gray */
+.no_show {
+  color: var(--text-muted);
+  background: rgba(96, 100, 111, 0.12);
+  border-color: rgba(96, 100, 111, 0.28);
+}

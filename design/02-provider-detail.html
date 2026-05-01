@@ -1042,7 +1042,7 @@
         <section aria-labelledby="sec-cennik">
           <div class="section-head">
             <h2 class="section-title" id="sec-cennik">Cennik</h2>
-            <span class="section-sub">Wymiana 4 opon</span>
+            <span class="section-sub">Sezonowa wymiana</span>
           </div>
 
           <div class="pricing-table">
@@ -1057,13 +1057,13 @@
                 <span class="size">16 – 17 cali</span>
                 <span class="your-tag">Twoje opony</span>
               </div>
-              <span class="price">180 zł</span>
+              <span class="price">200 zł</span>
             </div>
             <div class="pricing-row">
               <div class="size-col">
                 <span class="size">≥ 18 cali</span>
               </div>
-              <span class="price">240 zł</span>
+              <span class="price">260 zł</span>
             </div>
           </div>
 
@@ -1280,7 +1280,7 @@
       <div class="sticky-cta" role="region" aria-label="Rezerwacja">
         <div class="cta-price-col">
           <span class="cta-label">od</span>
-          <span class="cta-price">180<span class="zl">zł</span></span>
+          <span class="cta-price">200<span class="zl">zł</span></span>
         </div>
         <button class="cta-btn">
           Zarezerwuj termin
@@ -1299,6 +1299,19 @@
     <div>
       <strong>Do iteracji</strong>
       hero overlay <em>readability</em>, highlight ceny, layout faktów (3 kolumny), sekcja review, CTA z ceną wyjściową
+    </div>
+    <div style="grid-column: 1 / -1; border-top: 1px solid var(--border); padding-top: 12px; margin-top: 4px;">
+      <strong>DS Components</strong>
+      <code style="font-family:var(--font-mono);color:var(--text-secondary);font-size:10px">AppHeader</code> sticky (<em>⚠️ brak wariantu z tytułem + 2× icon-only</em>) ·
+      <code style="font-family:var(--font-mono);color:var(--text-secondary);font-size:10px">Button</code> iconOnly ghost ×2 (FAB back + favorite na hero) ·
+      <code style="font-family:var(--font-mono);color:var(--text-secondary);font-size:10px">ImageCarousel</code> (4 zdjęcia, dot-navigator, counter) ·
+      <code style="font-family:var(--font-mono);color:var(--text-secondary);font-size:10px">PricingTable</code> (3 wiersze, highlightRow="16–17 cali") ·
+      <code style="font-family:var(--font-mono);color:var(--text-secondary);font-size:10px">HoursTable</code> (7 dni, today, status badge open/closed) ·
+      <code style="font-family:var(--font-mono);color:var(--text-secondary);font-size:10px">ContactRow</code> (tel, "Zadzwoń →") ·
+      <code style="font-family:var(--font-mono);color:var(--text-secondary);font-size:10px">ReviewCard</code> (avatar, VerifiedBadge, reply block) ·
+      <code style="font-family:var(--font-mono);color:var(--text-secondary);font-size:10px">StickyBottomBar</code> + <code style="font-family:var(--font-mono);color:var(--text-secondary);font-size:10px">Button</code> primary "Zarezerwuj" ·
+      <em>❌ StatGrid</em> (3 fakty: "8 lat / ~45 min / 24 h") ·
+      <em>❌ SectionHeader</em> (Bebas title + optional right slot)
     </div>
   </footer>
 

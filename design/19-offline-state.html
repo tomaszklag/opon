@@ -958,6 +958,10 @@
       — „Moje rezerwacje" są <em>readable</em> offline — historyczne dane potrzebne (kod OPN-XXXX do pokazania w warsztacie).<br>
       — A11y: <code>aria-disabled="true"</code> na zablokowanych przyciskach, <code>aria-live</code> w banerze, bottom-sheet jako <code>role="dialog"</code>.
     </div>
+    <div style="grid-column: 1 / -1; border-top: 1px solid var(--border); padding-top: 12px; margin-top: 4px;">
+      <strong>DS Components</strong>
+      — <code>NoticeBlock</code> (warning, sticky, aria-live) · <code>ProviderCard</code> (disabled + cached props) ✅ · <code>Button</code> (secondary, disabled) <em>⚠️ brak wariantu dashed-border (offline lock)</em> · <code>BottomSheet</code> ✅ — retry dialog · <code>Chip</code> ✅ — nieaktywne filtry (disabled) · <code>Toast</code> ✅ — „Dane zaktualizowane" po powrocie online · <code>Button</code> (ghost — „Moje rezerwacje (z cache)")
+    </div>
   </footer>
 
 </body>

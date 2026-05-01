@@ -816,6 +816,16 @@
       <strong>Stany statusów</strong>
       <em>Potwierdzona</em> amber · <em>Oczekuje</em> yellow · <em>Zakończona</em> muted + CTA oceń · <em>Anulowana</em> red (szablon gotowy — tu nie pokazany)
     </div>
+    <div style="grid-column: 1 / -1; border-top: 1px solid var(--border); padding-top: 12px; margin-top: 4px;">
+      <strong>DS Components</strong>
+      <code style="font-family:var(--font-mono);color:var(--text-secondary);font-size:10px">AppHeader</code> title-only "Moje rezerwacje" + count chip "2 aktywne" (<em>⚠️ AppHeader bez wordmark / page-title wariant</em>) ·
+      <code style="font-family:var(--font-mono);color:var(--text-secondary);font-size:10px">Tabs</code> ×2 z count per tab: "Nadchodzące (2)" / "Historia (8)" (<em>⚠️ sprawdzić czy Tabs ma count badge</em>) ·
+      <em>❌ DateGroupHeader</em> ×3 (urgent=amber "Za 3 dni · Pon 14 kwietnia" / muted "2 tygodnie temu") ·
+      <code style="font-family:var(--font-mono);color:var(--text-secondary);font-size:10px">BookingCard</code> CONFIRMED (photoUrl, urgentLabel="Pon · 10:15") ·
+      <code style="font-family:var(--font-mono);color:var(--text-secondary);font-size:10px">BookingCard</code> PENDING (initials, urgentLabel muted) ·
+      <code style="font-family:var(--font-mono);color:var(--text-secondary);font-size:10px">BookingCard</code> COMPLETED (<em>⚠️ CTA "Oceń wizytę" w strip zamiast urgentLabel — brak onRate prop</em>) ·
+      <code style="font-family:var(--font-mono);color:var(--text-secondary);font-size:10px">BottomTabBar</code> (active="rezerwacje")
+    </div>
   </footer>
 
 </body>
