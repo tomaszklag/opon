@@ -169,6 +169,7 @@ model Provider {
   updatedAt        DateTime       @updatedAt
 
   emailVerifiedAt  DateTime?
+  pausedUntil      DateTime?
 
   owner              User                       @relation("ProviderOwner", fields: [ownerId], references: [id], onDelete: Restrict)
   photos             ProviderPhoto[]
@@ -183,6 +184,7 @@ model Provider {
   stations           Station[]
   workers            Worker[]
   workerTasks        WorkerTask[]
+  serviceConfigs     ServiceConfig[]
 
   @@map("providers")
 }
@@ -591,4 +593,19 @@ model WorkerTask {
 
   @@index([providerId, startAt])
   @@map("worker_tasks")
+}
+
+// ──────────────────────────────────────────────
+// SERVICE CONFIG — czas trwania usługi dla dostawcy
+// ──────────────────────────────────────────────
+
+model ServiceConfig {
+  id              String      @id @default(uuid())
+  providerId      String
+  serviceType     ServiceType
+  durationMinutes Int         @default(45)
+  provider        Provider    @relation(fields: [providerId], references: [id], onDelete: Cascade)
+
+  @@unique([providerId, serviceType])
+  @@map("service_configs")
 }

@@ -22,6 +22,7 @@ import { StationsModule } from './stations/stations.module';
 import { WorkersModule } from './workers/workers.module';
 import { WorkerTasksModule } from './worker-tasks/worker-tasks.module';
 import { RealtimeModule } from './realtime/realtime.module';
+import { ServiceConfigsModule } from './service-configs/service-configs.module';
 
 @Module({
   imports: [
@@ -48,6 +49,7 @@ import { RealtimeModule } from './realtime/realtime.module';
     BookingsModule,
     ReviewsModule,
     RealtimeModule,
+    ServiceConfigsModule,
   ],
   providers: [
     // Globalny guard — wszystkie endpointy wymagają JWT, chyba że @Public()

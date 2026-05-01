@@ -14,6 +14,7 @@ import {
   IconHours,
   IconProfile,
   IconReviews,
+  IconServices,
   IconSettings,
   IconStations,
   IconWorkers,
@@ -44,6 +45,7 @@ const PAGE_TITLE: Record<string, string> = {
   '/dashboard/calendar': 'Kalendarz',
   '/dashboard/hours': 'Godziny pracy',
   '/dashboard/pricing': 'Cennik',
+  '/dashboard/services': 'Usługi',
   '/dashboard/stations': 'Stanowiska',
   '/dashboard/workers': 'Pracownicy',
   '/dashboard/bookings': 'Rezerwacje',
@@ -157,6 +159,13 @@ export default function DashboardNav() {
           >
             <IconHours width="15" height="15" />
             Godziny pracy
+          </a>
+          <a
+            href="/dashboard/services"
+            className={`${styles.navItem} ${isActive('/dashboard/services') ? styles.navActive : ''}`}
+          >
+            <IconServices width="15" height="15" />
+            Usługi
           </a>
           <a
             href="/dashboard/reviews"

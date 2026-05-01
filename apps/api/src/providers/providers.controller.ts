@@ -20,8 +20,10 @@ import { CreateProviderDto } from './dto/create-provider.dto';
 import { ListProvidersQueryDto } from './dto/list-providers-query.dto';
 import { PhotoResponseDto } from './dto/photo-response.dto';
 import { ProviderPageResponseDto } from './dto/provider-page-response.dto';
+import { ProviderPauseResponseDto } from './dto/provider-pause-response.dto';
 import { ProviderResponseDto } from './dto/provider-response.dto';
 import { ReorderPhotosDto } from './dto/reorder-photos.dto';
+import { SetProviderPauseDto } from './dto/set-provider-pause.dto';
 import { UpdateProviderDto } from './dto/update-provider.dto';
 import { ProvidersService } from './providers.service';
 
@@ -109,6 +111,20 @@ export class ProvidersController {
   @ApiCookieAuth('access_token')
   deletePhoto(@CurrentUser() user: JwtPayload, @Param('id') id: string) {
     return this.service.deletePhoto(user.sub, id);
+  }
+
+  // ── PATCH /v1/providers/me/pause ─────────────────────────────────────────
+
+  @Patch('me/pause')
+  @HttpCode(HttpStatus.OK)
+  @ApiCookieAuth('access_token')
+  @ApiOperation({ summary: 'Ustaw pauzę warsztatu (null = odblokuj)' })
+  @ApiResponse({ status: 200, type: ProviderPauseResponseDto })
+  pause(
+    @CurrentUser() user: JwtPayload,
+    @Body() dto: SetProviderPauseDto,
+  ): Promise<ProviderPauseResponseDto> {
+    return this.service.setProviderPause(user.sub, dto.until ?? null);
   }
 
   // ── GET /v1/providers/:id ──────────────────────────────────────────────────

@@ -33,4 +33,7 @@ export class ProviderResponseDto {
   @ApiProperty({ type: [String] }) vehicleTypes!: string[];
   @ApiProperty({ type: [String] }) tireSizes!: string[];
   @ApiProperty({ type: [String] }) additionalServices!: string[];
+  @ApiPropertyOptional({ type: String, format: 'date-time', nullable: true }) pausedUntil?:
+    | string
+    | null;
 }

@@ -1,0 +1,145 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+/* ── Action bar ── */
+.actionBar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 10px 28px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  flex-shrink: 0;
+}
+
+.dirtyChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 5px;
+  background: var(--warning-muted);
+  border: 1px solid var(--warning-border);
+  text-transform: uppercase;
+}
+
+.savedChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 5px;
+  background: var(--success-muted);
+  border: 1px solid var(--success-border);
+  text-transform: uppercase;
+}
+
+.savedChip::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--success);
+}
+
+/* ── Content area ── */
+.content {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 24px 28px 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  max-width: 680px;
+}
+
+/* ── Page hero ── */
+.pageHero {
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.pageDesc {
+  margin-top: 6px;
+}
+
+/* ── Service list ── */
+.serviceList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* ── Service card ── */
+.serviceCard {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 18px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  position: relative;
+  transition: border-color 0.14s;
+}
+
+.serviceCard:hover {
+  border-color: var(--border-strong);
+}
+
+.serviceCard::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--hairline);
+  border-radius: 12px 12px 0 0;
+  pointer-events: none;
+}
+
+.serviceInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.serviceHint {
+  margin-top: 2px;
+}
+
+/* ── Duration input group ── */
+.durationGroup {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.durationInput {
+  width: 80px;
+}
+
+/* ── Error banner ── */
+.errorBanner {
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: var(--danger-muted);
+  border: 1px solid var(--danger-border);
+}
+
+/* ── Loading ── */
+.loadingWrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}

@@ -16,3 +16,7 @@ export function updateProvider(body: UpdateProviderBody): Promise<Provider> {
 export function submitProvider(): Promise<Provider> {
   return api.post<Provider>('/v1/providers/me/submit', {});
 }
+
+export function setProviderPause(until: string | null): Promise<{ pausedUntil: string | null }> {
+  return api.patch<{ pausedUntil: string | null }>('/v1/providers/me/pause', { until });
+}

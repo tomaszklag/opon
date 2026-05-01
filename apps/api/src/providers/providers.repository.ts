@@ -111,6 +111,13 @@ export class ProvidersRepository {
     });
   }
 
+  setPause(providerId: string, pausedUntil: Date | null) {
+    return this.prisma.provider.update({
+      where: { id: providerId },
+      data: { pausedUntil },
+    });
+  }
+
   /**
    * Atomowa operacja: tworzy Provider i aktualizuje rolę właściciela do PROVIDER_OWNER.
    * Transakcja w repozytorium bo obejmuje dwie encje w tym samym DB write.

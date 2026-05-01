@@ -6,6 +6,7 @@ import { EmailVerificationService } from '../email/email-verification.service';
 import { AddPhotoDto } from './dto/add-photo.dto';
 import { CreateProviderDto } from './dto/create-provider.dto';
 import { ListProvidersQueryDto } from './dto/list-providers-query.dto';
+import { ProviderPauseResponseDto } from './dto/provider-pause-response.dto';
 import { ReorderPhotosDto } from './dto/reorder-photos.dto';
 import { UpdateProviderDto } from './dto/update-provider.dto';
 import { ProvidersRepository } from './providers.repository';
@@ -183,6 +184,14 @@ export class ProvidersService {
   async reorderPhotos(ownerId: string, dto: ReorderPhotosDto) {
     const provider = await this.getMyProvider(ownerId);
     await this.repo.reorderPhotos(provider.id, dto.orderedIds);
+  }
+
+  async setProviderPause(ownerId: string, until: string | null): Promise<ProviderPauseResponseDto> {
+    const provider = await this.repo.findByOwnerId(ownerId);
+    if (!provider) throw new AppException(ErrorCode.PROVIDER_NOT_FOUND, 'Brak firmy.', 404);
+    const pausedUntil = until ? new Date(until) : null;
+    await this.repo.setPause(provider.id, pausedUntil);
+    return { pausedUntil: pausedUntil?.toISOString() ?? null };
   }
 
   /** Usuwa pola finansowe — używane przy publicznych endpointach. */

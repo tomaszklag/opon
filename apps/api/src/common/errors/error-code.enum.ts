@@ -96,6 +96,12 @@ export enum ErrorCode {
   // ── BOOKING ───────────────────────────────────────────────────────────────
   /** Rezerwacja nie istnieje */
   BOOKING_NOT_FOUND = 'BOOKING_NOT_FOUND',
+  /** Termin poza godzinami pracy warsztatu */
+  BOOKING_OUTSIDE_HOURS = 'BOOKING_OUTSIDE_HOURS',
+  /** Warsztat ma aktywną pauzę */
+  PROVIDER_PAUSED = 'PROVIDER_PAUSED',
+  /** Pracownik jest na urlopie */
+  WORKER_ON_LEAVE = 'WORKER_ON_LEAVE',
 
   // ── REVIEW ────────────────────────────────────────────────────────────────
   /** Opinia nie istnieje lub brak dostępu */

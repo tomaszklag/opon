@@ -136,7 +136,77 @@ export class BookingsService {
 
   // ── create manual ─────────────────────────────────────────────────────────
 
+  private async validateManualSlot(
+    providerId: string,
+    startAt: Date,
+    endAt: Date,
+    workerId?: string | null,
+  ): Promise<void> {
+    const dayOfWeek = startAt.getUTCDay();
+    const dateStr = startAt.toISOString().slice(0, 10);
+
+    const [workingHours, provider, exception] = await Promise.all([
+      this.prisma.workingHours.findUnique({
+        where: { providerId_dayOfWeek: { providerId, dayOfWeek } },
+      }),
+      this.prisma.provider.findUnique({ where: { id: providerId } }),
+      this.prisma.scheduleException.findUnique({
+        where: { providerId_date: { providerId, date: new Date(dateStr) } },
+      }),
+    ]);
+
+    if (exception) {
+      if (!exception.customOpenTime) {
+        throw new AppException(
+          ErrorCode.BOOKING_OUTSIDE_HOURS,
+          'Warsztat jest zamknięty w tym dniu (wyjątek kalendarzowy).',
+          422,
+        );
+      }
+    } else if (!workingHours || workingHours.isClosed) {
+      throw new AppException(
+        ErrorCode.BOOKING_OUTSIDE_HOURS,
+        'Warsztat jest zamknięty w tym dniu.',
+        422,
+      );
+    }
+
+    if (provider?.pausedUntil && provider.pausedUntil > new Date()) {
+      throw new AppException(ErrorCode.PROVIDER_PAUSED, 'Warsztat ma aktywną pauzę.', 422);
+    }
+
+    if (workerId) {
+      const [leave, tasks] = await Promise.all([
+        this.prisma.workerLeave.findFirst({
+          where: { workerId, startDate: { lte: startAt }, endDate: { gte: startAt } },
+        }),
+        this.workerTasksService.findActiveInRange(workerId, startAt, endAt),
+      ]);
+      if (leave)
+        throw new AppException(
+          ErrorCode.WORKER_ON_LEAVE,
+          'Pracownik jest nieobecny w tym dniu.',
+          422,
+        );
+      if (tasks.length > 0)
+        throw new AppException(
+          ErrorCode.WORKER_ON_LEAVE,
+          'Pracownik ma zaplanowane zadanie w tym czasie.',
+          422,
+        );
+    }
+  }
+
   async createManual(providerId: string, dto: CreateManualBookingDto): Promise<BookingResponseDto> {
+    if (!dto.skipAvailabilityCheck) {
+      await this.validateManualSlot(
+        providerId,
+        new Date(dto.startAt),
+        new Date(dto.endAt),
+        dto.workerId,
+      );
+    }
+
     const status = dto.autoConfirm !== false ? BookingStatus.CONFIRMED : BookingStatus.PENDING;
     const confirmedAt = status === BookingStatus.CONFIRMED ? new Date() : null;
 
@@ -380,6 +450,19 @@ export class BookingsService {
     const workingHours = await this.prisma.workingHours.findUnique({
       where: { providerId_dayOfWeek: { providerId, dayOfWeek } },
     });
+
+    // Check provider pause
+    const providerData = await this.prisma.provider.findUnique({
+      where: { id: providerId },
+    });
+    const pausedUntil = (providerData as unknown as { pausedUntil?: Date | null })?.pausedUntil;
+    if (pausedUntil && pausedUntil > new Date()) {
+      return {
+        slots: [],
+        slotMinutes: workingHours?.slotMinutes ?? 45,
+        isClosedDay: true,
+      };
+    }
 
     // Fetch schedule exception for this date
     const exception = await this.prisma.scheduleException.findUnique({

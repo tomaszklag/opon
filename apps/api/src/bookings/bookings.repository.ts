@@ -282,4 +282,11 @@ export class BookingsRepository {
       },
     });
   }
+
+  findProviderPause(providerId: string) {
+    return this.prisma.provider.findUnique({
+      where: { id: providerId },
+      select: { pausedUntil: true },
+    });
+  }
 }

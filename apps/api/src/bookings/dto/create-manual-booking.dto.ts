@@ -66,4 +66,12 @@ export class CreateManualBookingDto {
   @IsOptional()
   @IsBoolean()
   autoConfirm?: boolean;
+
+  @ApiPropertyOptional({
+    example: false,
+    description: 'Pomiń walidację dostępności (recepcja świadomie nadpisuje)',
+  })
+  @IsOptional()
+  @IsBoolean()
+  skipAvailabilityCheck?: boolean;
 }

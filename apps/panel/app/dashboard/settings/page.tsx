@@ -19,6 +19,7 @@ import {
   IconStations,
   IconTrash,
 } from '../../../components/icons';
+import { usePause } from '../../../lib/hooks/use-pause';
 import styles from './settings.module.css';
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -86,6 +87,16 @@ export default function SettingsPage() {
   const bodyRef = useRef<HTMLDivElement>(null);
   const [activeSection, setActiveSection] = useState<string>('contact');
   const [notifs, setNotifs] = useState<NotifState>(NOTIF_INITIAL);
+  const {
+    isPaused,
+    pausedUntil,
+    applying,
+    error: pauseError,
+    pauseToday,
+    pauseWeekend,
+    pauseWeek,
+    unpause,
+  } = usePause();
 
   // Scroll-spy via IntersectionObserver on the scrollable body div
   useEffect(() => {
@@ -325,51 +336,97 @@ export default function SettingsPage() {
               </span>
               <div className={styles.pauseStatusCol}>
                 <Heading variant="subsection" as="span">
-                  WARSZTAT AKTYWNY
+                  {isPaused ? 'WARSZTAT ZAPAUZOWANY' : 'WARSZTAT AKTYWNY'}
                 </Heading>
-                <Text variant="body-sm" color="secondary" as="span">
-                  Widoczny w wyszukiwarce. Najbliższy wolny slot:{' '}
-                  <Text variant="body-sm" as="span" weight="bold">
-                    dziś 14:30
+                {isPaused && pausedUntil ? (
+                  <Text variant="body-sm" color="secondary" as="span">
+                    Niewidoczny w wyszukiwarce. Pauza do:{' '}
+                    <Text variant="body-sm" as="span" weight="bold">
+                      {new Date(pausedUntil).toLocaleDateString('pl-PL', {
+                        day: 'numeric',
+                        month: 'long',
+                        year: 'numeric',
+                      })}
+                    </Text>
+                    .
                   </Text>
-                  . Od ostatniej pauzy:{' '}
-                  <Text variant="body-sm" as="span" weight="bold">
-                    37 dni
+                ) : (
+                  <Text variant="body-sm" color="secondary" as="span">
+                    Widoczny w wyszukiwarce. Klienci mogą składać rezerwacje.
                   </Text>
-                  .
-                </Text>
+                )}
               </div>
-              <Button variant="neutral" size="sm">
-                <IconPause width="13" height="13" />
-                Zapauzuj teraz
-              </Button>
+              {isPaused ? (
+                <Button variant="primary" size="sm" onClick={unpause} loading={applying}>
+                  Odblokuj warsztat
+                </Button>
+              ) : (
+                <Button variant="neutral" size="sm" onClick={pauseToday} loading={applying}>
+                  <IconPause width="13" height="13" />
+                  Zapauzuj teraz
+                </Button>
+              )}
             </div>
 
+            {pauseError && (
+              <Text variant="body-sm" as="p" color="danger">
+                {pauseError}
+              </Text>
+            )}
+
             {/* Pause presets */}
-            <div className={styles.pausePresets}>
-              {[
-                { lbl: 'Preset', val: 'Dziś', hint: 'Do 22:00 · 1 dzień', warn: false },
-                { lbl: 'Preset', val: 'Weekend', hint: 'Sob–Nd · 26–27 kwie', warn: false },
-                { lbl: 'Preset', val: 'Tydzień', hint: '7 dni od jutra', warn: false },
-                { lbl: 'Własny zakres', val: 'Od… Do…', hint: 'Picker dat + godzin', warn: true },
-              ].map(({ lbl, val, hint, warn }) => (
+            {!isPaused && (
+              <div className={styles.pausePresets}>
                 <button
-                  key={val}
                   type="button"
-                  className={`${styles.pausePreset} ${warn ? styles.pausePresetWarning : ''}`}
+                  className={styles.pausePreset}
+                  onClick={pauseToday}
+                  disabled={applying}
                 >
                   <Text variant="nano" as="span" color="muted" weight="bold" mono>
-                    {lbl}
+                    Preset
                   </Text>
                   <Heading variant="subsection" as="span">
-                    {val}
+                    Dziś
                   </Heading>
                   <Text variant="nano" as="span" color="muted">
-                    {hint}
+                    Do końca dnia · 23:59
                   </Text>
                 </button>
-              ))}
-            </div>
+                <button
+                  type="button"
+                  className={styles.pausePreset}
+                  onClick={pauseWeekend}
+                  disabled={applying}
+                >
+                  <Text variant="nano" as="span" color="muted" weight="bold" mono>
+                    Preset
+                  </Text>
+                  <Heading variant="subsection" as="span">
+                    Weekend
+                  </Heading>
+                  <Text variant="nano" as="span" color="muted">
+                    Do najbliższego poniedziałku
+                  </Text>
+                </button>
+                <button
+                  type="button"
+                  className={styles.pausePreset}
+                  onClick={pauseWeek}
+                  disabled={applying}
+                >
+                  <Text variant="nano" as="span" color="muted" weight="bold" mono>
+                    Preset
+                  </Text>
+                  <Heading variant="subsection" as="span">
+                    Tydzień
+                  </Heading>
+                  <Text variant="nano" as="span" color="muted">
+                    7 dni od teraz
+                  </Text>
+                </button>
+              </div>
+            )}
           </section>
 
           {/* ── 03 Powiadomienia ─────────────────────────────────────────── */}
