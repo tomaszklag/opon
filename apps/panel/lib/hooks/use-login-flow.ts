@@ -105,11 +105,13 @@ export function useLoginFlow() {
       if (user.role === 'CLIENT') {
         setClientRoleError(true);
         setCode('');
+        setLoading(false);
         return;
       }
 
       login(user);
       router.replace(canonicalRoute(user));
+      // loading stays true — component unmounts during navigation
     } catch (err) {
       if (err instanceof ApiError && err.isTooManyRequests) {
         // Too many wrong OTP attempts — back to phone step with rate limit
@@ -120,7 +122,6 @@ export function useLoginFlow() {
         setError(err instanceof ApiError ? err.message : 'Błąd weryfikacji.');
         setCode('');
       }
-    } finally {
       setLoading(false);
     }
   }

@@ -32,6 +32,10 @@
   pointer-events: none;
 }
 
+.button[aria-busy='true']:disabled {
+  opacity: 1;
+}
+
 /* ── Sizes (declared first so variants can override) ── */
 
 .sm {
