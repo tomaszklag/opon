@@ -66,6 +66,9 @@ export class OtpService {
   }
 
   private generateCode(): string {
+    if (this.config.get<string>('NODE_ENV') === 'development') {
+      return '000000';
+    }
     return randomInt(100_000, 1_000_000).toString();
   }
 
