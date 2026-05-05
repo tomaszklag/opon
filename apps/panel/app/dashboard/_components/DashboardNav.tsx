@@ -10,7 +10,6 @@ import {
   IconDashboard,
   IconBookings,
   IconCalendar,
-  IconPricing,
   IconHours,
   IconProfile,
   IconReviews,
@@ -44,8 +43,7 @@ const PAGE_TITLE: Record<string, string> = {
   '/dashboard': 'Dashboard',
   '/dashboard/calendar': 'Kalendarz',
   '/dashboard/hours': 'Godziny pracy',
-  '/dashboard/pricing': 'Cennik',
-  '/dashboard/services': 'Usługi',
+  '/dashboard/services': 'Usługi & Cennik',
   '/dashboard/stations': 'Stanowiska',
   '/dashboard/workers': 'Pracownicy',
   '/dashboard/bookings': 'Rezerwacje',
@@ -133,11 +131,11 @@ export default function DashboardNav() {
             Warsztat
           </Text>
           <a
-            href="/dashboard/pricing"
-            className={`${styles.navItem} ${isActive('/dashboard/pricing') ? styles.navActive : ''}`}
+            href="/dashboard/services"
+            className={`${styles.navItem} ${isActive('/dashboard/services') ? styles.navActive : ''}`}
           >
-            <IconPricing width="15" height="15" />
-            Cennik
+            <IconServices width="15" height="15" />
+            Usługi & Cennik
           </a>
           <a
             href="/dashboard/stations"
@@ -159,13 +157,6 @@ export default function DashboardNav() {
           >
             <IconHours width="15" height="15" />
             Godziny pracy
-          </a>
-          <a
-            href="/dashboard/services"
-            className={`${styles.navItem} ${isActive('/dashboard/services') ? styles.navActive : ''}`}
-          >
-            <IconServices width="15" height="15" />
-            Usługi
           </a>
           <a
             href="/dashboard/reviews"

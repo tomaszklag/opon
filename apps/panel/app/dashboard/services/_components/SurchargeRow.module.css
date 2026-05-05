@@ -1,0 +1,131 @@
+/* Grid: toggle(26) | icon(22) | name(1fr) | scope | price | calc | del */
+.row {
+  display: grid;
+  grid-template-columns: 26px 22px 1fr auto auto auto auto;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-top: 1px solid var(--border);
+}
+
+.row:first-child {
+  border-top: none;
+}
+
+.off {
+  opacity: 0.42;
+}
+
+.newRow {
+  border-top: 1px solid var(--purple-border);
+  background: var(--purple-muted);
+}
+
+.icon {
+  width: 22px;
+  height: 22px;
+  border-radius: 5px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: var(--purple-muted);
+  border: 1px solid var(--purple-border);
+}
+
+.info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+
+.scope {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.scope:hover {
+  border-color: var(--purple-border);
+  color: var(--purple);
+}
+
+.priceCell {
+  display: inline-flex;
+  align-items: stretch;
+  background: var(--surface-raised);
+  border: 1px solid var(--purple-border);
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.priceInput {
+  width: 30px;
+  background: transparent;
+  border: none;
+  outline: none;
+  padding: 3px;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 11px;
+  text-align: right;
+}
+
+.priceUnit {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 4px;
+  background: var(--bg);
+  border-left: 1px solid var(--border);
+  color: var(--purple);
+}
+
+.calc {
+  white-space: nowrap;
+  min-width: 44px;
+  text-align: right;
+}
+
+.delBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  border: 1px solid transparent;
+  background: transparent;
+  cursor: pointer;
+  color: var(--text-muted);
+  padding: 0;
+}
+
+.delBtn:hover {
+  border-color: var(--danger-border);
+  color: var(--danger);
+  background: var(--danger-muted);
+}
+
+.confirmBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  border: 1px solid var(--success-border);
+  background: var(--success-muted);
+  cursor: pointer;
+  color: var(--success);
+  padding: 0;
+}

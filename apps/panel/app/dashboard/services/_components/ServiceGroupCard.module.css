@@ -1,0 +1,89 @@
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  overflow: hidden;
+  position: relative;
+}
+
+.card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--hairline);
+  pointer-events: none;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  background: linear-gradient(180deg, rgba(255, 107, 26, 0.04), transparent);
+  border-bottom: 1px solid var(--border);
+}
+
+
+.countBadge {
+  padding: 2px 5px;
+  border-radius: 3px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+}
+
+.spacer {
+  flex: 1;
+}
+
+.pricingMode {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+  margin-left: 4px;
+}
+
+.pmOpt {
+  padding: 3px 9px;
+  cursor: pointer;
+  color: var(--text-muted);
+  background: transparent;
+  border: none;
+}
+
+.pmOptActive {
+  background: var(--accent-muted);
+  color: var(--accent);
+}
+
+.addVariantBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px;
+  border-radius: 6px;
+  border: 1px dashed var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.addVariantBtn:hover {
+  border-color: var(--accent-border);
+  color: var(--accent);
+}
+
+.variants {
+  /* Container for variant rows */
+}
+
+.variantBlock {
+  border-bottom: 1px solid var(--border);
+}
+
+.variantBlock:last-child {
+  border-bottom: none;
+}

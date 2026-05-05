@@ -1,0 +1,93 @@
+.expanded {
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.expLabel {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-muted);
+}
+
+.line {
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+.legend {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.legendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--text-muted);
+}
+
+.legendItemAccent {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--accent);
+}
+
+.legendDot {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--border-strong);
+}
+
+.rimTiers {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.addTierBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 9px;
+  border-radius: 6px;
+  border: 1px dashed var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  align-self: flex-start;
+}
+
+.addTierBtn:hover {
+  border-color: var(--accent-border);
+  color: var(--accent);
+}
+
+.subSvcList {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.addSubSvcBtn {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  padding: 6px 10px;
+  border-radius: 7px;
+  border: 1px solid var(--accent-border);
+  background: var(--accent-muted);
+  cursor: pointer;
+  color: var(--accent);
+}
+
+.addSubSvcBtn:hover {
+  background: rgba(255, 107, 26, 0.2);
+}

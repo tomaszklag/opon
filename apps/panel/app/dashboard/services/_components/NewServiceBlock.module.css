@@ -1,0 +1,110 @@
+.block {
+  background: var(--surface);
+  border: 1px solid var(--accent-border);
+  border-radius: 11px;
+  overflow: hidden;
+  box-shadow: 0 0 0 3px var(--accent-muted);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  background: linear-gradient(180deg, var(--accent-muted), transparent);
+  border-bottom: 1px solid var(--accent-border);
+}
+
+.label {
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+}
+
+.spacer {
+  flex: 1;
+}
+
+.body {
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+
+.optionsWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.optionsLabel {
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.opt {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 7px;
+  padding: 5px 10px;
+  border-radius: 7px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  cursor: pointer;
+}
+
+.optSelected {
+  border-color: var(--accent-border);
+  background: var(--accent-muted);
+}
+
+.radioHidden {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.optChk {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  border: 1px solid var(--border-strong);
+  background: var(--bg);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.optChkSelected {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.hintRow {
+  padding: 6px 10px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.enterHint {
+  margin-left: auto;
+}

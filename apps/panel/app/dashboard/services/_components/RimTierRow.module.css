@@ -1,0 +1,161 @@
+.row {
+  display: grid;
+  grid-template-columns: 1fr auto auto auto;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 9px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  align-items: center;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border-strong);
+}
+
+.chipX {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 11px;
+  height: 11px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-muted);
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+.chipX:hover {
+  background: var(--danger-muted);
+  color: var(--danger);
+}
+
+.chipAdd {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px dashed var(--border);
+  color: var(--text-muted);
+  background: transparent;
+  cursor: pointer;
+  font-size: 9px;
+}
+
+.chipAdd:hover {
+  border-color: var(--accent-border);
+  color: var(--accent);
+}
+
+.addSizeInput {
+  width: 44px;
+  background: var(--bg);
+  border: 1px solid var(--accent-border);
+  border-radius: 4px;
+  padding: 2px 4px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-primary);
+  outline: none;
+  text-transform: uppercase;
+}
+
+/* Price cell */
+.priceCell {
+  display: inline-flex;
+  align-items: stretch;
+  background: var(--surface-raised);
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.priceCellInput {
+  width: 38px;
+  background: transparent;
+  border: none;
+  outline: none;
+  padding: 4px 3px;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 13px;
+  text-align: right;
+}
+
+.priceCellUnit {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 5px;
+  background: var(--bg);
+  border-left: 1px solid var(--border);
+}
+
+/* Duration cell */
+.durCell {
+  display: inline-flex;
+  align-items: stretch;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.durCellInput {
+  width: 28px;
+  background: transparent;
+  border: none;
+  outline: none;
+  padding: 4px 3px;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 12px;
+  text-align: center;
+}
+
+.durCellUnit {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 5px;
+  border-left: 1px solid var(--border);
+}
+
+/* Delete button */
+.delBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  border: 1px solid transparent;
+  background: transparent;
+  cursor: pointer;
+  color: var(--text-muted);
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.delBtn:hover {
+  border-color: var(--danger-border);
+  color: var(--danger);
+  background: var(--danger-muted);
+}

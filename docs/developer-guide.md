@@ -456,6 +456,48 @@ import { Heading, Text } from '@opony/design-system-web';
 
 > **`TextColor`** obejmuje: `primary | secondary | muted | accent | warning | danger`. Dla `success` prop `color` nie istnieje — jedynym wyjątkiem od reguły „no color in CSS" jest ten przypadek: zachowaj `color: var(--success)` w CSS module dla danego elementu.
 
+#### Zakaz: inline `style={}` z typografią na DS komponentach
+
+Reguła „no typography in CSS module" obowiązuje **równie mocno** dla inline `style={}` w JSX. Oba zapisy są zabronione:
+
+```tsx
+// ❌ NIE — CSS module
+// .label { font-size: 11px; color: var(--text-muted); }
+<Text variant="nano" className={styles.label}>...</Text>
+
+// ❌ NIE — inline style (równoznaczne naruszenie)
+<Text variant="nano" style={{ fontSize: '11px', color: 'var(--text-muted)' }}>...</Text>
+
+// ❌ NIE — zły wariant + override rozmiaru przez style
+<Heading variant="display" style={{ fontSize: '11px' }}>Sekcja</Heading>
+
+// ✅ TAK — właściwy wariant, żadnych overrides
+<Text variant="nano" as="span" weight="bold" color="secondary">Sekcja</Text>
+```
+
+Wybierz właściwy wariant DS zamiast nadpisywać styl złego wariantu.
+
+#### Wzorzec: kolory spoza TextColor (purple, teal, success…)
+
+Gdy potrzebujesz koloru tokenu który nie jest w `TextColor` (np. `var(--purple)`, `var(--teal)`), owiń DS komponent w `<span>` z CSS klasą ustawiającą kolor. **Nie używaj** `style={{ color: ... }}` na DS komponencie ani `color:` w klasie doklejonej do DS komponentu.
+
+```tsx
+// ❌ NIE — inline style z kolorem na DS Text
+<Text variant="nano" style={{ color: 'var(--purple)' }}>Dopłaty</Text>
+
+// ❌ NIE — color w klasie bezpośrednio na DS Text
+// .label { color: var(--purple); }
+<Text variant="nano" className={styles.label}>Dopłaty</Text>
+
+// ✅ TAK — wrapper span z CSS klasą, DS Text bez inline styles
+<span className={styles.purpleWrap}>
+  <Text variant="nano" as="span" weight="bold">Dopłaty</Text>
+</span>
+// .purpleWrap { color: var(--purple); }  ← color na wrapperze, nie na DS komponencie
+```
+
+Wyjątek: `color: var(--success)` w CSS module bezpośrednio na elemencie (udokumentowany wyżej) pozostaje dopuszczalny ze względu na historyczną spójność. Dla nowego kodu prefer wrapper span.
+
 #### Heading — warianty
 
 | Wariant      | Zastosowanie                                  |
@@ -643,6 +685,35 @@ Reguła „każdy tekst = DS `<Text>`" obowiązuje bezwzględnie dla:
 Komórki wewnętrzne siatki (`.bookingTime`, `.monthChipName`, `.hourCell` w kalendarzu) to świadomy wyjątek analogiczny do pseudoelementów — po stronie JSX. Wzorzec referencyjny: `_components/WeekView.tsx`, `DayView.tsx`, `MonthView.tsx` (booking chips, day number, hour labels) vs. ich sidebar (wyłącznie DS `<Text>`).
 
 > **Dla reviewerów:** W komponencie data-dense rozróżniaj sidebar/wrapper (musi używać `<Text>`) od komórek samej siatki (wyjątek dozwolony). Flaguj naruszenie tylko gdy typografia jest poza siatką — np. w legendzie, nagłówku, stopce.
+
+#### Wyjątek: kompaktowe pola numeryczne w wierszach siatki usług
+
+Pola cena/czas w wierszach siatki (np. `ServiceVariantExpanded`, `RimTierRow`, `SubServiceRow`, `SurchargeRow`) mają ograniczoną szerokość (≤44px) i wymagają mono + bold + tight padding, których DS `<Input>` nie obsługuje w tak małej komórce. Raw `<input>` jest dopuszczalny **tylko jeśli**:
+
+1. Szerokość komórki wynosi ≤44px (price cell) lub ≤28px (duration cell).
+2. Typ to `number` (nie `text` — dla pól tekstowych nazw zawsze DS `<Input>`).
+3. Element jest zagnieżdżony bezpośrednio w cell-kontenerze siatki (nie jako standalone form field).
+4. Plik `.tsx` zawiera komentarz `/* raw <input> — [powód] */` bezpośrednio przed tagiem.
+
+```tsx
+// ✅ TAK — 36px price cell w siatce usług, z komentarzem
+/* raw <input> — DS Input nie pasuje do 36px cell embed z custom mono stylem */
+<input
+  className={styles.priceCellInput}
+  type="number"
+  value={sub.pricePln ?? ''}
+  onChange={(e) => onChange({ ...sub, pricePln: e.target.value })}
+  aria-label="Cena pod-usługi"
+/>
+
+// ❌ NIE — pole tekstowe nazwy (full-width, DS <Input> pasuje)
+<input className={styles.nameInput} type="text" placeholder="Nazwa usługi…" />
+
+// ❌ NIE — brak komentarza uzasadniającego
+<input className={styles.addSizeInput} type="text" maxLength={4} />
+```
+
+Pola tekstowe (`type="text"`) do wprowadzania nazw, opisów lub etykiet zawsze używają DS `<Input>`, nawet w zwartych layoutach.
 
 #### CSS Modules + noUncheckedIndexedAccess
 
