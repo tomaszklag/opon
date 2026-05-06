@@ -941,6 +941,23 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
   schemas: {
+    DataExportRequestDto: {
+      id: string;
+      providerId: string;
+      providerName: string;
+      providerNip: string;
+      providerEmail: string | null;
+      /** @enum {string} */
+      status: 'PENDING' | 'COMPLETED' | 'CANCELLED';
+      /** Format: date-time */
+      requestedAt: string;
+      /** Format: date-time */
+      completedAt: string | null;
+    };
+    DataExportPage: {
+      data: components['schemas']['DataExportRequestDto'][];
+      total: number;
+    };
     HealthResponseDto: {
       /** @example ok */
       status: string;

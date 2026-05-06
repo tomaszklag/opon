@@ -223,6 +223,20 @@ export class ProvidersService {
     return { status: 'PENDING_DELETION' };
   }
 
+  async requestDataExport(ownerId: string): Promise<{ status: string; requestedAt: string }> {
+    const provider = await this.repo.findByOwnerId(ownerId);
+    if (!provider) throw new AppException(ErrorCode.PROVIDER_NOT_FOUND, 'Brak firmy.', 404);
+    const existing = await this.repo.findPendingDataExportRequest(provider.id);
+    if (existing)
+      throw new AppException(
+        ErrorCode.DATA_EXPORT_ALREADY_PENDING,
+        'Masz już złożony wniosek o dane. Skontaktuj się z administratorem.',
+        409,
+      );
+    const req = await this.repo.createDataExportRequest(provider.id);
+    return { status: 'PENDING', requestedAt: req.requestedAt.toISOString() };
+  }
+
   /** Usuwa pola finansowe — używane przy publicznych endpointach. */
   private toPublicView(provider: Provider): ProviderPublicView {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars

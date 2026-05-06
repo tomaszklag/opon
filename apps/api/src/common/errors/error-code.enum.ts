@@ -115,6 +115,12 @@ export enum ErrorCode {
   /** Zasób nie znaleziony */
   NOT_FOUND = 'NOT_FOUND',
 
+  // ── DATA EXPORT ───────────────────────────────────────────────────────────
+  /** Wniosek o dane nie istnieje */
+  DATA_EXPORT_NOT_FOUND = 'DATA_EXPORT_NOT_FOUND',
+  /** Istnieje już oczekujący wniosek o dane */
+  DATA_EXPORT_ALREADY_PENDING = 'DATA_EXPORT_ALREADY_PENDING',
+
   // ── INTERNAL ──────────────────────────────────────────────────────────────
   /** Wewnętrzny błąd serwera */
   INTERNAL_ERROR = 'INTERNAL_ERROR',

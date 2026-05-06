@@ -151,6 +151,18 @@ export class ProvidersController {
     return this.service.requestDeletion(user.sub);
   }
 
+  // ── POST /v1/providers/me/data-export-requests ────────────────────────────
+
+  @Post('me/data-export-requests')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiCookieAuth('access_token')
+  @ApiOperation({ summary: 'Zamów kopię danych (RODO art. 20)' })
+  @ApiResponse({ status: 201, description: 'Wniosek przyjęty' })
+  @ApiResponse({ status: 409, description: 'Masz już oczekujący wniosek' })
+  requestDataExport(@CurrentUser() user: JwtPayload) {
+    return this.service.requestDataExport(user.sub);
+  }
+
   // ── GET /v1/providers/:id ──────────────────────────────────────────────────
 
   @Public()

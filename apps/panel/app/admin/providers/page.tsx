@@ -15,11 +15,18 @@ import {
   getGusHealth,
 } from '../../../api-data-access/admin';
 import type { Provider, GusHealthStatus, GusHealthResponse } from '../../../api-data-access/admin';
+import {
+  listDataExportRequests,
+  completeDataExportRequest,
+  cancelDataExportRequest,
+} from '../../../api-data-access/data-exports';
+import type { DataExportRequestDto } from '../../../api-data-access/data-exports';
 import type { ProviderStatus } from '../../../lib/auth';
 import {
   IconBriefcase,
   IconCheck,
   IconBan,
+  IconDownload,
   IconMobilePhone,
   IconMail,
   IconTrash,
@@ -270,6 +277,78 @@ function DeletionRow({
   );
 }
 
+function DataExportRow({
+  request,
+  onComplete,
+  onCancel,
+  busy,
+}: {
+  request: DataExportRequestDto;
+  onComplete: (id: string) => Promise<void>;
+  onCancel: (id: string) => Promise<void>;
+  busy: boolean;
+}) {
+  const requestedDate = formatDate(request.requestedAt);
+
+  return (
+    <div className={styles.row}>
+      <div className={styles.rowLeft}>
+        <div className={styles.rowIcon} aria-hidden="true">
+          <IconDownload width={16} height={16} />
+        </div>
+        <div className={styles.rowInfo}>
+          <div className={styles.rowNameLine}>
+            <Text variant="body-sm" as="span" weight="bold" color="primary">
+              {request.providerName}
+            </Text>
+          </div>
+          <div className={styles.rowMeta}>
+            <Text variant="nano" as="span" color="muted" mono>
+              NIP {request.providerNip}
+            </Text>
+            {request.providerEmail && (
+              <>
+                <span className={styles.metaSep} aria-hidden="true" />
+                <span className={styles.metaItem}>
+                  <IconMail width={11} height={11} />
+                  <Text variant="nano" as="span" color="muted">
+                    {request.providerEmail}
+                  </Text>
+                </span>
+              </>
+            )}
+          </div>
+          <Text variant="nano" as="span" color="muted">
+            Zamówiono: {requestedDate}
+          </Text>
+        </div>
+      </div>
+      <div className={styles.rowActions}>
+        <Button
+          variant="primary"
+          size="sm"
+          loading={busy}
+          disabled={busy}
+          onClick={() => onComplete(request.id)}
+        >
+          <IconCheck width={13} height={13} />
+          Zrealizowane
+        </Button>
+        <Button
+          variant="neutral"
+          size="sm"
+          loading={busy}
+          disabled={busy}
+          onClick={() => onCancel(request.id)}
+        >
+          <IconBan width={13} height={13} />
+          Anuluj
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 export default function AdminProvidersPage() {
   const { isLoading: authLoading } = useAuthGuard('/admin/providers');
   const {
@@ -282,11 +361,17 @@ export default function AdminProvidersPage() {
     isLoading: deletionLoading,
     mutate: mutateDeletion,
   } = useSWR('/v1/admin/providers?status=PENDING_DELETION', listDeletionRequests);
+  const {
+    data: dataExportData,
+    isLoading: dataExportLoading,
+    mutate: mutateDataExport,
+  } = useSWR('/v1/admin/data-export-requests', listDataExportRequests);
 
   const [busyIds, setBusyIds] = useState<Set<string>>(new Set());
   const [busyDeletionIds, setBusyDeletionIds] = useState<Set<string>>(new Set());
+  const [busyDataExportIds, setBusyDataExportIds] = useState<Set<string>>(new Set());
 
-  const isLoading = authLoading || dataLoading || deletionLoading;
+  const isLoading = authLoading || dataLoading || deletionLoading || dataExportLoading;
 
   async function handleApprove(id: string) {
     setBusyIds((prev) => new Set(prev).add(id));
@@ -344,6 +429,34 @@ export default function AdminProvidersPage() {
     }
   }
 
+  async function handleCompleteDataExport(id: string) {
+    setBusyDataExportIds((prev) => new Set(prev).add(id));
+    try {
+      await completeDataExportRequest(id);
+      await mutateDataExport();
+    } finally {
+      setBusyDataExportIds((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+    }
+  }
+
+  async function handleCancelDataExport(id: string) {
+    setBusyDataExportIds((prev) => new Set(prev).add(id));
+    try {
+      await cancelDataExportRequest(id);
+      await mutateDataExport();
+    } finally {
+      setBusyDataExportIds((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+    }
+  }
+
   if (isLoading) {
     return (
       <div className={styles.page}>
@@ -358,6 +471,8 @@ export default function AdminProvidersPage() {
   const total = data?.total ?? 0;
   const deletionProviders = deletionData?.data ?? [];
   const deletionTotal = deletionData?.total ?? 0;
+  const dataExportRequests = dataExportData?.data ?? [];
+  const dataExportTotal = dataExportData?.total ?? 0;
 
   return (
     <div className={styles.page}>
@@ -458,6 +573,51 @@ export default function AdminProvidersPage() {
                   onConfirm={handleConfirmDeletion}
                   onCancel={handleCancelDeletion}
                   busy={busyDeletionIds.has(provider.id)}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* ── Data export requests section ── */}
+          <div className={styles.sectionSep} />
+          <div className={styles.pageHeader}>
+            <div>
+              <Heading variant="section" as="h2">
+                Zamówienia danych (RODO)
+              </Heading>
+              <Text variant="body-sm" as="p" color="secondary">
+                Warsztaty oczekujące na przesłanie kopii swoich danych (art. 20 RODO)
+              </Text>
+            </div>
+            {dataExportTotal > 0 && (
+              <span className={styles.countBadge}>
+                <Text variant="kicker" as="span" weight="bold" color="accent" mono>
+                  {dataExportTotal}
+                </Text>
+                <Text variant="nano" as="span" color="muted">
+                  oczekujących
+                </Text>
+              </span>
+            )}
+          </div>
+
+          {dataExportRequests.length === 0 ? (
+            <div className={styles.emptyWrap}>
+              <EmptyState
+                illustration="done"
+                title="Brak zamówień danych"
+                description="Żaden warsztat nie zamówił kopii swoich danych."
+              />
+            </div>
+          ) : (
+            <div className={styles.list}>
+              {dataExportRequests.map((req) => (
+                <DataExportRow
+                  key={req.id}
+                  request={req}
+                  onComplete={handleCompleteDataExport}
+                  onCancel={handleCancelDataExport}
+                  busy={busyDataExportIds.has(req.id)}
                 />
               ))}
             </div>

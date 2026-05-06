@@ -27,6 +27,7 @@ import { ScrolledLayout, type ScrollSection } from '../../../components/Scrolled
 import { getProvider, selfSuspendProvider } from '../../../api-data-access/providers';
 import { requestOtp, verifyOtp } from '../../../api-data-access/auth';
 import { requestAccountDeletion } from '../../../api-data-access/admin';
+import { requestDataExport } from '../../../api-data-access/data-exports';
 import styles from './settings.module.css';
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -115,6 +116,9 @@ export default function SettingsPage() {
   const [otpCountdown, setOtpCountdown] = useState(0);
   const [deletionRequested, setDeletionRequested] = useState(false);
   const [suspensionApplied, setSuspensionApplied] = useState(false);
+  const [dataExportOrdered, setDataExportOrdered] = useState(false);
+  const [dataExportLoading, setDataExportLoading] = useState(false);
+  const [dataExportError, setDataExportError] = useState('');
 
   useEffect(() => {
     if (otpCountdown <= 0) return;
@@ -203,6 +207,25 @@ export default function SettingsPage() {
       }
     } finally {
       setConfirmLoading(false);
+    }
+  }
+
+  async function handleDataExportRequest() {
+    setDataExportLoading(true);
+    setDataExportError('');
+    try {
+      await requestDataExport();
+      setDataExportOrdered(true);
+    } catch (err) {
+      if (err instanceof ApiError && err.code === 'DATA_EXPORT_ALREADY_PENDING') {
+        setDataExportOrdered(true);
+      } else {
+        setDataExportError(
+          err instanceof ApiError ? err.message : 'Nie udało się złożyć wniosku. Spróbuj ponownie.',
+        );
+      }
+    } finally {
+      setDataExportLoading(false);
     }
   }
 
@@ -674,13 +697,32 @@ export default function SettingsPage() {
                 <Text variant="body-sm" as="span" weight="bold">
                   Pobierz moje dane
                 </Text>
-                <Text variant="caption" color="muted" as="p">
-                  Wyślemy paczkę ZIP (JSON + PDF) na email administracyjny w ciągu 14 dni. Zawiera:
-                  profil firmy, rezerwacje, opinie, logi logowania.
-                </Text>
+                {dataExportOrdered ? (
+                  <Text variant="caption" color="accent" as="p">
+                    Wniosek złożony. Prześlemy dane na email w ciągu 14 dni.
+                  </Text>
+                ) : (
+                  <>
+                    <Text variant="caption" color="muted" as="p">
+                      Wyślemy paczkę ZIP (JSON + PDF) na email administracyjny w ciągu 14 dni.
+                      Zawiera: profil firmy, rezerwacje, opinie, logi logowania.
+                    </Text>
+                    {dataExportError && (
+                      <Text variant="caption" color="danger" as="p">
+                        {dataExportError}
+                      </Text>
+                    )}
+                  </>
+                )}
               </div>
-              <Button variant="neutral" size="sm">
-                Zamów
+              <Button
+                variant="neutral"
+                size="sm"
+                loading={dataExportLoading}
+                disabled={dataExportOrdered || dataExportLoading}
+                onClick={handleDataExportRequest}
+              >
+                {dataExportOrdered ? <IconCheck width="13" height="13" /> : 'Zamów'}
               </Button>
             </div>
 

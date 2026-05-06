@@ -95,6 +95,12 @@ enum WaitlistRole {
   PROVIDER
 }
 
+enum DataExportStatus {
+  PENDING
+  COMPLETED
+  CANCELLED
+}
+
 // ──────────────────────────────────────────────
 // USER
 // ──────────────────────────────────────────────
@@ -199,6 +205,7 @@ model Provider {
   serviceConfigs     ServiceConfig[]
   serviceGroups      ServiceGroup[]
   surcharges         Surcharge[]
+  dataExportRequests DataExportRequest[]
 
   @@map("providers")
 }
@@ -706,4 +713,22 @@ model Surcharge {
 
   @@index([providerId])
   @@map("surcharges")
+}
+
+// ──────────────────────────────────────────────
+// DATA EXPORT REQUEST — wnioski RODO „pobierz moje dane"
+// ──────────────────────────────────────────────
+
+model DataExportRequest {
+  id          String           @id @default(uuid())
+  providerId  String
+  status      DataExportStatus @default(PENDING)
+  requestedAt DateTime         @default(now())
+  completedAt DateTime?
+
+  provider Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+
+  @@index([providerId])
+  @@index([status, requestedAt])
+  @@map("data_export_requests")
 }
