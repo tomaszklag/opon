@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { getProvider } from '../../api-data-access/providers';
-import { setProviderPause } from '../../api-data-access/providers';
+import { useState } from 'react';
+import useSWR from 'swr';
+import { getProvider, setProviderPause } from '../../api-data-access/providers';
 
 function endOfToday(): string {
   const d = new Date();
@@ -12,8 +12,8 @@ function endOfToday(): string {
 
 function nextMondayMidnight(): string {
   const d = new Date();
-  const day = d.getDay(); // 0=Sun, 1=Mon, …, 6=Sat
-  const daysUntilMonday = day === 0 ? 1 : 8 - day; // Sun→1, Mon→7, Tue→6 …
+  const day = d.getDay();
+  const daysUntilMonday = day === 0 ? 1 : 8 - day;
   d.setDate(d.getDate() + daysUntilMonday);
   d.setHours(0, 0, 0, 0);
   return d.toISOString();
@@ -26,25 +26,19 @@ function sevenDaysFromNow(): string {
   return d.toISOString();
 }
 
+const INDEFINITE_UNTIL = '2099-12-31T23:59:59.999Z';
+
+export function isIndefinitePause(until: string | null): boolean {
+  if (!until) return false;
+  return new Date(until) >= new Date(INDEFINITE_UNTIL);
+}
+
 export function usePause() {
-  const [pausedUntil, setPausedUntil] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { data: provider, mutate } = useSWR('/v1/providers/me', getProvider);
   const [applying, setApplying] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    getProvider()
-      .then((p) => {
-        // pausedUntil may not be in generated types yet — cast through unknown
-        const raw = (p as unknown as { pausedUntil?: string | null }).pausedUntil ?? null;
-        setPausedUntil(raw);
-      })
-      .catch(() => {
-        // non-critical — ignore silently
-      })
-      .finally(() => setLoading(false));
-  }, []);
-
+  const pausedUntil = provider?.pausedUntil ?? null;
   const isPaused = pausedUntil !== null && new Date(pausedUntil) > new Date();
 
   async function applyPause(until: string | null) {
@@ -52,7 +46,9 @@ export function usePause() {
     setError(null);
     try {
       const res = await setProviderPause(until);
-      setPausedUntil(res.pausedUntil);
+      await mutate((prev) => (prev ? { ...prev, pausedUntil: res.pausedUntil ?? null } : prev), {
+        revalidate: false,
+      });
     } catch {
       setError('Błąd zmiany pauzy. Spróbuj ponownie.');
     } finally {
@@ -60,31 +56,16 @@ export function usePause() {
     }
   }
 
-  function pauseToday() {
-    return applyPause(endOfToday());
-  }
-
-  function pauseWeekend() {
-    return applyPause(nextMondayMidnight());
-  }
-
-  function pauseWeek() {
-    return applyPause(sevenDaysFromNow());
-  }
-
-  function unpause() {
-    return applyPause(null);
-  }
-
   return {
     isPaused,
     pausedUntil,
-    loading,
+    loading: !provider,
     applying,
     error,
-    pauseToday,
-    pauseWeekend,
-    pauseWeek,
-    unpause,
+    pauseIndefinitely: () => applyPause(INDEFINITE_UNTIL),
+    pauseToday: () => applyPause(endOfToday()),
+    pauseWeekend: () => applyPause(nextMondayMidnight()),
+    pauseWeek: () => applyPause(sevenDaysFromNow()),
+    unpause: () => applyPause(null),
   };
 }

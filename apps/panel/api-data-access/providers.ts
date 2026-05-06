@@ -4,6 +4,7 @@ import type { components } from '@opony/api-client';
 export type Provider = components['schemas']['ProviderResponseDto'];
 export type UpdateProviderBody = components['schemas']['UpdateProviderDto'];
 export type CreateProviderBody = components['schemas']['CreateProviderDto'];
+export type ProviderPauseResponse = components['schemas']['ProviderPauseResponseDto'];
 
 export function getProvider(): Promise<Provider> {
   return api.get<Provider>('/v1/providers/me');
@@ -17,8 +18,8 @@ export function submitProvider(): Promise<Provider> {
   return api.post<Provider>('/v1/providers/me/submit', {});
 }
 
-export function setProviderPause(until: string | null): Promise<{ pausedUntil: string | null }> {
-  return api.patch<{ pausedUntil: string | null }>('/v1/providers/me/pause', { until });
+export function setProviderPause(until: string | null): Promise<ProviderPauseResponse> {
+  return api.patch<ProviderPauseResponse>('/v1/providers/me/pause', { until });
 }
 
 export function selfSuspendProvider(): Promise<{ status: string }> {

@@ -6,11 +6,13 @@ import { Text } from '@opony/design-system-web';
 import { api } from '../../../lib/api';
 import { useAuth } from '../../../lib/auth';
 import { useAuthGuard } from '../../../lib/hooks/use-auth-guard';
+import { usePause, isIndefinitePause } from '../../../lib/hooks/use-pause';
 import {
   IconDashboard,
   IconBookings,
   IconCalendar,
   IconHours,
+  IconPause,
   IconProfile,
   IconReviews,
   IconServices,
@@ -86,6 +88,8 @@ export default function DashboardNav() {
     if (href === '/dashboard') return pathname === href;
     return pathname === href || pathname.startsWith(href + '/');
   }
+
+  const { isPaused, pausedUntil } = usePause();
 
   const pageTitle =
     PAGE_TITLE[pathname] ?? (pathname.startsWith('/dashboard/bookings/') ? 'Rezerwacje' : 'Panel');
@@ -213,6 +217,14 @@ export default function DashboardNav() {
           </span>
         </nav>
         <div className={styles.topbarSpacer} />
+        {isPaused && pausedUntil && (
+          <a href="/dashboard/settings#sec-pause" className={styles.pauseBadge}>
+            <IconPause width="11" height="11" />
+            {isIndefinitePause(pausedUntil)
+              ? 'PAUZA · bezterminowo'
+              : `PAUZA · do ${new Date(pausedUntil).toLocaleDateString('pl-PL', { day: 'numeric', month: 'short' })}`}
+          </a>
+        )}
         {provider && (
           <>
             <Text variant="body-sm" as="span" weight="bold" className={styles.firmName}>

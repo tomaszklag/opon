@@ -10,7 +10,8 @@
 }
 
 .brand {
-  padding: 18px 14px 16px;
+  height: 54px;
+  padding: 0 14px;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -204,6 +205,29 @@
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 220px;
+}
+
+/* ── Pause badge (topbar) ── */
+.pauseBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 100px;
+  background: var(--warning-muted);
+  border: 1px solid var(--warning-border);
+  color: var(--warning);
+  font-size: var(--text-nano);
+  font-weight: 700;
+  font-family: var(--font-mono);
+  text-decoration: none;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: background 120ms;
+}
+
+.pauseBadge:hover {
+  background: color-mix(in srgb, var(--warning) 20%, transparent);
 }
 
 /* ── Status badge ── */

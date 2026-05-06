@@ -22,7 +22,7 @@ import {
 } from '../../../components/icons';
 import { useAuth } from '../../../lib/auth';
 import { ApiError } from '../../../lib/api';
-import { usePause } from '../../../lib/hooks/use-pause';
+import { usePause, isIndefinitePause } from '../../../lib/hooks/use-pause';
 import { ScrolledLayout, type ScrollSection } from '../../../components/ScrolledLayout';
 import { getProvider, selfSuspendProvider } from '../../../api-data-access/providers';
 import {
@@ -154,6 +154,7 @@ export default function SettingsPage() {
     pausedUntil,
     applying,
     error: pauseError,
+    pauseIndefinitely,
     pauseToday,
     pauseWeekend,
     pauseWeek,
@@ -512,7 +513,10 @@ export default function SettingsPage() {
           </header>
 
           <div className={styles.pauseHero}>
-            <span className={styles.pauseIco} aria-hidden="true">
+            <span
+              className={`${styles.pauseIco} ${isPaused ? styles.pauseIcoPaused : styles.pauseIcoActive}`}
+              aria-hidden="true"
+            >
               <IconHours width="24" height="24" />
             </span>
             <div className={styles.pauseStatusCol}>
@@ -521,14 +525,23 @@ export default function SettingsPage() {
               </Heading>
               {isPaused && pausedUntil ? (
                 <Text variant="body-sm" color="secondary" as="span">
-                  Niewidoczny w wyszukiwarce. Pauza do:{' '}
-                  <Text variant="body-sm" as="span" weight="bold">
-                    {new Date(pausedUntil).toLocaleDateString('pl-PL', {
-                      day: 'numeric',
-                      month: 'long',
-                      year: 'numeric',
-                    })}
-                  </Text>
+                  Niewidoczny w wyszukiwarce. Pauza{' '}
+                  {isIndefinitePause(pausedUntil) ? (
+                    <Text variant="body-sm" as="span" weight="bold">
+                      bezterminowa
+                    </Text>
+                  ) : (
+                    <>
+                      do:{' '}
+                      <Text variant="body-sm" as="span" weight="bold">
+                        {new Date(pausedUntil).toLocaleDateString('pl-PL', {
+                          day: 'numeric',
+                          month: 'long',
+                          year: 'numeric',
+                        })}
+                      </Text>
+                    </>
+                  )}
                   .
                 </Text>
               ) : (
@@ -542,7 +555,7 @@ export default function SettingsPage() {
                 Odblokuj warsztat
               </Button>
             ) : (
-              <Button variant="neutral" size="sm" onClick={pauseToday} loading={applying}>
+              <Button variant="neutral" size="sm" onClick={pauseIndefinitely} loading={applying}>
                 <IconPause width="13" height="13" />
                 Zapauzuj teraz
               </Button>
@@ -1027,31 +1040,6 @@ export default function SettingsPage() {
 
   return (
     <div className={styles.root}>
-      {/* Topbar */}
-      <div className={styles.topbar}>
-        <nav className={styles.breadcrumb} aria-label="Nawigacja strony">
-          <Text variant="body-sm" as="span" color="muted" weight="semibold">
-            Firma
-          </Text>
-          <Text variant="body-sm" as="span" color="muted">
-            ›
-          </Text>
-          <Text variant="body-sm" as="span" weight="bold">
-            Ustawienia konta
-          </Text>
-        </nav>
-        <div className={styles.topbarSpacer} />
-        <span className={styles.versionPill}>
-          <Text variant="nano" as="span" color="muted" mono>
-            Panel{' '}
-            <Text variant="nano" as="span" weight="bold" mono>
-              v0.1.0
-            </Text>{' '}
-            · pilot Nowy Sącz
-          </Text>
-        </span>
-      </div>
-
       <ScrolledLayout sections={sections} />
 
       {/* ── Shared confirm modal (suspend / delete) ── */}

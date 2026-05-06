@@ -5,34 +5,6 @@
   overflow: hidden;
 }
 
-/* Topbar */
-.topbar {
-  height: 58px;
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  padding: 0 28px;
-  gap: 12px;
-  flex-shrink: 0;
-}
-
-.breadcrumb {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.topbarSpacer { flex: 1; }
-
-.versionPill {
-  padding: 4px 8px;
-  border-radius: 5px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  display: inline-flex;
-  align-items: center;
-}
-
 
 .sectionAccent {
   background: linear-gradient(135deg, rgba(255, 107, 26, 0.08) 0%, var(--surface) 60%);
@@ -152,9 +124,6 @@
   width: 48px;
   height: 48px;
   border-radius: 12px;
-  background: var(--success-muted);
-  border: 1px solid var(--success-border);
-  color: var(--success);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -162,7 +131,19 @@
   position: relative;
 }
 
-.pauseIco::after {
+.pauseIcoActive {
+  background: var(--success-muted);
+  border: 1px solid var(--success-border);
+  color: var(--success);
+}
+
+.pauseIcoPaused {
+  background: var(--warning-muted);
+  border: 1px solid var(--warning-border);
+  color: var(--warning);
+}
+
+.pauseIcoActive::after {
   content: '';
   position: absolute;
   top: -2px;
@@ -173,6 +154,18 @@
   background: var(--success);
   box-shadow: 0 0 0 3px var(--surface);
   animation: pulse 1800ms ease-in-out infinite;
+}
+
+.pauseIcoPaused::after {
+  content: '';
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--warning);
+  box-shadow: 0 0 0 3px var(--surface);
 }
 
 @keyframes pulse {
@@ -188,7 +181,7 @@
 
 .pausePresets {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
 }
 
