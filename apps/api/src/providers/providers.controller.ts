@@ -141,7 +141,7 @@ export class ProvidersController {
 
   // ── POST /v1/providers/me/deletion-request ────────────────────────────────
 
-  @Post('me/deletion-request')
+  @Post('me/deletion-requests')
   @HttpCode(HttpStatus.OK)
   @ApiCookieAuth('access_token')
   @ApiOperation({ summary: 'Złóż wniosek o usunięcie konta (APPROVED → PENDING_DELETION)' })

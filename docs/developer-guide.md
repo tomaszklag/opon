@@ -1523,22 +1523,22 @@ Globalny `HttpExceptionFilter` (zarejestrowany w `main.ts`) gwarantuje jeden ksz
 
 Plik: `apps/api/src/common/errors/error-code.enum.ts`
 
-| Prefiks            | Zakres                                                                                        |
-| ------------------ | --------------------------------------------------------------------------------------------- |
-| `AUTH_*`           | Sesja, token, użytkownik (`AUTH_USER_NOT_FOUND`, `AUTH_UNAUTHORIZED`, …)                      |
-| `OTP_*`            | Kod SMS (`OTP_INVALID_OR_EXPIRED`, `OTP_RATE_LIMIT_EXCEEDED`)                                 |
-| `PROVIDER_*`       | Firma, status (`PROVIDER_NOT_FOUND`, `PROVIDER_ALREADY_EXISTS`, `PROVIDER_INVALID_STATUS`, …) |
-| `GUS_*`            | Weryfikacja CEIDG (`GUS_NIP_NOT_FOUND`, `GUS_INVALID_NIP`, `GUS_CONNECTION_ERROR`)            |
-| `PHOTO_*`          | Zdjęcia (`PHOTO_NOT_FOUND`, `PHOTO_ACCESS_DENIED`, `PHOTO_ADDITIONAL_LIMIT_EXCEEDED`)         |
-| `PRICING_TIER_*`   | Cennik (`PRICING_TIER_NOT_FOUND`, `PRICING_TIER_RANGE_CONFLICT`, …)                           |
-| `WORKING_HOURS_*`  | Godziny pracy (`WORKING_HOURS_MISSING_TIMES`, `WORKING_HOURS_INVALID_TIME_RANGE`)             |
-| `STATION_*`        | Stanowiska (`STATION_NOT_FOUND`, `STATION_ACCESS_DENIED`)                                     |
-| `WORKER_*`         | Pracownicy (`WORKER_NOT_FOUND`, `WORKER_ACCESS_DENIED`, `WORKER_LEAVE_CONFLICT`, …)           |
-| `BOOKING_*`        | Rezerwacje (`BOOKING_NOT_FOUND`, `BOOKING_OUTSIDE_HOURS`, `PROVIDER_PAUSED`, …)               |
-| `REVIEW_*`         | Opinie (`REVIEW_NOT_FOUND`)                                                                   |
-| `DATA_EXPORT_*`    | Wnioski o dane RODO (`DATA_EXPORT_NOT_FOUND`, `DATA_EXPORT_ALREADY_PENDING`)                  |
-| `VALIDATION_ERROR` | Błąd walidacji DTO (class-validator)                                                          |
-| `INTERNAL_ERROR`   | Nieokreślony błąd serwera                                                                     |
+| Prefiks            | Zakres                                                                                                     |
+| ------------------ | ---------------------------------------------------------------------------------------------------------- |
+| `AUTH_*`           | Sesja, token, użytkownik (`AUTH_USER_NOT_FOUND`, `AUTH_UNAUTHORIZED`, …)                                   |
+| `OTP_*`            | Kod SMS (`OTP_INVALID_OR_EXPIRED`, `OTP_RATE_LIMIT_EXCEEDED`)                                              |
+| `PROVIDER_*`       | Firma, status (`PROVIDER_NOT_FOUND`, `PROVIDER_ALREADY_EXISTS`, `PROVIDER_INVALID_STATUS`, …)              |
+| `GUS_*`            | Weryfikacja CEIDG (`GUS_NIP_NOT_FOUND`, `GUS_INVALID_NIP`, `GUS_CONNECTION_ERROR`)                         |
+| `PHOTO_*`          | Zdjęcia (`PHOTO_NOT_FOUND`, `PHOTO_ACCESS_DENIED`, `PHOTO_ADDITIONAL_LIMIT_EXCEEDED`)                      |
+| `PRICING_TIER_*`   | Cennik (`PRICING_TIER_NOT_FOUND`, `PRICING_TIER_RANGE_CONFLICT`, …)                                        |
+| `WORKING_HOURS_*`  | Godziny pracy (`WORKING_HOURS_MISSING_TIMES`, `WORKING_HOURS_INVALID_TIME_RANGE`)                          |
+| `STATION_*`        | Stanowiska (`STATION_NOT_FOUND`, `STATION_ACCESS_DENIED`)                                                  |
+| `WORKER_*`         | Pracownicy (`WORKER_NOT_FOUND`, `WORKER_ACCESS_DENIED`, `WORKER_LEAVE_CONFLICT`, …)                        |
+| `BOOKING_*`        | Rezerwacje (`BOOKING_NOT_FOUND`, `BOOKING_OUTSIDE_HOURS`, `PROVIDER_PAUSED`, …)                            |
+| `REVIEW_*`         | Opinie (`REVIEW_NOT_FOUND`)                                                                                |
+| `DATA_EXPORT_*`    | Wnioski o dane RODO (`DATA_EXPORT_NOT_FOUND`, `DATA_EXPORT_ALREADY_PENDING`, `DATA_EXPORT_INVALID_STATUS`) |
+| `VALIDATION_ERROR` | Błąd walidacji DTO (class-validator)                                                                       |
+| `INTERNAL_ERROR`   | Nieokreślony błąd serwera                                                                                  |
 
 **Gdy dodajesz nowy błąd:** dodaj kod do enum, użyj `AppException`. Nie twórz jednorazowych stringów.
 

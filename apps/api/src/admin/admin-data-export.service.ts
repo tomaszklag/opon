@@ -53,8 +53,8 @@ export class AdminDataExportService {
     if (!req) throw new AppException(ErrorCode.DATA_EXPORT_NOT_FOUND, 'Wniosek nie istnieje.', 404);
     if (req.status !== DataExportStatus.PENDING)
       throw new AppException(
-        ErrorCode.DATA_EXPORT_NOT_FOUND,
-        'Wniosek nie jest w stanie oczekującym.',
+        ErrorCode.DATA_EXPORT_INVALID_STATUS,
+        'Wniosek nie jest w stanie oczekujacym.',
         400,
       );
     await this.prisma.dataExportRequest.update({
@@ -69,8 +69,8 @@ export class AdminDataExportService {
     if (!req) throw new AppException(ErrorCode.DATA_EXPORT_NOT_FOUND, 'Wniosek nie istnieje.', 404);
     if (req.status !== DataExportStatus.PENDING)
       throw new AppException(
-        ErrorCode.DATA_EXPORT_NOT_FOUND,
-        'Wniosek nie jest w stanie oczekującym.',
+        ErrorCode.DATA_EXPORT_INVALID_STATUS,
+        'Wniosek nie jest w stanie oczekujacym.',
         400,
       );
     await this.prisma.dataExportRequest.update({

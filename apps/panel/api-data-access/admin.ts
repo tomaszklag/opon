@@ -43,7 +43,7 @@ export function cancelDeletion(id: string): Promise<Provider> {
 }
 
 export function requestAccountDeletion(): Promise<{ status: string }> {
-  return api.post<{ status: string }>('/v1/providers/me/deletion-request', {});
+  return api.post<{ status: string }>('/v1/providers/me/deletion-requests', {});
 }
 
 export function getGusHealth(): Promise<GusHealthResponse> {

@@ -120,6 +120,8 @@ export enum ErrorCode {
   DATA_EXPORT_NOT_FOUND = 'DATA_EXPORT_NOT_FOUND',
   /** Istnieje już oczekujący wniosek o dane */
   DATA_EXPORT_ALREADY_PENDING = 'DATA_EXPORT_ALREADY_PENDING',
+  /** Wniosek o dane nie jest w oczekiwanym stanie (np. już COMPLETED) */
+  DATA_EXPORT_INVALID_STATUS = 'DATA_EXPORT_INVALID_STATUS',
 
   // ── INTERNAL ──────────────────────────────────────────────────────────────
   /** Wewnętrzny błąd serwera */
