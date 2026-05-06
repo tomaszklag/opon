@@ -941,6 +941,20 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
   schemas: {
+    SessionDto: {
+      id: string;
+      userAgent: string | null;
+      ipAddress: string | null;
+      /** Format: date-time */
+      createdAt: string;
+      /** Format: date-time */
+      lastUsedAt: string;
+      /** Format: date-time */
+      expiresAt: string;
+      /** Format: date-time */
+      revokedAt: string | null;
+      isCurrent: boolean;
+    };
     DataExportRequestDto: {
       id: string;
       providerId: string;

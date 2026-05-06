@@ -14,8 +14,6 @@ otpToken powinien być jakoś unieważniany. Wygasa po 5 minutach chyba. Powinno
 
 Operator powinien mieć możliwość ręcznego dodania wizyty wraz z opisem oraz szacowanym zajęciem slotu
 
-teraz przedźmy do implementacji b2b-11-profil
-
 zleć wyspecjalizowanym agentom weryfikację tego rozwiazania. Głównie zależy mi na respektowaniu wcześniejszych postanowień oraz
 przyjętej architektury
 zaplanowanego design

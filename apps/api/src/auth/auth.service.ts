@@ -6,6 +6,7 @@ import { createHash } from 'crypto';
 import type { Response } from 'express';
 import { AppException, ErrorCode } from '../common/errors';
 import { AuthRepository } from './auth.repository';
+import { SessionResponseDto } from './dto/session-response.dto';
 import { JwtPayload } from './types/jwt-payload.interface';
 
 const ACCESS_TOKEN_TTL = 15 * 60; // 15 min [s]
@@ -143,6 +144,51 @@ export class AuthService {
 
   async revokeSession(jti: string): Promise<void> {
     await this.authRepository.revokeSession(jti);
+  }
+
+  async listSessions(
+    userId: string,
+    currentJti: string | undefined,
+  ): Promise<SessionResponseDto[]> {
+    const sessions = await this.authRepository.listUserSessions(userId);
+    return sessions.map((s) => ({
+      id: s.id,
+      userAgent: s.userAgent,
+      ipAddress: s.ipAddress,
+      createdAt: s.createdAt.toISOString(),
+      lastUsedAt: s.lastUsedAt.toISOString(),
+      expiresAt: s.expiresAt.toISOString(),
+      revokedAt: s.revokedAt?.toISOString() ?? null,
+      isCurrent: s.id === currentJti,
+    }));
+  }
+
+  async revokeSingleSession(
+    sessionId: string,
+    userId: string,
+    currentJti: string | undefined,
+  ): Promise<void> {
+    if (!currentJti)
+      throw new AppException(ErrorCode.AUTH_UNAUTHORIZED, 'Brak identyfikatora sesji.', 401);
+    if (sessionId === currentJti)
+      throw new AppException(
+        ErrorCode.AUTH_SESSION_IS_CURRENT,
+        'Nie można wylogować bieżącej sesji. Użyj /logout.',
+        400,
+      );
+    const revoked = await this.authRepository.revokeSessionById(sessionId, userId);
+    if (!revoked)
+      throw new AppException(ErrorCode.AUTH_SESSION_NOT_FOUND, 'Sesja nie istnieje.', 404);
+  }
+
+  async revokeOtherSessions(
+    userId: string,
+    currentJti: string | undefined,
+  ): Promise<{ count: number }> {
+    if (!currentJti)
+      throw new AppException(ErrorCode.AUTH_UNAUTHORIZED, 'Brak identyfikatora sesji.', 401);
+    const count = await this.authRepository.revokeOtherSessions(userId, currentJti);
+    return { count };
   }
 
   // ── Cookies ────────────────────────────────────────────────────────────────

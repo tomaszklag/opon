@@ -12,6 +12,8 @@ export enum ErrorCode {
   AUTH_SESSION_NOT_FOUND = 'AUTH_SESSION_NOT_FOUND',
   /** Sesja wygasła */
   AUTH_SESSION_EXPIRED = 'AUTH_SESSION_EXPIRED',
+  /** Próba unieważnienia bieżącej sesji przez endpoint sesji (użyj /logout) */
+  AUTH_SESSION_IS_CURRENT = 'AUTH_SESSION_IS_CURRENT',
   /** Wykryto ponowne użycie tokenu */
   AUTH_TOKEN_REUSE_DETECTED = 'AUTH_TOKEN_REUSE_DETECTED',
   /** Wykryto podejrzaną aktywność (hash mismatch) */

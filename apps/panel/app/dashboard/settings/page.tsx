@@ -25,7 +25,14 @@ import { ApiError } from '../../../lib/api';
 import { usePause } from '../../../lib/hooks/use-pause';
 import { ScrolledLayout, type ScrollSection } from '../../../components/ScrolledLayout';
 import { getProvider, selfSuspendProvider } from '../../../api-data-access/providers';
-import { requestOtp, verifyOtp } from '../../../api-data-access/auth';
+import {
+  requestOtp,
+  verifyOtp,
+  listSessions,
+  revokeSession,
+  revokeOtherSessions,
+  type SessionDto,
+} from '../../../api-data-access/auth';
 import { requestAccountDeletion } from '../../../api-data-access/admin';
 import { requestDataExport } from '../../../api-data-access/data-exports';
 import styles from './settings.module.css';
@@ -119,6 +126,13 @@ export default function SettingsPage() {
   const [dataExportOrdered, setDataExportOrdered] = useState(false);
   const [dataExportLoading, setDataExportLoading] = useState(false);
   const [dataExportError, setDataExportError] = useState('');
+  const { data: sessions, mutate: mutateSessions } = useSWR<SessionDto[]>(
+    '/v1/auth/sessions',
+    listSessions,
+  );
+  const [busySessionIds, setBusySessionIds] = useState<Set<string>>(new Set());
+  const [revokeAllLoading, setRevokeAllLoading] = useState(false);
+  const [sessionError, setSessionError] = useState('');
 
   useEffect(() => {
     if (otpCountdown <= 0) return;
@@ -227,6 +241,85 @@ export default function SettingsPage() {
     } finally {
       setDataExportLoading(false);
     }
+  }
+
+  async function handleRevokeSession(id: string) {
+    setBusySessionIds((prev) => new Set(prev).add(id));
+    setSessionError('');
+    try {
+      await revokeSession(id);
+      await mutateSessions();
+    } catch (err) {
+      setSessionError(
+        err instanceof ApiError ? err.message : 'Nie udało się wylogować sesji. Spróbuj ponownie.',
+      );
+    } finally {
+      setBusySessionIds((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+    }
+  }
+
+  async function handleRevokeOtherSessions() {
+    setRevokeAllLoading(true);
+    setSessionError('');
+    try {
+      await revokeOtherSessions();
+      await mutateSessions();
+    } catch (err) {
+      setSessionError(
+        err instanceof ApiError ? err.message : 'Nie udało się wylogować sesji. Spróbuj ponownie.',
+      );
+    } finally {
+      setRevokeAllLoading(false);
+    }
+  }
+
+  function parseUserAgent(ua: string | null): { browser: string; os: string } {
+    if (!ua) return { browser: 'Nieznana przeglądarka', os: 'Nieznany system' };
+    let browser = 'Nieznana przeglądarka';
+    let os = 'Nieznany system';
+    if (/Edg\//.test(ua)) browser = 'Edge';
+    else if (/OPR\//.test(ua)) browser = 'Opera';
+    else if (/Chrome\//.test(ua)) browser = 'Chrome';
+    else if (/Firefox\//.test(ua)) browser = 'Firefox';
+    else if (/Safari\//.test(ua)) browser = 'Safari';
+    if (/iPhone/.test(ua)) os = 'iPhone';
+    else if (/iPad/.test(ua)) os = 'iPad';
+    else if (/Android/.test(ua)) os = 'Android';
+    else if (/Windows NT 10/.test(ua)) os = 'Windows 11/10';
+    else if (/Windows NT/.test(ua)) os = 'Windows';
+    else if (/Mac OS X/.test(ua)) os = 'macOS';
+    else if (/Linux/.test(ua)) os = 'Linux';
+    return { browser, os };
+  }
+
+  function maskIp(ip: string | null): string {
+    if (!ip) return '';
+    const parts = ip.split('.');
+    if (parts.length === 4) return `${parts[0]}.${parts[1]}.${parts[2]}.xxx`;
+    return ip;
+  }
+
+  function formatLoginDate(iso: string): string {
+    const d = new Date(iso);
+    const isToday = d.toDateString() === new Date().toDateString();
+    const time = d.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' });
+    if (isToday) return `Zalogowano dziś · ${time}`;
+    return `Zalogowano ${d.toLocaleDateString('pl-PL', { day: '2-digit', month: 'short' })} · ${time}`;
+  }
+
+  function formatLastActive(iso: string): string {
+    const diffMs = Date.now() - new Date(iso).getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    if (diffMins < 2) return 'Aktywna teraz';
+    if (diffMins < 60) return `Aktywna · ${diffMins} min temu`;
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffHours < 24) return `Aktywna · ${diffHours} godz. temu`;
+    const diffDays = Math.floor(diffHours / 24);
+    return `Nieaktywna · ${diffDays} dni`;
   }
 
   const nameMatch = confirmNameDraft.trim() === (provider?.name ?? '').trim() && !!provider?.name;
@@ -567,103 +660,104 @@ export default function SettingsPage() {
           </header>
 
           <div className={styles.sessionList}>
-            <div className={`${styles.sessionItem} ${styles.sessionCurrent}`}>
-              <span className={`${styles.sessionIco} ${styles.sessionIcoCurrent}`}>
-                <IconStations width="16" height="16" />
-              </span>
-              <div className={styles.sessionInfo}>
-                <div className={styles.sessionMain}>
-                  <Text variant="body-sm" as="span" weight="bold">
-                    Chrome 126 · macOS
-                  </Text>
-                  <span className={styles.sessionCurrentBadge}>
-                    <Text variant="nano" as="span" weight="bold" mono>
-                      TA SESJA
-                    </Text>
-                  </span>
-                </div>
-                <div className={styles.sessionMeta}>
-                  <Text variant="nano" as="span" color="muted" mono>
-                    Nowy Sącz · 185.254.xxx.xxx
-                  </Text>
-                  <span className={styles.dotSep} aria-hidden="true" />
-                  <Text variant="nano" as="span" color="muted" mono>
-                    Zalogowano dziś · 09:42
-                  </Text>
-                  <span className={styles.dotSep} aria-hidden="true" />
-                  <Text variant="nano" as="span" color="muted" mono>
-                    Aktywna teraz
-                  </Text>
-                </div>
-              </div>
-            </div>
+            {sessions
+              ?.filter((s) => !s.revokedAt && new Date(s.expiresAt) >= new Date())
+              .map((session) => {
+                const { browser, os } = parseUserAgent(session.userAgent);
+                const maskedIp = maskIp(session.ipAddress);
+                const isMobile = /iPhone|iPad|Android/.test(session.userAgent ?? '');
+                const isIdle =
+                  Date.now() - new Date(session.lastUsedAt).getTime() > 24 * 60 * 60 * 1000;
+                return (
+                  <div
+                    key={session.id}
+                    className={`${styles.sessionItem} ${session.isCurrent ? styles.sessionCurrent : ''}`}
+                  >
+                    <span
+                      className={`${styles.sessionIco} ${session.isCurrent ? styles.sessionIcoCurrent : ''}`}
+                    >
+                      {isMobile ? (
+                        <IconMobilePhone width="16" height="16" />
+                      ) : (
+                        <IconStations width="16" height="16" />
+                      )}
+                    </span>
+                    <div className={styles.sessionInfo}>
+                      <div className={styles.sessionMain}>
+                        <Text variant="body-sm" as="span" weight="bold">
+                          {browser} · {os}
+                        </Text>
+                        {session.isCurrent && (
+                          <span className={styles.sessionCurrentBadge}>
+                            <Text variant="nano" as="span" weight="bold" mono>
+                              TA SESJA
+                            </Text>
+                          </span>
+                        )}
+                      </div>
+                      <div className={styles.sessionMeta}>
+                        {maskedIp && (
+                          <>
+                            <Text variant="nano" as="span" color="muted" mono>
+                              {maskedIp}
+                            </Text>
+                            <span className={styles.dotSep} aria-hidden="true" />
+                          </>
+                        )}
+                        <Text variant="nano" as="span" color="muted" mono>
+                          {formatLoginDate(session.createdAt)}
+                        </Text>
+                        <span className={styles.dotSep} aria-hidden="true" />
+                        <Text variant="nano" as="span" color={isIdle ? 'warning' : 'muted'} mono>
+                          {formatLastActive(session.lastUsedAt)}
+                        </Text>
+                      </div>
+                    </div>
+                    {!session.isCurrent && (
+                      <Button
+                        variant="neutral-danger"
+                        size="sm"
+                        loading={busySessionIds.has(session.id)}
+                        disabled={busySessionIds.has(session.id)}
+                        onClick={() => handleRevokeSession(session.id)}
+                      >
+                        <IconLogOut width="12" height="12" />
+                        Wyloguj
+                      </Button>
+                    )}
+                  </div>
+                );
+              })}
 
-            <div className={styles.sessionItem}>
-              <span className={styles.sessionIco}>
-                <IconMobilePhone width="16" height="16" />
-              </span>
-              <div className={styles.sessionInfo}>
-                <div className={styles.sessionMain}>
-                  <Text variant="body-sm" as="span" weight="bold">
-                    Safari 17 · iPhone 14
-                  </Text>
-                </div>
-                <div className={styles.sessionMeta}>
-                  <Text variant="nano" as="span" color="muted" mono>
-                    Nowy Sącz
-                  </Text>
-                  <span className={styles.dotSep} aria-hidden="true" />
-                  <Text variant="nano" as="span" color="muted" mono>
-                    Zalogowano 14 kwie · 17:18
-                  </Text>
-                  <span className={styles.dotSep} aria-hidden="true" />
-                  <Text variant="nano" as="span" color="muted" mono>
-                    Aktywna · 2 godz temu
-                  </Text>
-                </div>
-              </div>
-              <Button variant="neutral-danger" size="sm">
-                <IconLogOut width="12" height="12" />
-                Wyloguj
-              </Button>
-            </div>
+            {sessionError && (
+              <Text variant="caption" color="danger" as="p">
+                {sessionError}
+              </Text>
+            )}
 
-            <div className={styles.sessionItem}>
-              <span className={styles.sessionIco}>
-                <IconStations width="16" height="16" />
-              </span>
-              <div className={styles.sessionInfo}>
-                <div className={styles.sessionMain}>
-                  <Text variant="body-sm" as="span" weight="bold">
-                    Firefox 125 · Windows 11
-                  </Text>
+            {sessions &&
+              sessions.filter(
+                (s) => !s.isCurrent && !s.revokedAt && new Date(s.expiresAt) >= new Date(),
+              ).length > 0 && (
+                <div className={styles.sessionLogoutAll}>
+                  <Button
+                    variant="neutral-danger"
+                    size="sm"
+                    loading={revokeAllLoading}
+                    disabled={revokeAllLoading}
+                    onClick={handleRevokeOtherSessions}
+                  >
+                    <IconLogOut width="12" height="12" />
+                    Wyloguj wszystkie inne urządzenia (
+                    {
+                      sessions.filter(
+                        (s) => !s.isCurrent && !s.revokedAt && new Date(s.expiresAt) >= new Date(),
+                      ).length
+                    }
+                    )
+                  </Button>
                 </div>
-                <div className={styles.sessionMeta}>
-                  <Text variant="nano" as="span" color="muted" mono>
-                    Kraków · 31.0.xxx.xxx
-                  </Text>
-                  <span className={styles.dotSep} aria-hidden="true" />
-                  <Text variant="nano" as="span" color="muted" mono>
-                    Zalogowano 02 kwie · 11:05
-                  </Text>
-                  <span className={styles.dotSep} aria-hidden="true" />
-                  <Text variant="nano" as="span" color="warning" mono>
-                    Nieaktywna · 8 dni
-                  </Text>
-                </div>
-              </div>
-              <Button variant="neutral-danger" size="sm">
-                <IconLogOut width="12" height="12" />
-                Wyloguj
-              </Button>
-            </div>
-
-            <div className={styles.sessionLogoutAll}>
-              <Button variant="neutral-danger" size="sm">
-                <IconLogOut width="12" height="12" />
-                Wyloguj wszystkie inne urządzenia (2)
-              </Button>
-            </div>
+              )}
           </div>
         </>
       ),
