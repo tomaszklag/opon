@@ -25,6 +25,8 @@ export class ProviderResponseDto {
   submittedAt?: Date | null;
   @ApiPropertyOptional({ type: String, format: 'date-time', nullable: true })
   approvedAt?: Date | null;
+  @ApiPropertyOptional({ type: String, format: 'date-time', nullable: true })
+  deletionRequestedAt?: Date | null;
   @ApiProperty() updatedAt!: Date;
   @ApiPropertyOptional({ type: String, nullable: true }) tagline?: string | null;
   @ApiPropertyOptional({ type: Number, nullable: true }) foundedYear?: number | null;

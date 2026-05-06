@@ -36,6 +36,7 @@ enum ProviderStatus {
   APPROVED
   SUSPENDED
   REJECTED
+  PENDING_DELETION
 }
 
 enum BookingStatus {
@@ -171,8 +172,9 @@ model Provider {
   additionalServices String[]    @default([])
   createdAt        DateTime       @default(now())
   submittedAt      DateTime?
-  approvedAt       DateTime?
-  updatedAt        DateTime       @updatedAt
+  approvedAt            DateTime?
+  deletionRequestedAt   DateTime?
+  updatedAt             DateTime       @updatedAt
 
   emailVerifiedAt  DateTime?
   pausedUntil      DateTime?

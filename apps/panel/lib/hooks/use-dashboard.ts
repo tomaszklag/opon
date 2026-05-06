@@ -16,6 +16,7 @@ export const STATUS_LABEL: Record<ProviderStatus, string> = {
   APPROVED: 'Aktywna',
   SUSPENDED: 'Zawieszona',
   REJECTED: 'Odrzucona',
+  PENDING_DELETION: 'Oczekuje na usunięcie',
 };
 
 export function useDashboard() {

@@ -9,6 +9,9 @@ import {
   listPendingProviders,
   approveProvider,
   rejectProvider,
+  listDeletionRequests,
+  confirmDeletion,
+  cancelDeletion,
   getGusHealth,
 } from '../../../api-data-access/admin';
 import type { Provider, GusHealthStatus, GusHealthResponse } from '../../../api-data-access/admin';
@@ -19,6 +22,7 @@ import {
   IconBan,
   IconMobilePhone,
   IconMail,
+  IconTrash,
 } from '../../../components/icons';
 import styles from './providers.module.css';
 
@@ -29,6 +33,7 @@ const STATUS_LABELS: Record<ProviderStatus, string> = {
   APPROVED: 'Zatwierdzona',
   SUSPENDED: 'Zawieszona',
   REJECTED: 'Odrzucona',
+  PENDING_DELETION: 'Oczekuje na usunięcie',
 };
 
 const CEIDG_STATUS_LABELS: Record<GusHealthStatus, string> = {
@@ -171,6 +176,100 @@ function ProviderRow({
   );
 }
 
+function DeletionRow({
+  provider,
+  onConfirm,
+  onCancel,
+  busy,
+}: {
+  provider: Provider;
+  onConfirm: (id: string) => Promise<void>;
+  onCancel: (id: string) => Promise<void>;
+  busy: boolean;
+}) {
+  const typeLabel = provider.type === 'MOBILE' ? 'Mobilny' : 'Stacjonarny';
+  const requestedDate = formatDate(provider.deletionRequestedAt ?? undefined);
+
+  return (
+    <div className={styles.row}>
+      <div className={styles.rowLeft}>
+        <div className={styles.rowIcon} aria-hidden="true">
+          <IconBriefcase width={16} height={16} />
+        </div>
+        <div className={styles.rowInfo}>
+          <div className={styles.rowNameLine}>
+            <Text variant="body-sm" as="span" weight="bold" color="primary">
+              {provider.name}
+            </Text>
+            <span className={styles.typeBadge}>
+              <Text variant="nano" as="span" color="muted">
+                {typeLabel}
+              </Text>
+            </span>
+            <span className={styles.statusBadge} data-status={provider.status}>
+              <Text variant="nano" as="span" color="muted">
+                {STATUS_LABELS[provider.status as ProviderStatus] ?? provider.status}
+              </Text>
+            </span>
+          </div>
+          <div className={styles.rowMeta}>
+            <Text variant="nano" as="span" color="muted" mono>
+              NIP {provider.nip}
+            </Text>
+            {provider.phone && (
+              <>
+                <span className={styles.metaSep} aria-hidden="true" />
+                <span className={styles.metaItem}>
+                  <IconMobilePhone width={11} height={11} />
+                  <Text variant="nano" as="span" color="muted">
+                    {provider.phone}
+                  </Text>
+                </span>
+              </>
+            )}
+            {provider.email && (
+              <>
+                <span className={styles.metaSep} aria-hidden="true" />
+                <span className={styles.metaItem}>
+                  <IconMail width={11} height={11} />
+                  <Text variant="nano" as="span" color="muted">
+                    {provider.email}
+                  </Text>
+                </span>
+              </>
+            )}
+          </div>
+          <Text variant="nano" as="span" color="muted">
+            Wniosek złożony: {requestedDate}
+          </Text>
+        </div>
+      </div>
+      <div className={styles.rowActions}>
+        <Button
+          variant="danger"
+          size="sm"
+          loading={busy}
+          disabled={busy}
+          onClick={() => onConfirm(provider.id)}
+        >
+          <IconTrash width={13} height={13} />
+          Potwierdź usunięcie
+        </Button>
+        <Button
+          variant="neutral"
+          size="sm"
+          loading={busy}
+          disabled={busy}
+          onClick={() => onCancel(provider.id)}
+        >
+          <IconBan width={13} height={13} />
+          Anuluj wniosek
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 export default function AdminProvidersPage() {
   const { isLoading: authLoading } = useAuthGuard('/admin/providers');
   const {
@@ -178,10 +277,16 @@ export default function AdminProvidersPage() {
     isLoading: dataLoading,
     mutate,
   } = useSWR('/v1/admin/providers?status=PENDING_APPROVAL', listPendingProviders);
+  const {
+    data: deletionData,
+    isLoading: deletionLoading,
+    mutate: mutateDeletion,
+  } = useSWR('/v1/admin/providers?status=PENDING_DELETION', listDeletionRequests);
 
   const [busyIds, setBusyIds] = useState<Set<string>>(new Set());
+  const [busyDeletionIds, setBusyDeletionIds] = useState<Set<string>>(new Set());
 
-  const isLoading = authLoading || dataLoading;
+  const isLoading = authLoading || dataLoading || deletionLoading;
 
   async function handleApprove(id: string) {
     setBusyIds((prev) => new Set(prev).add(id));
@@ -211,6 +316,34 @@ export default function AdminProvidersPage() {
     }
   }
 
+  async function handleConfirmDeletion(id: string) {
+    setBusyDeletionIds((prev) => new Set(prev).add(id));
+    try {
+      await confirmDeletion(id);
+      await mutateDeletion();
+    } finally {
+      setBusyDeletionIds((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+    }
+  }
+
+  async function handleCancelDeletion(id: string) {
+    setBusyDeletionIds((prev) => new Set(prev).add(id));
+    try {
+      await cancelDeletion(id);
+      await mutateDeletion();
+    } finally {
+      setBusyDeletionIds((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+    }
+  }
+
   if (isLoading) {
     return (
       <div className={styles.page}>
@@ -223,6 +356,8 @@ export default function AdminProvidersPage() {
 
   const providers = data?.data ?? [];
   const total = data?.total ?? 0;
+  const deletionProviders = deletionData?.data ?? [];
+  const deletionTotal = deletionData?.total ?? 0;
 
   return (
     <div className={styles.page}>
@@ -241,6 +376,7 @@ export default function AdminProvidersPage() {
 
       <div className={styles.content}>
         <div className={styles.inner}>
+          {/* ── Verification section ── */}
           <div className={styles.pageHeader}>
             <div>
               <Heading variant="section" as="h1">
@@ -277,6 +413,51 @@ export default function AdminProvidersPage() {
                   onApprove={handleApprove}
                   onReject={handleReject}
                   busy={busyIds.has(provider.id)}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* ── Deletion requests section ── */}
+          <div className={styles.sectionSep} />
+          <div className={styles.pageHeader}>
+            <div>
+              <Heading variant="section" as="h2">
+                Wnioski o usunięcie konta
+              </Heading>
+              <Text variant="body-sm" as="p" color="secondary">
+                Warsztaty oczekujące na potwierdzenie usunięcia przez administratora
+              </Text>
+            </div>
+            {deletionTotal > 0 && (
+              <span className={`${styles.countBadge} ${styles.countBadgeDanger}`}>
+                <Text variant="kicker" as="span" weight="bold" color="danger" mono>
+                  {deletionTotal}
+                </Text>
+                <Text variant="nano" as="span" color="muted">
+                  oczekujących
+                </Text>
+              </span>
+            )}
+          </div>
+
+          {deletionProviders.length === 0 ? (
+            <div className={styles.emptyWrap}>
+              <EmptyState
+                illustration="done"
+                title="Brak wniosków o usunięcie"
+                description="Żaden warsztat nie złożył wniosku o usunięcie konta."
+              />
+            </div>
+          ) : (
+            <div className={styles.list}>
+              {deletionProviders.map((provider) => (
+                <DeletionRow
+                  key={provider.id}
+                  provider={provider}
+                  onConfirm={handleConfirmDeletion}
+                  onCancel={handleCancelDeletion}
+                  busy={busyDeletionIds.has(provider.id)}
                 />
               ))}
             </div>

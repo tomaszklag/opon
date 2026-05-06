@@ -449,3 +449,103 @@
   color: var(--danger);
   flex-shrink: 0;
 }
+
+/* Deletion requested success card */
+.deletionRequestedCard {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  background: rgba(46, 224, 160, 0.06);
+  border: 1px solid var(--success-border);
+  border-radius: 10px;
+}
+
+.deletionRequestedIco {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  background: var(--success-muted);
+  border: 1px solid var(--success-border);
+  color: var(--success);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.deletionRequestedCol {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+/* Delete account modal */
+.modalStep {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.modalWarning {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 12px;
+  background: rgba(239, 68, 68, 0.06);
+  border: 1px solid var(--danger-border);
+  border-radius: 8px;
+}
+
+.modalWarningIco {
+  color: var(--danger);
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.modalLabel {
+  margin: 0;
+}
+
+.modalProviderName {
+  margin: 0;
+  padding: 6px 10px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-family: var(--font-mono);
+}
+
+.modalOtp {
+  display: flex;
+  justify-content: center;
+  padding: 8px 0;
+}
+
+.otpTimer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.otpTimerValue {
+  padding: 2px 7px;
+  border-radius: 5px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  letter-spacing: 0.04em;
+}
+
+.otpExpired {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.modalFooter {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}

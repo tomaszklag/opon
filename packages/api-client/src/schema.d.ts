@@ -1026,7 +1026,8 @@ export interface components {
         | 'PENDING_APPROVAL'
         | 'APPROVED'
         | 'SUSPENDED'
-        | 'REJECTED';
+        | 'REJECTED'
+        | 'PENDING_DELETION';
       description?: string | null;
       logoUrl?: string | null;
       phone?: string | null;
@@ -1045,6 +1046,8 @@ export interface components {
       submittedAt?: string | null;
       /** Format: date-time */
       approvedAt?: string | null;
+      /** Format: date-time */
+      deletionRequestedAt?: string | null;
       /** Format: date-time */
       updatedAt: string;
       tagline?: string | null;

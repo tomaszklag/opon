@@ -40,6 +40,8 @@ export enum ErrorCode {
   PROVIDER_INVALID_STATUS = 'PROVIDER_INVALID_STATUS',
   /** Firma nie jest w stanie oczekującym na weryfikację (admin) */
   PROVIDER_NOT_PENDING_APPROVAL = 'PROVIDER_NOT_PENDING_APPROVAL',
+  /** Firma nie jest w stanie oczekującym na usunięcie (admin) */
+  PROVIDER_NOT_PENDING_DELETION = 'PROVIDER_NOT_PENDING_DELETION',
   /** Nie udało się zarejestrować firmy — błąd wewnętrzny */
   PROVIDER_CREATE_FAILED = 'PROVIDER_CREATE_FAILED',
 

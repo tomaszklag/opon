@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Provider, ProviderStatus } from '@prisma/client';
+import { Provider, ProviderStatus, UserRole } from '@prisma/client';
 import { AppException, ErrorCode } from '../common/errors';
 import { EmailService } from '../email/email.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -59,6 +59,47 @@ export class AdminProvidersService {
       await this.emailService.sendAccountApproved(provider.id, provider.email, provider.name);
     }
     return updated;
+  }
+
+  async confirmDeletion(id: string): Promise<{ ok: boolean }> {
+    const provider = await this.prisma.provider.findUnique({ where: { id } });
+    if (!provider) throw new AppException(ErrorCode.PROVIDER_NOT_FOUND, 'Firma nie istnieje.', 404);
+    if (provider.status !== ProviderStatus.PENDING_DELETION)
+      throw new AppException(
+        ErrorCode.PROVIDER_NOT_PENDING_DELETION,
+        'Firma nie oczekuje na usunięcie.',
+        400,
+      );
+    await this.prisma.$transaction([
+      this.prisma.provider.update({
+        where: { id },
+        data: { status: ProviderStatus.SUSPENDED },
+      }),
+      this.prisma.session.updateMany({
+        where: { userId: provider.ownerId, revokedAt: null },
+        data: { revokedAt: new Date() },
+      }),
+      this.prisma.user.update({
+        where: { id: provider.ownerId },
+        data: { role: UserRole.CLIENT, deletedAt: new Date() },
+      }),
+    ]);
+    return { ok: true };
+  }
+
+  async cancelDeletion(id: string): Promise<Provider> {
+    const provider = await this.prisma.provider.findUnique({ where: { id } });
+    if (!provider) throw new AppException(ErrorCode.PROVIDER_NOT_FOUND, 'Firma nie istnieje.', 404);
+    if (provider.status !== ProviderStatus.PENDING_DELETION)
+      throw new AppException(
+        ErrorCode.PROVIDER_NOT_PENDING_DELETION,
+        'Firma nie oczekuje na usunięcie.',
+        400,
+      );
+    return this.prisma.provider.update({
+      where: { id },
+      data: { status: ProviderStatus.APPROVED, deletionRequestedAt: null },
+    });
   }
 
   async rejectProvider(id: string, reason?: string): Promise<Provider> {

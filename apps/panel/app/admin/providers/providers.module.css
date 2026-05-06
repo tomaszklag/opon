@@ -301,6 +301,24 @@
   flex-shrink: 0;
 }
 
+.statusBadge[data-status='PENDING_DELETION'] {
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  color: var(--error);
+}
+
+/* ── Section separator ── */
+.sectionSep {
+  height: 1px;
+  background: var(--border);
+  margin: 8px 0;
+}
+
+/* ── Danger count badge ── */
+.countBadgeDanger {
+  border-color: var(--danger-border);
+}
+
 /* ── Empty state wrapper ── */
 .emptyWrap {
   padding: 48px 0;

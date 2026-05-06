@@ -194,6 +194,22 @@ export class ProvidersService {
     return { pausedUntil: pausedUntil?.toISOString() ?? null };
   }
 
+  async requestDeletion(ownerId: string): Promise<{ status: string }> {
+    const provider = await this.repo.findByOwnerId(ownerId);
+    if (!provider) throw new AppException(ErrorCode.PROVIDER_NOT_FOUND, 'Brak firmy.', 404);
+    if (provider.status !== ProviderStatus.APPROVED)
+      throw new AppException(
+        ErrorCode.PROVIDER_INVALID_STATUS,
+        'Wniosek o usunięcie możliwy tylko dla aktywnych firm.',
+        400,
+      );
+    await this.repo.update(provider.id, {
+      status: ProviderStatus.PENDING_DELETION,
+      deletionRequestedAt: new Date(),
+    });
+    return { status: 'PENDING_DELETION' };
+  }
+
   /** Usuwa pola finansowe — używane przy publicznych endpointach. */
   private toPublicView(provider: Provider): ProviderPublicView {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars

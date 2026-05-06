@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
-import { Button, Heading, Text, Toggle } from '@opony/design-system-web';
+import { useEffect, useState } from 'react';
+import useSWR from 'swr';
+import { Button, Heading, Input, Modal, OTPInput, Text, Toggle } from '@opony/design-system-web';
 import {
   IconAlertTriangle,
   IconBell,
@@ -19,8 +20,13 @@ import {
   IconStations,
   IconTrash,
 } from '../../../components/icons';
+import { useAuth } from '../../../lib/auth';
+import { ApiError } from '../../../lib/api';
 import { usePause } from '../../../lib/hooks/use-pause';
 import { ScrolledLayout, type ScrollSection } from '../../../components/ScrolledLayout';
+import { getProvider } from '../../../api-data-access/providers';
+import { requestOtp, verifyOtp } from '../../../api-data-access/auth';
+import { requestAccountDeletion } from '../../../api-data-access/admin';
 import styles from './settings.module.css';
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -94,6 +100,103 @@ export default function SettingsPage() {
     pauseWeek,
     unpause,
   } = usePause();
+  const auth = useAuth();
+  const user = auth.status === 'authenticated' ? auth.user : null;
+  const { data: provider } = useSWR('/v1/providers/me', getProvider);
+
+  const [deleteStep, setDeleteStep] = useState<0 | 1 | 2>(0);
+  const [deleteNameDraft, setDeleteNameDraft] = useState('');
+  const [deleteSmsCode, setDeleteSmsCode] = useState('');
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
+  const [deletionRequested, setDeletionRequested] = useState(false);
+  const [otpCountdown, setOtpCountdown] = useState(0);
+
+  useEffect(() => {
+    if (otpCountdown <= 0) return;
+    const t = setTimeout(() => setOtpCountdown((c) => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [otpCountdown]);
+
+  function formatCountdown(secs: number): string {
+    const m = Math.floor(secs / 60);
+    const s = secs % 60;
+    return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  }
+
+  function openDeleteModal() {
+    setDeleteNameDraft('');
+    setDeleteSmsCode('');
+    setDeleteError('');
+    setOtpCountdown(0);
+    setDeleteStep(1);
+  }
+
+  function closeDeleteModal() {
+    setDeleteStep(0);
+    setDeleteError('');
+  }
+
+  async function goToStep2() {
+    if (!user) return;
+    setDeleteLoading(true);
+    setDeleteError('');
+    try {
+      const res = await requestOtp({ phone: user.phone });
+      setDeleteSmsCode('');
+      setOtpCountdown(res.expiresIn);
+      setDeleteStep(2);
+    } catch (err) {
+      setDeleteError(
+        err instanceof ApiError ? err.message : 'Nie udało się wysłać kodu SMS. Spróbuj ponownie.',
+      );
+    } finally {
+      setDeleteLoading(false);
+    }
+  }
+
+  async function handleResendOtp() {
+    if (!user) return;
+    setDeleteLoading(true);
+    setDeleteError('');
+    try {
+      const res = await requestOtp({ phone: user.phone });
+      setDeleteSmsCode('');
+      setOtpCountdown(res.expiresIn);
+    } catch (err) {
+      setDeleteError(
+        err instanceof ApiError ? err.message : 'Nie udało się wysłać kodu SMS. Spróbuj ponownie.',
+      );
+    } finally {
+      setDeleteLoading(false);
+    }
+  }
+
+  async function handleDeleteSubmit() {
+    if (!user) return;
+    setDeleteLoading(true);
+    setDeleteError('');
+    try {
+      await verifyOtp({ phone: user.phone, code: deleteSmsCode });
+      await requestAccountDeletion();
+      setDeleteStep(0);
+      setDeletionRequested(true);
+    } catch (err) {
+      setDeleteSmsCode('');
+      if (err instanceof ApiError && err.code === 'OTP_INVALID_OR_EXPIRED') {
+        setOtpCountdown(0);
+        setDeleteError(
+          'Kod jest nieprawidłowy lub wygasł. Wyślij nowy kod SMS, aby ponowić operację.',
+        );
+      } else {
+        setDeleteError(err instanceof ApiError ? err.message : 'Błąd sieci. Spróbuj ponownie.');
+      }
+    } finally {
+      setDeleteLoading(false);
+    }
+  }
+
+  const nameMatch = deleteNameDraft.trim() === (provider?.name ?? '').trim() && !!provider?.name;
 
   function toggleNotif(key: NotifKey, channel: Channel) {
     setNotifs((prev) => {
@@ -663,28 +766,45 @@ export default function SettingsPage() {
             </Button>
           </div>
 
-          <div className={styles.dangerItem}>
-            <div className={styles.dangerInfo}>
-              <div className={styles.dangerTitle}>
-                <IconAlertTriangle width="13" height="13" className={styles.dangerTitleIco} />
-                <Text variant="body-sm" as="span" weight="bold" color="danger">
-                  Usuń konto i wszystkie dane
+          {deletionRequested ? (
+            <div className={styles.deletionRequestedCard}>
+              <span className={styles.deletionRequestedIco}>
+                <IconCheck width="14" height="14" />
+              </span>
+              <div className={styles.deletionRequestedCol}>
+                <Text variant="body-sm" as="span" weight="bold">
+                  Wniosek o usunięcie konta złożony
+                </Text>
+                <Text variant="caption" color="muted" as="p">
+                  Administrator zweryfikuje wniosek. Dane zostaną trwale usunięte po 30 dniach od
+                  zatwierdzenia.
                 </Text>
               </div>
-              <Text variant="caption" color="secondary" as="p">
-                Nieodwracalne. Warsztat znika z wyszukiwarki natychmiast, dane pozostają w systemie
-                30 dni (okres odwołania), potem są{' '}
-                <Text variant="caption" as="span" weight="bold">
-                  trwale usunięte
-                </Text>
-                . Wymagamy potwierdzenia hasłem → SMS → wpisania nazwy warsztatu.
-              </Text>
             </div>
-            <Button variant="danger" size="sm">
-              <IconTrash width="12" height="12" />
-              Usuń konto
-            </Button>
-          </div>
+          ) : (
+            <div className={styles.dangerItem}>
+              <div className={styles.dangerInfo}>
+                <div className={styles.dangerTitle}>
+                  <IconAlertTriangle width="13" height="13" className={styles.dangerTitleIco} />
+                  <Text variant="body-sm" as="span" weight="bold" color="danger">
+                    Usuń konto i wszystkie dane
+                  </Text>
+                </div>
+                <Text variant="caption" color="secondary" as="p">
+                  Nieodwracalne. Warsztat znika z wyszukiwarki natychmiast, dane pozostają w
+                  systemie 30 dni (okres odwołania), potem są{' '}
+                  <Text variant="caption" as="span" weight="bold">
+                    trwale usunięte
+                  </Text>
+                  . Wymagamy potwierdzenia nazwy warsztatu i weryfikacji SMS.
+                </Text>
+              </div>
+              <Button variant="danger" size="sm" onClick={openDeleteModal}>
+                <IconTrash width="12" height="12" />
+                Usuń konto
+              </Button>
+            </div>
+          )}
         </>
       ),
     },
@@ -718,6 +838,131 @@ export default function SettingsPage() {
       </div>
 
       <ScrolledLayout sections={sections} />
+
+      {/* ── Delete account modal ── */}
+      <Modal
+        isOpen={deleteStep > 0}
+        onClose={closeDeleteModal}
+        title={deleteStep === 1 ? 'Usuń konto — krok 1 z 2' : 'Usuń konto — krok 2 z 2'}
+        size="sm"
+        footer={
+          deleteStep === 1 ? (
+            <div className={styles.modalFooter}>
+              <Button variant="neutral" size="sm" onClick={closeDeleteModal}>
+                Anuluj
+              </Button>
+              <Button
+                variant="danger"
+                size="sm"
+                disabled={!nameMatch || deleteLoading}
+                loading={deleteLoading}
+                onClick={goToStep2}
+              >
+                Dalej →
+              </Button>
+            </div>
+          ) : (
+            <div className={styles.modalFooter}>
+              <Button variant="neutral" size="sm" onClick={() => setDeleteStep(1)}>
+                ← Wstecz
+              </Button>
+              <Button
+                variant="danger"
+                size="sm"
+                disabled={deleteSmsCode.length < 6 || deleteLoading || otpCountdown <= 0}
+                loading={deleteLoading}
+                onClick={handleDeleteSubmit}
+              >
+                <IconTrash width="12" height="12" />
+                Potwierdź usunięcie
+              </Button>
+            </div>
+          )
+        }
+      >
+        {deleteStep === 1 && (
+          <div className={styles.modalStep}>
+            <div className={styles.modalWarning}>
+              <IconAlertTriangle width="14" height="14" className={styles.modalWarningIco} />
+              <Text variant="caption" as="p">
+                Tej operacji nie można cofnąć. Warsztat zniknie z wyszukiwarki natychmiast, a dane
+                zostaną trwale usunięte po 30 dniach.
+              </Text>
+            </div>
+            <Text variant="caption" color="muted" as="p" className={styles.modalLabel}>
+              Wpisz dokładną nazwę warsztatu, aby kontynuować:
+            </Text>
+            <Text variant="body-sm" as="p" weight="bold" className={styles.modalProviderName}>
+              {provider?.name ?? '…'}
+            </Text>
+            <Input
+              value={deleteNameDraft}
+              onChange={(e) => setDeleteNameDraft(e.target.value)}
+              placeholder="Nazwa warsztatu"
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && nameMatch) setDeleteStep(2);
+              }}
+            />
+          </div>
+        )}
+        {deleteStep === 2 && (
+          <div className={styles.modalStep}>
+            <Text variant="body-sm" as="p" color="muted">
+              Wysłaliśmy 6-cyfrowy kod na numer{' '}
+              <Text variant="body-sm" as="span" weight="bold" mono>
+                {user?.phone}
+              </Text>
+              . Wpisz go poniżej, aby potwierdzić usunięcie konta.
+            </Text>
+            <div className={styles.modalOtp}>
+              <OTPInput
+                length={6}
+                value={deleteSmsCode}
+                onChange={setDeleteSmsCode}
+                autoFocus={otpCountdown > 0}
+                disabled={otpCountdown <= 0}
+                error={!!deleteError}
+              />
+            </div>
+            {otpCountdown > 0 ? (
+              <div className={styles.otpTimer}>
+                <Text variant="caption" color="muted" as="span">
+                  Kod wygaśnie za
+                </Text>
+                <Text
+                  variant="caption"
+                  weight="bold"
+                  mono
+                  as="span"
+                  className={styles.otpTimerValue}
+                >
+                  {formatCountdown(otpCountdown)}
+                </Text>
+              </div>
+            ) : (
+              <div className={styles.otpExpired}>
+                <Text variant="caption" color="danger" as="span">
+                  Kod wygasł.
+                </Text>
+                <Button
+                  variant="neutral"
+                  size="sm"
+                  onClick={handleResendOtp}
+                  loading={deleteLoading}
+                >
+                  Wyślij ponownie
+                </Button>
+              </div>
+            )}
+            {deleteError && (
+              <Text variant="caption" color="danger" as="p">
+                {deleteError}
+              </Text>
+            )}
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }

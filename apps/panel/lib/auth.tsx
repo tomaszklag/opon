@@ -11,7 +11,8 @@ export type ProviderStatus =
   | 'PENDING_APPROVAL'
   | 'APPROVED'
   | 'SUSPENDED'
-  | 'REJECTED';
+  | 'REJECTED'
+  | 'PENDING_DELETION';
 
 export type AuthUser = {
   sub: string;

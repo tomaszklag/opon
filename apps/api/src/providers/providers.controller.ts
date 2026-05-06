@@ -127,6 +127,18 @@ export class ProvidersController {
     return this.service.setProviderPause(user.sub, dto.until ?? null);
   }
 
+  // ── POST /v1/providers/me/deletion-request ────────────────────────────────
+
+  @Post('me/deletion-request')
+  @HttpCode(HttpStatus.OK)
+  @ApiCookieAuth('access_token')
+  @ApiOperation({ summary: 'Złóż wniosek o usunięcie konta (APPROVED → PENDING_DELETION)' })
+  @ApiResponse({ status: 200, description: 'Wniosek przyjęty' })
+  @ApiResponse({ status: 400, description: 'Firma nie jest w stanie aktywnym' })
+  requestDeletion(@CurrentUser() user: JwtPayload) {
+    return this.service.requestDeletion(user.sub);
+  }
+
   // ── GET /v1/providers/:id ──────────────────────────────────────────────────
 
   @Public()
