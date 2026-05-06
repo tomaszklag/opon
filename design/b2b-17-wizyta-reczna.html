@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Opony Panel — B2B-17 Wizyta ręczna — modal</title>
+<!--
+  Screen: Modal "Wizyta ręczna"
+  Trzy stany:
+    A) Pusty formularz — żadna usługa nie wybrana
+    B) Usługa wybrana, brak wyboru rozmiaru — chipy widoczne, summary placeholder
+    C) Pełny — usługa + rozmiar + pod-usługi + godzina → summary z ceną
+  Layout: 2 równe kolumny (1fr | 1fr)
+    Lewa: Klient (imię+tel inline) | Usługa → chipy rim → pod-usługi | Szczegóły
+    Prawa: Termin (data+pracownik inline) | Sloty (4 kolumny) | Podsumowanie
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Bebas+Neue&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0A0B0E;--surface:#14171D;--surface-raised:#1B1E26;
+  --border:#262A34;--border-strong:#363B47;--hairline:rgba(255,255,255,0.06);
+  --text-primary:#F5F4EF;--text-secondary:#9EA2AD;--text-muted:#60646F;--text-on-accent:#0A0B0E;
+  --accent:#FF6B1A;--accent-muted:rgba(255,107,26,0.14);--accent-border:rgba(255,107,26,0.32);--accent-glow:rgba(255,107,26,0.45);
+  --success:#2EE0A0;--success-muted:rgba(46,224,160,0.12);--success-border:rgba(46,224,160,0.30);
+  --warning:#FFB020;--warning-muted:rgba(255,176,32,0.14);--warning-border:rgba(255,176,32,0.32);
+  --danger:#F87171;--danger-muted:rgba(248,113,113,0.10);--danger-border:rgba(248,113,113,0.30);
+  --font-display:'Bebas Neue',sans-serif;--font-body:'Archivo',system-ui,sans-serif;--font-mono:'JetBrains Mono',monospace;
+  --radius-sm:5px;--radius-md:8px;--radius-lg:12px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;overflow-x:hidden;}
+body{
+  --s:min(1,calc((100vh - 100px)/900px),calc((100vw - 80px)/1440px));
+  font-family:var(--font-body);background:var(--bg);color:var(--text-primary);-webkit-font-smoothing:antialiased;
+  background-image:radial-gradient(ellipse 70% 50% at 50% 0%,rgba(255,107,26,0.05) 0%,transparent 60%);
+  min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:28px 40px 48px;gap:40px;
+}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 4px var(--accent-muted);}50%{box-shadow:0 0 0 8px transparent;opacity:0.6;}}
+
+/* ── Canvas header ── */
+.canvas-label{width:100%;max-width:1440px;display:grid;grid-template-columns:auto 1fr auto;align-items:baseline;gap:20px;padding-bottom:12px;border-bottom:1px solid var(--border);}
+.film-strip{font-family:var(--font-display);font-size:28px;letter-spacing:3px;}
+.slug{font-family:var(--font-mono);font-size:11px;color:var(--text-muted);letter-spacing:1.5px;text-transform:uppercase;border-left:1px solid var(--border);padding-left:16px;}
+.canvas-meta{font-family:var(--font-mono);font-size:11px;color:var(--text-secondary);letter-spacing:1px;display:inline-flex;align-items:center;gap:10px;}
+.pulse{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 4px var(--accent-muted);animation:pulse 1800ms ease-in-out infinite;}
+
+/* ── Desktop frame ── */
+.desktop-frame{width:1440px;height:900px;background:var(--bg);border-radius:14px;border:1px solid #1C1E24;box-shadow:0 40px 120px rgba(0,0,0,0.6);overflow:hidden;flex-shrink:0;transform:scale(var(--s));transform-origin:top center;margin-bottom:calc((var(--s)-1)*900px);display:flex;flex-direction:column;}
+.browser-chrome{height:44px;background:linear-gradient(180deg,#1A1D23,#14171D);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 16px;gap:16px;flex-shrink:0;}
+.traffic-lights{display:inline-flex;gap:8px;}
+.light{width:12px;height:12px;border-radius:50%;}
+.light.r{background:#FF5F57;}.light.y{background:#FEBC2E;}.light.g{background:#28C840;}
+.browser-tab{display:inline-flex;align-items:center;gap:8px;padding:6px 14px;background:var(--surface);border:1px solid var(--border);border-bottom:none;border-radius:8px 8px 0 0;font-size:12px;position:relative;top:6px;}
+.fav{width:14px;height:14px;border-radius:3px;background:var(--accent);display:inline-flex;align-items:center;justify-content:center;font-family:var(--font-display);font-size:9px;color:var(--text-on-accent);}
+.addr{flex:1;max-width:480px;display:inline-flex;align-items:center;gap:8px;padding:6px 14px;background:var(--bg);border:1px solid var(--border);border-radius:8px;font-family:var(--font-mono);font-size:12px;color:var(--text-secondary);}
+
+/* ── App layout ── */
+.app-root{flex:1;min-height:0;display:grid;grid-template-columns:210px 1fr;}
+.sidebar{background:var(--surface);border-right:1px solid var(--border);padding:16px 10px 10px;display:flex;flex-direction:column;gap:3px;}
+.sb-brand{display:flex;align-items:center;gap:10px;padding:4px 8px 14px;}
+.wordmark{font-family:var(--font-display);font-size:22px;letter-spacing:3px;display:inline-flex;align-items:baseline;gap:3px;}
+.dot{display:inline-block;width:6px;height:6px;background:var(--accent);border-radius:50%;transform:translateY(-2px);box-shadow:0 0 8px var(--accent-glow);}
+.panel-tag{font-family:var(--font-mono);font-size:9px;padding:2px 5px;border-radius:4px;background:var(--bg);border:1px solid var(--border);color:var(--text-muted);letter-spacing:1px;text-transform:uppercase;font-weight:700;margin-left:auto;}
+.sec{font-size:9px;font-weight:800;letter-spacing:1.4px;text-transform:uppercase;color:var(--text-muted);padding:7px 8px 3px;}
+.nav-item{display:flex;align-items:center;gap:9px;padding:7px 8px;border-radius:7px;border:1px solid transparent;color:var(--text-secondary);font-size:12px;font-weight:600;cursor:pointer;}
+.nav-item.active{background:var(--accent-muted);color:var(--accent);border-color:var(--accent-border);}
+.sb-spacer{flex:1;}
+.sb-user{display:flex;align-items:center;gap:8px;padding:9px;background:var(--bg);border:1px solid var(--border);border-radius:9px;}
+.avatar{width:30px;height:30px;border-radius:7px;background:linear-gradient(135deg,#FF8039,#C73F0A);display:inline-flex;align-items:center;justify-content:center;font-family:var(--font-display);font-size:13px;color:var(--text-on-accent);flex-shrink:0;}
+.user-col{flex:1;display:flex;flex-direction:column;gap:1px;}
+.user-name{font-size:11px;font-weight:700;}
+.user-role{font-family:var(--font-mono);font-size:8px;color:var(--accent);letter-spacing:0.5px;text-transform:uppercase;font-weight:700;}
+.nav-ico{width:14px;height:14px;border-radius:3px;background:currentColor;opacity:0.5;}
+
+.main{display:flex;flex-direction:column;overflow:hidden;position:relative;}
+.topbar{height:48px;border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 22px;gap:12px;flex-shrink:0;background:var(--surface);}
+.breadcrumb{display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--text-muted);font-weight:600;}
+.breadcrumb .cur{color:var(--text-primary);font-weight:700;}
+.page-content{flex:1;overflow:hidden;opacity:0.2;filter:blur(1px);}
+.placeholder-row{height:44px;border-bottom:1px solid var(--border);background:var(--surface);}
+.placeholder-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:1px;background:var(--border);height:100%;}
+.placeholder-cell{background:var(--bg);}
+
+/* ── Modal overlay ── */
+.modal-overlay{position:absolute;inset:0;background:rgba(8,9,12,0.75);display:flex;align-items:center;justify-content:center;z-index:50;padding:20px;}
+.modal{background:var(--surface);border:1px solid var(--border-strong);border-radius:14px;width:860px;max-height:calc(100% - 40px);display:flex;flex-direction:column;box-shadow:0 32px 80px rgba(0,0,0,0.7),0 0 0 1px var(--hairline);}
+.modal-hdr{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--border);flex-shrink:0;}
+.modal-title{font-family:var(--font-display);font-size:18px;letter-spacing:1.5px;}
+.modal-close{width:26px;height:26px;border-radius:6px;border:1px solid var(--border);background:transparent;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text-muted);font-size:12px;}
+.modal-body{flex:1;overflow-y:auto;padding:16px 18px;scrollbar-width:thin;}
+.modal-footer{padding:12px 18px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-shrink:0;background:var(--surface);}
+
+/* ── Form grid: 2 equal columns ── */
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 20px;}
+.col-left{display:flex;flex-direction:column;gap:14px;}
+.col-right{display:flex;flex-direction:column;gap:14px;}
+
+/* ── Section ── */
+.f-section{display:flex;flex-direction:column;gap:8px;}
+.f-label{font-size:9px;font-weight:800;letter-spacing:1.6px;text-transform:uppercase;color:var(--text-muted);display:flex;align-items:center;gap:6px;padding-bottom:4px;border-bottom:1px solid var(--border);}
+.f-badge{margin-left:auto;font-size:9px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--accent);}
+.f-field-label{font-size:10px;font-weight:600;color:var(--text-secondary);letter-spacing:0.3px;margin-bottom:3px;}
+
+/* ── Inputs ── */
+.f-row-2{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.f-field{display:flex;flex-direction:column;}
+.f-input{background:var(--bg);border:1px solid var(--border-strong);border-radius:var(--radius-md);padding:7px 10px;font-family:var(--font-body);font-size:12px;color:var(--text-primary);outline:none;width:100%;}
+.f-input.filled{border-color:var(--border-strong);}
+.f-input::placeholder{color:var(--text-muted);}
+.f-select{background:var(--bg);border:1px solid var(--border-strong);border-radius:var(--radius-md);padding:7px 10px;font-family:var(--font-body);font-size:12px;color:var(--text-primary);outline:none;width:100%;appearance:none;background-image:url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%2360646F' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;}
+.f-select.has-value{border-color:var(--accent-border);}
+.f-select.empty{color:var(--text-muted);}
+.f-phone{display:flex;align-items:stretch;background:var(--bg);border:1px solid var(--border-strong);border-radius:var(--radius-md);overflow:hidden;}
+.f-phone-prefix{display:flex;align-items:center;padding:0 8px;background:var(--surface-raised);border-right:1px solid var(--border);font-size:11px;color:var(--text-muted);font-family:var(--font-mono);white-space:nowrap;}
+.f-phone input{background:transparent;border:none;outline:none;padding:7px 10px;font-family:var(--font-body);font-size:12px;color:var(--text-primary);flex:1;min-width:0;}
+.f-textarea{background:var(--bg);border:1px solid var(--border-strong);border-radius:var(--radius-md);padding:7px 10px;font-family:var(--font-body);font-size:12px;color:var(--text-primary);outline:none;width:100%;resize:none;}
+
+/* ── Rim size chips ── */
+.rim-chips{display:flex;flex-wrap:wrap;gap:6px;}
+.rim-chip{display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:var(--radius-md);border:1px solid var(--border);background:var(--bg);font-size:11px;font-weight:700;color:var(--text-secondary);cursor:pointer;font-family:var(--font-body);}
+.rim-chip:hover{border-color:var(--accent-border);color:var(--accent);}
+.rim-chip.selected{background:var(--accent-muted);border-color:var(--accent-border);color:var(--accent);}
+.rim-price{font-size:10px;font-weight:400;color:var(--text-muted);font-family:var(--font-mono);}
+.rim-chip.selected .rim-price{color:var(--accent);opacity:0.75;}
+.rim-dur{font-size:9px;color:var(--text-muted);}
+
+/* ── Placeholder dashed box ── */
+.f-placeholder{padding:12px;background:var(--bg);border:1px dashed var(--border);border-radius:var(--radius-md);text-align:center;font-size:11px;color:var(--text-muted);}
+
+/* ── Sub-services ── */
+.sub-list{display:flex;flex-direction:column;gap:4px;}
+.sub-item{display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:var(--radius-sm);background:var(--bg);border:1px solid var(--border);cursor:pointer;}
+.sub-item.incl{background:var(--success-muted);border-color:var(--success-border);cursor:default;}
+.sub-item.checked{background:var(--accent-muted);border-color:var(--accent-border);}
+.sub-chk{width:14px;height:14px;border-radius:3px;border:1px solid var(--border-strong);background:var(--bg);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.sub-chk.locked{background:var(--success-muted);border-color:var(--success-border);color:var(--success);}
+.sub-chk.on{background:var(--success);border-color:var(--success);color:var(--bg);}
+.sub-info{flex:1;display:flex;flex-direction:column;gap:1px;}
+.sub-name{font-size:12px;font-weight:600;}
+.sub-desc{font-size:9px;color:var(--text-muted);}
+.sub-price{font-family:var(--font-mono);font-size:10px;font-weight:700;color:var(--text-muted);white-space:nowrap;}
+.sub-price.incl{color:var(--success);font-size:9px;}
+.sub-price.added{color:var(--accent);}
+
+/* Price input (Szczegóły — cena) */
+.price-row{display:flex;align-items:stretch;background:var(--bg);border:1px solid var(--border-strong);border-radius:var(--radius-md);overflow:hidden;}
+.price-input{background:transparent;border:none;outline:none;padding:7px 8px;font-family:var(--font-mono);font-size:13px;font-weight:700;color:var(--text-primary);flex:1;width:100%;}
+.price-input::placeholder{color:var(--text-muted);font-weight:400;}
+.price-unit{display:flex;align-items:center;padding:0 10px;background:var(--surface-raised);border-left:1px solid var(--border);font-size:11px;font-weight:700;font-family:var(--font-mono);}
+.price-unit.has-val{color:var(--accent);}
+.price-unit.empty{color:var(--text-muted);}
+
+/* Toggle */
+.toggle-row{display:flex;align-items:center;gap:10px;padding:4px 0;}
+.toggle-track{width:32px;height:18px;border-radius:9px;background:var(--accent);position:relative;flex-shrink:0;}
+.toggle-thumb{width:14px;height:14px;border-radius:50%;background:#fff;position:absolute;top:2px;right:2px;}
+.toggle-track.off{background:var(--border-strong);}
+.toggle-track.off .toggle-thumb{left:2px;right:auto;}
+.toggle-label{font-size:11px;color:var(--text-secondary);}
+
+/* ── Slot grid (4 columns) ── */
+.slot-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;max-height:200px;overflow-y:auto;padding-right:2px;}
+.slot-btn{display:flex;align-items:center;justify-content:center;gap:3px;padding:7px 4px;border-radius:var(--radius-md);border:1px solid var(--border);background:var(--bg);font-family:var(--font-mono);font-size:10px;font-weight:700;color:var(--text-secondary);cursor:pointer;}
+.slot-btn:hover{border-color:var(--accent-border);background:var(--accent-muted);color:var(--accent);}
+.slot-btn.sel{background:var(--accent);border-color:var(--accent);color:var(--text-on-accent);}
+.slot-btn.conflict{border-color:var(--warning-border);}
+.slot-dot{width:4px;height:4px;border-radius:50%;background:var(--warning);flex-shrink:0;}
+.slot-btn.sel .slot-dot{background:var(--text-on-accent);}
+.selected-time{color:var(--accent);}
+
+/* Conflict banner */
+.conflict-banner{padding:6px 10px;background:var(--warning-muted);border:1px solid var(--warning-border);border-radius:var(--radius-md);font-size:11px;color:var(--warning);}
+
+/* ── Summary panel ── */
+.summary-empty{padding:14px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-md);text-align:center;font-size:11px;color:var(--text-muted);}
+.summary-box{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-md);overflow:hidden;}
+.sum-row{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;padding:6px 10px;border-bottom:1px solid var(--border);}
+.sum-row:last-child{border-bottom:none;}
+.sum-row.total{background:var(--accent-muted);border-top:1px solid var(--accent-border);border-bottom:none;padding:9px 10px;}
+.sum-name{display:flex;flex-direction:column;gap:1px;min-width:0;}
+.sum-label{font-size:12px;color:var(--text-secondary);}
+.sum-sub{font-size:9px;color:var(--text-muted);}
+.sum-val{font-family:var(--font-mono);font-size:11px;font-weight:700;color:var(--text-primary);white-space:nowrap;flex-shrink:0;}
+.sum-val.incl{color:var(--success);font-size:10px;}
+.sum-val.add{color:var(--accent);}
+.sum-val.total{font-family:var(--font-display);font-size:20px;letter-spacing:1px;color:var(--accent);}
+.sum-total-label{font-size:12px;font-weight:700;color:var(--text-primary);}
+
+/* ── Buttons ── */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 16px;border-radius:var(--radius-md);font-size:12px;font-weight:700;cursor:pointer;border:1px solid transparent;font-family:var(--font-body);}
+.btn-neutral{background:transparent;border-color:var(--border);color:var(--text-secondary);}
+.btn-primary{background:var(--accent);color:var(--text-on-accent);}
+.btn-primary.disabled{opacity:0.45;cursor:default;}
+
+/* State tag */
+.state-tag{display:inline-flex;align-items:center;gap:5px;padding:3px 8px;border-radius:5px;border:1px solid var(--border);background:var(--surface-raised);font-family:var(--font-mono);font-size:9px;color:var(--text-muted);letter-spacing:1px;text-transform:uppercase;}
+
+/* Shared sidebar */
+.sidebar-content{display:contents;}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     STAN C — Pełny: usługa + rozmiar + pod-usługi + sloty + summary
+═══════════════════════════════════════════════════════════════════ -->
+<div class="canvas-label">
+  <span class="film-strip">B2B-17</span>
+  <span class="slug">Wizyta ręczna — Stan C (pełny)</span>
+  <span class="canvas-meta"><span class="pulse"></span>Wymiana sez. — Osobowe · R13–R15 · Wyważanie wliczone · Wentyl +10 zł · 10:00 wybrany</span>
+</div>
+
+<div class="desktop-frame">
+  <div class="browser-chrome">
+    <div class="traffic-lights"><span class="light r"></span><span class="light y"></span><span class="light g"></span></div>
+    <div class="browser-tab"><span class="fav">O</span>Panel warsztatu</div>
+    <div class="addr">🔒 panel.opony.app/dashboard/bookings</div>
+  </div>
+  <div class="app-root">
+    <div class="sidebar">
+      <div class="sb-brand"><div class="wordmark">OPONY<span class="dot"></span></div><span class="panel-tag">Beta</span></div>
+      <span class="sec">Główne</span>
+      <div class="nav-item"><div class="nav-ico"></div>Dashboard</div>
+      <div class="nav-item active"><div class="nav-ico"></div>Rezerwacje</div>
+      <div class="nav-item"><div class="nav-ico"></div>Kalendarz</div>
+      <span class="sec">Konfiguracja</span>
+      <div class="nav-item"><div class="nav-ico"></div>Usługi & Cennik</div>
+      <div class="nav-item"><div class="nav-ico"></div>Godziny pracy</div>
+      <div class="nav-item"><div class="nav-ico"></div>Stanowiska</div>
+      <div class="nav-item"><div class="nav-ico"></div>Pracownicy</div>
+      <div class="nav-item"><div class="nav-ico"></div>Profil warsztatu</div>
+      <div class="sb-spacer"></div>
+      <div class="sb-user"><div class="avatar">TK</div><div class="user-col"><div class="user-name">Tomasz K.</div><div class="user-role">Admin</div></div></div>
+    </div>
+
+    <div class="main">
+      <div class="topbar">
+        <div class="breadcrumb">Rezerwacje <span style="color:var(--border-strong)">›</span> <span class="cur">Lista</span></div>
+      </div>
+      <div class="page-content">
+        <div class="placeholder-row"></div>
+        <div class="placeholder-row" style="height:36px"></div>
+        <div class="placeholder-grid"><div class="placeholder-cell"></div><div class="placeholder-cell"></div><div class="placeholder-cell"></div><div class="placeholder-cell"></div><div class="placeholder-cell"></div></div>
+      </div>
+
+      <div class="modal-overlay">
+        <div class="modal">
+          <div class="modal-hdr">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <span class="modal-title">Wizyta ręczna</span>
+              <span class="state-tag">Stan C · pełny</span>
+            </div>
+            <button class="modal-close">✕</button>
+          </div>
+
+          <div class="modal-body">
+            <div class="form-grid">
+
+              <!-- ══ LEWA KOLUMNA ══ -->
+              <div class="col-left">
+
+                <!-- KLIENT -->
+                <div class="f-section">
+                  <div class="f-label">Klient</div>
+                  <div class="f-row-2">
+                    <div class="f-field">
+                      <div class="f-field-label">Imię i nazwisko</div>
+                      <input class="f-input filled" value="Jan Kowalski" readonly/>
+                    </div>
+                    <div class="f-field">
+                      <div class="f-field-label">Telefon</div>
+                      <div class="f-phone">
+                        <span class="f-phone-prefix">+48</span>
+                        <input value="601 234 567" readonly/>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- USŁUGA -->
+                <div class="f-section">
+                  <div class="f-label">
+                    Usługa
+                    <span class="f-badge">z cennika</span>
+                  </div>
+                  <div class="f-field">
+                    <div class="f-field-label">Wybierz usługę</div>
+                    <select class="f-select has-value">
+                      <option>Wymiana sezonowa — Osobowe</option>
+                    </select>
+                  </div>
+
+                  <!-- Rim chips (pojawia się po wyborze usługi z rim tiers) -->
+                  <div class="f-field">
+                    <div class="f-field-label">Rozmiar felgi</div>
+                    <div class="rim-chips">
+                      <button class="rim-chip selected">
+                        R13–R15
+                        <span class="rim-price">180 zł</span>
+                        <span class="rim-dur">40 min</span>
+                      </button>
+                      <button class="rim-chip">
+                        R16–R17
+                        <span class="rim-price">210 zł</span>
+                        <span class="rim-dur">45 min</span>
+                      </button>
+                      <button class="rim-chip" style="opacity:0.45;cursor:default;">
+                        R18–R19
+                        <span class="rim-price">—</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- Pod-usługi (pojawia się po wyborze usługi) -->
+                  <div class="f-field">
+                    <div class="f-field-label">Pod-usługi</div>
+                    <div class="sub-list">
+                      <!-- wliczone — locked -->
+                      <div class="sub-item incl">
+                        <span class="sub-chk locked">
+                          <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+                        </span>
+                        <div class="sub-info">
+                          <span class="sub-name">Wyważanie</span>
+                          <span class="sub-desc">wliczone w cenę</span>
+                        </div>
+                        <span class="sub-price incl">wliczone</span>
+                      </div>
+                      <!-- opcjonalne — zaznaczone -->
+                      <div class="sub-item checked">
+                        <span class="sub-chk on">
+                          <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+                        </span>
+                        <div class="sub-info">
+                          <span class="sub-name">Nowy wentyl</span>
+                          <span class="sub-desc">opcjonalne</span>
+                        </div>
+                        <span class="sub-price added">+10 zł</span>
+                      </div>
+                      <!-- opcjonalne — niezaznaczone -->
+                      <div class="sub-item">
+                        <span class="sub-chk"></span>
+                        <div class="sub-info">
+                          <span class="sub-name">Przechowanie opon</span>
+                          <span class="sub-desc">opcjonalne</span>
+                        </div>
+                        <span class="sub-price">jak usł.</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- SZCZEGÓŁY -->
+                <div class="f-section">
+                  <div class="f-label">Szczegóły</div>
+                  <div class="f-field">
+                    <div class="f-field-label">Cena końcowa (zł)</div>
+                    <div class="price-row">
+                      <input class="price-input" value="190" readonly/>
+                      <span class="price-unit has-val">zł</span>
+                    </div>
+                  </div>
+                  <div class="f-field">
+                    <div class="f-field-label">Notatki</div>
+                    <textarea class="f-textarea" rows="2" placeholder="Opcjonalne uwagi…"></textarea>
+                  </div>
+                  <div class="toggle-row">
+                    <div class="toggle-track"><div class="toggle-thumb"></div></div>
+                    <span class="toggle-label">Potwierdź automatycznie</span>
+                  </div>
+                </div>
+
+              </div><!-- /col-left -->
+
+              <!-- ══ PRAWA KOLUMNA ══ -->
+              <div class="col-right">
+
+                <!-- TERMIN -->
+                <div class="f-section">
+                  <div class="f-label">Termin</div>
+                  <div class="f-row-2">
+                    <div class="f-field">
+                      <div class="f-field-label">Data</div>
+                      <input class="f-input filled" type="date" value="2026-05-06" readonly/>
+                    </div>
+                    <div class="f-field">
+                      <div class="f-field-label">Pracownik</div>
+                      <select class="f-select has-value"><option>Marek W.</option></select>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- GODZINA -->
+                <div class="f-section" style="flex:1;">
+                  <div class="f-label">
+                    Godzina
+                    <span class="selected-time" style="margin-left:auto;font-family:var(--font-mono);font-size:10px;text-transform:none;letter-spacing:0;font-weight:700;">· 10:00</span>
+                  </div>
+                  <div class="slot-grid">
+                    <button class="slot-btn">08:00</button>
+                    <button class="slot-btn">08:30</button>
+                    <button class="slot-btn">09:00</button>
+                    <button class="slot-btn">09:30</button>
+                    <button class="slot-btn sel">10:00</button>
+                    <button class="slot-btn">10:30</button>
+                    <button class="slot-btn conflict">11:00 <span class="slot-dot"></span></button>
+                    <button class="slot-btn conflict">11:30 <span class="slot-dot"></span></button>
+                    <button class="slot-btn">12:00</button>
+                    <button class="slot-btn">12:30</button>
+                    <button class="slot-btn">13:00</button>
+                    <button class="slot-btn">13:30</button>
+                    <button class="slot-btn">14:00</button>
+                    <button class="slot-btn">14:30</button>
+                    <button class="slot-btn">15:00</button>
+                    <button class="slot-btn">15:30</button>
+                  </div>
+                </div>
+
+                <!-- PODSUMOWANIE -->
+                <div class="f-section">
+                  <div class="f-label">Podsumowanie</div>
+                  <div class="summary-box">
+                    <div class="sum-row">
+                      <div class="sum-name">
+                        <span class="sum-label">Wymiana sez. — Osobowe</span>
+                        <span class="sum-sub">R13–R15 · 40 min</span>
+                      </div>
+                      <span class="sum-val">180 zł</span>
+                    </div>
+                    <div class="sum-row">
+                      <div class="sum-name">
+                        <span class="sum-label">Wyważanie</span>
+                        <span class="sum-sub">wliczone · +0 min</span>
+                      </div>
+                      <span class="sum-val incl">wliczone</span>
+                    </div>
+                    <div class="sum-row">
+                      <div class="sum-name">
+                        <span class="sum-label">Nowy wentyl</span>
+                        <span class="sum-sub">opcjonalne · +5 min</span>
+                      </div>
+                      <span class="sum-val add">+10 zł</span>
+                    </div>
+                    <div class="sum-row total">
+                      <div class="sum-name">
+                        <span class="sum-total-label">Do zapłaty</span>
+                        <span class="sum-sub">10:00 → 45 min</span>
+                      </div>
+                      <span class="sum-val total">190 zł</span>
+                    </div>
+                  </div>
+                </div>
+
+              </div><!-- /col-right -->
+
+            </div><!-- /form-grid -->
+          </div><!-- /modal-body -->
+
+          <div class="modal-footer">
+            <button class="btn btn-neutral">Anuluj</button>
+            <button class="btn btn-primary">Utwórz i potwierdź</button>
+          </div>
+        </div><!-- /modal -->
+      </div><!-- /overlay -->
+    </div><!-- /main -->
+  </div><!-- /app-root -->
+</div><!-- /desktop-frame -->
+
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     STAN B — Usługa wybrana, brak rozmiaru felgi (chipy widoczne)
+═══════════════════════════════════════════════════════════════════ -->
+<div class="canvas-label">
+  <span class="film-strip">B2B-17</span>
+  <span class="slug">Stan B — usługa wybrana, rozmiar nie wybrany</span>
+  <span class="canvas-meta">Rim chipy widoczne · summary placeholder · cena auto</span>
+</div>
+
+<div class="desktop-frame">
+  <div class="browser-chrome">
+    <div class="traffic-lights"><span class="light r"></span><span class="light y"></span><span class="light g"></span></div>
+    <div class="browser-tab"><span class="fav">O</span>Panel warsztatu</div>
+    <div class="addr">🔒 panel.opony.app/dashboard/bookings</div>
+  </div>
+  <div class="app-root">
+    <div class="sidebar">
+      <div class="sb-brand"><div class="wordmark">OPONY<span class="dot"></span></div><span class="panel-tag">Beta</span></div>
+      <span class="sec">Główne</span>
+      <div class="nav-item"><div class="nav-ico"></div>Dashboard</div>
+      <div class="nav-item active"><div class="nav-ico"></div>Rezerwacje</div>
+      <div class="nav-item"><div class="nav-ico"></div>Kalendarz</div>
+      <span class="sec">Konfiguracja</span>
+      <div class="nav-item"><div class="nav-ico"></div>Usługi & Cennik</div>
+      <div class="nav-item"><div class="nav-ico"></div>Godziny pracy</div>
+      <div class="nav-item"><div class="nav-ico"></div>Stanowiska</div>
+      <div class="nav-item"><div class="nav-ico"></div>Pracownicy</div>
+      <div class="nav-item"><div class="nav-ico"></div>Profil warsztatu</div>
+      <div class="sb-spacer"></div>
+      <div class="sb-user"><div class="avatar">TK</div><div class="user-col"><div class="user-name">Tomasz K.</div><div class="user-role">Admin</div></div></div>
+    </div>
+
+    <div class="main">
+      <div class="topbar">
+        <div class="breadcrumb">Rezerwacje <span style="color:var(--border-strong)">›</span> <span class="cur">Lista</span></div>
+      </div>
+      <div class="page-content">
+        <div class="placeholder-row"></div>
+        <div class="placeholder-row" style="height:36px"></div>
+        <div class="placeholder-grid"><div class="placeholder-cell"></div><div class="placeholder-cell"></div><div class="placeholder-cell"></div><div class="placeholder-cell"></div><div class="placeholder-cell"></div></div>
+      </div>
+
+      <div class="modal-overlay">
+        <div class="modal">
+          <div class="modal-hdr">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <span class="modal-title">Wizyta ręczna</span>
+              <span class="state-tag">Stan B · brak rozmiaru</span>
+            </div>
+            <button class="modal-close">✕</button>
+          </div>
+
+          <div class="modal-body">
+            <div class="form-grid">
+              <div class="col-left">
+                <div class="f-section">
+                  <div class="f-label">Klient</div>
+                  <div class="f-row-2">
+                    <div class="f-field">
+                      <div class="f-field-label">Imię i nazwisko</div>
+                      <input class="f-input" placeholder="Jan Kowalski"/>
+                    </div>
+                    <div class="f-field">
+                      <div class="f-field-label">Telefon</div>
+                      <div class="f-phone"><span class="f-phone-prefix">+48</span><input placeholder="601 234 567" style="color:var(--text-muted);"/></div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="f-section">
+                  <div class="f-label">Usługa <span class="f-badge">z cennika</span></div>
+                  <div class="f-field">
+                    <div class="f-field-label">Wybierz usługę</div>
+                    <select class="f-select has-value"><option>Wymiana sezonowa — Osobowe</option></select>
+                  </div>
+                  <div class="f-field">
+                    <div class="f-field-label">Rozmiar felgi</div>
+                    <div class="rim-chips">
+                      <button class="rim-chip">R13–R15 <span class="rim-price">180 zł</span> <span class="rim-dur">40 min</span></button>
+                      <button class="rim-chip">R16–R17 <span class="rim-price">210 zł</span> <span class="rim-dur">45 min</span></button>
+                      <button class="rim-chip" style="opacity:0.45;cursor:default;">R18–R19 <span class="rim-price">—</span></button>
+                    </div>
+                  </div>
+                  <div class="f-field">
+                    <div class="f-field-label">Pod-usługi</div>
+                    <div class="sub-list">
+                      <div class="sub-item incl">
+                        <span class="sub-chk locked"><svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></span>
+                        <div class="sub-info"><span class="sub-name">Wyważanie</span><span class="sub-desc">wliczone w cenę</span></div>
+                        <span class="sub-price incl">wliczone</span>
+                      </div>
+                      <div class="sub-item">
+                        <span class="sub-chk"></span>
+                        <div class="sub-info"><span class="sub-name">Nowy wentyl</span><span class="sub-desc">opcjonalne</span></div>
+                        <span class="sub-price">+10 zł</span>
+                      </div>
+                      <div class="sub-item">
+                        <span class="sub-chk"></span>
+                        <div class="sub-info"><span class="sub-name">Przechowanie opon</span><span class="sub-desc">opcjonalne</span></div>
+                        <span class="sub-price">jak usł.</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="f-section">
+                  <div class="f-label">Szczegóły</div>
+                  <div class="f-field">
+                    <div class="f-field-label">Cena końcowa (zł)</div>
+                    <div class="price-row">
+                      <input class="price-input" placeholder="auto" readonly/>
+                      <span class="price-unit empty">zł</span>
+                    </div>
+                  </div>
+                  <div class="f-field">
+                    <div class="f-field-label">Notatki</div>
+                    <textarea class="f-textarea" rows="2" placeholder="Opcjonalne uwagi…"></textarea>
+                  </div>
+                  <div class="toggle-row">
+                    <div class="toggle-track"><div class="toggle-thumb"></div></div>
+                    <span class="toggle-label">Potwierdź automatycznie</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="col-right">
+                <div class="f-section">
+                  <div class="f-label">Termin</div>
+                  <div class="f-row-2">
+                    <div class="f-field">
+                      <div class="f-field-label">Data</div>
+                      <input class="f-input" type="date" value="2026-05-06"/>
+                    </div>
+                    <div class="f-field">
+                      <div class="f-field-label">Pracownik</div>
+                      <select class="f-select empty"><option value="">Dowolny</option></select>
+                    </div>
+                  </div>
+                </div>
+                <div class="f-section" style="flex:1;">
+                  <div class="f-label">Godzina</div>
+                  <div class="slot-grid">
+                    <button class="slot-btn">08:00</button><button class="slot-btn">08:30</button><button class="slot-btn">09:00</button><button class="slot-btn">09:30</button>
+                    <button class="slot-btn">10:00</button><button class="slot-btn">10:30</button><button class="slot-btn conflict">11:00<span class="slot-dot"></span></button><button class="slot-btn conflict">11:30<span class="slot-dot"></span></button>
+                    <button class="slot-btn">12:00</button><button class="slot-btn">12:30</button><button class="slot-btn">13:00</button><button class="slot-btn">13:30</button>
+                    <button class="slot-btn">14:00</button><button class="slot-btn">14:30</button><button class="slot-btn">15:00</button><button class="slot-btn">15:30</button>
+                  </div>
+                </div>
+                <div class="f-section">
+                  <div class="f-label">Podsumowanie</div>
+                  <div class="summary-empty">Wybierz usługę i rozmiar</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="modal-footer">
+            <button class="btn btn-neutral">Anuluj</button>
+            <button class="btn btn-primary">Utwórz i potwierdź</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     STAN A — Pusty formularz (żadna usługa nie wybrana)
+═══════════════════════════════════════════════════════════════════ -->
+<div class="canvas-label">
+  <span class="film-strip">B2B-17</span>
+  <span class="slug">Stan A — pusty formularz</span>
+  <span class="canvas-meta">Placeholder dashed box · summary placeholder · przycisk disabled</span>
+</div>
+
+<div class="desktop-frame">
+  <div class="browser-chrome">
+    <div class="traffic-lights"><span class="light r"></span><span class="light y"></span><span class="light g"></span></div>
+    <div class="browser-tab"><span class="fav">O</span>Panel warsztatu</div>
+    <div class="addr">🔒 panel.opony.app/dashboard/bookings</div>
+  </div>
+  <div class="app-root">
+    <div class="sidebar">
+      <div class="sb-brand"><div class="wordmark">OPONY<span class="dot"></span></div><span class="panel-tag">Beta</span></div>
+      <span class="sec">Główne</span>
+      <div class="nav-item"><div class="nav-ico"></div>Dashboard</div>
+      <div class="nav-item active"><div class="nav-ico"></div>Rezerwacje</div>
+      <div class="nav-item"><div class="nav-ico"></div>Kalendarz</div>
+      <span class="sec">Konfiguracja</span>
+      <div class="nav-item"><div class="nav-ico"></div>Usługi & Cennik</div>
+      <div class="nav-item"><div class="nav-ico"></div>Godziny pracy</div>
+      <div class="nav-item"><div class="nav-ico"></div>Stanowiska</div>
+      <div class="nav-item"><div class="nav-ico"></div>Pracownicy</div>
+      <div class="nav-item"><div class="nav-ico"></div>Profil warsztatu</div>
+      <div class="sb-spacer"></div>
+      <div class="sb-user"><div class="avatar">TK</div><div class="user-col"><div class="user-name">Tomasz K.</div><div class="user-role">Admin</div></div></div>
+    </div>
+
+    <div class="main">
+      <div class="topbar">
+        <div class="breadcrumb">Rezerwacje <span style="color:var(--border-strong)">›</span> <span class="cur">Lista</span></div>
+      </div>
+      <div class="page-content">
+        <div class="placeholder-row"></div>
+        <div class="placeholder-row" style="height:36px"></div>
+        <div class="placeholder-grid"><div class="placeholder-cell"></div><div class="placeholder-cell"></div><div class="placeholder-cell"></div><div class="placeholder-cell"></div><div class="placeholder-cell"></div></div>
+      </div>
+
+      <div class="modal-overlay">
+        <div class="modal">
+          <div class="modal-hdr">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <span class="modal-title">Wizyta ręczna</span>
+              <span class="state-tag">Stan A · pusty</span>
+            </div>
+            <button class="modal-close">✕</button>
+          </div>
+
+          <div class="modal-body">
+            <div class="form-grid">
+              <div class="col-left">
+                <div class="f-section">
+                  <div class="f-label">Klient</div>
+                  <div class="f-row-2">
+                    <div class="f-field">
+                      <div class="f-field-label">Imię i nazwisko</div>
+                      <input class="f-input" placeholder="Jan Kowalski"/>
+                    </div>
+                    <div class="f-field">
+                      <div class="f-field-label">Telefon</div>
+                      <div class="f-phone"><span class="f-phone-prefix">+48</span><input placeholder="601 234 567" style="color:var(--text-muted);"/></div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="f-section">
+                  <div class="f-label">Usługa <span class="f-badge">z cennika</span></div>
+                  <div class="f-field">
+                    <div class="f-field-label">Wybierz usługę</div>
+                    <select class="f-select empty">
+                      <option value="">Wybierz usługę z cennika…</option>
+                      <option>Wymiana sezonowa — Osobowe</option>
+                      <option>Wymiana sezonowa — SUV</option>
+                      <option>Wyważanie</option>
+                    </select>
+                  </div>
+                  <!-- placeholder gdy usługa nie wybrana -->
+                  <div class="f-placeholder">
+                    Wybierz usługę aby zobaczyć dostępne rozmiary i pod-usługi
+                  </div>
+                </div>
+
+                <div class="f-section">
+                  <div class="f-label">Szczegóły</div>
+                  <div class="f-field">
+                    <div class="f-field-label">Cena końcowa (zł)</div>
+                    <div class="price-row">
+                      <input class="price-input" placeholder="auto" readonly/>
+                      <span class="price-unit empty">zł</span>
+                    </div>
+                  </div>
+                  <div class="f-field">
+                    <div class="f-field-label">Notatki</div>
+                    <textarea class="f-textarea" rows="2" placeholder="Opcjonalne uwagi…"></textarea>
+                  </div>
+                  <div class="toggle-row">
+                    <div class="toggle-track"><div class="toggle-thumb"></div></div>
+                    <span class="toggle-label">Potwierdź automatycznie</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="col-right">
+                <div class="f-section">
+                  <div class="f-label">Termin</div>
+                  <div class="f-row-2">
+                    <div class="f-field">
+                      <div class="f-field-label">Data</div>
+                      <input class="f-input" type="date" value="2026-05-06"/>
+                    </div>
+                    <div class="f-field">
+                      <div class="f-field-label">Pracownik</div>
+                      <select class="f-select empty"><option value="">Dowolny</option><option>Marek W.</option></select>
+                    </div>
+                  </div>
+                </div>
+                <div class="f-section" style="flex:1;">
+                  <div class="f-label">Godzina</div>
+                  <div class="slot-grid">
+                    <button class="slot-btn">08:00</button><button class="slot-btn">08:30</button><button class="slot-btn">09:00</button><button class="slot-btn">09:30</button>
+                    <button class="slot-btn">10:00</button><button class="slot-btn">10:30</button><button class="slot-btn conflict">11:00<span class="slot-dot"></span></button><button class="slot-btn conflict">11:30<span class="slot-dot"></span></button>
+                    <button class="slot-btn">12:00</button><button class="slot-btn">12:30</button><button class="slot-btn">13:00</button><button class="slot-btn">13:30</button>
+                    <button class="slot-btn">14:00</button><button class="slot-btn">14:30</button><button class="slot-btn">15:00</button><button class="slot-btn">15:30</button>
+                  </div>
+                </div>
+                <div class="f-section">
+                  <div class="f-label">Podsumowanie</div>
+                  <div class="summary-empty">Wybierz usługę i rozmiar</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="modal-footer">
+            <button class="btn btn-neutral">Anuluj</button>
+            <button class="btn btn-primary disabled">Utwórz i potwierdź</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

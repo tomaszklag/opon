@@ -62,7 +62,7 @@ export function NewServiceBlock({ onCreate, onCancel }: Props) {
 
         {/* Pricing mode options */}
         <div className={styles.optionsWrap}>
-          <Text variant="nano" as="span" weight="bold" className={styles.optionsLabel}>
+          <Text variant="kicker-sm" as="span" className={styles.optionsLabel}>
             Charakter usługi
           </Text>
           <div className={styles.options}>
@@ -93,7 +93,7 @@ export function NewServiceBlock({ onCreate, onCancel }: Props) {
                 )}
               </span>
               <span>
-                <Text variant="nano" as="span" weight="bold">
+                <Text variant="body-sm" as="span">
                   Wymaga rozmiaru felgi
                 </Text>
                 <Text variant="nano" as="div" color="secondary">
@@ -128,7 +128,7 @@ export function NewServiceBlock({ onCreate, onCancel }: Props) {
                 )}
               </span>
               <span>
-                <Text variant="nano" as="span" weight="bold">
+                <Text variant="body-sm" as="span">
                   Cena stała (flat)
                 </Text>
                 <Text variant="nano" as="div" color="secondary">

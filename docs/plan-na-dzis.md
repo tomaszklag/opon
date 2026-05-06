@@ -19,3 +19,5 @@ teraz przedźmy do implementacji b2b-11-profil
 zleć wyspecjalizowanym agentom weryfikację tego rozwiazania. Głównie zależy mi na respektowaniu wcześniejszych postanowień oraz
 przyjętej architektury
 zaplanowanego design
+
+Depot (przechowywanie) to największy nieobecny — warsztaty zarabiają na nim 120–360 zł/sezon per zestaw. Wymaga osobnego modułu (zarządzanie składem). Priorytet Sprint 3–4.

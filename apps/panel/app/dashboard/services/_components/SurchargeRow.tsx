@@ -1,6 +1,6 @@
 'use client';
 
-import { Input, Toggle, Text } from '@opony/design-system-web';
+import { Toggle, Text } from '@opony/design-system-web';
 import { IconTrash, IconChevronDown, IconCheck } from '../../../../components/icons';
 import type { SurchargeState } from '../_types';
 import styles from './SurchargeRow.module.css';
@@ -60,16 +60,21 @@ export function SurchargeRow({ surcharge, onChange, onDelete, isNew, onConfirm }
       {/* Name / description */}
       <div className={styles.info}>
         {isNew ? (
-          <Input
+          <input
+            className={styles.nameInput}
             type="text"
             placeholder="Nazwa dopłaty…"
             value={surcharge.name}
             onChange={(e) => onChange({ ...surcharge, name: e.target.value })}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && onConfirm) onConfirm();
+              if (e.key === 'Escape') onDelete();
+            }}
             autoFocus
           />
         ) : (
           <>
-            <Text variant="nano" as="span" weight="bold">
+            <Text variant="body-sm" as="span">
               {surcharge.name}
             </Text>
             <Text variant="nano" as="span" color="secondary">

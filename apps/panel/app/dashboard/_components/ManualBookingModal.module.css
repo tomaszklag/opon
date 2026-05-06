@@ -1,85 +1,393 @@
+/* 3-column grid: klient+szczegóły | usługa+chipy+pod-usługi | termin+sloty+summary */
 .form {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-5);
-}
-
-.formSection {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-}
-
-.row {
   display: grid;
-  gap: var(--space-3);
+  grid-template-columns: 220px 1fr 1fr;
+  gap: 0 20px;
+  align-items: start;
 }
 
-.row2 {
-  grid-template-columns: 1fr 1fr;
+.colLeft {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
 }
 
-.row3 {
-  grid-template-columns: 1fr 1fr 1fr;
+.colMid {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
 }
 
+.colRight {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* Full-width error banner under all three columns */
 .errorMsg {
-  padding: 10px 14px;
+  grid-column: 1 / -1;
+  padding: 8px 12px;
   background: var(--danger-muted);
   border: 1px solid var(--danger-border);
   border-radius: var(--radius-md);
   margin: 0;
 }
 
+/* Section block */
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sectionLabel {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--border);
+}
+
+/* "z cennika" badge in service section label */
+.sectionBadge {
+  margin-left: auto;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.selectedTime {
+  color: var(--accent);
+}
+
+/* Small label above a field group inside a section */
+.fieldLabel {
+  margin-bottom: 2px;
+}
+
+/* 2-field row within a section */
+.row2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+/* Toggle row */
 .toggleRow {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: var(--space-3) 0;
+  padding: 4px 0;
+}
+
+/* ── Rim size chips ── */
+.rimChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.rimChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--bg);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: border-color 80ms, background 80ms, color 80ms;
+}
+
+.rimChip:hover {
+  border-color: var(--accent-border);
+  color: var(--accent);
+}
+
+.rimChipSelected {
+  background: var(--accent-muted);
+  border-color: var(--accent-border);
+  color: var(--accent);
+}
+
+.rimPrice {
+  font-size: 10px;
+  font-weight: 400;
+  color: var(--text-muted);
+}
+
+.rimChipSelected .rimPrice {
+  color: var(--accent);
+  opacity: 0.75;
+}
+
+.rimDur {
+  font-size: 9px;
+  color: var(--text-muted);
+}
+
+/* ── Sub-services checklist ── */
+.placeholder {
+  padding: 12px;
+  background: var(--bg);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-md);
+  text-align: center;
+}
+
+.subList {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.subItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 8px;
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: background 80ms, border-color 80ms;
+}
+
+.subItem[aria-checked="false"]:hover {
+  border-color: var(--accent-border);
+}
+
+.subItemIncl {
+  background: var(--success-muted);
+  border-color: var(--success-border);
+  cursor: default;
+}
+
+.subItemChecked {
+  background: var(--accent-muted);
+  border-color: var(--accent-border);
+}
+
+/* Checkbox circle */
+.subChk {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  border: 1px solid var(--border-strong);
+  background: var(--bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--bg);
+}
+
+.subChkLocked {
+  background: var(--success-muted);
+  border-color: var(--success-border);
+  color: var(--success);
+}
+
+.subChkChecked {
+  background: var(--success);
+  border-color: var(--success);
+  color: var(--bg);
+}
+
+.subInfo {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.subPrice {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.subPriceIncl {
+  color: var(--success);
+  font-size: 9px;
+}
+
+.subPriceAdded {
+  color: var(--accent);
+}
+
+/* ── Slot picker area ── */
+.slotArea {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
 }
 
 .slotGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
-  gap: var(--space-2);
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+  max-height: 200px;
+  overflow-y: auto;
+  padding-right: 2px;
+  scrollbar-width: thin;
 }
 
 .slotBtn {
-  width: 100%;
-  flex-direction: column;
-  gap: 2px;
-  height: auto;
-  padding: var(--space-2) 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 7px 4px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--bg);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 80ms, border-color 80ms;
 }
 
-.slotConflict {
-  width: 6px;
-  height: 6px;
-  border-radius: var(--radius-full);
+.slotBtn:hover {
+  border-color: var(--accent-border);
+  background: var(--accent-muted);
+}
+
+.slotBtnSelected {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--text-on-accent);
+}
+
+.slotBtnSelected:hover {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.slotBtnConflict {
+  border-color: var(--warning-border);
+}
+
+.slotBtnConflict.slotBtnSelected {
   background: var(--warning);
-  display: inline-block;
+  border-color: var(--warning);
+}
+
+.conflictDot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--warning);
+  flex-shrink: 0;
+}
+
+.slotBtnSelected .conflictDot {
+  background: var(--text-on-accent);
 }
 
 .conflictBanner {
-  padding: 10px 14px;
+  padding: 7px 10px;
   background: var(--warning-muted);
   border: 1px solid var(--warning-border);
   border-radius: var(--radius-md);
 }
 
-.closedDayMsg {
-  padding: var(--space-5);
-  text-align: center;
-}
-
-.slotSection {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-}
-
 .spinnerRow {
   display: flex;
   justify-content: center;
-  padding: var(--space-4) 0;
+  padding: 20px 0;
+}
+
+.closedMsg {
+  text-align: center;
+  padding: 20px 0;
+  margin: 0;
+}
+
+/* ── Price summary panel ── */
+.summaryEmpty {
+  padding: 14px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  text-align: center;
+}
+
+.summaryBox {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.sumRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.sumRow:last-child {
+  border-bottom: none;
+}
+
+.sumRowTotal {
+  background: var(--accent-muted);
+  border-top: 1px solid var(--accent-border);
+  padding: 9px 10px;
+}
+
+.sumName {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.sumSub {
+  display: block;
+}
+
+.sumVal {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-primary);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* "wliczone" — success color via wrapper (no inline style on DS Text) */
+.sumValIncl {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--success);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.sumValAdd {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.sumValTotal {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--accent);
+  white-space: nowrap;
+  flex-shrink: 0;
+  letter-spacing: 0.5px;
 }

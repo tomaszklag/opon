@@ -1591,7 +1591,7 @@ export interface components {
       enabled: boolean;
       fromCatalog: boolean;
       pricePln?: number | null;
-      durationMinutes?: Record<string, never> | null;
+      durationMinutes?: number | null;
       sortOrder: number;
     };
     ServiceVariantResponseDto: {
@@ -1609,7 +1609,50 @@ export interface components {
       sortOrder: number;
       variants: components['schemas']['ServiceVariantResponseDto'][];
     };
-    UpsertServiceGroupsDto: Record<string, never>;
+    UpsertRimTierDto: {
+      id?: string;
+      rimSizes: string[];
+      pricePln: number;
+      durationMinutes: number;
+      sortOrder: number;
+    };
+    UpsertSubServiceDto: {
+      id?: string;
+      name: string;
+      included: boolean;
+      enabled: boolean;
+      fromCatalog: boolean;
+      pricePln?: number | null;
+      durationMinutes?: number | null;
+      sortOrder: number;
+    };
+    UpsertServiceVariantDto: {
+      id?: string;
+      name: string;
+      enabled: boolean;
+      sortOrder: number;
+      rimTiers: components['schemas']['UpsertRimTierDto'][];
+      subServices: components['schemas']['UpsertSubServiceDto'][];
+    };
+    UpsertServiceGroupDto: {
+      id?: string;
+      name: string;
+      pricingMode: string;
+      sortOrder: number;
+      variants: components['schemas']['UpsertServiceVariantDto'][];
+    };
+    UpsertServiceGroupsDto: {
+      groups: components['schemas']['UpsertServiceGroupDto'][];
+    };
+    UpsertSurchargeDto: {
+      id?: string;
+      name: string;
+      enabled: boolean;
+      /** @enum {string} */
+      scope: 'PER_WHEEL' | 'PER_SENSOR';
+      pricePln: number;
+      sortOrder: number;
+    };
     SurchargeResponseDto: {
       id: string;
       name: string;
@@ -1619,7 +1662,9 @@ export interface components {
       pricePln: number;
       sortOrder: number;
     };
-    UpsertSurchargesDto: Record<string, never>;
+    UpsertSurchargesDto: {
+      surcharges: components['schemas']['UpsertSurchargeDto'][];
+    };
   };
   responses: never;
   parameters: never;

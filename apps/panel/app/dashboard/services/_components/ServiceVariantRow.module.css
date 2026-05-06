@@ -106,3 +106,41 @@
   flex-shrink: 0;
   white-space: nowrap;
 }
+
+.nameBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: text;
+  color: inherit;
+  text-align: left;
+}
+
+.editIcon {
+  opacity: 0;
+  color: var(--text-muted);
+  flex-shrink: 0;
+  transition: opacity var(--transition-fast);
+}
+
+.row:hover .editIcon {
+  opacity: 1;
+}
+
+.nameInput {
+  background: var(--bg);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 0 0 2px var(--accent-muted);
+  outline: none;
+  padding: 1px 6px;
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  min-width: 80px;
+  width: auto;
+}

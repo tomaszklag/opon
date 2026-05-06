@@ -87,3 +87,76 @@
 .variantBlock:last-child {
   border-bottom: none;
 }
+
+.addSubSvcBar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border-top: 1px solid var(--border);
+  background: var(--bg);
+}
+
+.addSubSvcBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: 6px;
+  border: 1px dashed var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: border-color var(--transition-fast), color var(--transition-fast);
+}
+
+.addSubSvcBtn:hover {
+  border-color: var(--accent-border);
+  color: var(--accent);
+}
+
+.addSubSvcInput {
+  flex: 1;
+  background: var(--surface-raised);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 0 0 2px var(--accent-muted);
+  outline: none;
+  padding: 3px 8px;
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+}
+
+.addSubSvcConfirm {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--accent-border);
+  background: var(--accent-muted);
+  color: var(--accent);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.addSubSvcConfirm:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.addSubSvcCancel {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  flex-shrink: 0;
+}

@@ -4,42 +4,28 @@ import { useState } from 'react';
 import { Button, Heading, Modal, Spinner, Text } from '@opony/design-system-web';
 import { useAuthGuard } from '../../../lib/hooks/use-auth-guard';
 import { useNavigationGuard } from '../../../lib/hooks/use-navigation-guard';
-import {
-  IconBolt,
-  IconPlus,
-  IconRefresh,
-  IconServices,
-  IconInfo,
-  IconChevronDown,
-} from '../../../components/icons';
+import { useServicesPage } from '../../../lib/hooks/use-services-page';
+import { IconBolt, IconPlus, IconRefresh, IconInfo } from '../../../components/icons';
 import { ServiceGroupCard } from './_components/ServiceGroupCard';
 import { SurchargeList } from './_components/SurchargeList';
 import { NewServiceBlock } from './_components/NewServiceBlock';
-import { DEFAULT_SERVICES_STATE } from './_defaultState';
-import type { PricingMode, ServiceGroupState, ServicesPageState, SurchargeState } from './_types';
+import type { PricingMode, ServiceGroupState, SurchargeState } from './_types';
 import styles from './services.module.css';
 
 export default function ServicesPage() {
   const { isLoading: authLoading } = useAuthGuard('/dashboard');
-
-  const [state, setState] = useState<ServicesPageState>(DEFAULT_SERVICES_STATE);
-  const [dirty, setDirty] = useState(false);
-  const [saved, setSaved] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const { state, isLoading, isSaving, saveError, dirty, saved, updateState, revert, save } =
+    useServicesPage();
   const [addingService, setAddingService] = useState(false);
 
   const { showModal, confirm: confirmNav, cancel: cancelNav } = useNavigationGuard(dirty);
 
   function updateGroups(groups: ServiceGroupState[]) {
-    setState((prev) => ({ ...prev, groups }));
-    setDirty(true);
-    setSaved(false);
+    updateState((prev) => ({ ...prev, groups }));
   }
 
   function updateSurcharges(surcharges: SurchargeState[]) {
-    setState((prev) => ({ ...prev, surcharges }));
-    setDirty(true);
-    setSaved(false);
+    updateState((prev) => ({ ...prev, surcharges }));
   }
 
   function updateGroup(groupId: string, updated: ServiceGroupState) {
@@ -58,22 +44,7 @@ export default function ServicesPage() {
     setAddingService(false);
   }
 
-  function revert() {
-    setState(DEFAULT_SERVICES_STATE);
-    setDirty(false);
-    setSaved(false);
-  }
-
-  async function save() {
-    setSaving(true);
-    // TODO: PUT /v1/providers/me/service-groups + PUT /v1/providers/me/surcharges
-    await new Promise((r) => setTimeout(r, 300));
-    setSaving(false);
-    setSaved(true);
-    setDirty(false);
-  }
-
-  if (authLoading) {
+  if (authLoading || isLoading) {
     return (
       <div className={styles.loadingWrap}>
         <Spinner size="md" label="Ładowanie…" />
@@ -114,7 +85,12 @@ export default function ServicesPage() {
       <div className={styles.page}>
         {/* ── Action bar ── */}
         <div className={styles.actionBar}>
-          {dirty && (
+          {saveError && (
+            <Text variant="nano" as="span" color="danger" className={styles.dirtyChip}>
+              {saveError}
+            </Text>
+          )}
+          {dirty && !saveError && (
             <Text variant="nano" as="span" color="warning" className={styles.dirtyChip}>
               Niezapisane zmiany
             </Text>
@@ -125,7 +101,7 @@ export default function ServicesPage() {
             </Text>
           )}
           {dirty && (
-            <Button variant="ghost" size="sm" onClick={revert} disabled={saving}>
+            <Button variant="ghost" size="sm" onClick={revert} disabled={isSaving}>
               <IconRefresh width="13" height="13" />
               Cofnij
             </Button>
@@ -134,8 +110,8 @@ export default function ServicesPage() {
             variant="primary"
             size="sm"
             onClick={save}
-            loading={saving}
-            disabled={!dirty || saving}
+            loading={isSaving}
+            disabled={!dirty || isSaving}
           >
             Zapisz zmiany
           </Button>
@@ -175,7 +151,8 @@ export default function ServicesPage() {
               </Text>
               <span className={styles.sectionDividerLine} />
               <Text variant="nano" as="span" mono color="secondary">
-                {state.groups.length} grupy · {totalVariants} wariantów
+                {state.groups.length} {state.groups.length === 1 ? 'grupa' : 'grupy'} ·{' '}
+                {totalVariants} wariantów
               </Text>
             </div>
 

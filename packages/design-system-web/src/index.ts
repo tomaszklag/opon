@@ -1,5 +1,7 @@
 // forms
 export * from './forms/Button';
+export * from './forms/Combobox';
+export * from './forms/DatePicker';
 export * from './forms/Checkbox';
 export * from './forms/IconButton';
 export * from './forms/InlineInput';
@@ -10,6 +12,7 @@ export * from './forms/OTPInput';
 export * from './forms/PhoneInput';
 export * from './forms/SearchInput';
 export * from './forms/SegmentedControl';
+export * from './forms/NumberStepper';
 export * from './forms/Select';
 export * from './forms/Textarea';
 export * from './forms/Toggle';

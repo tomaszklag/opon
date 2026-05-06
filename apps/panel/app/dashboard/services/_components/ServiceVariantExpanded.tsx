@@ -1,7 +1,7 @@
 'use client';
 
-import { Button, Text } from '@opony/design-system-web';
-import { IconPlus, IconChevronDown } from '../../../../components/icons';
+import { Text } from '@opony/design-system-web';
+import { IconPlus } from '../../../../components/icons';
 import { RimTierRow } from './RimTierRow';
 import { SubServiceRow } from './SubServiceRow';
 import type { RimTierState, ServiceVariantState, SubServiceState } from '../_types';
@@ -52,22 +52,12 @@ export function ServiceVariantExpanded({ variant, onChange }: Props) {
     });
   }
 
-  function handleAddSubService() {
-    // TODO: SubServiceDropdown
-    alert('TODO: catalog dropdown');
-  }
-
   return (
     <div className={styles.expanded}>
       {/* Rim Tiers Section */}
       <div className={styles.expLabel}>
         <RimCircleIcon />
-        <Text
-          variant="nano"
-          as="span"
-          weight="bold"
-          style={{ letterSpacing: '1.4px', textTransform: 'uppercase' }}
-        >
+        <Text variant="kicker-sm" as="span">
           Zakresy rozmiarów
         </Text>
         <span className={styles.line} />
@@ -94,12 +84,7 @@ export function ServiceVariantExpanded({ variant, onChange }: Props) {
       {/* Sub-services Section */}
       <div className={styles.expLabel}>
         <CheckboxIcon />
-        <Text
-          variant="nano"
-          as="span"
-          weight="bold"
-          style={{ letterSpacing: '1.4px', textTransform: 'uppercase' }}
-        >
+        <Text variant="kicker-sm" as="span">
           Pod-usługi
         </Text>
         <span className={styles.line} />
@@ -130,14 +115,6 @@ export function ServiceVariantExpanded({ variant, onChange }: Props) {
           />
         ))}
       </div>
-
-      <button className={styles.addSubSvcBtn} onClick={handleAddSubService}>
-        <IconPlus width="10" height="10" />
-        <Text variant="nano" as="span" weight="bold" color="accent">
-          Dodaj pod-usługę
-        </Text>
-        <IconChevronDown width="9" height="9" style={{ marginLeft: 'auto', opacity: 0.6 }} />
-      </button>
     </div>
   );
 }

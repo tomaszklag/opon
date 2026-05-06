@@ -1,6 +1,6 @@
 'use client';
 
-import { Text } from '@opony/design-system-web';
+import { Text, NumberStepper } from '@opony/design-system-web';
 import { IconTrash, IconLock, IconLockOutline, IconCheck } from '../../../../components/icons';
 import type { SubServiceState } from '../_types';
 import styles from './SubServiceRow.module.css';
@@ -63,7 +63,7 @@ export function SubServiceRow({ sub, onChange, onDelete }: Props) {
       {/* Name */}
       <div className={styles.nameWrap}>
         <div className={styles.name}>
-          <Text variant="nano" as="span" weight="bold">
+          <Text variant="body-sm" as="span">
             {sub.name}
           </Text>
           {sub.fromCatalog && (
@@ -98,22 +98,15 @@ export function SubServiceRow({ sub, onChange, onDelete }: Props) {
           </Text>
         </span>
       ) : isOverride ? (
-        <div className={`${styles.priceCell} ${styles.priceCellOverride}`}>
-          {/* raw <input> — DS Input nie pasuje do 36px cell embed z custom mono stylem */}
-          <input
-            className={styles.priceCellInput}
-            type="number"
-            value={sub.pricePln ?? ''}
-            onChange={(e) => onChange({ ...sub, pricePln: e.target.value })}
-            min="0"
-            aria-label="Cena pod-usługi"
-          />
-          <span className={styles.priceCellUnit}>
-            <Text variant="nano" as="span" color="accent" mono>
-              zł
-            </Text>
-          </span>
-        </div>
+        <NumberStepper
+          value={sub.pricePln ?? ''}
+          onChange={(v) => onChange({ ...sub, pricePln: v })}
+          unit="zł"
+          min={0}
+          step={5}
+          inputWidth={44}
+          aria-label="Cena pod-usługi"
+        />
       ) : (
         <div className={styles.inheritTag} title="Kliknij kłódkę aby ustawić własną cenę">
           <InheritIcon />
@@ -132,26 +125,15 @@ export function SubServiceRow({ sub, onChange, onDelete }: Props) {
           </Text>
         </div>
       ) : isOverride || (sub.included && sub.durationMinutes !== null) ? (
-        <div className={`${styles.durCell} ${isOverride ? styles.durCellOverride : ''}`}>
-          <input
-            className={styles.durCellInput}
-            type="number"
-            value={sub.durationMinutes ?? ''}
-            onChange={(e) => onChange({ ...sub, durationMinutes: e.target.value })}
-            min="0"
-            aria-label="Czas pod-usługi"
-          />
-          <span className={styles.durCellUnit}>
-            <Text
-              variant="nano"
-              as="span"
-              mono
-              style={{ color: isOverride ? 'var(--accent)' : 'var(--text-muted)' }}
-            >
-              min
-            </Text>
-          </span>
-        </div>
+        <NumberStepper
+          value={sub.durationMinutes ?? ''}
+          onChange={(v) => onChange({ ...sub, durationMinutes: v })}
+          unit="min"
+          min={0}
+          step={5}
+          inputWidth={36}
+          aria-label="Czas pod-usługi"
+        />
       ) : (
         <div className={styles.inheritTag} title="Kliknij kłódkę aby ustawić własny czas">
           <InheritIcon />

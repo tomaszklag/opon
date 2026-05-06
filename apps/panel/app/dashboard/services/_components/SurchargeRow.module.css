@@ -116,6 +116,20 @@
   background: var(--danger-muted);
 }
 
+.nameInput {
+  flex: 1;
+  width: 100%;
+  background: var(--surface-raised);
+  border: 1px solid var(--purple-border);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 0 0 2px var(--purple-muted);
+  outline: none;
+  padding: 3px 8px;
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+}
+
 .confirmBtn {
   display: inline-flex;
   align-items: center;

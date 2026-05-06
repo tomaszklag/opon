@@ -1,5 +1,22 @@
 export type PricingMode = 'PER_SET' | 'PER_WHEEL';
 
+export const RIM_SIZES = [
+  'R13',
+  'R14',
+  'R15',
+  'R16',
+  'R17',
+  'R18',
+  'R19',
+  'R20',
+  'R21',
+  'R22',
+  'R23',
+  'R24',
+] as const;
+
+export type RimSize = (typeof RIM_SIZES)[number];
+
 export interface RimTierState {
   id: string; // lokalny UUID (Math.random().toString())
   rimSizes: string[]; // ["R13","R14","R15"]

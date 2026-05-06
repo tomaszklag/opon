@@ -1,7 +1,8 @@
 'use client';
 
+import { useState, useRef } from 'react';
 import { Toggle, Text } from '@opony/design-system-web';
-import { IconChevronRight } from '../../../../components/icons';
+import { IconChevronRight, IconPencil } from '../../../../components/icons';
 import type { ServiceVariantState } from '../_types';
 import styles from './ServiceVariantRow.module.css';
 
@@ -10,9 +11,21 @@ interface Props {
   isOpen: boolean;
   onToggle: () => void;
   onEnabledChange: (enabled: boolean) => void;
+  onNameChange: (name: string) => void;
 }
 
-export function ServiceVariantRow({ variant, isOpen, onToggle, onEnabledChange }: Props) {
+export function ServiceVariantRow({
+  variant,
+  isOpen,
+  onToggle,
+  onEnabledChange,
+  onNameChange,
+}: Props) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
+  const cancellingRef = useRef(false);
+
   const includedSubs = variant.subServices.filter((s) => s.included);
   const prices = variant.rimTiers.map((t) => parseFloat(t.pricePln) || 0).filter((p) => p > 0);
   const minPrice = prices.length ? Math.min(...prices) : null;
@@ -35,6 +48,7 @@ export function ServiceVariantRow({ variant, isOpen, onToggle, onEnabledChange }
       : null;
 
   const rimLabel = rimMin && rimMax ? (rimMin === rimMax ? rimMin : `${rimMin}–${rimMax}`) : null;
+  const displayName = variant.name || rimLabel || 'Nowy wariant';
   const tiersLabel = variant.rimTiers.length
     ? `${variant.rimTiers.length} ${variant.rimTiers.length === 1 ? 'zakres' : 'zakresy'}`
     : 'brak konfiguracji';
@@ -43,10 +57,42 @@ export function ServiceVariantRow({ variant, isOpen, onToggle, onEnabledChange }
     .filter(Boolean)
     .join(' ');
 
+  function startEditing(e: React.MouseEvent) {
+    e.stopPropagation();
+    setDraft(variant.name);
+    setEditing(true);
+    setTimeout(() => inputRef.current?.select(), 0);
+  }
+
+  function cancelEdit() {
+    cancellingRef.current = true;
+    setEditing(false);
+  }
+
+  function commitEdit() {
+    if (cancellingRef.current) {
+      cancellingRef.current = false;
+      return;
+    }
+    const trimmed = draft.trim();
+    if (trimmed !== variant.name) onNameChange(trimmed);
+    setEditing(false);
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    e.stopPropagation();
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      commitEdit();
+    }
+    if (e.key === 'Escape') {
+      cancelEdit();
+    }
+  }
+
   function handleRowClick(e: React.MouseEvent) {
-    // Don't toggle if clicking the toggle switch
     const target = e.target as HTMLElement;
-    if (target.closest('[data-toggle]')) return;
+    if (target.closest('[data-toggle]') || target.closest('[data-name-edit]')) return;
     onToggle();
   }
 
@@ -72,14 +118,33 @@ export function ServiceVariantRow({ variant, isOpen, onToggle, onEnabledChange }
       {/* Info */}
       <div className={styles.info}>
         <div className={styles.nameRow}>
-          <Text variant="body-sm" as="span" weight="bold">
-            {variant.name}
-          </Text>
-          <span className={`${styles.badge} ${variant.enabled ? styles.badgeOn : styles.badgeOff}`}>
-            <Text variant="nano" as="span">
-              {variant.enabled ? 'aktywna' : 'wyłączona'}
-            </Text>
-          </span>
+          {editing ? (
+            <input
+              ref={inputRef}
+              data-name-edit
+              className={styles.nameInput}
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              onBlur={commitEdit}
+              onKeyDown={handleKeyDown}
+              onClick={(e) => e.stopPropagation()}
+              size={Math.max(draft.length || (rimLabel?.length ?? 8), 8)}
+              placeholder={rimLabel ?? 'np. Osobowe'}
+              aria-label="Nazwa wariantu (opcjonalna)"
+            />
+          ) : (
+            <button
+              data-name-edit
+              className={styles.nameBtn}
+              onClick={startEditing}
+              aria-label={`Zmień nazwę: ${variant.name}`}
+            >
+              <Text variant="body-sm" as="span" weight="bold">
+                {displayName}
+              </Text>
+              <IconPencil width="10" height="10" className={styles.editIcon} />
+            </button>
+          )}
           {includedSubs.length > 0 && (
             <span className={`${styles.badge} ${styles.badgeInc}`}>
               <Text variant="nano" as="span">

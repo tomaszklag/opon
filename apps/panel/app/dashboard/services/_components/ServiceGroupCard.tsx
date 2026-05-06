@@ -1,11 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Heading, Text } from '@opony/design-system-web';
-import { IconPlus, IconServices } from '../../../../components/icons';
+import { IconPlus, IconServices, IconCheck, IconXClose } from '../../../../components/icons';
 import { ServiceVariantRow } from './ServiceVariantRow';
 import { ServiceVariantExpanded } from './ServiceVariantExpanded';
-import type { ServiceGroupState, ServiceVariantState } from '../_types';
+import type { ServiceGroupState, ServiceVariantState, SubServiceState } from '../_types';
 import styles from './ServiceGroupCard.module.css';
 
 interface Props {
@@ -15,15 +15,19 @@ interface Props {
 
 export function ServiceGroupCard({ group, onChange }: Props) {
   const [openVariants, setOpenVariants] = useState<Set<string>>(new Set());
+  const [addingSubSvc, setAddingSubSvc] = useState(false);
+  const [newSubName, setNewSubName] = useState('');
+  const subInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (addingSubSvc) subInputRef.current?.focus();
+  }, [addingSubSvc]);
 
   function toggleVariant(variantId: string) {
     setOpenVariants((prev) => {
       const next = new Set(prev);
-      if (next.has(variantId)) {
-        next.delete(variantId);
-      } else {
-        next.add(variantId);
-      }
+      if (next.has(variantId)) next.delete(variantId);
+      else next.add(variantId);
       return next;
     });
   }
@@ -38,7 +42,7 @@ export function ServiceGroupCard({ group, onChange }: Props) {
   function addVariant() {
     const newVariant: ServiceVariantState = {
       id: Math.random().toString(36).slice(2),
-      name: 'Nowy wariant',
+      name: '',
       enabled: true,
       sortOrder: group.variants.length,
       rimTiers: [],
@@ -47,9 +51,43 @@ export function ServiceGroupCard({ group, onChange }: Props) {
     onChange({ ...group, variants: [...group.variants, newVariant] });
   }
 
+  function confirmAddSubSvc() {
+    const name = newSubName.trim();
+    if (!name) return;
+    const newSub: SubServiceState = {
+      id: Math.random().toString(36).slice(2),
+      name,
+      included: false,
+      enabled: true,
+      fromCatalog: false,
+      pricePln: null,
+      durationMinutes: null,
+      sortOrder:
+        Math.max(0, ...group.variants.flatMap((v) => v.subServices.map((s) => s.sortOrder))) + 1,
+    };
+    onChange({
+      ...group,
+      variants: group.variants.map((v) => ({
+        ...v,
+        subServices: [...v.subServices, { ...newSub, id: Math.random().toString(36).slice(2) }],
+      })),
+    });
+    setNewSubName('');
+    setAddingSubSvc(false);
+  }
+
+  function cancelAddSubSvc() {
+    setNewSubName('');
+    setAddingSubSvc(false);
+  }
+
+  function handleSubKeyDown(e: React.KeyboardEvent) {
+    if (e.key === 'Enter') confirmAddSubSvc();
+    if (e.key === 'Escape') cancelAddSubSvc();
+  }
+
   const activeCount = group.variants.filter((v) => v.enabled).length;
   const totalCount = group.variants.length;
-  const showPricingMode = group.pricingMode === 'PER_WHEEL' || group.variants.length > 0;
 
   return (
     <div className={styles.card}>
@@ -65,7 +103,6 @@ export function ServiceGroupCard({ group, onChange }: Props) {
           </Text>
         </span>
 
-        {/* Pricing mode selector — only show for groups that use per-wheel pricing */}
         {group.pricingMode !== 'PER_SET' && (
           <div className={styles.pricingMode}>
             <button
@@ -105,6 +142,7 @@ export function ServiceGroupCard({ group, onChange }: Props) {
               isOpen={openVariants.has(variant.id)}
               onToggle={() => toggleVariant(variant.id)}
               onEnabledChange={(enabled) => updateVariant(variant.id, { ...variant, enabled })}
+              onNameChange={(name) => updateVariant(variant.id, { ...variant, name })}
             />
             {openVariants.has(variant.id) && (
               <ServiceVariantExpanded
@@ -114,6 +152,44 @@ export function ServiceGroupCard({ group, onChange }: Props) {
             )}
           </div>
         ))}
+      </div>
+
+      {/* Add sub-service — applies to all variants */}
+      <div className={styles.addSubSvcBar}>
+        {addingSubSvc ? (
+          <>
+            <input
+              ref={subInputRef}
+              className={styles.addSubSvcInput}
+              value={newSubName}
+              onChange={(e) => setNewSubName(e.target.value)}
+              onKeyDown={handleSubKeyDown}
+              placeholder="Nazwa pod-usługi…"
+            />
+            <button
+              className={styles.addSubSvcConfirm}
+              onClick={confirmAddSubSvc}
+              disabled={!newSubName.trim()}
+              aria-label="Zatwierdź"
+            >
+              <IconCheck width="10" height="10" />
+            </button>
+            <button
+              className={styles.addSubSvcCancel}
+              onClick={cancelAddSubSvc}
+              aria-label="Anuluj"
+            >
+              <IconXClose width="10" height="10" />
+            </button>
+          </>
+        ) : (
+          <button className={styles.addSubSvcBtn} onClick={() => setAddingSubSvc(true)}>
+            <IconPlus width="9" height="9" />
+            <Text variant="nano" as="span">
+              Dodaj pod-usługę
+            </Text>
+          </button>
+        )}
       </div>
     </div>
   );
