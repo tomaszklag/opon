@@ -1,4 +1,5 @@
 import { mutate } from 'swr';
+import { toast } from '@opony/design-system-web';
 
 interface BookingCreatedPayload {
   bookingId: string;
@@ -19,6 +20,12 @@ interface RealtimeEvent {
   ts: string;
 }
 
+const CANCELATION_STATUSES = new Set([
+  'CANCELLED_BY_CLIENT',
+  'CANCELLED_BY_PROVIDER',
+  'CANCELLED_BY_SYSTEM',
+]);
+
 export function routeBookingEvent(event: RealtimeEvent): void {
   const { type, payload } = event;
 
@@ -29,6 +36,7 @@ export function routeBookingEvent(event: RealtimeEvent): void {
     mutate('booking-stats');
     mutate((key: unknown) => Array.isArray(key) && key[0] === 'booking-count');
     mutate((key: unknown) => Array.isArray(key) && key[0] === 'booking-admin');
+    toast.success(`Nowa rezerwacja #${p.referenceCode}`, { duration: 6000 });
   } else if (type === 'booking.status_changed') {
     const p = payload as BookingStatusChangedPayload;
     mutate(['bookings', p.weekStart]);
@@ -37,6 +45,9 @@ export function routeBookingEvent(event: RealtimeEvent): void {
     mutate((key: unknown) => Array.isArray(key) && key[0] === 'booking-count');
     mutate((key: unknown) => Array.isArray(key) && key[0] === 'booking-admin');
     mutate((key: unknown) => Array.isArray(key) && key[0] === 'availability');
+    if (CANCELATION_STATUSES.has(p.newStatus)) {
+      toast.error(`Rezerwacja #${p.referenceCode} anulowana`, { duration: 6000 });
+    }
   } else if (type === 'booking.bulk_status_changed') {
     mutate((key: unknown) => Array.isArray(key) && key[0] === 'bookings');
     mutate((key: unknown) => Array.isArray(key) && key[0] === 'bookings-month');

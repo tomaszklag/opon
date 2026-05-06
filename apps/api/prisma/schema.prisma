@@ -203,9 +203,11 @@ model Provider {
   workers            Worker[]
   workerTasks        WorkerTask[]
   serviceConfigs     ServiceConfig[]
-  serviceGroups      ServiceGroup[]
-  surcharges         Surcharge[]
-  dataExportRequests DataExportRequest[]
+  serviceGroups              ServiceGroup[]
+  surcharges                 Surcharge[]
+  dataExportRequests         DataExportRequest[]
+  notificationPreferences    NotificationPreferences?
+  pushSubscriptions          PushSubscription[]
 
   @@map("providers")
 }
@@ -338,6 +340,7 @@ model Booking {
   sizeTier        SizeTier?
   tpmsRequired    Boolean      @default(false)
   isManual        Boolean      @default(false)
+  reminderSentAt  DateTime?
 
   client      User         @relation("ClientBookings", fields: [clientId], references: [id])
   provider    Provider     @relation("ProviderBookings", fields: [providerId], references: [id])
@@ -713,6 +716,63 @@ model Surcharge {
 
   @@index([providerId])
   @@map("surcharges")
+}
+
+// ──────────────────────────────────────────────
+// PUSH SUBSCRIPTION — Web Push subskrypcje urządzeń
+// ──────────────────────────────────────────────
+
+model PushSubscription {
+  id         String   @id @default(uuid())
+  providerId String
+  endpoint   String   @db.Text
+  p256dh     String   @db.VarChar(500)
+  auth       String   @db.VarChar(100)
+  userAgent  String?  @db.VarChar(500)
+  createdAt  DateTime @default(now())
+
+  provider Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+
+  @@unique([providerId, endpoint])
+  @@index([providerId])
+  @@map("push_subscriptions")
+}
+
+// ──────────────────────────────────────────────
+// NOTIFICATION PREFERENCES — per-provider, per-channel ustawienia
+// ──────────────────────────────────────────────
+
+model NotificationPreferences {
+  id              String  @id @default(uuid())
+  providerId      String  @unique
+
+  newBookingSms   Boolean @default(true)
+  newBookingEmail Boolean @default(false)
+  newBookingPush  Boolean @default(true)
+
+  cancelationSms   Boolean @default(true)
+  cancelationEmail Boolean @default(false)
+  cancelationPush  Boolean @default(true)
+
+  reminder30Sms   Boolean @default(true)
+  reminder30Email Boolean @default(false)
+  reminder30Push  Boolean @default(true)
+
+  newReviewSms   Boolean @default(false)
+  newReviewEmail Boolean @default(true)
+  newReviewPush  Boolean @default(true)
+
+  weeklyReportSms   Boolean @default(false)
+  weeklyReportEmail Boolean @default(true)
+  weeklyReportPush  Boolean @default(false)
+
+  platformNewsSms   Boolean @default(false)
+  platformNewsEmail Boolean @default(false)
+  platformNewsPush  Boolean @default(false)
+
+  provider Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+
+  @@map("notification_preferences")
 }
 
 // ──────────────────────────────────────────────

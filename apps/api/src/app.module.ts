@@ -3,6 +3,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { EventEmitterModule } from '@nestjs/event-emitter';
+import { ScheduleModule } from '@nestjs/schedule';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { AdminModule } from './admin/admin.module';
 import { AuthModule } from './auth/auth.module';
@@ -24,11 +25,13 @@ import { WorkerTasksModule } from './worker-tasks/worker-tasks.module';
 import { RealtimeModule } from './realtime/realtime.module';
 import { ServiceConfigsModule } from './service-configs/service-configs.module';
 import { ServiceGroupsModule } from './service-groups/service-groups.module';
+import { NotificationPreferencesModule } from './notification-preferences/notification-preferences.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     EventEmitterModule.forRoot(),
+    ScheduleModule.forRoot(),
     ServeStaticModule.forRoot({
       rootPath: join(process.cwd(), 'uploads'),
       serveRoot: '/uploads',
@@ -52,6 +55,7 @@ import { ServiceGroupsModule } from './service-groups/service-groups.module';
     RealtimeModule,
     ServiceConfigsModule,
     ServiceGroupsModule,
+    NotificationPreferencesModule,
   ],
   providers: [
     // Globalny guard — wszystkie endpointy wymagają JWT, chyba że @Public()

@@ -11,6 +11,7 @@ Pełna dokumentacja developerska: **`docs/developer-guide.md`**. Przeczytaj go p
 - **Typy API = `components['schemas']['XxxResponseDto']`.** Nigdy ręczna definicja.
 - **Routing = `canonicalRoute()`.** Nigdy własny `router.replace` z logiką statusów.
 - **Klucze API tylko w `apps/api/.env`.** Nigdy w `NEXT_PUBLIC_*` ani w kodzie.
+- **Toast = `@opony/design-system-web`.** `import { toast } from '@opony/design-system-web'` — nigdy z `react-hot-toast` bezpośrednio.
 
 ## Commit workflow
 

@@ -955,6 +955,26 @@ export interface components {
       revokedAt: string | null;
       isCurrent: boolean;
     };
+    NotificationPreferencesDto: {
+      newBookingSms: boolean;
+      newBookingEmail: boolean;
+      newBookingPush: boolean;
+      cancelationSms: boolean;
+      cancelationEmail: boolean;
+      cancelationPush: boolean;
+      reminder30Sms: boolean;
+      reminder30Email: boolean;
+      reminder30Push: boolean;
+      newReviewSms: boolean;
+      newReviewEmail: boolean;
+      newReviewPush: boolean;
+      weeklyReportSms: boolean;
+      weeklyReportEmail: boolean;
+      weeklyReportPush: boolean;
+      platformNewsSms: boolean;
+      platformNewsEmail: boolean;
+      platformNewsPush: boolean;
+    };
     DataExportRequestDto: {
       id: string;
       providerId: string;

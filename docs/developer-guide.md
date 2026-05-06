@@ -321,7 +321,25 @@ export class StationsService {
 }
 ```
 
-Moduły z repozytoriami: `providers`, `pricing-tiers`, `working-hours`, `stations`, `workers`.
+Moduły z repozytoriami: `providers`, `pricing-tiers`, `working-hours`, `stations`, `workers`, `notification-preferences`.
+
+#### Anti-pattern: podwójna rejestracja modułu w AppModule
+
+Jeśli moduł B jest importowany wewnątrz modułu A, **nie importuj B ponownie w AppModule**. NestJS tworzy osobny scope dla każdego importu — duplikacja skutkuje podwójną rejestracją kontrolerów (dwa zestawy routerów tego samego endpointu) i duplikacją providerów.
+
+```
+// ❌ NIE
+AppModule imports: [..., NotificationPreferencesModule, PushSubscriptionsModule]
+NotificationPreferencesModule imports: [PushSubscriptionsModule]  // zarejestrowany 2×
+
+// ✅ TAK
+AppModule imports: [..., NotificationPreferencesModule]
+NotificationPreferencesModule imports: [PushSubscriptionsModule]  // raz, we właściwym module
+```
+
+Symptom: brak błędów kompilacji, ale dwa razy ten sam endpoint widoczny w Swagger UI lub dwie instancje tego samego serwisu działające niezależnie.
+
+Moduł `notification-preferences` jest niestandardowy — zawiera dodatkowo `NotificationDispatcherService` (nasłuchuje na eventy domenowe), `SmsChannelService` i `EmailChannelService` (kanały wysyłki) oraz czyste builderów szablonów w `templates/notification-templates.ts`. Szczegóły: `docs/system-powiadomien.md`.
 
 #### Wyjątek: złożone zapytania wielotabelowe w serwisie
 

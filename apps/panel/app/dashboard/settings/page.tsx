@@ -34,7 +34,13 @@ import {
   type SessionDto,
 } from '../../../api-data-access/auth';
 import { requestAccountDeletion } from '../../../api-data-access/admin';
+import {
+  getNotificationPreferences,
+  updateNotificationPreferences,
+  type NotificationPreferencesDto,
+} from '../../../api-data-access/notification-preferences';
 import { requestDataExport } from '../../../api-data-access/data-exports';
+import { usePushSubscription } from '../../../lib/hooks/use-push-subscription';
 import styles from './settings.module.css';
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -94,10 +100,55 @@ const NOTIF_ROWS: { key: NotifKey; title: string; desc: string }[] = [
   },
 ];
 
+// ── Helpers — DTO ↔ state ────────────────────────────────────────────────────
+
+function prefsToState(p: NotificationPreferencesDto): NotifState {
+  return {
+    newBooking: { sms: p.newBookingSms, email: p.newBookingEmail, push: p.newBookingPush },
+    cancelation: { sms: p.cancelationSms, email: p.cancelationEmail, push: p.cancelationPush },
+    reminder30: { sms: p.reminder30Sms, email: p.reminder30Email, push: p.reminder30Push },
+    newReview: { sms: p.newReviewSms, email: p.newReviewEmail, push: p.newReviewPush },
+    weeklyReport: { sms: p.weeklyReportSms, email: p.weeklyReportEmail, push: p.weeklyReportPush },
+    platformNews: { sms: p.platformNewsSms, email: p.platformNewsEmail, push: p.platformNewsPush },
+  };
+}
+
+function stateToPrefs(s: NotifState): NotificationPreferencesDto {
+  return {
+    newBookingSms: s.newBooking.sms,
+    newBookingEmail: s.newBooking.email,
+    newBookingPush: s.newBooking.push,
+    cancelationSms: s.cancelation.sms,
+    cancelationEmail: s.cancelation.email,
+    cancelationPush: s.cancelation.push,
+    reminder30Sms: s.reminder30.sms,
+    reminder30Email: s.reminder30.email,
+    reminder30Push: s.reminder30.push,
+    newReviewSms: s.newReview.sms,
+    newReviewEmail: s.newReview.email,
+    newReviewPush: s.newReview.push,
+    weeklyReportSms: s.weeklyReport.sms,
+    weeklyReportEmail: s.weeklyReport.email,
+    weeklyReportPush: s.weeklyReport.push,
+    platformNewsSms: s.platformNews.sms,
+    platformNewsEmail: s.platformNews.email,
+    platformNewsPush: s.platformNews.push,
+  };
+}
+
 // ── Page ─────────────────────────────────────────────────────────────────────
 
 export default function SettingsPage() {
-  const [notifs, setNotifs] = useState<NotifState>(NOTIF_INITIAL);
+  const { data: notifPrefs, mutate: mutateNotifPrefs } = useSWR<NotificationPreferencesDto>(
+    '/v1/providers/me/notification-preferences',
+    getNotificationPreferences,
+  );
+  const notifs: NotifState = notifPrefs ? prefsToState(notifPrefs) : NOTIF_INITIAL;
+  const {
+    permission: pushPermission,
+    subscribe: subscribePush,
+    unsubscribe: unsubscribePush,
+  } = usePushSubscription();
   const {
     isPaused,
     pausedUntil,
@@ -324,17 +375,36 @@ export default function SettingsPage() {
 
   const nameMatch = confirmNameDraft.trim() === (provider?.name ?? '').trim() && !!provider?.name;
 
-  function toggleNotif(key: NotifKey, channel: Channel) {
-    setNotifs((prev) => {
-      const curr = prev[key];
-      const newVal = !curr[channel];
-      if (CRITICAL.has(key) && !newVal) {
-        const otherOn = (Object.keys(curr) as Channel[])
-          .filter((c) => c !== channel)
-          .some((c) => curr[c]);
-        if (!otherOn) return prev;
+  async function toggleNotif(key: NotifKey, channel: Channel) {
+    const curr = notifs[key];
+    const newVal = !curr[channel];
+    if (CRITICAL.has(key) && !newVal) {
+      const otherOn = (Object.keys(curr) as Channel[])
+        .filter((c) => c !== channel)
+        .some((c) => curr[c]);
+      if (!otherOn) return;
+    }
+    // Przy włączaniu push — poproś o pozwolenie i zarejestruj subskrypcję
+    if (channel === 'push' && newVal) {
+      if (pushPermission === 'unsupported' || pushPermission === 'denied') return;
+      if (pushPermission !== 'granted') {
+        const ok = await subscribePush();
+        if (!ok) return; // użytkownik odmówił lub błąd — nie zmieniaj togglea
       }
-      return { ...prev, [key]: { ...curr, [channel]: newVal } };
+    }
+    // Przy wyłączaniu push — wyrejestruj subskrypcję gdy wszystkie kanały push są wyłączone
+    if (channel === 'push' && !newVal) {
+      const allPushOff = (Object.keys(notifs) as NotifKey[]).every(
+        (k) => k === key || !notifs[k].push,
+      );
+      if (allPushOff) await unsubscribePush();
+    }
+    const newState: NotifState = { ...notifs, [key]: { ...curr, [channel]: newVal } };
+    const newPrefs = stateToPrefs(newState);
+    await mutateNotifPrefs(updateNotificationPreferences(newPrefs), {
+      optimisticData: newPrefs,
+      rollbackOnError: true,
+      revalidate: false,
     });
   }
 
@@ -616,7 +686,8 @@ export default function SettingsPage() {
                     </div>
                   </td>
                   {(['sms', 'email', 'push'] as Channel[]).map((ch) => {
-                    const isDisabled = ch === 'push' && PUSH_DISABLED.has(key);
+                    const isDisabled =
+                      ch === 'push' && (PUSH_DISABLED.has(key) || pushPermission === 'unsupported');
                     return (
                       <td key={ch} className={styles.switchCell}>
                         <div className={styles.switchWrap}>
