@@ -111,11 +111,6 @@ function PhonePreview({ form, photos }: { form: ProfileFormState; photos: Provid
         <Heading variant="subsection" as="h3">
           Podgląd
         </Heading>
-        <span className={styles.secKicker}>
-          <Text variant="nano" as="span" mono weight="bold" color="muted">
-            Widok klienta
-          </Text>
-        </span>
         <div className={styles.previewToolbar} role="tablist" aria-label="Tryb podglądu">
           <button
             className={`${styles.previewTab} ${styles.previewTabActive}`}
@@ -365,11 +360,6 @@ export default function ProfilePage() {
               <Heading variant="subsection" as="h2" id="sec-identity">
                 Tożsamość firmy
               </Heading>
-              <span className={styles.secKicker}>
-                <Text variant="nano" as="span" mono weight="bold" color="muted">
-                  Widoczne publicznie
-                </Text>
-              </span>
               <span className={styles.secHint}>
                 <Text variant="nano" as="span" color="muted">
                   Pola{' '}
@@ -487,11 +477,6 @@ export default function ProfilePage() {
               <Heading variant="subsection" as="h2" id="sec-type">
                 Typ serwisu
               </Heading>
-              <span className={styles.secKicker}>
-                <Text variant="nano" as="span" mono weight="bold" color="muted">
-                  Wpływa na filtry klienta
-                </Text>
-              </span>
             </header>
 
             <div className={styles.typeGrid}>
@@ -528,11 +513,6 @@ export default function ProfilePage() {
               <Heading variant="subsection" as="h2" id="sec-services">
                 Zakres usług
               </Heading>
-              <span className={styles.secKicker}>
-                <Text variant="nano" as="span" mono weight="bold" color="muted">
-                  Filtry w wyszukiwarce
-                </Text>
-              </span>
               <span className={styles.secHint}>
                 <Text variant="nano" as="span" mono weight="bold" color="secondary">
                   {selectedCount}
@@ -599,11 +579,6 @@ export default function ProfilePage() {
               <Heading variant="subsection" as="h2" id="sec-gallery">
                 Galeria
               </Heading>
-              <span className={styles.secKicker}>
-                <Text variant="nano" as="span" mono weight="bold" color="muted">
-                  Pierwsze = okładka
-                </Text>
-              </span>
               <span className={styles.secHint}>
                 <Text variant="nano" as="span" mono weight="bold" color="secondary">
                   {photos.length}
@@ -692,11 +667,6 @@ export default function ProfilePage() {
               <Heading variant="subsection" as="h2" id="sec-contact">
                 Kontakt i adres
               </Heading>
-              <span className={styles.secKicker}>
-                <Text variant="nano" as="span" mono weight="bold" color="muted">
-                  Publiczne
-                </Text>
-              </span>
             </header>
 
             <div className={styles.fieldRow2}>

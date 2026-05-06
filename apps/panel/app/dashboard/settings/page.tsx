@@ -242,11 +242,6 @@ export default function SettingsPage() {
                 powiadomienia administracyjne — nie jest widoczny publicznie.
               </Text>
             </div>
-            <span className={styles.secKicker}>
-              <Text variant="nano" as="span" weight="bold" mono color="muted">
-                US-47
-              </Text>
-            </span>
           </header>
 
           <div className={styles.contactRow}>
@@ -328,11 +323,6 @@ export default function SettingsPage() {
                 znika z wyszukiwarki klientów, ale istniejące rezerwacje są zachowane.
               </Text>
             </div>
-            <span className={styles.secKicker}>
-              <Text variant="nano" as="span" weight="bold" mono color="muted">
-                Natychmiastowe
-              </Text>
-            </span>
           </header>
 
           <div className={styles.pauseHero}>
@@ -673,11 +663,6 @@ export default function SettingsPage() {
                 Masz prawo otrzymać kopię swoich danych i wiedzieć, co o Tobie wiemy.
               </Text>
             </div>
-            <span className={styles.secKicker}>
-              <Text variant="nano" as="span" weight="bold" mono color="muted">
-                US-46
-              </Text>
-            </span>
           </header>
 
           <div className={styles.rodoRow}>
@@ -750,11 +735,6 @@ export default function SettingsPage() {
                 kliknięciem.
               </Text>
             </div>
-            <span className={styles.secKicker}>
-              <Text variant="nano" as="span" weight="bold" mono color="muted">
-                US-46
-              </Text>
-            </span>
           </header>
 
           {suspensionApplied ? (

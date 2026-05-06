@@ -86,14 +86,6 @@
 
 .secDesc { margin-top: 4px; }
 
-.secKicker {
-  padding: 3px 7px;
-  border: 1px solid var(--border);
-  border-radius: 5px;
-  display: inline-flex;
-  align-items: center;
-  flex-shrink: 0;
-}
 
 /* Section 01 — Contact */
 .contactRow {

@@ -770,7 +770,7 @@ export default function BookingDetailPage({ params }: PageProps) {
                 <Text variant="nano" as="div" color="muted">
                   <strong className={styles.adrNoteStrong}>Aplikacja darmowa w pilocie.</strong>{' '}
                   Klient płaci Tobie bezpośrednio — gotówka lub przelew. Platforma pobiera{' '}
-                  <strong className={styles.adrNoteStrong}>0% prowizji</strong> (zgodnie z ADR-004 i
+                  <strong className={styles.adrNoteStrong}>0% prowizji</strong> (zgodnie z
                   regulaminem).
                 </Text>
               </div>

@@ -175,11 +175,6 @@ export function WaitingForClients({ launchDate }: WaitingForClientsProps) {
           <Heading variant="subsection" as="h2" id="roadmap-title">
             Roadmapa pilotu
           </Heading>
-          <span className={styles.cardKicker}>
-            <Text variant="nano" as="span" weight="bold" mono color="muted">
-              ADR-009 faza A/B
-            </Text>
-          </span>
         </header>
         <Timeline events={ROADMAP} />
       </section>
@@ -192,11 +187,6 @@ export function WaitingForClients({ launchDate }: WaitingForClientsProps) {
             <Heading variant="subsection" as="h2" id="setup-title">
               Twoja konfiguracja
             </Heading>
-            <span className={styles.cardKicker}>
-              <Text variant="nano" as="span" weight="bold" mono color="muted">
-                6 / 7 ✓
-              </Text>
-            </span>
           </header>
 
           <div className={styles.setupTop}>
@@ -270,11 +260,6 @@ export function WaitingForClients({ launchDate }: WaitingForClientsProps) {
           <Heading variant="subsection" as="h2" id="tips-title">
             W międzyczasie — pomóż nam startować z popytem
           </Heading>
-          <span className={styles.cardKicker}>
-            <Text variant="nano" as="span" weight="bold" mono color="muted">
-              Preselling
-            </Text>
-          </span>
         </header>
 
         <div className={styles.tipsGrid}>

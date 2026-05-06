@@ -118,14 +118,6 @@
   border-bottom: 1px dashed var(--border);
 }
 
-.secKicker {
-  text-transform: uppercase;
-  padding: 3px 7px;
-  border: 1px solid var(--border);
-  border-radius: 5px;
-  display: inline-flex;
-  align-items: center;
-}
 
 .secHint {
   margin-left: auto;

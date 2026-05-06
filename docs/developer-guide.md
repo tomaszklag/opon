@@ -103,6 +103,25 @@ pnpm generate:api-client
 # generuje: packages/api-client/src/schema.d.ts
 ```
 
+**Jeśli API nie jest uruchomione (np. sesja offline, brak bazy):** zaktualizuj `packages/api-client/src/schema.d.ts` ręcznie — plik jest zwykłym TypeScriptem, commitowanym do repo. Wzorzec edycji jest identyczny z tym co generator by wyprodukował:
+
+```diff
+// Nowe pole opcjonalne w istniejącym DTO
+  ProviderResponseDto: {
+    ...
++   /** Format: date-time */
++   deletionRequestedAt?: string | null;
+    updatedAt: string;
+  }
+
+// Nowa wartość enuma w istniejącym union
+  status:
+    | 'APPROVED'
++   | 'PENDING_DELETION';
+```
+
+**Regułą jest:** każda zmiana w `*ResponseDto` po stronie backendu wymaga odpowiedniej zmiany w `schema.d.ts` — albo przez generator, albo ręcznie. Brak synchronizacji skutkuje brakującymi polami w typach FE bez żadnego błędu kompilacji (pole po prostu nie istnieje w typie).
+
 ### 3.2. Wymagania dla agenta BE (nowy endpoint)
 
 Każdy nowy endpoint **musi** mieć Response DTO i dekorator `@ApiResponse`:
@@ -1211,16 +1230,26 @@ Sprawdzanie roli jest **pierwszą** regułą po null-check — admin nie potrzeb
 
 Możliwe wartości `status` (`ProviderStatus`):
 
-| Wartość            | Znaczenie                                                                                         |
-| ------------------ | ------------------------------------------------------------------------------------------------- |
-| `PENDING_NIP`      | Onboarding niezakończony — traktowany jak `PENDING_DOCS` w routingu (oba → `/onboarding/zdjecia`) |
-| `PENDING_DOCS`     | Onboarding niezakończony — brak dokumentów                                                        |
-| `PENDING_APPROVAL` | Czeka na ręczną weryfikację przez admina                                                          |
-| `APPROVED`         | Aktywny — dostęp do dashboardu                                                                    |
-| `SUSPENDED`        | Zawieszony przez admina                                                                           |
-| `REJECTED`         | Odrzucony — nie może korzystać z panelu                                                           |
+| Wartość            | Znaczenie                                                                                         | Routing                   |
+| ------------------ | ------------------------------------------------------------------------------------------------- | ------------------------- |
+| `PENDING_NIP`      | Onboarding niezakończony — traktowany jak `PENDING_DOCS` w routingu (oba → `/onboarding/zdjecia`) | `/onboarding/zdjecia`     |
+| `PENDING_DOCS`     | Onboarding niezakończony — brak dokumentów                                                        | `/onboarding/zdjecia`     |
+| `PENDING_APPROVAL` | Czeka na ręczną weryfikację przez admina                                                          | `/onboarding/weryfikacja` |
+| `APPROVED`         | Aktywny — dostęp do dashboardu                                                                    | `/dashboard`              |
+| `SUSPENDED`        | Zawieszony przez admina (lub po potwierdzeniu usunięcia)                                          | `/onboarding/weryfikacja` |
+| `REJECTED`         | Odrzucony — nie może korzystać z panelu                                                           | `/onboarding/weryfikacja` |
+| `PENDING_DELETION` | Złożył wniosek o usunięcie konta — czeka na potwierdzenie admina                                  | `/onboarding/weryfikacja` |
 
 Typ w kodzie: `AuthUser.status?: ProviderStatus` z `lib/auth.tsx`.
+
+**Gdy dodajesz nową wartość `ProviderStatus`:** zaktualizuj wszystkie cztery miejsca naraz:
+
+1. `apps/api/prisma/schema.prisma` — enum `ProviderStatus`
+2. `packages/api-client/src/schema.d.ts` — union w `ProviderResponseDto.status`
+3. `apps/panel/lib/auth.tsx` — typ `ProviderStatus`
+4. `apps/panel/lib/hooks/use-dashboard.ts` — `STATUS_LABEL` (etykieta dla widoku warsztatu)
+
+Jeśli nowy status pojawia się w panelu admina, dodaj też wpis w `STATUS_LABELS` w `apps/panel/app/admin/providers/page.tsx` — kompilator TypeScript wymusi kompletność `Record<ProviderStatus, string>`, więc brak wpisu = błąd TS.
 
 ### 9.3.1. Nawigacja wewnętrzna — `<Link>` zamiast `<a>`
 
@@ -1319,12 +1348,14 @@ await this.prisma.session.updateMany({
 **Kiedy unieważniać:**
 
 - Admin zatwierdza providera (`PENDING_APPROVAL → APPROVED`) — wymagany nowy JWT z aktualnym statusem, żeby routing trafił na `/dashboard`
+- Admin potwierdza usunięcie konta (`PENDING_DELETION → SUSPENDED`) — provider traci dostęp natychmiast; sesje są unieważniane razem ze zmianą statusu w jednej transakcji Prisma
 - Reset hasła / zmiana numeru telefonu (jeśli zaimplementowane)
 
 **Kiedy NIE unieważniać:**
 
 - Weryfikacja emaila — czysto informacyjna, nie zmienia routingu ani uprawnień
 - Aktualizacja danych firmy (nazwa, opis, zdjęcia)
+- Sam wniosek o usunięcie (`APPROVED → PENDING_DELETION`) — status się zmienia, ale routing i uprawnienia pozostają takie same do momentu potwierdzenia przez admina; sesja może żyć dalej
 
 Po unieważnieniu: przy kolejnym API request `JwtAuthGuard` przyjmie token (jest jeszcze ważny przez 15 min), ale przy próbie odświeżenia (`/refresh`) backend znajdzie sesję jako `revokedAt != null` → zwróci 401 → interceptor wyloguje użytkownika.
 
