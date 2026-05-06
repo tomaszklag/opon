@@ -24,7 +24,7 @@ import { useAuth } from '../../../lib/auth';
 import { ApiError } from '../../../lib/api';
 import { usePause } from '../../../lib/hooks/use-pause';
 import { ScrolledLayout, type ScrollSection } from '../../../components/ScrolledLayout';
-import { getProvider } from '../../../api-data-access/providers';
+import { getProvider, selfSuspendProvider } from '../../../api-data-access/providers';
 import { requestOtp, verifyOtp } from '../../../api-data-access/auth';
 import { requestAccountDeletion } from '../../../api-data-access/admin';
 import styles from './settings.module.css';
@@ -104,13 +104,17 @@ export default function SettingsPage() {
   const user = auth.status === 'authenticated' ? auth.user : null;
   const { data: provider } = useSWR('/v1/providers/me', getProvider);
 
-  const [deleteStep, setDeleteStep] = useState<0 | 1 | 2>(0);
-  const [deleteNameDraft, setDeleteNameDraft] = useState('');
-  const [deleteSmsCode, setDeleteSmsCode] = useState('');
-  const [deleteLoading, setDeleteLoading] = useState(false);
-  const [deleteError, setDeleteError] = useState('');
-  const [deletionRequested, setDeletionRequested] = useState(false);
+  type ConfirmAction = 'delete' | 'suspend';
+
+  const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
+  const [confirmStep, setConfirmStep] = useState<1 | 2>(1);
+  const [confirmNameDraft, setConfirmNameDraft] = useState('');
+  const [confirmSmsCode, setConfirmSmsCode] = useState('');
+  const [confirmLoading, setConfirmLoading] = useState(false);
+  const [confirmError, setConfirmError] = useState('');
   const [otpCountdown, setOtpCountdown] = useState(0);
+  const [deletionRequested, setDeletionRequested] = useState(false);
+  const [suspensionApplied, setSuspensionApplied] = useState(false);
 
   useEffect(() => {
     if (otpCountdown <= 0) return;
@@ -124,79 +128,85 @@ export default function SettingsPage() {
     return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
   }
 
-  function openDeleteModal() {
-    setDeleteNameDraft('');
-    setDeleteSmsCode('');
-    setDeleteError('');
+  function openConfirmModal(action: ConfirmAction) {
+    setConfirmAction(action);
+    setConfirmStep(1);
+    setConfirmNameDraft('');
+    setConfirmSmsCode('');
+    setConfirmError('');
     setOtpCountdown(0);
-    setDeleteStep(1);
   }
 
-  function closeDeleteModal() {
-    setDeleteStep(0);
-    setDeleteError('');
+  function closeConfirmModal() {
+    setConfirmAction(null);
+    setConfirmError('');
   }
 
   async function goToStep2() {
     if (!user) return;
-    setDeleteLoading(true);
-    setDeleteError('');
+    setConfirmLoading(true);
+    setConfirmError('');
     try {
       const res = await requestOtp({ phone: user.phone });
-      setDeleteSmsCode('');
+      setConfirmSmsCode('');
       setOtpCountdown(res.expiresIn);
-      setDeleteStep(2);
+      setConfirmStep(2);
     } catch (err) {
-      setDeleteError(
+      setConfirmError(
         err instanceof ApiError ? err.message : 'Nie udało się wysłać kodu SMS. Spróbuj ponownie.',
       );
     } finally {
-      setDeleteLoading(false);
+      setConfirmLoading(false);
     }
   }
 
   async function handleResendOtp() {
     if (!user) return;
-    setDeleteLoading(true);
-    setDeleteError('');
+    setConfirmLoading(true);
+    setConfirmError('');
     try {
       const res = await requestOtp({ phone: user.phone });
-      setDeleteSmsCode('');
+      setConfirmSmsCode('');
       setOtpCountdown(res.expiresIn);
     } catch (err) {
-      setDeleteError(
+      setConfirmError(
         err instanceof ApiError ? err.message : 'Nie udało się wysłać kodu SMS. Spróbuj ponownie.',
       );
     } finally {
-      setDeleteLoading(false);
+      setConfirmLoading(false);
     }
   }
 
-  async function handleDeleteSubmit() {
+  async function handleConfirmSubmit() {
     if (!user) return;
-    setDeleteLoading(true);
-    setDeleteError('');
+    setConfirmLoading(true);
+    setConfirmError('');
     try {
-      await verifyOtp({ phone: user.phone, code: deleteSmsCode });
-      await requestAccountDeletion();
-      setDeleteStep(0);
-      setDeletionRequested(true);
+      await verifyOtp({ phone: user.phone, code: confirmSmsCode });
+      if (confirmAction === 'delete') {
+        await requestAccountDeletion();
+        setDeletionRequested(true);
+      } else {
+        await selfSuspendProvider();
+        setSuspensionApplied(true);
+      }
+      setConfirmAction(null);
     } catch (err) {
-      setDeleteSmsCode('');
+      setConfirmSmsCode('');
       if (err instanceof ApiError && err.code === 'OTP_INVALID_OR_EXPIRED') {
         setOtpCountdown(0);
-        setDeleteError(
+        setConfirmError(
           'Kod jest nieprawidłowy lub wygasł. Wyślij nowy kod SMS, aby ponowić operację.',
         );
       } else {
-        setDeleteError(err instanceof ApiError ? err.message : 'Błąd sieci. Spróbuj ponownie.');
+        setConfirmError(err instanceof ApiError ? err.message : 'Błąd sieci. Spróbuj ponownie.');
       }
     } finally {
-      setDeleteLoading(false);
+      setConfirmLoading(false);
     }
   }
 
-  const nameMatch = deleteNameDraft.trim() === (provider?.name ?? '').trim() && !!provider?.name;
+  const nameMatch = confirmNameDraft.trim() === (provider?.name ?? '').trim() && !!provider?.name;
 
   function toggleNotif(key: NotifKey, channel: Channel) {
     setNotifs((prev) => {
@@ -747,24 +757,42 @@ export default function SettingsPage() {
             </span>
           </header>
 
-          <div className={styles.dangerItem}>
-            <div className={styles.dangerInfo}>
-              <div className={styles.dangerTitle}>
-                <IconAlertTriangle width="13" height="13" className={styles.dangerTitleIco} />
-                <Text variant="body-sm" as="span" weight="bold" color="danger">
-                  Zawieś widoczność warsztatu
+          {suspensionApplied ? (
+            <div className={styles.deletionRequestedCard}>
+              <span className={styles.deletionRequestedIco}>
+                <IconCheck width="14" height="14" />
+              </span>
+              <div className={styles.deletionRequestedCol}>
+                <Text variant="body-sm" as="span" weight="bold">
+                  Warsztat zawieszony
+                </Text>
+                <Text variant="caption" color="muted" as="p">
+                  Warsztat jest ukryty w wyszukiwarce. Aby go przywrócić, skontaktuj się z
+                  administratorem lub zaloguj się ponownie.
                 </Text>
               </div>
-              <Text variant="caption" color="secondary" as="p">
-                Ukryj warsztat z wyszukiwarki na czas nieokreślony — bez usuwania konta. Istniejące
-                rezerwacje pozostają, ale nowe nie mogą być składane. Odwracalne jednym kliknięciem.
-              </Text>
             </div>
-            <Button variant="danger" size="sm">
-              <IconEyeOff width="12" height="12" />
-              Ukryj warsztat
-            </Button>
-          </div>
+          ) : (
+            <div className={styles.dangerItem}>
+              <div className={styles.dangerInfo}>
+                <div className={styles.dangerTitle}>
+                  <IconAlertTriangle width="13" height="13" className={styles.dangerTitleIco} />
+                  <Text variant="body-sm" as="span" weight="bold" color="danger">
+                    Zawieś widoczność warsztatu
+                  </Text>
+                </div>
+                <Text variant="caption" color="secondary" as="p">
+                  Ukryj warsztat z wyszukiwarki na czas nieokreślony — bez usuwania konta.
+                  Istniejące rezerwacje pozostają, ale nowe nie mogą być składane. Wymaga
+                  potwierdzenia nazwy warsztatu i weryfikacji SMS.
+                </Text>
+              </div>
+              <Button variant="danger" size="sm" onClick={() => openConfirmModal('suspend')}>
+                <IconEyeOff width="12" height="12" />
+                Ukryj warsztat
+              </Button>
+            </div>
+          )}
 
           {deletionRequested ? (
             <div className={styles.deletionRequestedCard}>
@@ -799,7 +827,7 @@ export default function SettingsPage() {
                   . Wymagamy potwierdzenia nazwy warsztatu i weryfikacji SMS.
                 </Text>
               </div>
-              <Button variant="danger" size="sm" onClick={openDeleteModal}>
+              <Button variant="danger" size="sm" onClick={() => openConfirmModal('delete')}>
                 <IconTrash width="12" height="12" />
                 Usuń konto
               </Button>
@@ -839,23 +867,31 @@ export default function SettingsPage() {
 
       <ScrolledLayout sections={sections} />
 
-      {/* ── Delete account modal ── */}
+      {/* ── Shared confirm modal (suspend / delete) ── */}
       <Modal
-        isOpen={deleteStep > 0}
-        onClose={closeDeleteModal}
-        title={deleteStep === 1 ? 'Usuń konto — krok 1 z 2' : 'Usuń konto — krok 2 z 2'}
+        isOpen={confirmAction !== null}
+        onClose={closeConfirmModal}
+        title={
+          confirmStep === 1
+            ? confirmAction === 'delete'
+              ? 'Usuń konto — krok 1 z 2'
+              : 'Zawieś warsztat — krok 1 z 2'
+            : confirmAction === 'delete'
+              ? 'Usuń konto — krok 2 z 2'
+              : 'Zawieś warsztat — krok 2 z 2'
+        }
         size="sm"
         footer={
-          deleteStep === 1 ? (
+          confirmStep === 1 ? (
             <div className={styles.modalFooter}>
-              <Button variant="neutral" size="sm" onClick={closeDeleteModal}>
+              <Button variant="neutral" size="sm" onClick={closeConfirmModal}>
                 Anuluj
               </Button>
               <Button
                 variant="danger"
                 size="sm"
-                disabled={!nameMatch || deleteLoading}
-                loading={deleteLoading}
+                disabled={!nameMatch || confirmLoading}
+                loading={confirmLoading}
                 onClick={goToStep2}
               >
                 Dalej →
@@ -863,30 +899,40 @@ export default function SettingsPage() {
             </div>
           ) : (
             <div className={styles.modalFooter}>
-              <Button variant="neutral" size="sm" onClick={() => setDeleteStep(1)}>
+              <Button variant="neutral" size="sm" onClick={() => setConfirmStep(1)}>
                 ← Wstecz
               </Button>
               <Button
                 variant="danger"
                 size="sm"
-                disabled={deleteSmsCode.length < 6 || deleteLoading || otpCountdown <= 0}
-                loading={deleteLoading}
-                onClick={handleDeleteSubmit}
+                disabled={confirmSmsCode.length < 6 || confirmLoading || otpCountdown <= 0}
+                loading={confirmLoading}
+                onClick={handleConfirmSubmit}
               >
-                <IconTrash width="12" height="12" />
-                Potwierdź usunięcie
+                {confirmAction === 'delete' ? (
+                  <>
+                    <IconTrash width="12" height="12" />
+                    Potwierdź usunięcie
+                  </>
+                ) : (
+                  <>
+                    <IconEyeOff width="12" height="12" />
+                    Potwierdź zawieszenie
+                  </>
+                )}
               </Button>
             </div>
           )
         }
       >
-        {deleteStep === 1 && (
+        {confirmStep === 1 && (
           <div className={styles.modalStep}>
             <div className={styles.modalWarning}>
               <IconAlertTriangle width="14" height="14" className={styles.modalWarningIco} />
               <Text variant="caption" as="p">
-                Tej operacji nie można cofnąć. Warsztat zniknie z wyszukiwarki natychmiast, a dane
-                zostaną trwale usunięte po 30 dniach.
+                {confirmAction === 'delete'
+                  ? 'Tej operacji nie można cofnąć. Warsztat zniknie z wyszukiwarki natychmiast, a dane zostaną trwale usunięte po 30 dniach.'
+                  : 'Warsztat zniknie z wyszukiwarki natychmiast. Istniejące rezerwacje pozostają, ale nowe nie będą możliwe. Odblokowanie wymaga kontaktu z administratorem.'}
               </Text>
             </div>
             <Text variant="caption" color="muted" as="p" className={styles.modalLabel}>
@@ -896,33 +942,41 @@ export default function SettingsPage() {
               {provider?.name ?? '…'}
             </Text>
             <Input
-              value={deleteNameDraft}
-              onChange={(e) => setDeleteNameDraft(e.target.value)}
+              value={confirmNameDraft}
+              onChange={(e) => setConfirmNameDraft(e.target.value)}
               placeholder="Nazwa warsztatu"
               autoFocus
               onKeyDown={(e) => {
-                if (e.key === 'Enter' && nameMatch) setDeleteStep(2);
+                if (e.key === 'Enter' && nameMatch) goToStep2();
               }}
             />
+            {confirmError && (
+              <Text variant="caption" color="danger" as="p">
+                {confirmError}
+              </Text>
+            )}
           </div>
         )}
-        {deleteStep === 2 && (
+        {confirmStep === 2 && (
           <div className={styles.modalStep}>
             <Text variant="body-sm" as="p" color="muted">
               Wysłaliśmy 6-cyfrowy kod na numer{' '}
               <Text variant="body-sm" as="span" weight="bold" mono>
                 {user?.phone}
               </Text>
-              . Wpisz go poniżej, aby potwierdzić usunięcie konta.
+              .{' '}
+              {confirmAction === 'delete'
+                ? 'Wpisz go poniżej, aby potwierdzić usunięcie konta.'
+                : 'Wpisz go poniżej, aby potwierdzić zawieszenie warsztatu.'}
             </Text>
             <div className={styles.modalOtp}>
               <OTPInput
                 length={6}
-                value={deleteSmsCode}
-                onChange={setDeleteSmsCode}
+                value={confirmSmsCode}
+                onChange={setConfirmSmsCode}
                 autoFocus={otpCountdown > 0}
                 disabled={otpCountdown <= 0}
-                error={!!deleteError}
+                error={!!confirmError}
               />
             </div>
             {otpCountdown > 0 ? (
@@ -949,15 +1003,15 @@ export default function SettingsPage() {
                   variant="neutral"
                   size="sm"
                   onClick={handleResendOtp}
-                  loading={deleteLoading}
+                  loading={confirmLoading}
                 >
                   Wyślij ponownie
                 </Button>
               </div>
             )}
-            {deleteError && (
+            {confirmError && (
               <Text variant="caption" color="danger" as="p">
-                {deleteError}
+                {confirmError}
               </Text>
             )}
           </div>

@@ -20,3 +20,7 @@ export function submitProvider(): Promise<Provider> {
 export function setProviderPause(until: string | null): Promise<{ pausedUntil: string | null }> {
   return api.patch<{ pausedUntil: string | null }>('/v1/providers/me/pause', { until });
 }
+
+export function selfSuspendProvider(): Promise<{ status: string }> {
+  return api.post<{ status: string }>('/v1/providers/me/suspend', {});
+}

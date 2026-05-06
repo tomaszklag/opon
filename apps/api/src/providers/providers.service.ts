@@ -194,6 +194,19 @@ export class ProvidersService {
     return { pausedUntil: pausedUntil?.toISOString() ?? null };
   }
 
+  async selfSuspend(ownerId: string): Promise<{ status: string }> {
+    const provider = await this.repo.findByOwnerId(ownerId);
+    if (!provider) throw new AppException(ErrorCode.PROVIDER_NOT_FOUND, 'Brak firmy.', 404);
+    if (provider.status !== ProviderStatus.APPROVED)
+      throw new AppException(
+        ErrorCode.PROVIDER_INVALID_STATUS,
+        'Zawieszenie możliwe tylko dla aktywnych firm.',
+        400,
+      );
+    await this.repo.update(provider.id, { status: ProviderStatus.SUSPENDED });
+    return { status: 'SUSPENDED' };
+  }
+
   async requestDeletion(ownerId: string): Promise<{ status: string }> {
     const provider = await this.repo.findByOwnerId(ownerId);
     if (!provider) throw new AppException(ErrorCode.PROVIDER_NOT_FOUND, 'Brak firmy.', 404);

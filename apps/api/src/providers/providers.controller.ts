@@ -127,6 +127,18 @@ export class ProvidersController {
     return this.service.setProviderPause(user.sub, dto.until ?? null);
   }
 
+  // ── POST /v1/providers/me/suspend ────────────────────────────────────────
+
+  @Post('me/suspend')
+  @HttpCode(HttpStatus.OK)
+  @ApiCookieAuth('access_token')
+  @ApiOperation({ summary: 'Zawieś widoczność warsztatu (APPROVED → SUSPENDED)' })
+  @ApiResponse({ status: 200, description: 'Warsztat zawieszony' })
+  @ApiResponse({ status: 400, description: 'Firma nie jest w stanie aktywnym' })
+  selfSuspend(@CurrentUser() user: JwtPayload) {
+    return this.service.selfSuspend(user.sub);
+  }
+
   // ── POST /v1/providers/me/deletion-request ────────────────────────────────
 
   @Post('me/deletion-request')
