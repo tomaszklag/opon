@@ -1,5 +1,6 @@
 .wrapper {
   display: inline-flex;
+  position: relative;
 }
 
 .wrapper.disabled {
@@ -51,11 +52,11 @@
   height: 20px;
 }
 
-.input:checked + .track {
+.track.on {
   background: var(--accent);
 }
 
-.input:checked + .track.error {
+.track.error.on {
   background: var(--danger);
 }
 
@@ -68,27 +69,29 @@
 .dot {
   position: absolute;
   top: 50%;
+  left: 0;
   transform: translateY(-50%) translateX(2px);
   border-radius: 50%;
-  background: var(--text-primary);
+  background: var(--white);
+  box-shadow: var(--shadow-sm);
   transition: transform var(--transition-fast);
 }
 
-.md .dot {
+.track.md .dot {
   width: 18px;
   height: 18px;
 }
 
-.sm .dot {
+.track.sm .dot {
   width: 16px;
   height: 16px;
 }
 
-.input:checked + .track.md .dot {
+.track.md.on .dot {
   transform: translateY(-50%) translateX(24px);
 }
 
-.input:checked + .track.sm .dot {
+.track.sm.on .dot {
   transform: translateY(-50%) translateX(16px);
 }
 
