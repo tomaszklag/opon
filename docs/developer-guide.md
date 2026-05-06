@@ -354,6 +354,31 @@ export class BookingsService {
 
 Standardowe CRUD zapytania (findMany, create, update) zawsze idą przez repository — nawet jeśli dotyczą wielu tabel przez `include`.
 
+#### Wyjątek: moduł `admin/`
+
+Serwisy w `apps/api/src/admin/` wstrzykują `PrismaService` bezpośrednio — **nie** korzystają z repozytoriów domenowych. Powód: admin operuje na encjach z wielu domen jednocześnie (Provider + User + Session w jednej transakcji), a tworzenie dedykowanego repozytorium tylko dla operacji administracyjnych sugerowałoby własność, której nie ma.
+
+```ts
+// ✅ TAK — AdminProvidersService bezpośrednio przez PrismaService
+@Injectable()
+export class AdminProvidersService {
+  constructor(private readonly prisma: PrismaService) {}
+
+  async confirmDeletion(id: string) {
+    await this.prisma.$transaction([
+      this.prisma.provider.update({ ... }),
+      this.prisma.session.updateMany({ ... }),  // inna domena
+      this.prisma.user.update({ ... }),         // inna domena
+    ]);
+  }
+}
+
+// ❌ NIE — nie wstrzykuj ProvidersRepository do AdminProvidersService
+constructor(private readonly providersRepo: ProvidersRepository) {}
+```
+
+Nowe serwisy admin dodawaj do `apps/api/src/admin/` i rejestruj je w `AdminModule` — nie twórz osobnych modułów NestJS dla operacji czysto administracyjnych.
+
 ### 5.2. Krok po kroku
 
 ```
@@ -387,6 +412,105 @@ Standardowe CRUD zapytania (findMany, create, update) zawsze idą przez reposito
 
 7. Sprawdź TypeScript
    └─ cd apps/api && npx tsc --noEmit
+```
+
+### 5.3. Wzorzec: kolejka asynchronicznych wniosków (admin queue)
+
+Używany gdy użytkownik składa wniosek wymagający ręcznej akcji admina — i nie ma potrzeby natychmiastowej zmiany głównego statusu encji. Przykłady: zamówienie kopii danych RODO (`DataExportRequest`), odwołanie od opinii, wniosek o refund.
+
+**Kiedy stosować ten wzorzec zamiast zmiany statusu Provider:**
+
+- Wniosek dotyczy danych, nie stanu konta
+- Provider może złożyć wiele wniosków (historia)
+- Chcesz oddzielić lifecyle wniosku od lifecyle encji głównej
+
+#### Struktura modelu Prisma
+
+```prisma
+enum XxxStatus {
+  PENDING
+  COMPLETED
+  CANCELLED
+}
+
+model XxxRequest {
+  id          String    @id @default(uuid())
+  providerId  String
+  status      XxxStatus @default(PENDING)
+  requestedAt DateTime  @default(now())
+  completedAt DateTime?
+
+  provider Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+
+  @@index([providerId])
+  @@index([status, requestedAt])
+  @@map("xxx_requests")
+}
+```
+
+Dodaj relację `xxxRequests XxxRequest[]` do modelu `Provider`.
+
+#### API
+
+| Endpoint                                    | Kto      | Opis                                           |
+| ------------------------------------------- | -------- | ---------------------------------------------- |
+| `POST /v1/providers/me/xxx-requests`        | Provider | Tworzy wniosek; 409 jeśli już `PENDING`        |
+| `GET /v1/admin/xxx-requests`                | Admin    | Lista `PENDING`, posortowana `requestedAt asc` |
+| `PATCH /v1/admin/xxx-requests/:id/complete` | Admin    | Oznacza jako zrealizowany                      |
+| `PATCH /v1/admin/xxx-requests/:id/cancel`   | Admin    | Anuluje wniosek                                |
+
+Serwis i kontroler admin trafiają do `apps/api/src/admin/` i `AdminModule` — bez osobnego modułu NestJS.
+
+#### ErrorCode
+
+```ts
+XXX_REQUEST_NOT_FOUND = 'XXX_REQUEST_NOT_FOUND',
+XXX_REQUEST_ALREADY_PENDING = 'XXX_REQUEST_ALREADY_PENDING',
+```
+
+#### FE — idempotentny przycisk
+
+Kluczowa zasada: kod `XXX_ALREADY_PENDING` (409) traktuj jako **sukces**, nie błąd. User kliknął drugi raz — stan i tak jest prawidłowy.
+
+```ts
+async function handleRequest() {
+  setLoading(true);
+  try {
+    await requestXxx();
+    setOrdered(true);
+  } catch (err) {
+    if (err instanceof ApiError && err.code === 'XXX_REQUEST_ALREADY_PENDING') {
+      setOrdered(true); // ← sukces, nie błąd
+    } else {
+      setError(err instanceof ApiError ? err.message : 'Błąd sieci.');
+    }
+  } finally {
+    setLoading(false);
+  }
+}
+```
+
+Przycisk po złożeniu wniosku: `disabled={ordered}`, ikona checkmark zamiast tekstu, komunikat potwierdzający pod opisem.
+
+#### schema.d.ts
+
+Dodaj DTO ręcznie (wzorzec z sekcji 3.1) jeśli generator nie jest dostępny:
+
+```ts
+XxxRequestDto: {
+  id: string;
+  providerId: string;
+  providerName: string;
+  /** @enum {string} */
+  status: 'PENDING' | 'COMPLETED' | 'CANCELLED';
+  /** Format: date-time */
+  requestedAt: string;
+  completedAt: string | null;
+};
+XxxPage: {
+  data: components['schemas']['XxxRequestDto'][];
+  total: number;
+};
 ```
 
 ---
@@ -1408,6 +1532,11 @@ Plik: `apps/api/src/common/errors/error-code.enum.ts`
 | `PHOTO_*`          | Zdjęcia (`PHOTO_NOT_FOUND`, `PHOTO_ACCESS_DENIED`, `PHOTO_ADDITIONAL_LIMIT_EXCEEDED`)         |
 | `PRICING_TIER_*`   | Cennik (`PRICING_TIER_NOT_FOUND`, `PRICING_TIER_RANGE_CONFLICT`, …)                           |
 | `WORKING_HOURS_*`  | Godziny pracy (`WORKING_HOURS_MISSING_TIMES`, `WORKING_HOURS_INVALID_TIME_RANGE`)             |
+| `STATION_*`        | Stanowiska (`STATION_NOT_FOUND`, `STATION_ACCESS_DENIED`)                                     |
+| `WORKER_*`         | Pracownicy (`WORKER_NOT_FOUND`, `WORKER_ACCESS_DENIED`, `WORKER_LEAVE_CONFLICT`, …)           |
+| `BOOKING_*`        | Rezerwacje (`BOOKING_NOT_FOUND`, `BOOKING_OUTSIDE_HOURS`, `PROVIDER_PAUSED`, …)               |
+| `REVIEW_*`         | Opinie (`REVIEW_NOT_FOUND`)                                                                   |
+| `DATA_EXPORT_*`    | Wnioski o dane RODO (`DATA_EXPORT_NOT_FOUND`, `DATA_EXPORT_ALREADY_PENDING`)                  |
 | `VALIDATION_ERROR` | Błąd walidacji DTO (class-validator)                                                          |
 | `INTERNAL_ERROR`   | Nieokreślony błąd serwera                                                                     |
 
