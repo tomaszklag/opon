@@ -1,8 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { Text } from '@opony/design-system-web';
+import { Text, Combobox } from '@opony/design-system-web';
 import { IconInfo } from '../../../../components/icons';
+import { PriceTag } from './PriceTag';
+import { DurBadge } from './DurBadge';
 import type { ServiceState, AddonState } from '../_types';
 import styles from './SimulationCard.module.css';
 
@@ -15,7 +17,18 @@ export function SimulationCard({ services, addons }: Props) {
   const [selectedId, setSelectedId] = useState<string>(() => services[0]?.id ?? '');
 
   const service = services.find((s) => s.id === selectedId) ?? services[0];
-  const linkedAddons = service ? addons.filter((a) => service.addonIds.includes(a.id)) : [];
+
+  const linkedSubServices = service
+    ? service.subServiceIds
+        .map((id) => services.find((s) => s.id === id))
+        .filter((s): s is ServiceState => s !== undefined)
+    : [];
+
+  const linkedAddons = service
+    ? service.addonIds
+        .map((id) => addons.find((a) => a.id === id))
+        .filter((a): a is AddonState => a !== undefined)
+    : [];
 
   const prices = service
     ? service.variants.map((v) => parseFloat(v.pricePln) || 0).filter((p) => p > 0)
@@ -50,30 +63,36 @@ export function SimulationCard({ services, addons }: Props) {
       ) : (
         <>
           {services.length > 1 && (
-            <div className={styles.tabs}>
-              {services.map((s) => (
-                <button
-                  key={s.id}
-                  className={`${styles.tab} ${s.id === service?.id ? styles.tabActive : ''}`}
-                  onClick={() => setSelectedId(s.id)}
-                >
-                  <Text variant="nano" as="span">
-                    {s.name}
-                  </Text>
-                </button>
-              ))}
+            <div className={styles.selector}>
+              <Combobox
+                value={service?.id ?? ''}
+                onChange={setSelectedId}
+                options={services.map((s) => ({
+                  value: s.id,
+                  label: `${s.name || 'Usługa bez nazwy'}${!s.enabled ? ' (wył.)' : ''}`,
+                }))}
+                placeholder="Wybierz usługę…"
+              />
             </div>
           )}
 
           <div className={styles.body}>
+            {service && !service.enabled && (
+              <div className={styles.disabledNotice}>
+                <Text variant="nano" as="span" color="secondary">
+                  Ta usługa jest wyłączona — niewidoczna dla klientów.
+                </Text>
+              </div>
+            )}
+
             {minPrice !== null && (
-              <div className={styles.total}>
+              <div
+                className={`${styles.total} ${service && !service.enabled ? styles.totalDisabled : ''}`}
+              >
                 <Text variant="nano" as="span" color="secondary">
                   {service!.name}
                 </Text>
-                <Text variant="body-sm" as="span" weight="bold">
-                  {minPrice === maxPrice ? `${minPrice} zł` : `od ${minPrice} zł`}
-                </Text>
+                <PriceTag value={minPrice} from={minPrice !== maxPrice} bold size="sm" />
               </div>
             )}
 
@@ -89,19 +108,9 @@ export function SimulationCard({ services, addons }: Props) {
                         <Text variant="nano" as="span">
                           {getVariantLabel(v, i)}
                         </Text>
+                        {dur > 0 && <DurBadge minutes={dur} />}
                       </div>
-                      <div className={styles.rowMeta}>
-                        {dur > 0 && (
-                          <Text variant="nano" as="span" color="secondary" mono>
-                            {dur} min
-                          </Text>
-                        )}
-                        {price > 0 && (
-                          <Text variant="nano" as="span" weight="bold">
-                            {price} zł
-                          </Text>
-                        )}
-                      </div>
+                      {price > 0 && <PriceTag value={price} bold />}
                     </div>
                   );
                 })}
@@ -116,21 +125,69 @@ export function SimulationCard({ services, addons }: Props) {
               </div>
             )}
 
+            {linkedSubServices.length > 0 && (
+              <>
+                <div className={styles.divider} />
+                <Text
+                  variant="nano"
+                  as="span"
+                  color="secondary"
+                  weight="bold"
+                  className={styles.sectionLabel}
+                >
+                  Sugerowane
+                </Text>
+                {linkedSubServices.map((sub) => (
+                  <div
+                    key={sub.id}
+                    className={`${styles.row} ${styles.rowSub} ${!sub.enabled ? styles.rowDisabled : ''}`}
+                  >
+                    <Text variant="nano" as="span" color={sub.enabled ? 'primary' : 'secondary'}>
+                      {sub.name}
+                    </Text>
+                    {!sub.enabled && (
+                      <Text variant="nano" as="span" color="secondary">
+                        wył.
+                      </Text>
+                    )}
+                  </div>
+                ))}
+              </>
+            )}
+
             {linkedAddons.length > 0 && (
               <>
                 <div className={styles.divider} />
+                <Text
+                  variant="nano"
+                  as="span"
+                  color="secondary"
+                  weight="bold"
+                  className={styles.sectionLabel}
+                >
+                  Dodatki
+                </Text>
                 {linkedAddons.map((addon) => {
                   const price = parseFloat(addon.pricePln) || 0;
                   return (
-                    <div key={addon.id} className={`${styles.row} ${styles.rowOpt}`}>
-                      <Text variant="nano" as="span">
+                    <div
+                      key={addon.id}
+                      className={`${styles.row} ${styles.rowOpt} ${!addon.enabled ? styles.rowDisabled : ''}`}
+                    >
+                      <Text
+                        variant="nano"
+                        as="span"
+                        color={addon.enabled ? 'primary' : 'secondary'}
+                      >
                         {addon.name || 'Dodatek'}
                       </Text>
-                      {price > 0 && (
-                        <Text variant="nano" as="span" weight="bold">
-                          +{price} zł
+                      {!addon.enabled ? (
+                        <Text variant="nano" as="span" color="secondary">
+                          wył.
                         </Text>
-                      )}
+                      ) : price > 0 ? (
+                        <PriceTag value={price} prefix="+" bold />
+                      ) : null}
                     </div>
                   );
                 })}

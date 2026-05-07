@@ -81,6 +81,7 @@ Bezpośrednio:
 ```bash
 cd apps/api
 pnpm prisma migrate dev --name <nazwa>
+pnpm prisma migrate deploy    # aplikuje istniejące migracje bez tworzenia nowych (gdy plik SQL już istnieje)
 pnpm prisma generate          # regeneruj klienta bez migracji
 pnpm prisma migrate reset     # ⚠ resetuje bazę i aplikuje od nowa (dev only)
 pnpm prisma studio
@@ -651,6 +652,26 @@ const removeService = useCallback((id: string) => {
   }));
   // Nie wywołuj setDirty(true) — delete już trafił do bazy
 }, []);
+```
+
+#### Pułapka: równoległe transakcje i cascade delete
+
+Gdy encja A ma FK do encji B z `onDelete: Cascade` (np. `ServiceAddonLink` → `Addon`), **nie uruchamiaj** replaceAll dla A i B równolegle (`Promise.all`). Równoległe transakcje powodują race condition:
+
+1. TX-B (replace addons): `DELETE addons` → **cascade usuwa ServiceAddonLinks** → `INSERT addons`
+2. TX-A (replace services): `INSERT ServiceAddonLinks` → TX-B cascade usuwa je ← **lub** TX-A odczytuje puste addonLinks po cascade delete z TX-B
+
+Efekt: serwis zwraca usługi z pustymi `addonIds`, mimo że zostały poprawnie ustawione chwilę wcześniej.
+
+**Zasada:** zapisuj wpierw encje referencjonowane (bez FK), potem encje referencjonujące:
+
+```ts
+// ✅ TAK — addony najpierw, usługi po nich (usługi FK→addony przez ServiceAddonLink)
+const updatedAddons = await api.upsertAddons(...);
+const updatedServices = await api.upsertServices(...);
+
+// ❌ NIE — równoległa transakcja może wyczyścić addonIds przez cascade delete
+const [updatedServices, updatedAddons] = await Promise.all([api.upsertServices(...), api.upsertAddons(...)]);
 ```
 
 ---

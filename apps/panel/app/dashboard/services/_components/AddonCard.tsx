@@ -1,9 +1,11 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { Input, NumberStepper, Text } from '@opony/design-system-web';
+import { Input, NumberStepper } from '@opony/design-system-web';
 import { IconPlusCircle } from '../../../../components/icons';
 import { AccordionCard } from './AccordionCard';
+import { PriceTag } from './PriceTag';
+import { DurBadge } from './DurBadge';
 import type { AddonState } from '../_types';
 import styles from './AddonCard.module.css';
 
@@ -28,16 +30,8 @@ export function AddonCard({ addon, onChange, onDelete, onToggle, defaultOpen }: 
   const meta =
     price !== null || dur !== null ? (
       <>
-        {price !== null && (
-          <Text variant="nano" as="span" mono color="secondary">
-            {price} zł
-          </Text>
-        )}
-        {dur !== null && (
-          <Text variant="nano" as="span" mono color="secondary">
-            {dur} min
-          </Text>
-        )}
+        {price !== null && <PriceTag value={price} muted />}
+        {dur !== null && <DurBadge minutes={dur} plain />}
       </>
     ) : undefined;
 

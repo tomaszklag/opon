@@ -13,35 +13,16 @@
   gap: 7px;
 }
 
-.tabs {
-  display: flex;
-  align-items: center;
-  gap: 3px;
-  flex-wrap: wrap;
-  padding: 6px 10px;
+.selector {
+  padding: 7px 10px;
   border-bottom: 1px solid var(--border);
-}
-
-.tab {
-  padding: 3px 8px;
-  border-radius: 5px;
-  border: 1px solid var(--border);
-  background: transparent;
-  cursor: pointer;
-  color: var(--text-secondary);
-}
-
-.tabActive {
-  background: var(--accent-muted);
-  border-color: var(--accent-border);
-  color: var(--accent);
 }
 
 .body {
   padding: 9px 12px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
 }
 
 .divider {
@@ -94,3 +75,32 @@
   padding: 8px 0;
   text-align: center;
 }
+
+.rowSub {
+  background: transparent;
+  border: 1px dashed var(--border);
+}
+
+.rowDisabled {
+  opacity: 0.5;
+  text-decoration: line-through;
+}
+
+
+.disabledNotice {
+  padding: 5px 8px;
+  border-radius: 5px;
+  background: var(--warning-muted);
+  border: 1px solid var(--warning-border);
+}
+
+.totalDisabled {
+  opacity: 0.5;
+}
+
+.sectionLabel {
+  padding: 0 2px;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+}
+

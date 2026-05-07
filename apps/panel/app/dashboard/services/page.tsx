@@ -166,6 +166,15 @@ export default function ServicesPage() {
             <strong>Dodatki</strong> — opcjonalne pozycje z opłatą (np. worek na opony, nowy
             wentyl). Klient zaznacza je sam podczas rezerwacji.
           </Text>
+          <div className={styles.helpModalDivider} />
+          <Text variant="body-sm" as="p" weight="bold">
+            Wyłączanie usług i dodatków
+          </Text>
+          <Text variant="body-sm" as="p" color="secondary">
+            Przełącznik przy każdej usłudze i dodatku pozwala ją tymczasowo wyłączyć — zniknie z
+            oferty widocznej dla klientów, ale dane (ceny, warianty) pozostają zapisane. Wyłączone
+            pozycje są przekreślone w symulacji cennika po prawej stronie.
+          </Text>
         </div>
       </Modal>
 

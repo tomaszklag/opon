@@ -155,10 +155,15 @@ export function useServicesPage() {
     setIsSaving(true);
     setSaveError(null);
     try {
-      const [updatedServices, updatedAddons] = await Promise.all([
-        servicesApi.upsertServices({ services: state.services.map(serviceToApi) }),
-        servicesApi.upsertAddons({ addons: state.addons.map(addonToApi) }),
-      ]);
+      // Addons first — ServiceAddonLink has onDelete: Cascade on Addon FK.
+      // Parallel transactions would cause replaceAllAddons to cascade-delete
+      // links that replaceAll just created, leaving services with empty addonIds.
+      const updatedAddons = await servicesApi.upsertAddons({
+        addons: state.addons.map(addonToApi),
+      });
+      const updatedServices = await servicesApi.upsertServices({
+        services: state.services.map(serviceToApi),
+      });
       setState({
         services: updatedServices.map(serviceFromApi),
         addons: updatedAddons.map(addonFromApi),

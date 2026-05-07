@@ -13,6 +13,7 @@ import {
 } from '../../../../components/icons';
 import { RimTierRow } from './RimTierRow';
 import { ServiceVariantRow } from './ServiceVariantRow';
+import { PriceTag } from './PriceTag';
 import type { ServiceState, ServiceVariantState, AddonState } from '../_types';
 import styles from './ServiceVariantExpanded.module.css';
 
@@ -215,7 +216,10 @@ export function ServiceVariantExpanded({ service, allServices, allAddons, onChan
               const sub = otherServices.find((s) => s.id === id);
               if (!sub) return null;
               return (
-                <span key={id} className={styles.chip}>
+                <span
+                  key={id}
+                  className={`${styles.chip}${!sub.enabled ? ' ' + styles.chipDisabled : ''}`}
+                >
                   <Text variant="nano" as="span">
                     {sub.name}
                   </Text>
@@ -230,8 +234,8 @@ export function ServiceVariantExpanded({ service, allServices, allAddons, onChan
               );
             })}
 
-            {service.subServiceIds.length < otherServices.length && (
-              <div className={styles.chipAddWrap} ref={subWrapRef}>
+            <div className={styles.chipAddWrap} ref={subWrapRef}>
+              {(service.subServiceIds.length < otherServices.length || subDropdown) && (
                 <button
                   className={styles.chipAdd}
                   onClick={() => setSubDropdown((v) => !v)}
@@ -240,28 +244,28 @@ export function ServiceVariantExpanded({ service, allServices, allAddons, onChan
                 >
                   <IconPlus width="7" height="7" />
                 </button>
-                {subDropdown && (
-                  <div className={styles.subDropdown}>
-                    {otherServices
-                      .filter((s) => !service.subServiceIds.includes(s.id))
-                      .map((s) => (
-                        <button
-                          key={s.id}
-                          className={styles.subOption}
-                          onMouseDown={(e) => {
-                            e.preventDefault();
-                            toggleSubService(s.id);
-                          }}
-                        >
-                          <Text variant="nano" as="span">
-                            {s.name}
-                          </Text>
-                        </button>
-                      ))}
-                  </div>
-                )}
-              </div>
-            )}
+              )}
+              {subDropdown && (
+                <div className={styles.subDropdown}>
+                  {otherServices
+                    .filter((s) => !service.subServiceIds.includes(s.id))
+                    .map((s) => (
+                      <button
+                        key={s.id}
+                        className={styles.subOption}
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          toggleSubService(s.id);
+                        }}
+                      >
+                        <Text variant="nano" as="span">
+                          {s.name}
+                        </Text>
+                      </button>
+                    ))}
+                </div>
+              )}
+            </div>
           </div>
         </>
       )}
@@ -284,14 +288,15 @@ export function ServiceVariantExpanded({ service, allServices, allAddons, onChan
               const addon = allAddons.find((a) => a.id === id);
               if (!addon) return null;
               return (
-                <span key={id} className={styles.chip}>
+                <span
+                  key={id}
+                  className={`${styles.chip}${!addon.enabled ? ' ' + styles.chipDisabled : ''}`}
+                >
                   <Text variant="nano" as="span">
                     {addon.name}
                   </Text>
-                  {addon.pricePln && (
-                    <Text variant="nano" as="span" color="secondary" mono>
-                      +{addon.pricePln} zł
-                    </Text>
+                  {parseFloat(addon.pricePln) > 0 && (
+                    <PriceTag value={parseFloat(addon.pricePln)} prefix="+" muted />
                   )}
                   <button
                     className={styles.chipX}
@@ -330,10 +335,8 @@ export function ServiceVariantExpanded({ service, allServices, allAddons, onChan
                           <Text variant="nano" as="span">
                             {a.name}
                           </Text>
-                          {a.pricePln && (
-                            <Text variant="nano" as="span" color="secondary" mono>
-                              &nbsp;+{a.pricePln} zł
-                            </Text>
+                          {parseFloat(a.pricePln) > 0 && (
+                            <PriceTag value={parseFloat(a.pricePln)} prefix="+" muted />
                           )}
                         </button>
                       ))}

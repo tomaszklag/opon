@@ -72,6 +72,11 @@
   border: 1px solid var(--border-strong);
 }
 
+.chipDisabled {
+  opacity: 0.5;
+  text-decoration: line-through;
+}
+
 .chipX {
   display: inline-flex;
   align-items: center;

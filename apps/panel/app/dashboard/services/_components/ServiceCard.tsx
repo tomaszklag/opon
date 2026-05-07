@@ -4,6 +4,7 @@ import { Text } from '@opony/design-system-web';
 import { IconServices } from '../../../../components/icons';
 import { AccordionCard } from './AccordionCard';
 import { ServiceVariantExpanded } from './ServiceVariantExpanded';
+import { PriceTag } from './PriceTag';
 import type { ServiceState, AddonState } from '../_types';
 
 const TYPE_LABEL: Record<string, string> = {
@@ -34,12 +35,6 @@ export function ServiceCard({
   const prices = service.variants.map((v) => parseFloat(v.pricePln) || 0).filter((p) => p > 0);
   const minPrice = prices.length ? Math.min(...prices) : null;
   const maxPrice = prices.length ? Math.max(...prices) : null;
-  const priceLabel =
-    minPrice !== null
-      ? minPrice === maxPrice
-        ? `${minPrice} zł`
-        : `${minPrice}–${maxPrice} zł`
-      : '—';
 
   return (
     <AccordionCard
@@ -51,9 +46,13 @@ export function ServiceCard({
         </Text>
       }
       meta={
-        <Text variant="nano" as="span" mono color="secondary">
-          {priceLabel}
-        </Text>
+        minPrice !== null ? (
+          <PriceTag value={minPrice} max={maxPrice ?? undefined} muted />
+        ) : (
+          <Text variant="nano" as="span" mono color="secondary">
+            —
+          </Text>
+        )
       }
       enabled={service.enabled}
       onToggle={onToggle}
