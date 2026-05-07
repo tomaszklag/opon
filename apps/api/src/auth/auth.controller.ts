@@ -7,6 +7,7 @@ import {
   HttpStatus,
   Param,
   ParseUUIDPipe,
+  Patch,
   Post,
   Query,
   Req,
@@ -22,6 +23,8 @@ import { AuthService } from './auth.service';
 import { CurrentUser } from './decorators/current-user.decorator';
 import { Public } from './decorators/public.decorator';
 import { AuthMeResponseDto } from './dto/auth-me-response.dto';
+import { ChangePhoneDto } from './dto/change-phone.dto';
+import { ChangePhoneResponseDto } from './dto/change-phone-response.dto';
 import { SessionResponseDto } from './dto/session-response.dto';
 import { MessageResponseDto } from './dto/message-response.dto';
 import { RequestOtpDto } from './dto/request-otp.dto';
@@ -176,6 +179,38 @@ export class AuthController {
     }
     this.authService.clearAuthCookies(res);
     return { message: 'Wylogowano' };
+  }
+
+  // ── PATCH /v1/auth/change-phone ───────────────────────────────────────────
+
+  @Patch('change-phone')
+  @HttpCode(HttpStatus.OK)
+  @ApiCookieAuth('access_token')
+  @ApiOperation({ summary: 'Zmień numer telefonu — wymaga OTP na stary i nowy numer' })
+  @ApiResponse({ status: 200, type: ChangePhoneResponseDto })
+  @ApiResponse({ status: 401, description: 'Nieprawidłowy lub wygasły kod OTP' })
+  @ApiResponse({ status: 409, description: 'Numer telefonu jest już w użyciu' })
+  async changePhone(
+    @CurrentUser() user: JwtPayload,
+    @Body() dto: ChangePhoneDto,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<ChangePhoneResponseDto> {
+    await this.authService.changePhone(
+      user.sub,
+      user.phone,
+      dto.currentCode,
+      dto.newPhone,
+      dto.newCode,
+    );
+
+    // Re-issue access token with updated phone (session jti stays the same)
+    if (user.jti) {
+      const newPayload: JwtPayload = { ...user, phone: dto.newPhone };
+      const accessToken = this.authService.issueAccessToken(newPayload, user.jti);
+      this.authService.setAccessTokenCookie(res, accessToken);
+    }
+
+    return { message: 'Numer telefonu zmieniony', phone: dto.newPhone };
   }
 
   // ── GET /v1/auth/verify-email ──────────────────────────────────────────────

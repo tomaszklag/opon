@@ -93,6 +93,10 @@ export class AuthRepository {
     return result.count > 0;
   }
 
+  async updateUserPhone(userId: string, newPhone: string): Promise<void> {
+    await this.prisma.user.update({ where: { id: userId }, data: { phone: newPhone } });
+  }
+
   async revokeOtherSessions(userId: string, currentJti: string): Promise<number> {
     const result = await this.prisma.session.updateMany({
       where: { userId, id: { not: currentJti }, revokedAt: null },

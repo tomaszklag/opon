@@ -5,6 +5,7 @@ import { ProviderStatus, UserRole } from '@prisma/client';
 import { createHash } from 'crypto';
 import type { Response } from 'express';
 import { AppException, ErrorCode } from '../common/errors';
+import { OtpService } from './otp.service';
 import { AuthRepository } from './auth.repository';
 import { SessionResponseDto } from './dto/session-response.dto';
 import { JwtPayload } from './types/jwt-payload.interface';
@@ -29,6 +30,7 @@ type SessionMeta = {
 export class AuthService {
   constructor(
     private readonly authRepository: AuthRepository,
+    private readonly otpService: OtpService,
     private readonly jwt: JwtService,
     private readonly config: ConfigService,
   ) {}
@@ -189,6 +191,63 @@ export class AuthService {
       throw new AppException(ErrorCode.AUTH_UNAUTHORIZED, 'Brak identyfikatora sesji.', 401);
     const count = await this.authRepository.revokeOtherSessions(userId, currentJti);
     return { count };
+  }
+
+  // ── Phone change ───────────────────────────────────────────────────────────
+
+  async changePhone(
+    userId: string,
+    currentPhone: string,
+    currentCode: string,
+    newPhone: string,
+    newCode: string,
+  ): Promise<void> {
+    const currentValid = await this.otpService.verifyOtp(currentPhone, currentCode);
+    if (!currentValid)
+      throw new AppException(
+        ErrorCode.PHONE_OTP_CURRENT_INVALID,
+        'Kod SMS starego numeru jest nieprawidłowy lub wygasł.',
+        401,
+      );
+
+    const existingUser = await this.authRepository.findUserByPhone(newPhone);
+    if (existingUser && existingUser.id !== userId)
+      throw new AppException(
+        ErrorCode.PHONE_ALREADY_IN_USE,
+        'Ten numer telefonu jest już przypisany do innego konta.',
+        409,
+      );
+
+    const newValid = await this.otpService.verifyOtp(newPhone, newCode);
+    if (!newValid)
+      throw new AppException(
+        ErrorCode.PHONE_OTP_NEW_INVALID,
+        'Kod SMS nowego numeru jest nieprawidłowy lub wygasł.',
+        401,
+      );
+
+    await this.authRepository.updateUserPhone(userId, newPhone);
+  }
+
+  issueAccessToken(payload: JwtPayload, jti: string): string {
+    return this.jwt.sign(
+      { ...payload, jti },
+      {
+        secret: this.config.getOrThrow<string>('JWT_SECRET'),
+        expiresIn: ACCESS_TOKEN_TTL,
+      },
+    );
+  }
+
+  setAccessTokenCookie(res: Response, accessToken: string): void {
+    const isProd = this.config.get<string>('NODE_ENV') === 'production';
+    res.cookie('access_token', accessToken, {
+      httpOnly: true,
+      secure: isProd,
+      sameSite: 'lax',
+      domain: isProd ? '.opony.app' : undefined,
+      maxAge: ACCESS_TOKEN_TTL * 1000,
+    });
   }
 
   // ── Cookies ────────────────────────────────────────────────────────────────

@@ -1,8 +1,20 @@
 import { api } from '../lib/api';
-import type { components } from '@opony/api-client';
 
-export type DataExportRequestDto = components['schemas']['DataExportRequestDto'];
-export type DataExportPage = components['schemas']['DataExportPage'];
+export type DataExportRequestDto = {
+  id: string;
+  providerId: string;
+  providerName: string;
+  providerNip: string;
+  providerEmail: string | null;
+  status: 'PENDING' | 'COMPLETED' | 'CANCELLED';
+  requestedAt: string;
+  completedAt: string | null;
+};
+
+export type DataExportPage = {
+  data: DataExportRequestDto[];
+  total: number;
+};
 
 export function requestDataExport(): Promise<{ status: string; requestedAt: string }> {
   return api.post<{ status: string; requestedAt: string }>(

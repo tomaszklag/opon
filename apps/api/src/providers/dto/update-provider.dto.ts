@@ -3,7 +3,6 @@ import { ProviderType } from '@prisma/client';
 import {
   IsArray,
   IsBoolean,
-  IsEmail,
   IsEnum,
   IsInt,
   IsLatitude,
@@ -40,12 +39,6 @@ export class UpdateProviderDto {
   @IsOptional()
   @Matches(/^\+\d{7,15}$/, { message: 'Nieprawidłowy numer telefonu' })
   phone?: string;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsEmail()
-  @MaxLength(254)
-  email?: string;
 
   @ApiPropertyOptional({ description: 'Szerokość geogr. centrum operacji (mobilni)' })
   @IsOptional()

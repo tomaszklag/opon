@@ -24,10 +24,16 @@ import { useAuth } from '../../../lib/auth';
 import { ApiError } from '../../../lib/api';
 import { usePause, isIndefinitePause } from '../../../lib/hooks/use-pause';
 import { ScrolledLayout, type ScrollSection } from '../../../components/ScrolledLayout';
-import { getProvider, selfSuspendProvider } from '../../../api-data-access/providers';
+import {
+  getProvider,
+  selfSuspendProvider,
+  requestEmailChangeOtp,
+  confirmEmailChange,
+} from '../../../api-data-access/providers';
 import {
   requestOtp,
   verifyOtp,
+  changePhone,
   listSessions,
   revokeSession,
   revokeOtherSessions,
@@ -162,7 +168,7 @@ export default function SettingsPage() {
   } = usePause();
   const auth = useAuth();
   const user = auth.status === 'authenticated' ? auth.user : null;
-  const { data: provider } = useSWR('/v1/providers/me', getProvider);
+  const { data: provider, mutate: mutateProvider } = useSWR('/v1/providers/me', getProvider);
 
   type ConfirmAction = 'delete' | 'suspend';
 
@@ -186,16 +192,243 @@ export default function SettingsPage() {
   const [revokeAllLoading, setRevokeAllLoading] = useState(false);
   const [sessionError, setSessionError] = useState('');
 
+  // ── Phone change modal ────────────────────────────────────────────────────
+  const [phoneModalOpen, setPhoneModalOpen] = useState(false);
+  const [phoneStep, setPhoneStep] = useState<1 | 2 | 3>(1);
+  const [phoneCurrCode, setPhoneCurrCode] = useState('');
+  const [phoneCurrCountdown, setPhoneCurrCountdown] = useState(0);
+  const [phoneNewNumber, setPhoneNewNumber] = useState('');
+  const [phoneNewOtpSent, setPhoneNewOtpSent] = useState(false);
+  const [phoneNewCode, setPhoneNewCode] = useState('');
+  const [phoneNewCountdown, setPhoneNewCountdown] = useState(0);
+  const [phoneLoading, setPhoneLoading] = useState(false);
+  const [phoneError, setPhoneError] = useState('');
+
+  // ── Email change modal ────────────────────────────────────────────────────
+  const [emailModalOpen, setEmailModalOpen] = useState(false);
+  const [emailStep, setEmailStep] = useState<1 | 2>(1);
+  const [emailNewAddress, setEmailNewAddress] = useState('');
+  const [emailCode, setEmailCode] = useState('');
+  const [emailCountdown, setEmailCountdown] = useState(0);
+  const [emailLoading, setEmailLoading] = useState(false);
+  const [emailError, setEmailError] = useState('');
+
   useEffect(() => {
     if (otpCountdown <= 0) return;
     const t = setTimeout(() => setOtpCountdown((c) => c - 1), 1000);
     return () => clearTimeout(t);
   }, [otpCountdown]);
 
+  useEffect(() => {
+    if (phoneCurrCountdown <= 0) return;
+    const t = setTimeout(() => setPhoneCurrCountdown((c) => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [phoneCurrCountdown]);
+
+  useEffect(() => {
+    if (phoneNewCountdown <= 0) return;
+    const t = setTimeout(() => setPhoneNewCountdown((c) => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [phoneNewCountdown]);
+
+  useEffect(() => {
+    if (emailCountdown <= 0) return;
+    const t = setTimeout(() => setEmailCountdown((c) => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [emailCountdown]);
+
   function formatCountdown(secs: number): string {
     const m = Math.floor(secs / 60);
     const s = secs % 60;
     return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  }
+
+  function openPhoneModal() {
+    setPhoneModalOpen(true);
+    setPhoneStep(1);
+    setPhoneCurrCode('');
+    setPhoneCurrCountdown(0);
+    setPhoneNewNumber('');
+    setPhoneNewOtpSent(false);
+    setPhoneNewCode('');
+    setPhoneNewCountdown(0);
+    setPhoneError('');
+  }
+
+  function closePhoneModal() {
+    setPhoneModalOpen(false);
+    setPhoneError('');
+  }
+
+  function openEmailModal() {
+    setEmailModalOpen(true);
+    setEmailStep(1);
+    setEmailNewAddress('');
+    setEmailCode('');
+    setEmailCountdown(0);
+    setEmailError('');
+  }
+
+  function closeEmailModal() {
+    setEmailModalOpen(false);
+    setEmailError('');
+  }
+
+  async function emailSendOtp() {
+    const addr = emailNewAddress.trim();
+    setEmailLoading(true);
+    setEmailError('');
+    try {
+      const res = await requestEmailChangeOtp({ newEmail: addr });
+      setEmailCountdown(res.expiresIn);
+      setEmailCode('');
+      setEmailStep(2);
+    } catch (err) {
+      setEmailError(
+        err instanceof ApiError ? err.message : 'Nie udało się wysłać kodu. Spróbuj ponownie.',
+      );
+    } finally {
+      setEmailLoading(false);
+    }
+  }
+
+  async function emailResendOtp() {
+    const addr = emailNewAddress.trim();
+    setEmailLoading(true);
+    setEmailError('');
+    try {
+      const res = await requestEmailChangeOtp({ newEmail: addr });
+      setEmailCountdown(res.expiresIn);
+      setEmailCode('');
+    } catch (err) {
+      setEmailError(
+        err instanceof ApiError ? err.message : 'Nie udało się wysłać kodu. Spróbuj ponownie.',
+      );
+    } finally {
+      setEmailLoading(false);
+    }
+  }
+
+  async function emailConfirm() {
+    setEmailLoading(true);
+    setEmailError('');
+    try {
+      await confirmEmailChange({ newEmail: emailNewAddress.trim(), code: emailCode });
+      await mutateProvider();
+      setEmailModalOpen(false);
+    } catch (err) {
+      setEmailCode('');
+      if (err instanceof ApiError) {
+        if (err.code === 'EMAIL_CHANGE_OTP_INVALID') {
+          setEmailError('Kod jest nieprawidłowy lub wygasł.');
+        } else {
+          setEmailError(err.message);
+        }
+      } else {
+        setEmailError('Błąd sieci. Spróbuj ponownie.');
+      }
+    } finally {
+      setEmailLoading(false);
+    }
+  }
+
+  async function phoneStep1SendOtp() {
+    if (!user) return;
+    setPhoneLoading(true);
+    setPhoneError('');
+    try {
+      const res = await requestOtp({ phone: user.phone });
+      setPhoneCurrCountdown(res.expiresIn);
+      setPhoneStep(2);
+    } catch (err) {
+      setPhoneError(
+        err instanceof ApiError ? err.message : 'Nie udało się wysłać kodu SMS. Spróbuj ponownie.',
+      );
+    } finally {
+      setPhoneLoading(false);
+    }
+  }
+
+  async function phoneStep1Resend() {
+    if (!user) return;
+    setPhoneLoading(true);
+    setPhoneError('');
+    try {
+      const res = await requestOtp({ phone: user.phone });
+      setPhoneCurrCode('');
+      setPhoneCurrCountdown(res.expiresIn);
+    } catch (err) {
+      setPhoneError(
+        err instanceof ApiError ? err.message : 'Nie udało się wysłać kodu SMS. Spróbuj ponownie.',
+      );
+    } finally {
+      setPhoneLoading(false);
+    }
+  }
+
+  async function phoneStep2SendOtp() {
+    const phone = phoneNewNumber.trim();
+    setPhoneLoading(true);
+    setPhoneError('');
+    try {
+      const res = await requestOtp({ phone });
+      setPhoneNewCountdown(res.expiresIn);
+      setPhoneNewOtpSent(true);
+    } catch (err) {
+      setPhoneError(
+        err instanceof ApiError ? err.message : 'Nie udało się wysłać kodu SMS. Spróbuj ponownie.',
+      );
+    } finally {
+      setPhoneLoading(false);
+    }
+  }
+
+  async function phoneStep2Resend() {
+    const phone = phoneNewNumber.trim();
+    setPhoneLoading(true);
+    setPhoneError('');
+    try {
+      const res = await requestOtp({ phone });
+      setPhoneNewCode('');
+      setPhoneNewCountdown(res.expiresIn);
+    } catch (err) {
+      setPhoneError(
+        err instanceof ApiError ? err.message : 'Nie udało się wysłać kodu SMS. Spróbuj ponownie.',
+      );
+    } finally {
+      setPhoneLoading(false);
+    }
+  }
+
+  async function phoneConfirm() {
+    setPhoneLoading(true);
+    setPhoneError('');
+    try {
+      await changePhone({
+        currentCode: phoneCurrCode,
+        newPhone: phoneNewNumber.trim(),
+        newCode: phoneNewCode,
+      });
+      await auth.refresh();
+      setPhoneModalOpen(false);
+    } catch (err) {
+      setPhoneNewCode('');
+      if (err instanceof ApiError) {
+        if (err.code === 'PHONE_OTP_CURRENT_INVALID') {
+          setPhoneError('Kod starego numeru jest nieprawidłowy lub wygasł. Zacznij od nowa.');
+        } else if (err.code === 'PHONE_OTP_NEW_INVALID') {
+          setPhoneError('Kod nowego numeru jest nieprawidłowy lub wygasł.');
+        } else if (err.code === 'PHONE_ALREADY_IN_USE') {
+          setPhoneError('Ten numer jest już przypisany do innego konta.');
+        } else {
+          setPhoneError(err.message);
+        }
+      } else {
+        setPhoneError('Błąd sieci. Spróbuj ponownie.');
+      }
+    } finally {
+      setPhoneLoading(false);
+    }
   }
 
   function openConfirmModal(action: ConfirmAction) {
@@ -446,9 +679,9 @@ export default function SettingsPage() {
               </div>
               <div className={styles.contactValRow}>
                 <Text variant="body" as="span" weight="bold" mono className={styles.contactVal}>
-                  +48 600 123 456
+                  {user?.phone ?? '—'}
                 </Text>
-                <Button variant="neutral" size="sm">
+                <Button variant="neutral" size="sm" onClick={openPhoneModal}>
                   <IconPencil width="11" height="11" />
                   Zmień
                 </Button>
@@ -463,22 +696,34 @@ export default function SettingsPage() {
                 <Text variant="nano" as="span" color="muted" weight="bold" mono>
                   Email · administracyjny
                 </Text>
-                <span className={styles.verified}>
-                  <IconCheck width="9" height="9" />
-                  <Text variant="nano" as="span">
-                    OK
-                  </Text>
-                </span>
+                {provider?.emailVerifiedAt ? (
+                  <span className={styles.verified}>
+                    <IconCheck width="9" height="9" />
+                    <Text variant="nano" as="span">
+                      Zweryfikowany
+                    </Text>
+                  </span>
+                ) : provider?.email ? (
+                  <span className={styles.unverified}>
+                    <IconAlertTriangle width="9" height="9" />
+                    <Text variant="nano" as="span">
+                      Niezweryfikowany
+                    </Text>
+                  </span>
+                ) : null}
               </div>
               <div className={styles.contactValRow}>
                 <Text variant="body-sm" as="span" weight="bold" mono className={styles.contactVal}>
-                  jan.kowalski@example.pl
+                  {provider?.email ?? '—'}
                 </Text>
-                <Button variant="neutral" size="sm">
+                <Button variant="neutral" size="sm" onClick={openEmailModal}>
                   <IconPencil width="11" height="11" />
                   Zmień
                 </Button>
               </div>
+              <Text variant="caption" color="muted" as="p">
+                Zmiana wymaga potwierdzenia 6-cyfrowym kodem wysłanym na nowy adres email.
+              </Text>
             </div>
           </div>
         </>
@@ -747,8 +992,8 @@ export default function SettingsPage() {
             {sessions
               ?.filter((s) => !s.revokedAt && new Date(s.expiresAt) >= new Date())
               .map((session) => {
-                const { browser, os } = parseUserAgent(session.userAgent);
-                const maskedIp = maskIp(session.ipAddress);
+                const { browser, os } = parseUserAgent(session.userAgent ?? null);
+                const maskedIp = maskIp(session.ipAddress ?? null);
                 const isMobile = /iPhone|iPad|Android/.test(session.userAgent ?? '');
                 const isIdle =
                   Date.now() - new Date(session.lastUsedAt).getTime() > 24 * 60 * 60 * 1000;
@@ -1187,6 +1432,395 @@ export default function SettingsPage() {
             {confirmError && (
               <Text variant="caption" color="danger" as="p">
                 {confirmError}
+              </Text>
+            )}
+          </div>
+        )}
+      </Modal>
+
+      {/* ── Phone change modal ── */}
+      <Modal
+        isOpen={phoneModalOpen}
+        onClose={closePhoneModal}
+        title={
+          phoneStep === 1
+            ? 'Zmiana numeru — krok 1 z 3'
+            : phoneStep === 2
+              ? 'Zmiana numeru — krok 2 z 3'
+              : 'Zmiana numeru — krok 3 z 3'
+        }
+        size="sm"
+        footer={
+          phoneStep === 1 ? (
+            <div className={styles.modalFooter}>
+              <Button variant="neutral" size="sm" onClick={closePhoneModal}>
+                Anuluj
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                loading={phoneLoading}
+                onClick={phoneStep1SendOtp}
+              >
+                <IconSMS width="12" height="12" />
+                Wyślij kod SMS →
+              </Button>
+            </div>
+          ) : phoneStep === 2 ? (
+            <div className={styles.modalFooter}>
+              <Button
+                variant="neutral"
+                size="sm"
+                onClick={() => {
+                  setPhoneStep(1);
+                  setPhoneError('');
+                }}
+              >
+                ← Wstecz
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                disabled={phoneCurrCode.length < 6 || phoneCurrCountdown <= 0}
+                onClick={() => {
+                  setPhoneStep(3);
+                  setPhoneError('');
+                }}
+              >
+                Dalej →
+              </Button>
+            </div>
+          ) : (
+            <div className={styles.modalFooter}>
+              <Button
+                variant="neutral"
+                size="sm"
+                onClick={() => {
+                  setPhoneStep(2);
+                  setPhoneError('');
+                }}
+              >
+                ← Wstecz
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                disabled={
+                  !phoneNewOtpSent ||
+                  phoneNewCode.length < 6 ||
+                  phoneNewCountdown <= 0 ||
+                  phoneLoading
+                }
+                loading={phoneLoading}
+                onClick={phoneConfirm}
+              >
+                <IconCheck width="12" height="12" />
+                Potwierdź zmianę
+              </Button>
+            </div>
+          )
+        }
+      >
+        {phoneStep === 1 && (
+          <div className={styles.modalStep}>
+            <Text variant="body-sm" as="p" color="muted">
+              Wyślemy jednorazowy kod SMS na Twój bieżący numer{' '}
+              <Text variant="body-sm" as="span" weight="bold" mono>
+                {user?.phone}
+              </Text>
+              , aby potwierdzić tożsamość przed zmianą.
+            </Text>
+            {phoneError && (
+              <Text variant="caption" color="danger" as="p">
+                {phoneError}
+              </Text>
+            )}
+          </div>
+        )}
+
+        {phoneStep === 2 && (
+          <div className={styles.modalStep}>
+            <Text variant="body-sm" as="p" color="muted">
+              Wysłaliśmy 6-cyfrowy kod na numer{' '}
+              <Text variant="body-sm" as="span" weight="bold" mono>
+                {user?.phone}
+              </Text>
+              . Wpisz go poniżej.
+            </Text>
+            <div className={styles.modalOtp}>
+              <OTPInput
+                length={6}
+                value={phoneCurrCode}
+                onChange={setPhoneCurrCode}
+                autoFocus={phoneCurrCountdown > 0}
+                disabled={phoneCurrCountdown <= 0}
+                error={!!phoneError}
+              />
+            </div>
+            {phoneCurrCountdown > 0 ? (
+              <div className={styles.otpTimer}>
+                <Text variant="caption" color="muted" as="span">
+                  Kod wygaśnie za
+                </Text>
+                <Text
+                  variant="caption"
+                  weight="bold"
+                  mono
+                  as="span"
+                  className={styles.otpTimerValue}
+                >
+                  {formatCountdown(phoneCurrCountdown)}
+                </Text>
+              </div>
+            ) : (
+              <div className={styles.otpExpired}>
+                <Text variant="caption" color="danger" as="span">
+                  Kod wygasł.
+                </Text>
+                <Button
+                  variant="neutral"
+                  size="sm"
+                  onClick={phoneStep1Resend}
+                  loading={phoneLoading}
+                >
+                  Wyślij ponownie
+                </Button>
+              </div>
+            )}
+            {phoneError && (
+              <Text variant="caption" color="danger" as="p">
+                {phoneError}
+              </Text>
+            )}
+          </div>
+        )}
+
+        {phoneStep === 3 && (
+          <div className={styles.modalStep}>
+            <Text variant="body-sm" as="p" color="muted">
+              Podaj nowy numer telefonu. Wyślemy na niego kod weryfikacyjny.
+            </Text>
+            <div className={styles.phoneNewRow}>
+              <Input
+                value={phoneNewNumber}
+                onChange={(e) => {
+                  setPhoneNewNumber(e.target.value);
+                  setPhoneNewOtpSent(false);
+                  setPhoneNewCode('');
+                  setPhoneNewCountdown(0);
+                }}
+                placeholder="+48123456789"
+                autoFocus={!phoneNewOtpSent}
+                disabled={phoneLoading}
+                onKeyDown={(e) => {
+                  if (
+                    e.key === 'Enter' &&
+                    /^\+48\d{9}$/.test(phoneNewNumber.trim()) &&
+                    !phoneNewOtpSent
+                  ) {
+                    phoneStep2SendOtp();
+                  }
+                }}
+              />
+              <Button
+                variant="neutral"
+                size="sm"
+                disabled={!/^\+48\d{9}$/.test(phoneNewNumber.trim()) || phoneLoading}
+                loading={phoneLoading && !phoneNewOtpSent}
+                onClick={phoneStep2SendOtp}
+              >
+                <IconSMS width="12" height="12" />
+                {phoneNewOtpSent ? 'Wysłano' : 'Wyślij kod'}
+              </Button>
+            </div>
+            {phoneNewOtpSent && (
+              <>
+                <Text variant="body-sm" as="p" color="muted">
+                  Kod wysłany na{' '}
+                  <Text variant="body-sm" as="span" weight="bold" mono>
+                    {phoneNewNumber.trim()}
+                  </Text>
+                  .
+                </Text>
+                <div className={styles.modalOtp}>
+                  <OTPInput
+                    length={6}
+                    value={phoneNewCode}
+                    onChange={setPhoneNewCode}
+                    autoFocus={phoneNewCountdown > 0}
+                    disabled={phoneNewCountdown <= 0}
+                    error={!!phoneError}
+                  />
+                </div>
+                {phoneNewCountdown > 0 ? (
+                  <div className={styles.otpTimer}>
+                    <Text variant="caption" color="muted" as="span">
+                      Kod wygaśnie za
+                    </Text>
+                    <Text
+                      variant="caption"
+                      weight="bold"
+                      mono
+                      as="span"
+                      className={styles.otpTimerValue}
+                    >
+                      {formatCountdown(phoneNewCountdown)}
+                    </Text>
+                  </div>
+                ) : (
+                  <div className={styles.otpExpired}>
+                    <Text variant="caption" color="danger" as="span">
+                      Kod wygasł.
+                    </Text>
+                    <Button
+                      variant="neutral"
+                      size="sm"
+                      onClick={phoneStep2Resend}
+                      loading={phoneLoading}
+                    >
+                      Wyślij ponownie
+                    </Button>
+                  </div>
+                )}
+              </>
+            )}
+            {phoneError && (
+              <Text variant="caption" color="danger" as="p">
+                {phoneError}
+              </Text>
+            )}
+          </div>
+        )}
+      </Modal>
+
+      {/* ── Email change modal ── */}
+      <Modal
+        isOpen={emailModalOpen}
+        onClose={closeEmailModal}
+        title={emailStep === 1 ? 'Zmiana emaila — krok 1 z 2' : 'Zmiana emaila — krok 2 z 2'}
+        size="sm"
+        footer={
+          emailStep === 1 ? (
+            <div className={styles.modalFooter}>
+              <Button variant="neutral" size="sm" onClick={closeEmailModal}>
+                Anuluj
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                loading={emailLoading}
+                disabled={
+                  !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailNewAddress.trim()) || emailLoading
+                }
+                onClick={emailSendOtp}
+              >
+                <IconMail width="12" height="12" />
+                Wyślij kod →
+              </Button>
+            </div>
+          ) : (
+            <div className={styles.modalFooter}>
+              <Button
+                variant="neutral"
+                size="sm"
+                onClick={() => {
+                  setEmailStep(1);
+                  setEmailError('');
+                }}
+              >
+                ← Wstecz
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                disabled={emailCode.length < 6 || emailCountdown <= 0 || emailLoading}
+                loading={emailLoading}
+                onClick={emailConfirm}
+              >
+                <IconCheck width="12" height="12" />
+                Potwierdź zmianę
+              </Button>
+            </div>
+          )
+        }
+      >
+        {emailStep === 1 && (
+          <div className={styles.modalStep}>
+            <Text variant="body-sm" as="p" color="muted">
+              Podaj nowy adres email. Wyślemy na niego 6-cyfrowy kod weryfikacyjny. Nowy adres
+              zastąpi obecny dopiero po potwierdzeniu.
+            </Text>
+            <Input
+              type="email"
+              value={emailNewAddress}
+              onChange={(e) => setEmailNewAddress(e.target.value)}
+              placeholder="nowy@example.pl"
+              autoFocus
+              disabled={emailLoading}
+              onKeyDown={(e) => {
+                if (
+                  e.key === 'Enter' &&
+                  /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailNewAddress.trim())
+                ) {
+                  emailSendOtp();
+                }
+              }}
+            />
+            {emailError && (
+              <Text variant="caption" color="danger" as="p">
+                {emailError}
+              </Text>
+            )}
+          </div>
+        )}
+
+        {emailStep === 2 && (
+          <div className={styles.modalStep}>
+            <Text variant="body-sm" as="p" color="muted">
+              Wysłaliśmy 6-cyfrowy kod na{' '}
+              <Text variant="body-sm" as="span" weight="bold" mono>
+                {emailNewAddress.trim()}
+              </Text>
+              . Sprawdź skrzynkę (i folder spam) i wpisz kod poniżej.
+            </Text>
+            <div className={styles.modalOtp}>
+              <OTPInput
+                length={6}
+                value={emailCode}
+                onChange={setEmailCode}
+                autoFocus={emailCountdown > 0}
+                disabled={emailCountdown <= 0}
+                error={!!emailError}
+              />
+            </div>
+            {emailCountdown > 0 ? (
+              <div className={styles.otpTimer}>
+                <Text variant="caption" color="muted" as="span">
+                  Kod wygaśnie za
+                </Text>
+                <Text
+                  variant="caption"
+                  weight="bold"
+                  mono
+                  as="span"
+                  className={styles.otpTimerValue}
+                >
+                  {formatCountdown(emailCountdown)}
+                </Text>
+              </div>
+            ) : (
+              <div className={styles.otpExpired}>
+                <Text variant="caption" color="danger" as="span">
+                  Kod wygasł.
+                </Text>
+                <Button variant="neutral" size="sm" onClick={emailResendOtp} loading={emailLoading}>
+                  Wyślij ponownie
+                </Button>
+              </div>
+            )}
+            {emailError && (
+              <Text variant="caption" color="danger" as="p">
+                {emailError}
               </Text>
             )}
           </div>

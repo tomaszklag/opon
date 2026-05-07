@@ -122,6 +122,18 @@ pnpm generate:api-client
 
 **Regułą jest:** każda zmiana w `*ResponseDto` po stronie backendu wymaga odpowiedniej zmiany w `schema.d.ts` — albo przez generator, albo ręcznie. Brak synchronizacji skutkuje brakującymi polami w typach FE bez żadnego błędu kompilacji (pole po prostu nie istnieje w typie).
 
+**Windows — fallback gdy `pnpm generate:api-client` nie działa (brak `/dev/stdin`):**
+
+```powershell
+# 1. Pobierz spec do pliku
+Invoke-WebRequest http://localhost:4000/v1/docs-json -OutFile C:\Temp\spec.json
+
+# 2. Wygeneruj schema z pliku
+npx openapi-typescript C:\Temp\spec.json -o packages/api-client/src/schema.d.ts
+```
+
+Komenda `pnpm generate:api-client` może failować na Windows gdy skrypt próbuje czytać z `/dev/stdin`. Powyższy flow jest bezpiecznym zamiennikiem.
+
 ### 3.2. Wymagania dla agenta BE (nowy endpoint)
 
 Każdy nowy endpoint **musi** mieć Response DTO i dekorator `@ApiResponse`:
@@ -147,6 +159,18 @@ listBookings() { ... }
 @ApiResponse({ status: 201, type: BookingResponseDto })
 createBooking() { ... }
 ```
+
+**Reguła: pola wymagające weryfikacji nigdy nie trafiają do `Update*Dto`.**
+
+Pola takie jak `email` czy `phone` mają własny endpoint + OTP/token flow (patrz §16). Umieszczenie ich w `UpdateProviderDto` pozwala je zmienić bez weryfikacji, co narusza bezpieczeństwo.
+
+```
+❌  PATCH /v1/providers/me  { email: "nowy@example.pl" }   ← zmienia bez OTP
+✅  POST  /v1/providers/me/email/request-otp  { newEmail }  ← wysyła kod
+    PATCH /v1/providers/me/email              { newEmail, code }  ← potwierdza
+```
+
+Jeśli usuniesz pole z `UpdateDto` — usuń je też z `FE form hook` (np. `use-provider-form.ts`), bo TypeScript nie będzie o tym wiedział dopóki nie uruchomisz `tsc --noEmit`.
 
 ### 3.3. Wymagania dla agenta FE (nowa strona)
 
@@ -1970,6 +1994,7 @@ Historia wysłanych maili:
 | `SUBMISSION_RECEIVED` | `ProvidersService.submitForApproval()`                    | `EmailService.sendSubmissionReceived()`    |
 | `ACCOUNT_APPROVED`    | `AdminProvidersService.approveProvider()`                 | `EmailService.sendAccountApproved()`       |
 | `ACCOUNT_REJECTED`    | `AdminProvidersService.rejectProvider()`                  | `EmailService.sendAccountRejected()`       |
+| `EMAIL_CHANGE_OTP`    | `POST /v1/providers/me/email/request-otp`                 | `EmailChangeService.requestOtp()`          |
 
 ### 15.4. Endpoint weryfikacji emaila
 
@@ -2011,6 +2036,62 @@ PANEL_URL=http://localhost:3000   # URL panelu (dla redirectów weryfikacji)
 Mailpit działa lokalnie na `http://localhost:8025` (uruchamiany przez `pnpm docker:up`). Przechwytuje wszystkie wychodzące maile gdy `RESEND_API_KEY` jest placeholderem — sprawdź w WebUI czy mail dotarł.
 
 Flow weryfikacji możesz testować w Prisma Studio (`pnpm db:studio`): po `POST /v1/providers` znajdź rekord w tabeli `EmailVerificationToken`, skopiuj `tokenHash` i sprawdź że `emailVerifiedAt` na Providerze ustawia się po GET `/v1/auth/verify-email`.
+
+### 15.8. Zmiana emaila po rejestracji — wzorzec OTP
+
+Zmiana adresu email (po zalogowaniu) używa **6-cyfrowego kodu OTP** zamiast linku, bo user jest już uwierzytelniony — nie musi klikać z klienta pocztowego.
+
+```
+apps/api/src/email/
+  └─ email-change.service.ts   ← EmailChangeService
+```
+
+#### Model `EmailChangeToken`
+
+```prisma
+model EmailChangeToken {
+  id         String    @id @default(uuid())
+  providerId String
+  newEmail   String    @db.VarChar(254)
+  codeHash   String    @db.VarChar(200)   // bcrypt(code, 10)
+  expiresAt  DateTime                     // TTL 10 min
+  usedAt     DateTime?
+  attempts   Int       @default(0)        // max 3 prób, potem token invalid
+  createdAt  DateTime  @default(now())
+  provider   Provider  @relation(...)
+  @@map("email_change_tokens")
+}
+```
+
+#### Endpointy
+
+```
+POST  /v1/providers/me/email/request-otp  { newEmail }
+  → tworzy/reużywa token, wysyła EMAIL_CHANGE_OTP na newEmail
+  → rate limit: max 3 w ciągu 15 min na providera
+  → odpowiedź: { message, expiresIn, alreadySent }
+
+PATCH /v1/providers/me/email  { newEmail, code }
+  → bcrypt.compare(code, token.codeHash)
+  → transakcja: token.usedAt = now, provider.email = newEmail, provider.emailVerifiedAt = now
+  → odpowiedź: ProviderResponseDto (z nowym emailem)
+```
+
+#### Kluczowe zasady
+
+- Kod w dev: zawsze `000000` (jeśli `NODE_ENV !== 'production'`). Mailpit przechwytuje wysyłkę.
+- Nieprawidłowy kod inkrementuje `attempts`; przy `attempts >= 3` token jest traktowany jako wygasły (ErrorCode `EMAIL_CHANGE_OTP_INVALID`).
+- Sukces aktualizuje `emailVerifiedAt` — panel pokazuje badge "Zweryfikowany".
+- `email` jest usunięty z `UpdateProviderDto` — jedyna droga zmiany to ten flow.
+
+#### Strona FE (panel)
+
+```
+POST  requestEmailChangeOtp({ newEmail }) → apps/panel/api-data-access/providers.ts
+PATCH confirmEmailChange({ newEmail, code }) → apps/panel/api-data-access/providers.ts
+```
+
+Po `confirmEmailChange` wywołaj `mutateProvider()` (SWR mutate), żeby badge weryfikacji odświeżył się bez przeładowania.
 
 ---
 

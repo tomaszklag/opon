@@ -28,6 +28,14 @@ export enum ErrorCode {
   OTP_RATE_LIMIT_EXCEEDED = 'OTP_RATE_LIMIT_EXCEEDED',
   /** Nieprawidłowy lub wygasły kod OTP */
   OTP_INVALID_OR_EXPIRED = 'OTP_INVALID_OR_EXPIRED',
+  /** Nieprawidłowy lub wygasły kod OTP bieżącego numeru (zmiana telefonu) */
+  PHONE_OTP_CURRENT_INVALID = 'PHONE_OTP_CURRENT_INVALID',
+  /** Nieprawidłowy lub wygasły kod OTP nowego numeru (zmiana telefonu) */
+  PHONE_OTP_NEW_INVALID = 'PHONE_OTP_NEW_INVALID',
+  /** Nowy numer telefonu jest już przypisany do innego konta */
+  PHONE_ALREADY_IN_USE = 'PHONE_ALREADY_IN_USE',
+  /** Nieprawidłowy lub wygasły kod OTP zmiany adresu email */
+  EMAIL_CHANGE_OTP_INVALID = 'EMAIL_CHANGE_OTP_INVALID',
 
   // ── PROVIDER ──────────────────────────────────────────────────────────────
   /** Użytkownik ma już zarejestrowaną firmę */

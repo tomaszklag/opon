@@ -59,6 +59,7 @@ enum ConsentType {
 
 enum EmailType {
   EMAIL_VERIFICATION
+  EMAIL_CHANGE_OTP
   SUBMISSION_RECEIVED
   ACCOUNT_APPROVED
   ACCOUNT_REJECTED
@@ -198,6 +199,7 @@ model Provider {
   reviews            Review[]                   @relation("ProviderReviews")
   consentLogs        ConsentLog[]
   emailVerificationTokens EmailVerificationToken[]
+  emailChangeTokens       EmailChangeToken[]
   emailLogs          EmailLog[]
   stations           Station[]
   workers            Worker[]
@@ -479,6 +481,26 @@ model EmailVerificationToken {
 
   @@index([providerId])
   @@map("email_verification_tokens")
+}
+
+// ──────────────────────────────────────────────
+// EMAIL CHANGE OTP
+// ──────────────────────────────────────────────
+
+model EmailChangeToken {
+  id         String    @id @default(uuid())
+  providerId String
+  newEmail   String    @db.VarChar(254)
+  codeHash   String    @db.VarChar(200)
+  expiresAt  DateTime
+  usedAt     DateTime?
+  attempts   Int       @default(0)
+  createdAt  DateTime  @default(now())
+
+  provider Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+
+  @@index([providerId])
+  @@map("email_change_tokens")
 }
 
 // ──────────────────────────────────────────────

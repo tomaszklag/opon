@@ -92,6 +92,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/v1/auth/change-phone': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /** Zmień numer telefonu — wymaga OTP na stary i nowy numer */
+    patch: operations['AuthController_changePhone'];
+    trace?: never;
+  };
   '/v1/auth/verify-email': {
     parameters: {
       query?: never;
@@ -121,6 +138,41 @@ export interface paths {
     put?: never;
     post?: never;
     delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/auth/sessions': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Lista sesji zalogowanego użytkownika (aktywnych i historycznych) */
+    get: operations['AuthController_listSessions'];
+    put?: never;
+    post?: never;
+    /** Wyloguj wszystkie inne urządzenia (zachowuje bieżącą sesję) */
+    delete: operations['AuthController_revokeOtherSessions'];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/auth/sessions/{id}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /** Wyloguj wybrane urządzenie (nie można wylogować bieżącej sesji) */
+    delete: operations['AuthController_revokeSession'];
     options?: never;
     head?: never;
     patch?: never;
@@ -229,6 +281,91 @@ export interface paths {
     head?: never;
     /** Ustaw pauzę warsztatu (null = odblokuj) */
     patch: operations['ProvidersController_pause'];
+    trace?: never;
+  };
+  '/v1/providers/me/suspend': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Zawieś widoczność warsztatu (APPROVED → SUSPENDED) */
+    post: operations['ProvidersController_selfSuspend'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/providers/me/deletion-requests': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Złóż wniosek o usunięcie konta (APPROVED → PENDING_DELETION) */
+    post: operations['ProvidersController_requestDeletion'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/providers/me/data-export-requests': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Zamów kopię danych (RODO art. 20) */
+    post: operations['ProvidersController_requestDataExport'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/providers/me/email/request-otp': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Wyślij kod OTP na nowy adres email */
+    post: operations['ProvidersController_requestEmailChangeOtp'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/providers/me/email': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /** Potwierdź zmianę adresu email kodem OTP */
+    patch: operations['ProvidersController_confirmEmailChange'];
     trace?: never;
   };
   '/v1/providers/{id}': {
@@ -455,6 +592,40 @@ export interface paths {
     patch: operations['AdminProvidersController_rejectProvider'];
     trace?: never;
   };
+  '/v1/admin/providers/{id}/confirm-deletion': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /** Potwierdź usunięcie konta (PENDING_DELETION → usuwa dane) */
+    patch: operations['AdminProvidersController_confirmDeletion'];
+    trace?: never;
+  };
+  '/v1/admin/providers/{id}/cancel-deletion': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /** Anuluj wniosek o usunięcie (PENDING_DELETION → APPROVED) */
+    patch: operations['AdminProvidersController_cancelDeletion'];
+    trace?: never;
+  };
   '/v1/admin/gus/health': {
     parameters: {
       query?: never;
@@ -470,6 +641,57 @@ export interface paths {
     options?: never;
     head?: never;
     patch?: never;
+    trace?: never;
+  };
+  '/v1/admin/data-export-requests': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Lista wniosków o kopię danych (PENDING) */
+    get: operations['AdminDataExportController_listPending'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/admin/data-export-requests/{id}/complete': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /** Oznacz wniosek jako zrealizowany */
+    patch: operations['AdminDataExportController_complete'];
+    trace?: never;
+  };
+  '/v1/admin/data-export-requests/{id}/cancel': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /** Anuluj wniosek o dane */
+    patch: operations['AdminDataExportController_cancel'];
     trace?: never;
   };
   '/v1/providers/me/stations': {
@@ -937,61 +1159,46 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/v1/providers/me/notification-preferences': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Pobierz ustawienia powiadomień (tworzy domyślne jeśli brak) */
+    get: operations['NotificationPreferencesController_get'];
+    /** Zaktualizuj ustawienia powiadomień */
+    put: operations['NotificationPreferencesController_update'];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/providers/me/push-subscriptions': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Zarejestruj Web Push subscription urządzenia */
+    post: operations['PushSubscriptionsController_register'];
+    /** Wyrejestruj Web Push subscription (po wyłączeniu push w ustawieniach) */
+    delete: operations['PushSubscriptionsController_unregister'];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
   schemas: {
-    SessionDto: {
-      id: string;
-      userAgent: string | null;
-      ipAddress: string | null;
-      /** Format: date-time */
-      createdAt: string;
-      /** Format: date-time */
-      lastUsedAt: string;
-      /** Format: date-time */
-      expiresAt: string;
-      /** Format: date-time */
-      revokedAt: string | null;
-      isCurrent: boolean;
-    };
-    NotificationPreferencesDto: {
-      newBookingSms: boolean;
-      newBookingEmail: boolean;
-      newBookingPush: boolean;
-      cancelationSms: boolean;
-      cancelationEmail: boolean;
-      cancelationPush: boolean;
-      reminder30Sms: boolean;
-      reminder30Email: boolean;
-      reminder30Push: boolean;
-      newReviewSms: boolean;
-      newReviewEmail: boolean;
-      newReviewPush: boolean;
-      weeklyReportSms: boolean;
-      weeklyReportEmail: boolean;
-      weeklyReportPush: boolean;
-      platformNewsSms: boolean;
-      platformNewsEmail: boolean;
-      platformNewsPush: boolean;
-    };
-    DataExportRequestDto: {
-      id: string;
-      providerId: string;
-      providerName: string;
-      providerNip: string;
-      providerEmail: string | null;
-      /** @enum {string} */
-      status: 'PENDING' | 'COMPLETED' | 'CANCELLED';
-      /** Format: date-time */
-      requestedAt: string;
-      /** Format: date-time */
-      completedAt: string | null;
-    };
-    DataExportPage: {
-      data: components['schemas']['DataExportRequestDto'][];
-      total: number;
-    };
     HealthResponseDto: {
       /** @example ok */
       status: string;
@@ -1032,6 +1239,29 @@ export interface components {
       /** @example OK */
       message: string;
     };
+    ChangePhoneDto: {
+      /**
+       * @description Kod OTP wysłany na bieżący numer
+       * @example 123456
+       */
+      currentCode: string;
+      /**
+       * @description Nowy numer telefonu w formacie E.164
+       * @example +48123456789
+       */
+      newPhone: string;
+      /**
+       * @description Kod OTP wysłany na nowy numer
+       * @example 654321
+       */
+      newCode: string;
+    };
+    ChangePhoneResponseDto: {
+      /** @example Numer telefonu zmieniony */
+      message: string;
+      /** @example +48123456789 */
+      phone: string;
+    };
     AuthMeResponseDto: {
       sub: string;
       phone: string;
@@ -1046,7 +1276,18 @@ export interface components {
         | 'PENDING_APPROVAL'
         | 'APPROVED'
         | 'SUSPENDED'
-        | 'REJECTED';
+        | 'REJECTED'
+        | 'PENDING_DELETION';
+    };
+    SessionResponseDto: {
+      id: string;
+      userAgent?: string | null;
+      ipAddress?: string | null;
+      createdAt: string;
+      lastUsedAt: string;
+      expiresAt: string;
+      revokedAt?: string | null;
+      isCurrent: boolean;
     };
     CreateProviderDto: {
       /** @example Opony Express Sp. z o.o. */
@@ -1123,7 +1364,6 @@ export interface components {
       logoUrl?: string;
       /** @example +48600000000 */
       phone?: string;
-      email?: string;
       /** @description Szerokość geogr. centrum operacji (mobilni) */
       cityCenterLat?: number;
       /** @description Długość geogr. centrum operacji (mobilni) */
@@ -1170,6 +1410,22 @@ export interface components {
     ProviderPauseResponseDto: {
       /** Format: date-time */
       pausedUntil?: string | null;
+    };
+    RequestEmailChangeDto: {
+      /**
+       * @description Nowy adres email
+       * @example nowy@example.pl
+       */
+      newEmail: string;
+    };
+    ConfirmEmailChangeDto: {
+      /** @example nowy@example.pl */
+      newEmail: string;
+      /**
+       * @description 6-cyfrowy kod z emaila
+       * @example 123456
+       */
+      code: string;
     };
     MarketPriceResponseDto: {
       /**
@@ -1645,7 +1901,7 @@ export interface components {
       enabled: boolean;
       fromCatalog: boolean;
       pricePln?: number | null;
-      durationMinutes?: number | null;
+      durationMinutes?: Record<string, never> | null;
       sortOrder: number;
     };
     ServiceVariantResponseDto: {
@@ -1663,50 +1919,7 @@ export interface components {
       sortOrder: number;
       variants: components['schemas']['ServiceVariantResponseDto'][];
     };
-    UpsertRimTierDto: {
-      id?: string;
-      rimSizes: string[];
-      pricePln: number;
-      durationMinutes: number;
-      sortOrder: number;
-    };
-    UpsertSubServiceDto: {
-      id?: string;
-      name: string;
-      included: boolean;
-      enabled: boolean;
-      fromCatalog: boolean;
-      pricePln?: number | null;
-      durationMinutes?: number | null;
-      sortOrder: number;
-    };
-    UpsertServiceVariantDto: {
-      id?: string;
-      name: string;
-      enabled: boolean;
-      sortOrder: number;
-      rimTiers: components['schemas']['UpsertRimTierDto'][];
-      subServices: components['schemas']['UpsertSubServiceDto'][];
-    };
-    UpsertServiceGroupDto: {
-      id?: string;
-      name: string;
-      pricingMode: string;
-      sortOrder: number;
-      variants: components['schemas']['UpsertServiceVariantDto'][];
-    };
-    UpsertServiceGroupsDto: {
-      groups: components['schemas']['UpsertServiceGroupDto'][];
-    };
-    UpsertSurchargeDto: {
-      id?: string;
-      name: string;
-      enabled: boolean;
-      /** @enum {string} */
-      scope: 'PER_WHEEL' | 'PER_SENSOR';
-      pricePln: number;
-      sortOrder: number;
-    };
+    UpsertServiceGroupsDto: Record<string, never>;
     SurchargeResponseDto: {
       id: string;
       name: string;
@@ -1716,8 +1929,52 @@ export interface components {
       pricePln: number;
       sortOrder: number;
     };
-    UpsertSurchargesDto: {
-      surcharges: components['schemas']['UpsertSurchargeDto'][];
+    UpsertSurchargesDto: Record<string, never>;
+    NotificationPreferencesDto: {
+      newBookingSms: boolean;
+      newBookingEmail: boolean;
+      newBookingPush: boolean;
+      cancelationSms: boolean;
+      cancelationEmail: boolean;
+      cancelationPush: boolean;
+      reminder30Sms: boolean;
+      reminder30Email: boolean;
+      reminder30Push: boolean;
+      newReviewSms: boolean;
+      newReviewEmail: boolean;
+      newReviewPush: boolean;
+      weeklyReportSms: boolean;
+      weeklyReportEmail: boolean;
+      weeklyReportPush: boolean;
+      platformNewsSms: boolean;
+      platformNewsEmail: boolean;
+      platformNewsPush: boolean;
+    };
+    UpdateNotificationPreferencesDto: {
+      newBookingSms?: boolean;
+      newBookingEmail?: boolean;
+      newBookingPush?: boolean;
+      cancelationSms?: boolean;
+      cancelationEmail?: boolean;
+      cancelationPush?: boolean;
+      reminder30Sms?: boolean;
+      reminder30Email?: boolean;
+      reminder30Push?: boolean;
+      newReviewSms?: boolean;
+      newReviewEmail?: boolean;
+      newReviewPush?: boolean;
+      weeklyReportSms?: boolean;
+      weeklyReportEmail?: boolean;
+      weeklyReportPush?: boolean;
+      platformNewsSms?: boolean;
+      platformNewsEmail?: boolean;
+      platformNewsPush?: boolean;
+    };
+    RegisterPushSubscriptionDto: {
+      endpoint: string;
+      p256dh: string;
+      auth: string;
+      userAgent?: string;
     };
   };
   responses: never;
@@ -1852,6 +2109,43 @@ export interface operations {
       };
     };
   };
+  AuthController_changePhone: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ChangePhoneDto'];
+      };
+    };
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ChangePhoneResponseDto'];
+        };
+      };
+      /** @description Nieprawidłowy lub wygasły kod OTP */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Numer telefonu jest już w użyciu */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
   AuthController_verifyEmail: {
     parameters: {
       query: {
@@ -1890,6 +2184,77 @@ export interface operations {
       };
       /** @description Nieautoryzowany */
       401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  AuthController_listSessions: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['SessionResponseDto'][];
+        };
+      };
+    };
+  };
+  AuthController_revokeOtherSessions: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Pozostałe sesje unieważnione */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  AuthController_revokeSession: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Sesja unieważniona */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description To jest bieżąca sesja — użyj /logout */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Sesja nie istnieje */
+      404: {
         headers: {
           [name: string]: unknown;
         };
@@ -2155,6 +2520,140 @@ export interface operations {
         content: {
           'application/json': components['schemas']['ProviderPauseResponseDto'];
         };
+      };
+    };
+  };
+  ProvidersController_selfSuspend: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Warsztat zawieszony */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Firma nie jest w stanie aktywnym */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  ProvidersController_requestDeletion: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Wniosek przyjęty */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Firma nie jest w stanie aktywnym */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  ProvidersController_requestDataExport: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Wniosek przyjęty */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Masz już oczekujący wniosek */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  ProvidersController_requestEmailChangeOtp: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['RequestEmailChangeDto'];
+      };
+    };
+    responses: {
+      /** @description Kod wysłany */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Zbyt wiele prób */
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  ProvidersController_confirmEmailChange: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ConfirmEmailChangeDto'];
+      };
+    };
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ProviderResponseDto'];
+        };
+      };
+      /** @description Nieprawidłowy lub wygasły kod */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
       };
     };
   };
@@ -2488,7 +2987,8 @@ export interface operations {
           | 'PENDING_APPROVAL'
           | 'APPROVED'
           | 'SUSPENDED'
-          | 'REJECTED';
+          | 'REJECTED'
+          | 'PENDING_DELETION';
         page?: number;
         limit?: number;
       };
@@ -2600,6 +3100,88 @@ export interface operations {
       };
     };
   };
+  AdminProvidersController_confirmDeletion: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Konto usunięte */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Firma nie oczekuje na usunięcie */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Brak uprawnień */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Firma nie istnieje */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  AdminProvidersController_cancelDeletion: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Wniosek anulowany */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Firma nie oczekuje na usunięcie */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Brak uprawnień */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Firma nie istnieje */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
   AdminGusController_getHealth: {
     parameters: {
       query?: never;
@@ -2618,6 +3200,64 @@ export interface operations {
       };
       /** @description Brak uprawnień */
       403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  AdminDataExportController_listPending: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Paginowana lista wniosków */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  AdminDataExportController_complete: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Wniosek zrealizowany */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  AdminDataExportController_cancel: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Wniosek anulowany */
+      200: {
         headers: {
           [name: string]: unknown;
         };
@@ -3408,6 +4048,90 @@ export interface operations {
         content: {
           'application/json': components['schemas']['SurchargeResponseDto'][];
         };
+      };
+    };
+  };
+  NotificationPreferencesController_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['NotificationPreferencesDto'];
+        };
+      };
+    };
+  };
+  NotificationPreferencesController_update: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['UpdateNotificationPreferencesDto'];
+      };
+    };
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['NotificationPreferencesDto'];
+        };
+      };
+    };
+  };
+  PushSubscriptionsController_register: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['RegisterPushSubscriptionDto'];
+      };
+    };
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  PushSubscriptionsController_unregister: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['RegisterPushSubscriptionDto'];
+      };
+    };
+    responses: {
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
       };
     };
   };

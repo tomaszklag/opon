@@ -93,6 +93,17 @@
   color: var(--success);
 }
 
+.unverified {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--warning-muted);
+  border: 1px solid var(--warning-border);
+  color: var(--warning);
+}
+
 .contactValRow {
   display: flex;
   align-items: center;
@@ -534,4 +545,10 @@
   display: flex;
   justify-content: flex-end;
   gap: 8px;
+}
+
+.phoneNewRow {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
 }

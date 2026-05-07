@@ -47,7 +47,6 @@ export function useProviderForm() {
         name: data.name.trim(),
         description: data.description || undefined,
         phone: data.phone || undefined,
-        email: data.email || undefined,
         logoUrl: data.logoUrl || undefined,
       });
       setProvider(updated);

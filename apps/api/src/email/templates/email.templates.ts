@@ -1,3 +1,27 @@
+export function emailChangeOtpTemplate(code: string, newEmail: string): string {
+  return `<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8" />
+  <title>Potwierdź zmianę adresu email — Opony.app</title>
+</head>
+<body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; color: #1a1a1a;">
+  <h1 style="font-size: 22px; margin-bottom: 16px;">Potwierdzenie zmiany adresu email</h1>
+  <p>Otrzymaliśmy prośbę o przypisanie adresu <strong>${newEmail}</strong> do Twojego konta w serwisie Opony.app.</p>
+  <p>Wpisz poniższy kod w panelu, aby potwierdzić zmianę. Kod jest ważny przez <strong>10 minut</strong>.</p>
+  <p style="margin: 32px 0; text-align: center;">
+    <span style="display: inline-block; font-size: 36px; font-weight: bold; letter-spacing: 10px; font-family: monospace; background: #f4f4f4; padding: 16px 32px; border-radius: 8px; border: 1px solid #ddd;">
+      ${code}
+    </span>
+  </p>
+  <hr style="border: none; border-top: 1px solid #ddd; margin: 32px 0;" />
+  <p style="font-size: 12px; color: #888;">
+    Jeśli nie zamawiałeś tej zmiany, zignoruj tę wiadomość — adres email pozostanie bez zmian.
+  </p>
+</body>
+</html>`;
+}
+
 export function emailVerificationTemplate(link: string): string {
   return `<!DOCTYPE html>
 <html lang="pl">
