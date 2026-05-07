@@ -2,18 +2,36 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { Button, Input, Text } from '@opony/design-system-web';
-import { IconPlus, IconXClose } from '../../../../components/icons';
-import type { PricingMode } from '../_types';
+import { IconPlus, IconCheck } from '../../../../components/icons';
+import type { ServicePricingType } from '../_types';
 import styles from './NewServiceBlock.module.css';
 
+const OPTIONS: { value: ServicePricingType; label: string; hint: string }[] = [
+  {
+    value: 'RIM_SIZES',
+    label: 'Rozmiary felg',
+    hint: 'Klient podaje R-kę → dopasuje tier cenowy. Idealna dla wymiany i wyważania.',
+  },
+  {
+    value: 'VARIANTS',
+    label: 'Warianty',
+    hint: 'Wiele wariantów (np. Osobowe / SUV / Dostawcze), każdy z własną ceną i czasem.',
+  },
+  {
+    value: 'FLAT',
+    label: 'Stała cena',
+    hint: 'Jedna cena niezależnie od pojazdu. Idealna dla prostych usług serwisowych.',
+  },
+];
+
 interface Props {
-  onCreate: (name: string, pricingMode: PricingMode) => void;
+  onCreate: (name: string, pricingType: ServicePricingType) => void;
   onCancel: () => void;
 }
 
 export function NewServiceBlock({ onCreate, onCancel }: Props) {
   const [name, setName] = useState('');
-  const [pricingMode, setPricingMode] = useState<PricingMode>('PER_SET');
+  const [pricingType, setPricingType] = useState<ServicePricingType>('RIM_SIZES');
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -22,17 +40,14 @@ export function NewServiceBlock({ onCreate, onCancel }: Props) {
 
   function handleKeyDown(e: React.KeyboardEvent) {
     if (e.key === 'Enter' && name.trim()) {
-      onCreate(name.trim(), pricingMode);
+      onCreate(name.trim(), pricingType);
     }
     if (e.key === 'Escape') {
       onCancel();
     }
   }
 
-  const hintText =
-    pricingMode === 'PER_SET'
-      ? 'Po zapisaniu pojawi się pusty accordion, gdzie dodasz zakresy R-ek i warianty pojazdu (Osobowe, SUV…).'
-      : 'Jedna cena niezależnie od rozmiaru felgi — idealna dla usług serwisowych bez znaczenia na R.';
+  const selectedOption = OPTIONS.find((o) => o.value === pricingType)!;
 
   return (
     <div className={styles.block}>
@@ -60,90 +75,48 @@ export function NewServiceBlock({ onCreate, onCancel }: Props) {
           onKeyDown={handleKeyDown}
         />
 
-        {/* Pricing mode options */}
+        {/* Pricing type options */}
         <div className={styles.optionsWrap}>
           <Text variant="kicker-sm" as="span" className={styles.optionsLabel}>
             Charakter usługi
           </Text>
           <div className={styles.options}>
-            <label
-              className={`${styles.opt} ${pricingMode === 'PER_SET' ? styles.optSelected : ''}`}
-            >
-              <input
-                type="radio"
-                className={styles.radioHidden}
-                checked={pricingMode === 'PER_SET'}
-                onChange={() => setPricingMode('PER_SET')}
-              />
-              <span
-                className={`${styles.optChk} ${pricingMode === 'PER_SET' ? styles.optChkSelected : ''}`}
+            {OPTIONS.map((opt) => (
+              <label
+                key={opt.value}
+                className={`${styles.opt} ${pricingType === opt.value ? styles.optSelected : ''}`}
               >
-                {pricingMode === 'PER_SET' && (
-                  <svg
-                    width="8"
-                    height="8"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="var(--bg)"
-                    strokeWidth="3"
-                    aria-hidden="true"
-                  >
-                    <polyline points="20 6 9 17 4 12" />
-                  </svg>
-                )}
-              </span>
-              <span>
-                <Text variant="body-sm" as="span">
-                  Wymaga rozmiaru felgi
-                </Text>
-                <Text variant="nano" as="div" color="secondary">
-                  klient poda R-kę → dopasuje tier cenowy
-                </Text>
-              </span>
-            </label>
-            <label
-              className={`${styles.opt} ${pricingMode === 'PER_WHEEL' ? styles.optSelected : ''}`}
-            >
-              <input
-                type="radio"
-                className={styles.radioHidden}
-                checked={pricingMode === 'PER_WHEEL'}
-                onChange={() => setPricingMode('PER_WHEEL')}
-              />
-              <span
-                className={`${styles.optChk} ${pricingMode === 'PER_WHEEL' ? styles.optChkSelected : ''}`}
-              >
-                {pricingMode === 'PER_WHEEL' && (
-                  <svg
-                    width="8"
-                    height="8"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="var(--bg)"
-                    strokeWidth="3"
-                    aria-hidden="true"
-                  >
-                    <polyline points="20 6 9 17 4 12" />
-                  </svg>
-                )}
-              </span>
-              <span>
-                <Text variant="body-sm" as="span">
-                  Cena stała (flat)
-                </Text>
-                <Text variant="nano" as="div" color="secondary">
-                  jedna cena niezależnie od rozmiaru
-                </Text>
-              </span>
-            </label>
+                <input
+                  type="radio"
+                  className={styles.radioHidden}
+                  checked={pricingType === opt.value}
+                  onChange={() => setPricingType(opt.value)}
+                />
+                <span
+                  className={`${styles.optChk} ${pricingType === opt.value ? styles.optChkSelected : ''}`}
+                >
+                  {pricingType === opt.value && (
+                    <IconCheck
+                      width="8"
+                      height="8"
+                      style={{ stroke: 'var(--bg)', strokeWidth: 3 }}
+                    />
+                  )}
+                </span>
+                <span>
+                  <Text variant="body-sm" as="span">
+                    {opt.label}
+                  </Text>
+                </span>
+              </label>
+            ))}
           </div>
         </div>
 
         {/* Contextual hint */}
         <div className={styles.hintRow}>
           <Text variant="nano" as="p" color="secondary">
-            <strong>{pricingMode === 'PER_SET' ? 'Wymaga rozmiaru felgi' : 'Cena stała'}</strong> —{' '}
-            {hintText}
+            {selectedOption.hint}
           </Text>
         </div>
 
@@ -152,7 +125,7 @@ export function NewServiceBlock({ onCreate, onCancel }: Props) {
           <Button
             variant="primary"
             size="sm"
-            onClick={() => name.trim() && onCreate(name.trim(), pricingMode)}
+            onClick={() => name.trim() && onCreate(name.trim(), pricingType)}
             disabled={!name.trim()}
           >
             <IconPlus width="10" height="10" />

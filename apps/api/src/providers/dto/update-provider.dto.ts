@@ -7,6 +7,7 @@ import {
   IsInt,
   IsLatitude,
   IsLongitude,
+  IsNumber,
   IsOptional,
   IsString,
   IsUrl,
@@ -103,4 +104,22 @@ export class UpdateProviderDto {
   @IsArray()
   @IsString({ each: true })
   additionalServices?: string[];
+
+  @ApiPropertyOptional({ description: 'Dopłata TPMS per sensor (PLN)', minimum: 0 })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  tpmsPricePln?: number;
+
+  @ApiPropertyOptional({ description: 'Opłata dojazd strefa 1: 0–10 km (PLN)', minimum: 0 })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  travelFeeZone1Pln?: number;
+
+  @ApiPropertyOptional({ description: 'Opłata dojazd strefa 2: 10–15 km (PLN)', minimum: 0 })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  travelFeeZone2Pln?: number;
 }

@@ -10,12 +10,21 @@
 .actionBar {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
   gap: 10px;
   padding: 7px 18px;
   border-bottom: 1px solid var(--border);
   background: var(--surface);
   flex-shrink: 0;
+}
+
+.actionBarSpacer {
+  flex: 1;
+}
+
+.helpHint {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .dirtyChip {
@@ -160,152 +169,18 @@
   background: var(--accent-muted);
 }
 
-/* ── Help card (right column) ── */
-.helpCard {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 11px;
-  overflow: hidden;
-}
 
-.helpCardPurple {
-  border-color: var(--purple-border);
-}
-
-.helpHdr {
-  padding: 8px 13px;
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  gap: 7px;
-}
-
-.helpHdrPurple {
-  border-bottom-color: var(--purple-border);
-}
-
-.helpBody {
-  padding: 8px 13px;
+/* ── Help modal content ── */
+.helpModalBody {
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 8px;
 }
 
-.helpRow {
-  display: flex;
-  align-items: flex-start;
-  gap: 7px;
-  line-height: 1.4;
-}
-
-.helpDot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  flex-shrink: 0;
-  margin-top: 3px;
-}
-
-.simSubLabel {
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-}
-
-.simSuccessText {
-  color: var(--success);
-}
-
-/* ── Simulation card ── */
-.simCard {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 11px;
-  overflow: hidden;
-  position: relative;
-}
-
-.simCard::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: var(--hairline);
-}
-
-.simHdr {
-  padding: 9px 13px;
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  gap: 7px;
-}
-
-.simBody {
-  padding: 9px 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.simSteps {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  flex-wrap: wrap;
-  margin-bottom: 4px;
-}
-
-.simDivider {
+.helpModalDivider {
   height: 1px;
   background: var(--border);
   margin: 4px 0;
-}
-
-.simRow {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 4px 8px;
-  border-radius: 5px;
-}
-
-.simRowBase {
-  background: var(--bg);
-  border: 1px solid var(--border);
-}
-
-.simRowIncl {
-  background: var(--success-muted);
-  border: 1px solid var(--success-border);
-}
-
-.simRowOpt {
-  background: var(--accent-muted);
-  border: 1px solid var(--accent-border);
-}
-
-.simRowSurcharge {
-  background: var(--purple-muted);
-  border: 1px solid var(--purple-border);
-}
-
-.simLabel {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
-
-.simTotal {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  padding: 7px 10px;
-  background: var(--accent-muted);
-  border: 1px solid var(--accent-border);
-  border-radius: 7px;
-  margin-top: 4px;
 }
 
 /* ── Loading ── */

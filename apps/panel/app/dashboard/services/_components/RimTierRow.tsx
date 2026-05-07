@@ -3,12 +3,12 @@
 import { useState, useRef, useEffect } from 'react';
 import { Text, NumberStepper } from '@opony/design-system-web';
 import { IconTrash, IconPlus, IconXClose } from '../../../../components/icons';
-import { RIM_SIZES, type RimTierState } from '../_types';
+import { RIM_SIZES, type ServiceVariantState } from '../_types';
 import styles from './RimTierRow.module.css';
 
 interface Props {
-  tier: RimTierState;
-  onChange: (updated: RimTierState) => void;
+  tier: ServiceVariantState;
+  onChange: (updated: ServiceVariantState) => void;
   onDelete: () => void;
 }
 
@@ -30,8 +30,9 @@ export function RimTierRow({ tier, onChange, onDelete }: Props) {
   }, [dropdownOpen]);
 
   function addSize(size: string) {
-    onChange({ ...tier, rimSizes: [...tier.rimSizes, size] });
-    if (available.length <= 1) setDropdownOpen(false);
+    const next = [...tier.rimSizes, size];
+    onChange({ ...tier, rimSizes: next });
+    if (next.length === RIM_SIZES.length) setDropdownOpen(false);
   }
 
   function removeSize(size: string) {
@@ -81,7 +82,9 @@ export function RimTierRow({ tier, onChange, onDelete }: Props) {
                       addSize(size);
                     }}
                   >
-                    {size}
+                    <Text variant="nano" as="span" mono weight="bold">
+                      {size}
+                    </Text>
                   </button>
                 ))}
               </div>

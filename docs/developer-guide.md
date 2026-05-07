@@ -555,6 +555,104 @@ XxxPage: {
 };
 ```
 
+### 5.4. Wzorzec: soft/hard delete
+
+Używany gdy encja może być już powiązana z historycznymi danymi (rezerwacje, faktury) — jej usunięcie z bazy złamałoby referencje. Zamiast tego encja jest ukrywana (`deletedAt`) lub usuwana całkowicie w zależności od historii.
+
+**Kiedy stosować:**
+
+- Encja może być powiązana z przeszłymi rezerwacjami/transakcjami przez providera (np. `Service`, `Addon`)
+- Chcesz zachować spójność historycznych danych przy jednoczesnym ukryciu encji przed użytkownikiem
+- Encja nigdy nie wróci do aktywnego stanu po usunięciu (w odróżnieniu od np. `ProviderStatus`)
+
+#### Schemat Prisma
+
+```prisma
+model Service {
+  enabled   Boolean   @default(true)
+  deletedAt DateTime?
+  // ...
+}
+```
+
+#### Repository — metoda delete
+
+```ts
+// services.repository.ts
+async deleteService(id: string, providerId: string): Promise<boolean> {
+  const soft = await this.providerHasActiveBookings(providerId);
+  if (soft) {
+    await this.prisma.service.updateMany({
+      where: { id, providerId },
+      data: { deletedAt: new Date(), enabled: false },
+    });
+    return false; // soft delete
+  }
+  await this.prisma.service.deleteMany({ where: { id, providerId } });
+  return true; // hard delete
+}
+
+private async providerHasActiveBookings(providerId: string): Promise<boolean> {
+  const count = await this.prisma.booking.count({
+    where: { providerId, status: { in: [BookingStatus.CONFIRMED, BookingStatus.IN_PROGRESS, BookingStatus.COMPLETED] } },
+  });
+  return count > 0;
+}
+```
+
+#### Krytyczna zasada: `replaceAll` musi filtrować soft-deleted
+
+Operacje bulk (replace all / full sync) **muszą** filtrować `deletedAt: null` przy `deleteMany` — w przeciwnym razie niszczą soft-deleted rekordy których nigdy nie da się odtworzyć:
+
+```ts
+// ✅ TAK — nie dotykaj soft-deleted
+await tx.service.deleteMany({ where: { providerId, deletedAt: null } });
+
+// ❌ NIE — usuwa również soft-deleted rekordy z historycznymi danymi
+await tx.service.deleteMany({ where: { providerId } });
+```
+
+To samo dotyczy `findAll` — zwracaj tylko aktywne rekordy:
+
+```ts
+// ✅ TAK
+findAll(providerId: string) {
+  return this.prisma.service.findMany({ where: { providerId, deletedAt: null }, ... });
+}
+```
+
+#### Controller — endpoint DELETE (204)
+
+```ts
+@Delete('services/:id')
+@HttpCode(204)
+@ApiCookieAuth('access_token')
+@ApiResponse({ status: 204 })
+async deleteService(@CurrentUser() user: JwtPayload, @Param('id') id: string): Promise<void> {
+  const provider = await this.providersService.getMyProvider(user.sub);
+  await this.service.deleteService(id, provider.id);
+}
+```
+
+#### FE — natychmiastowe usunięcie + potwierdzenie
+
+Delete jest commit-owany natychmiastowo (nie przez „Zapisz" button), więc FE:
+
+1. Pokazuje modal z potwierdzeniem (z informacją o soft delete przy rezerwacjach)
+2. Wywołuje `DELETE /v1/.../services/:id` bezpośrednio
+3. Usuwa rekord z lokalnego state **bez** oznaczania `dirty = true` — stan już jest zsynchronizowany z DB
+
+```ts
+// use-xxx-page.ts
+const removeService = useCallback((id: string) => {
+  setState((prev) => ({
+    ...prev,
+    services: prev.services.filter((s) => s.id !== id),
+  }));
+  // Nie wywołuj setDirty(true) — delete już trafił do bazy
+}, []);
+```
+
 ---
 
 ## 6. Dodawanie nowej strony FE (panel) — krok po kroku
@@ -983,6 +1081,22 @@ Zamiast CSS w panelu-app dla konkretnego użycia. Rozszerzenie DS jest wielokrot
 | `<label className={styles.label}>...</label>` | `<FieldLabel htmlFor="id" required>...</FieldLabel>` |
 
 DS `Input` i `Textarea` są `forwardRef` → działają bezpośrednio z `{...register('field')}` z RHF.
+
+#### Toggle w klikalnym kontenerze — stop propagation
+
+`<Toggle>` renderuje się jako `<label>` → klik na toggle propaguje do rodzica. Gdy Toggle znajduje się wewnątrz klikalnego headera (accordion, wiersz tabeli), otocz go wrapperem zatrzymującym propagację:
+
+```tsx
+// ✅ TAK — wrapper zatrzymuje propagację, Toggle działa poprawnie
+<span onClick={(e) => e.stopPropagation()}>
+  <Toggle size="sm" checked={enabled} onChange={() => onToggle()} />
+</span>
+
+// ❌ NIE — klik toggle otwiera/zamyka accordion
+<Toggle size="sm" checked={enabled} onChange={() => onToggle()} />
+```
+
+**Nigdy** nie implementuj własnego toggle przez `<button role="switch">` z ręcznym CSS — DS `<Toggle>` już istnieje i obsługuje focus, dostępność, rozmiary `sm`/`md` oraz stan `disabled`.
 
 ### Czego DS celowo nie ma — i co robić zamiast
 

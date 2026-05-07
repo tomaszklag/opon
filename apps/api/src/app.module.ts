@@ -24,7 +24,7 @@ import { WorkersModule } from './workers/workers.module';
 import { WorkerTasksModule } from './worker-tasks/worker-tasks.module';
 import { RealtimeModule } from './realtime/realtime.module';
 import { ServiceConfigsModule } from './service-configs/service-configs.module';
-import { ServiceGroupsModule } from './service-groups/service-groups.module';
+import { ServicesModule } from './services/services.module';
 import { NotificationPreferencesModule } from './notification-preferences/notification-preferences.module';
 
 @Module({
@@ -54,7 +54,7 @@ import { NotificationPreferencesModule } from './notification-preferences/notifi
     ReviewsModule,
     RealtimeModule,
     ServiceConfigsModule,
-    ServiceGroupsModule,
+    ServicesModule,
     NotificationPreferencesModule,
   ],
   providers: [

@@ -5,42 +5,116 @@ import { Button, Heading, Modal, Spinner, Text } from '@opony/design-system-web'
 import { useAuthGuard } from '../../../lib/hooks/use-auth-guard';
 import { useNavigationGuard } from '../../../lib/hooks/use-navigation-guard';
 import { useServicesPage } from '../../../lib/hooks/use-services-page';
-import { IconBolt, IconPlus, IconRefresh, IconInfo } from '../../../components/icons';
-import { ServiceGroupCard } from './_components/ServiceGroupCard';
-import { SurchargeList } from './_components/SurchargeList';
+import { servicesApi } from '../../../api-data-access/services';
+import { IconPlus, IconRefresh, IconHelp } from '../../../components/icons';
+import { ServiceCard } from './_components/ServiceCard';
+import { AddonCollection } from './_components/AddonCollection';
 import { NewServiceBlock } from './_components/NewServiceBlock';
-import type { PricingMode, ServiceGroupState, SurchargeState } from './_types';
+import { SimulationCard } from './_components/SimulationCard';
+import type { ServicePricingType, ServiceState, AddonState } from './_types';
 import styles from './services.module.css';
+
+interface DeleteConfirm {
+  type: 'service' | 'addon';
+  id: string;
+  name: string;
+}
 
 export default function ServicesPage() {
   const { isLoading: authLoading } = useAuthGuard('/dashboard');
-  const { state, isLoading, isSaving, saveError, dirty, saved, updateState, revert, save } =
-    useServicesPage();
+  const {
+    state,
+    isLoading,
+    isSaving,
+    saveError,
+    dirty,
+    saved,
+    updateState,
+    removeService,
+    removeAddon,
+    revert,
+    save,
+  } = useServicesPage();
   const [addingService, setAddingService] = useState(false);
+  const [newlyCreatedId, setNewlyCreatedId] = useState<string | null>(null);
+  const [showHelp, setShowHelp] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState<DeleteConfirm | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const { showModal, confirm: confirmNav, cancel: cancelNav } = useNavigationGuard(dirty);
 
-  function updateGroups(groups: ServiceGroupState[]) {
-    updateState((prev) => ({ ...prev, groups }));
+  function updateServices(services: ServiceState[]) {
+    updateState((prev) => ({ ...prev, services }));
   }
 
-  function updateSurcharges(surcharges: SurchargeState[]) {
-    updateState((prev) => ({ ...prev, surcharges }));
+  function updateAddons(addons: AddonState[]) {
+    updateState((prev) => ({ ...prev, addons }));
   }
 
-  function updateGroup(groupId: string, updated: ServiceGroupState) {
-    updateGroups(state.groups.map((g) => (g.id === groupId ? updated : g)));
+  function updateService(serviceId: string, updated: ServiceState) {
+    updateServices(state.services.map((s) => (s.id === serviceId ? updated : s)));
   }
 
-  function handleCreateService(name: string, pricingMode: PricingMode) {
-    const newGroup: ServiceGroupState = {
+  function requestDeleteService(serviceId: string, name: string) {
+    setDeleteConfirm({ type: 'service', id: serviceId, name });
+  }
+
+  function requestDeleteAddon(addonId: string, name: string) {
+    setDeleteConfirm({ type: 'addon', id: addonId, name });
+  }
+
+  function toggleServiceEnabled(serviceId: string) {
+    updateServices(
+      state.services.map((s) => (s.id === serviceId ? { ...s, enabled: !s.enabled } : s)),
+    );
+  }
+
+  function toggleAddonEnabled(addonId: string) {
+    updateAddons(state.addons.map((a) => (a.id === addonId ? { ...a, enabled: !a.enabled } : a)));
+  }
+
+  async function handleConfirmDelete() {
+    if (!deleteConfirm) return;
+    setIsDeleting(true);
+    try {
+      if (deleteConfirm.type === 'service') {
+        await servicesApi.deleteService(deleteConfirm.id);
+        removeService(deleteConfirm.id);
+      } else {
+        await servicesApi.deleteAddon(deleteConfirm.id);
+        removeAddon(deleteConfirm.id);
+      }
+      setDeleteConfirm(null);
+    } catch {
+      // keep modal open so user knows it failed — they can retry
+    } finally {
+      setIsDeleting(false);
+    }
+  }
+
+  function handleCreateService(name: string, pricingType: ServicePricingType) {
+    const newId = Math.random().toString(36).slice(2);
+    const firstVariant = () => ({
       id: Math.random().toString(36).slice(2),
+      name: pricingType === 'VARIANTS' ? '' : null,
+      rimSizes: [],
+      pricePln: '',
+      durationMinutes: '',
+      sortOrder: 0,
+    });
+    const newService: ServiceState = {
+      id: newId,
       name,
-      pricingMode,
-      sortOrder: state.groups.length,
-      variants: [],
+      description: null,
+      pricingType,
+      enabled: true,
+      sortOrder: state.services.length,
+      variants: [firstVariant()],
+      subServiceIds: [],
+      addonIds: [],
     };
-    updateGroups([...state.groups, newGroup]);
+    updateServices([...state.services, newService]);
+    setNewlyCreatedId(newId);
     setAddingService(false);
   }
 
@@ -52,15 +126,79 @@ export default function ServicesPage() {
     );
   }
 
-  const totalVariants = state.groups.reduce((acc, g) => acc + g.variants.length, 0);
-  const activeVariants = state.groups.reduce(
-    (acc, g) => acc + g.variants.filter((v) => v.enabled).length,
-    0,
-  );
-  const activeSurcharges = state.surcharges.filter((s) => s.enabled).length;
+  const activeServices = state.services.length;
+  const deleteTargetLabel = deleteConfirm?.type === 'service' ? 'usługę' : 'dodatek';
 
   return (
     <>
+      {/* ── Help modal ── */}
+      <Modal
+        isOpen={showHelp}
+        onClose={() => setShowHelp(false)}
+        title="Jak działają usługi?"
+        size="sm"
+      >
+        <div className={styles.helpModalBody}>
+          <Text variant="body-sm" as="p" weight="bold">
+            Typy cennika
+          </Text>
+          <Text variant="body-sm" as="p" color="secondary">
+            <strong>Rozmiary felg</strong> — definiujesz zakresy R-ek (np. R13–15, R16–17) z własną
+            ceną i czasem dla każdego. Klient podaje rozmiar przy rezerwacji.
+          </Text>
+          <Text variant="body-sm" as="p" color="secondary">
+            <strong>Warianty</strong> — np. Osobowe / SUV / Dostawcze. Każdy wariant ma swoją cenę i
+            czas. Klient wybiera wariant przy rezerwacji.
+          </Text>
+          <Text variant="body-sm" as="p" color="secondary">
+            <strong>Stała cena</strong> — jedna cena bez względu na pojazd. Idealna dla prostych
+            usług serwisowych.
+          </Text>
+          <div className={styles.helpModalDivider} />
+          <Text variant="body-sm" as="p" weight="bold">
+            Podusługi i dodatki
+          </Text>
+          <Text variant="body-sm" as="p" color="secondary">
+            <strong>Podusługi</strong> — inne usługi z Twojej oferty sugerowane klientowi przy
+            rezerwacji danej usługi (np. wyważanie przy wymianie sezonowej).
+          </Text>
+          <Text variant="body-sm" as="p" color="secondary">
+            <strong>Dodatki</strong> — opcjonalne pozycje z opłatą (np. worek na opony, nowy
+            wentyl). Klient zaznacza je sam podczas rezerwacji.
+          </Text>
+        </div>
+      </Modal>
+
+      {/* ── Delete confirmation modal ── */}
+      <Modal
+        isOpen={deleteConfirm !== null}
+        onClose={() => !isDeleting && setDeleteConfirm(null)}
+        title={`Usuń ${deleteTargetLabel}`}
+        size="sm"
+        footer={
+          <>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setDeleteConfirm(null)}
+              disabled={isDeleting}
+            >
+              Anuluj
+            </Button>
+            <Button variant="danger" size="sm" onClick={handleConfirmDelete} loading={isDeleting}>
+              Usuń
+            </Button>
+          </>
+        }
+      >
+        <Text variant="body-sm" as="p" color="secondary">
+          Czy na pewno chcesz usunąć {deleteTargetLabel}{' '}
+          <strong>{deleteConfirm?.name || 'bez nazwy'}</strong>? Jeśli była już używana w
+          rezerwacjach, zostanie ukryta (soft delete).
+        </Text>
+      </Modal>
+
+      {/* ── Navigation guard modal ── */}
       <Modal
         isOpen={showModal}
         onClose={cancelNav}
@@ -85,6 +223,16 @@ export default function ServicesPage() {
       <div className={styles.page}>
         {/* ── Action bar ── */}
         <div className={styles.actionBar}>
+          <div className={styles.helpHint}>
+            <Text variant="nano" as="span" color="secondary">
+              Skonfiguruj usługi i cennik swojego warsztatu.
+            </Text>
+            <Button variant="ghost" size="sm" onClick={() => setShowHelp(true)}>
+              <IconHelp width="13" height="13" />
+              Jak to działa?
+            </Button>
+          </div>
+          <span className={styles.actionBarSpacer} />
           {saveError && (
             <Text variant="nano" as="span" color="danger" className={styles.dirtyChip}>
               {saveError}
@@ -133,7 +281,8 @@ export default function ServicesPage() {
                   </Text>
                 </span>
                 <Text variant="nano" as="span" color="secondary">
-                  {activeVariants} usług · {activeSurcharges} dopłaty aktywne
+                  {activeServices} {activeServices === 1 ? 'usługa' : 'usługi'} ·{' '}
+                  {state.addons.length} dodatki
                 </Text>
               </div>
             </header>
@@ -151,17 +300,21 @@ export default function ServicesPage() {
               </Text>
               <span className={styles.sectionDividerLine} />
               <Text variant="nano" as="span" mono color="secondary">
-                {state.groups.length} {state.groups.length === 1 ? 'grupa' : 'grupy'} ·{' '}
-                {totalVariants} wariantów
+                {activeServices}
               </Text>
             </div>
 
-            {/* Service groups */}
-            {state.groups.map((group) => (
-              <ServiceGroupCard
-                key={group.id}
-                group={group}
-                onChange={(updated) => updateGroup(group.id, updated)}
+            {/* Service cards */}
+            {state.services.map((service) => (
+              <ServiceCard
+                key={service.id}
+                service={service}
+                allServices={state.services}
+                allAddons={state.addons}
+                onChange={(updated) => updateService(service.id, updated)}
+                onDelete={() => requestDeleteService(service.id, service.name)}
+                onToggle={() => toggleServiceEnabled(service.id)}
+                defaultOpen={service.id === newlyCreatedId}
               />
             ))}
 
@@ -183,270 +336,38 @@ export default function ServicesPage() {
               </button>
             )}
 
-            {/* Surcharges divider */}
+            {/* Addons divider */}
             <div className={styles.sectionDivider} style={{ paddingTop: '8px' }}>
-              <span className={styles.sectionLabelPurple}>
-                <Text variant="nano" as="span" weight="bold" className={styles.sectionLabel}>
-                  Dopłaty
-                </Text>
-              </span>
-              <span className={styles.sectionDividerLinePurple} />
-              <span className={styles.sectionLabelPurple}>
-                <Text variant="nano" as="span" mono>
-                  {activeSurcharges} aktywne · doliczane auto
-                </Text>
-              </span>
+              <Text
+                variant="nano"
+                as="span"
+                weight="bold"
+                color="secondary"
+                className={styles.sectionLabel}
+              >
+                Dodatki
+              </Text>
+              <span className={styles.sectionDividerLine} />
+              <Text variant="nano" as="span" mono color="secondary">
+                {state.addons.length}
+              </Text>
             </div>
 
-            {/* Surcharges */}
-            <SurchargeList surcharges={state.surcharges} onChange={updateSurcharges} />
+            {/* Addon collection */}
+            <AddonCollection
+              addons={state.addons}
+              onChange={updateAddons}
+              onDeleteAddon={requestDeleteAddon}
+              onToggleAddon={toggleAddonEnabled}
+            />
           </div>
 
           {/* ── Right column (sticky) ── */}
           <div className={styles.colRight}>
-            {/* Help card 1 — sub-services inherit/override */}
-            <div className={styles.helpCard}>
-              <div className={styles.helpHdr}>
-                <IconInfo width="10" height="10" style={{ color: 'var(--text-muted)' }} />
-                <Text variant="nano" as="span" weight="bold" color="secondary">
-                  Pod-usługi — inherit / override
-                </Text>
-              </div>
-              <div className={styles.helpBody}>
-                <div className={styles.helpRow}>
-                  <InheritIcon />
-                  <Text variant="nano" as="p" color="secondary">
-                    <strong>jak usł.</strong> — domyślny stan. Pod-usługa dziedziczy cenę i czas z
-                    usługi głównej. Nie musisz nic konfigurować.
-                  </Text>
-                </div>
-                <div className={styles.helpRow}>
-                  <OverrideOpenIcon />
-                  <Text variant="nano" as="p" color="secondary">
-                    <strong style={{ color: 'var(--accent)' }}>Otwarta kłódka</strong> — override
-                    aktywny. Pod-usługa ma własną cenę i czas — niezależne od usługi głównej.
-                  </Text>
-                </div>
-                <div className={styles.helpRow}>
-                  <span className={styles.helpDot} style={{ background: 'var(--success)' }} />
-                  <Text variant="nano" as="p" color="secondary">
-                    <strong>Wliczone</strong> — cena zawsze &quot;wliczone&quot;. Kliknij kłódkę
-                    żeby ustawić własny dodatkowy czas (domyślnie +0 min).
-                  </Text>
-                </div>
-              </div>
-            </div>
-
-            {/* Help card 2 — surcharges */}
-            <div className={`${styles.helpCard} ${styles.helpCardPurple}`}>
-              <div className={`${styles.helpHdr} ${styles.helpHdrPurple}`}>
-                <IconBolt
-                  width="10"
-                  height="10"
-                  style={{ color: 'var(--purple)', flexShrink: 0 }}
-                />
-                <span className={styles.sectionLabelPurple}>
-                  <Text variant="nano" as="span" weight="bold">
-                    Dopłaty do usług
-                  </Text>
-                </span>
-              </div>
-              <div className={styles.helpBody}>
-                <div className={styles.helpRow}>
-                  <span className={styles.helpDot} style={{ background: 'var(--purple)' }} />
-                  <Text variant="nano" as="p" color="secondary">
-                    Klient zaznacza cechy pojazdu przy rezerwacji. Doliczane automatycznie.
-                  </Text>
-                </div>
-                <div className={styles.helpRow}>
-                  <span className={styles.helpDot} style={{ background: 'var(--border-strong)' }} />
-                  <Text variant="nano" as="p" color="secondary">
-                    &quot;Per koło&quot; → ×4. &quot;Per sensor&quot; → ×4–5. Zakres klikalny —
-                    można zmienić.
-                  </Text>
-                </div>
-              </div>
-            </div>
-
-            {/* Simulation card (static) */}
-            <div className={styles.simCard}>
-              <div className={styles.simHdr}>
-                <svg
-                  width="11"
-                  height="11"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="var(--accent)"
-                  strokeWidth="2.2"
-                  aria-hidden="true"
-                >
-                  <path d="M5 17H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v5" />
-                  <circle cx="16" cy="17" r="3" />
-                  <circle cx="8" cy="17" r="3" />
-                </svg>
-                <div>
-                  <Heading variant="subsection" as="span">
-                    Symulacja
-                  </Heading>
-                  <Text
-                    variant="nano"
-                    as="div"
-                    color="secondary"
-                    mono
-                    className={styles.simSubLabel}
-                  >
-                    Osobowe · R15 · Run-Flat
-                  </Text>
-                </div>
-              </div>
-              <div className={styles.simBody}>
-                <div className={styles.simSteps}>
-                  <Text variant="nano" as="span" weight="bold" color="primary">
-                    Osobowe
-                  </Text>
-                  <Text variant="nano" as="span" color="secondary">
-                    →
-                  </Text>
-                  <Text variant="nano" as="span" weight="bold" color="primary">
-                    Wymiana sez.
-                  </Text>
-                  <Text variant="nano" as="span" color="secondary">
-                    →
-                  </Text>
-                  <Text variant="nano" as="span" weight="bold" color="primary">
-                    R15
-                  </Text>
-                  <Text variant="nano" as="span" color="secondary">
-                    →
-                  </Text>
-                  <span className={styles.sectionLabelPurple}>
-                    <Text variant="nano" as="span" weight="bold">
-                      Run-Flat ✓
-                    </Text>
-                  </span>
-                </div>
-                <div className={styles.simDivider} />
-                <div className={`${styles.simRow} ${styles.simRowBase}`}>
-                  <div className={styles.simLabel}>
-                    <Text variant="nano" as="span" color="secondary">
-                      Wymiana sezonowa — R13-15
-                    </Text>
-                    <Text variant="nano" as="span" color="secondary" mono>
-                      {' '}
-                      40 min baza
-                    </Text>
-                  </div>
-                  <Text variant="nano" as="span" mono weight="bold">
-                    180 zł
-                  </Text>
-                </div>
-                <div className={`${styles.simRow} ${styles.simRowIncl}`}>
-                  <div className={styles.simLabel}>
-                    <svg
-                      width="7"
-                      height="7"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="var(--success)"
-                      strokeWidth="2.5"
-                      aria-hidden="true"
-                    >
-                      <polyline points="20 6 9 17 4 12" />
-                    </svg>
-                    <Text variant="nano" as="span" color="secondary">
-                      Wyważanie (wliczone, inherit)
-                    </Text>
-                    <Text variant="nano" as="span" color="secondary" mono>
-                      +0 min
-                    </Text>
-                  </div>
-                  <span className={styles.simSuccessText}>
-                    <Text variant="nano" as="span" mono weight="bold">
-                      — wlicz.
-                    </Text>
-                  </span>
-                </div>
-                <div className={`${styles.simRow} ${styles.simRowOpt}`}>
-                  <div className={styles.simLabel}>
-                    <Text variant="nano" as="span" color="secondary">
-                      + Nowy wentyl (własna)
-                    </Text>
-                    <Text variant="nano" as="span" color="secondary" mono>
-                      +5 min
-                    </Text>
-                  </div>
-                  <Text variant="nano" as="span" mono weight="bold" color="accent">
-                    +10 zł
-                  </Text>
-                </div>
-                <div className={`${styles.simRow} ${styles.simRowSurcharge}`}>
-                  <div className={styles.simLabel}>
-                    <Text variant="nano" as="span" color="secondary">
-                      + Run-Flat (4×20 zł)
-                    </Text>
-                  </div>
-                  <span className={styles.sectionLabelPurple}>
-                    <Text variant="nano" as="span" mono weight="bold">
-                      +80 zł
-                    </Text>
-                  </span>
-                </div>
-                <div className={styles.simTotal}>
-                  <div>
-                    <Text variant="nano" as="div" weight="bold" color="secondary">
-                      Do zapłaty
-                    </Text>
-                    <Text variant="nano" as="div" color="secondary" mono>
-                      10:00 → 10:45 · 45 min łącznie
-                    </Text>
-                  </div>
-                  <Heading variant="subsection" as="span" color="accent">
-                    270 zł
-                  </Heading>
-                </div>
-              </div>
-            </div>
+            <SimulationCard services={state.services} addons={state.addons} />
           </div>
         </div>
       </div>
     </>
-  );
-}
-
-function InheritIcon() {
-  return (
-    <svg
-      width="9"
-      height="9"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="var(--text-muted)"
-      strokeWidth="2.2"
-      strokeLinecap="round"
-      style={{ flexShrink: 0, marginTop: 2 }}
-      aria-hidden="true"
-    >
-      <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
-      <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
-    </svg>
-  );
-}
-
-function OverrideOpenIcon() {
-  return (
-    <svg
-      width="9"
-      height="9"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="var(--accent)"
-      strokeWidth="2.3"
-      strokeLinecap="round"
-      style={{ flexShrink: 0, marginTop: 2 }}
-      aria-hidden="true"
-    >
-      <rect x="3" y="11" width="18" height="11" rx="2" />
-      <path d="M7 11V7a5 5 0 0 1 9.9-1" />
-    </svg>
   );
 }

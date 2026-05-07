@@ -2,128 +2,97 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import {
-  serviceGroupsApi,
-  type ServiceGroupResponse,
-  type RimTierResponse,
-  type SubServiceResponse,
-  type SurchargeResponse,
-} from '../../api-data-access/service-groups';
+  servicesApi,
+  type ServiceResponse,
+  type AddonResponse,
+} from '../../api-data-access/services';
 import type {
-  ServiceGroupState,
+  ServiceState,
   ServiceVariantState,
-  RimTierState,
-  SubServiceState,
-  SurchargeState,
+  AddonState,
   ServicesPageState,
 } from '../../app/dashboard/services/_types';
 
 // ── API → State ──────────────────────────────────────────────────────────────
 
-function rimTierFromApi(t: RimTierResponse): RimTierState {
-  return {
-    id: t.id ?? Math.random().toString(36).slice(2),
-    rimSizes: t.rimSizes,
-    pricePln: String(t.pricePln),
-    durationMinutes: String(t.durationMinutes),
-    sortOrder: t.sortOrder,
-  };
-}
-
-function subServiceFromApi(s: SubServiceResponse): SubServiceState {
-  return {
-    id: (s as { id?: string }).id ?? Math.random().toString(36).slice(2),
-    name: s.name,
-    included: s.included,
-    enabled: s.enabled,
-    fromCatalog: s.fromCatalog,
-    pricePln: s.pricePln != null ? String(s.pricePln) : null,
-    durationMinutes: s.durationMinutes != null ? String(s.durationMinutes) : null,
-    sortOrder: s.sortOrder,
-  };
-}
-
-function variantFromApi(v: ServiceGroupResponse['variants'][number]): ServiceVariantState {
+function variantFromApi(v: ServiceResponse['variants'][number]): ServiceVariantState {
   return {
     id: v.id,
-    name: v.name,
-    enabled: v.enabled,
+    name: v.name ?? null,
+    rimSizes: v.rimSizes,
+    pricePln: String(v.pricePln),
+    durationMinutes: String(v.durationMinutes),
     sortOrder: v.sortOrder,
-    rimTiers: v.rimTiers.map(rimTierFromApi),
-    subServices: v.subServices.map(subServiceFromApi),
   };
 }
 
-function groupFromApi(g: ServiceGroupResponse): ServiceGroupState {
-  return {
-    id: g.id,
-    name: g.name,
-    pricingMode: g.pricingMode as 'PER_SET' | 'PER_WHEEL',
-    sortOrder: g.sortOrder,
-    variants: g.variants.map(variantFromApi),
-  };
-}
-
-function surchargeFromApi(s: SurchargeResponse): SurchargeState {
+function serviceFromApi(s: ServiceResponse): ServiceState {
   return {
     id: s.id,
     name: s.name,
-    enabled: s.enabled,
-    scope: s.scope as 'PER_WHEEL' | 'PER_SENSOR',
-    pricePln: String(s.pricePln),
+    description: s.description ?? null,
+    pricingType: s.pricingType,
+    enabled: s.enabled ?? true,
     sortOrder: s.sortOrder,
+    variants: s.variants.map(variantFromApi),
+    subServiceIds: s.subServiceIds,
+    addonIds: s.addonIds,
+  };
+}
+
+function addonFromApi(a: AddonResponse): AddonState {
+  return {
+    id: a.id,
+    name: a.name,
+    pricePln: String(a.pricePln),
+    durationMinutes: a.durationMinutes != null ? String(a.durationMinutes) : null,
+    enabled: a.enabled ?? true,
+    sortOrder: a.sortOrder,
   };
 }
 
 // ── State → API ──────────────────────────────────────────────────────────────
 
-function rimTierToApi(t: RimTierState) {
-  return {
-    id: t.id,
-    rimSizes: t.rimSizes,
-    pricePln: parseFloat(t.pricePln) || 0,
-    durationMinutes: parseInt(t.durationMinutes, 10) || 0,
-    sortOrder: t.sortOrder,
-  };
-}
-
-function subServiceToApi(s: SubServiceState) {
-  return {
-    id: s.id,
-    name: s.name,
-    included: s.included,
-    enabled: s.enabled,
-    fromCatalog: s.fromCatalog,
-    pricePln: s.pricePln != null ? parseFloat(s.pricePln) || 0 : null,
-    durationMinutes: s.durationMinutes != null ? parseInt(s.durationMinutes, 10) || 0 : null,
-    sortOrder: s.sortOrder,
-  };
-}
-
 function variantToApi(v: ServiceVariantState) {
   return {
     id: v.id,
     name: v.name,
-    enabled: v.enabled,
+    rimSizes: v.rimSizes,
+    pricePln: parseFloat(v.pricePln) || 0,
+    durationMinutes: parseInt(v.durationMinutes, 10) || 0,
     sortOrder: v.sortOrder,
-    rimTiers: v.rimTiers.map(rimTierToApi),
-    subServices: v.subServices.map(subServiceToApi),
   };
 }
 
-function groupToApi(g: ServiceGroupState) {
+function serviceToApi(s: ServiceState) {
   return {
-    id: g.id,
-    name: g.name,
-    pricingMode: g.pricingMode,
-    sortOrder: g.sortOrder,
-    variants: g.variants.map(variantToApi),
+    id: s.id,
+    name: s.name,
+    description: s.description,
+    pricingType: s.pricingType,
+    enabled: s.enabled,
+    sortOrder: s.sortOrder,
+    variants: s.variants.map(variantToApi),
+    subServiceIds: s.subServiceIds,
+    addonIds: s.addonIds,
+  };
+}
+
+function addonToApi(a: AddonState) {
+  return {
+    id: a.id,
+    name: a.name,
+    pricePln: parseFloat(a.pricePln) || 0,
+    durationMinutes: a.durationMinutes != null ? parseInt(a.durationMinutes, 10) || 0 : null,
+    enabled: a.enabled,
+    sortOrder: a.sortOrder,
   };
 }
 
 // ── Hook ─────────────────────────────────────────────────────────────────────
 
 export function useServicesPage() {
-  const [state, setState] = useState<ServicesPageState>({ groups: [], surcharges: [] });
+  const [state, setState] = useState<ServicesPageState>({ services: [], addons: [] });
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -131,15 +100,15 @@ export function useServicesPage() {
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
-    Promise.all([serviceGroupsApi.list(), serviceGroupsApi.surcharges()])
-      .then(([groups, surcharges]) => {
+    Promise.all([servicesApi.listServices(), servicesApi.listAddons()])
+      .then(([services, addons]) => {
         setState({
-          groups: groups.map(groupFromApi),
-          surcharges: surcharges.map(surchargeFromApi),
+          services: services.map(serviceFromApi),
+          addons: addons.map(addonFromApi),
         });
       })
       .catch(() => {
-        // leave empty state on error — user can still add groups manually
+        // leave empty state on error
       })
       .finally(() => setIsLoading(false));
   }, []);
@@ -151,14 +120,29 @@ export function useServicesPage() {
     setSaveError(null);
   }, []);
 
+  // Remove without marking dirty — item is already deleted from DB
+  const removeService = useCallback((id: string) => {
+    setState((prev) => ({
+      ...prev,
+      services: prev.services.filter((s) => s.id !== id),
+    }));
+  }, []);
+
+  const removeAddon = useCallback((id: string) => {
+    setState((prev) => ({
+      ...prev,
+      addons: prev.addons.filter((a) => a.id !== id),
+    }));
+  }, []);
+
   const revert = useCallback(() => {
     setIsLoading(true);
     setSaveError(null);
-    Promise.all([serviceGroupsApi.list(), serviceGroupsApi.surcharges()])
-      .then(([groups, surcharges]) => {
+    Promise.all([servicesApi.listServices(), servicesApi.listAddons()])
+      .then(([services, addons]) => {
         setState({
-          groups: groups.map(groupFromApi),
-          surcharges: surcharges.map(surchargeFromApi),
+          services: services.map(serviceFromApi),
+          addons: addons.map(addonFromApi),
         });
         setDirty(false);
         setSaved(false);
@@ -171,22 +155,13 @@ export function useServicesPage() {
     setIsSaving(true);
     setSaveError(null);
     try {
-      const [updatedGroups, updatedSurcharges] = await Promise.all([
-        serviceGroupsApi.upsertGroups({ groups: state.groups.map(groupToApi) }),
-        serviceGroupsApi.upsertSurcharges({
-          surcharges: state.surcharges.map((s) => ({
-            id: s.id,
-            name: s.name,
-            enabled: s.enabled,
-            scope: s.scope,
-            pricePln: parseFloat(s.pricePln) || 0,
-            sortOrder: s.sortOrder,
-          })),
-        }),
+      const [updatedServices, updatedAddons] = await Promise.all([
+        servicesApi.upsertServices({ services: state.services.map(serviceToApi) }),
+        servicesApi.upsertAddons({ addons: state.addons.map(addonToApi) }),
       ]);
       setState({
-        groups: updatedGroups.map(groupFromApi),
-        surcharges: updatedSurcharges.map(surchargeFromApi),
+        services: updatedServices.map(serviceFromApi),
+        addons: updatedAddons.map(addonFromApi),
       });
       setDirty(false);
       setSaved(true);
@@ -205,6 +180,8 @@ export function useServicesPage() {
     dirty,
     saved,
     updateState,
+    removeService,
+    removeAddon,
     revert,
     save,
   };

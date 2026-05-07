@@ -1,0 +1,12 @@
+.body {
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.steppers {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}

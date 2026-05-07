@@ -79,9 +79,10 @@ enum SizeTier {
   XL  // R20+ / dostawcze / ciężarowe
 }
 
-enum SurchargeScope {
-  PER_WHEEL   // x4 kół
-  PER_SENSOR  // x4-5 sensorów TPMS
+enum ServicePricingType {
+  FLAT       // stała cena — jeden wariant bez nazwy
+  VARIANTS   // warianty z nazwą (np. Osobowe, SUV)
+  RIM_SIZES  // zakresy rozmiarów felg
 }
 
 enum LeaveType {
@@ -205,8 +206,8 @@ model Provider {
   workers            Worker[]
   workerTasks        WorkerTask[]
   serviceConfigs     ServiceConfig[]
-  serviceGroups              ServiceGroup[]
-  surcharges                 Surcharge[]
+  services                   Service[]
+  addons                     Addon[]
   dataExportRequests         DataExportRequest[]
   notificationPreferences    NotificationPreferences?
   pushSubscriptions          PushSubscription[]
@@ -657,87 +658,94 @@ model ServiceConfig {
 }
 
 // ──────────────────────────────────────────────
-// SERVICE GROUPS — elastyczne grupy usług warsztatu
+// ──────────────────────────────────────────────
+// SERVICES — lista usług warsztatu
 // ──────────────────────────────────────────────
 
-model ServiceGroup {
-  id          String   @id @default(uuid())
+model Service {
+  id          String             @id @default(uuid())
   providerId  String
-  name        String   @db.VarChar(200)
-  pricingMode String   @default("PER_SET") @db.VarChar(20)
-  sortOrder   Int      @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  name        String             @db.VarChar(200)
+  description String?            @db.VarChar(1000)
+  pricingType ServicePricingType @default(FLAT)
+  enabled     Boolean            @default(true)
+  sortOrder   Int                @default(0)
+  deletedAt   DateTime?
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
 
-  provider Provider         @relation(fields: [providerId], references: [id], onDelete: Cascade)
-  variants ServiceVariant[]
+  provider    Provider           @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  variants    ServiceVariant[]
+  subLinks    ServiceSubLink[]   @relation("ParentService")
+  parentLinks ServiceSubLink[]   @relation("SubService")
+  addonLinks  ServiceAddonLink[]
 
   @@index([providerId])
-  @@map("service_groups")
+  @@map("services")
 }
 
 model ServiceVariant {
-  id        String   @id @default(uuid())
-  groupId   String
-  name      String   @db.VarChar(200)
-  enabled   Boolean  @default(true)
-  sortOrder Int      @default(0)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  group       ServiceGroup       @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  rimTiers    RimTier[]
-  subServices SubServiceConfig[]
-
-  @@index([groupId])
-  @@map("service_variants")
-}
-
-model RimTier {
   id              String   @id @default(uuid())
-  variantId       String
-  rimSizes        String[]
-  pricePln        Decimal  @db.Decimal(10,2)
+  serviceId       String
+  name            String?  @db.VarChar(200)  // null dla FLAT i RIM_SIZES
+  rimSizes        String[]                    // tylko dla RIM_SIZES
+  pricePln        Decimal  @db.Decimal(10, 2)
   durationMinutes Int
   sortOrder       Int      @default(0)
 
-  variant ServiceVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  service Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
 
-  @@index([variantId])
-  @@map("rim_tiers")
+  @@index([serviceId])
+  @@map("service_variants")
 }
 
-model SubServiceConfig {
-  id              String   @id @default(uuid())
-  variantId       String
-  name            String   @db.VarChar(200)
-  included        Boolean  @default(false)
-  enabled         Boolean  @default(true)
-  fromCatalog     Boolean  @default(false)
-  pricePln        Decimal? @db.Decimal(10,2)
+// Pod-usługi: cross-referencje między usługami (sugestie przy wizycie)
+model ServiceSubLink {
+  id        String @id @default(uuid())
+  parentId  String
+  subId     String
+  sortOrder Int    @default(0)
+
+  parent Service @relation("ParentService", fields: [parentId], references: [id], onDelete: Cascade)
+  sub    Service @relation("SubService",    fields: [subId],    references: [id], onDelete: Cascade)
+
+  @@unique([parentId, subId])
+  @@index([parentId])
+  @@map("service_sub_links")
+}
+
+// ──────────────────────────────────────────────
+// ADDONS — kolekcja dodatków do usług
+// ──────────────────────────────────────────────
+
+model Addon {
+  id              String    @id @default(uuid())
+  providerId      String
+  name            String    @db.VarChar(200)
+  pricePln        Decimal   @db.Decimal(10, 2)
   durationMinutes Int?
-  sortOrder       Int      @default(0)
+  enabled         Boolean   @default(true)
+  sortOrder       Int       @default(0)
+  deletedAt       DateTime?
+  createdAt       DateTime  @default(now())
 
-  variant ServiceVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
-
-  @@index([variantId])
-  @@map("sub_service_configs")
-}
-
-model Surcharge {
-  id         String         @id @default(uuid())
-  providerId String
-  name       String         @db.VarChar(200)
-  enabled    Boolean        @default(true)
-  scope      SurchargeScope @default(PER_WHEEL)
-  pricePln   Decimal        @db.Decimal(10,2)
-  sortOrder  Int            @default(0)
-  createdAt  DateTime       @default(now())
-
-  provider Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  provider Provider          @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  links    ServiceAddonLink[]
 
   @@index([providerId])
-  @@map("surcharges")
+  @@map("addons")
+}
+
+model ServiceAddonLink {
+  serviceId String
+  addonId   String
+  sortOrder Int    @default(0)
+
+  service Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  addon   Addon   @relation(fields: [addonId],   references: [id], onDelete: Cascade)
+
+  @@id([serviceId, addonId])
+  @@map("service_addon_links")
 }
 
 // ──────────────────────────────────────────────

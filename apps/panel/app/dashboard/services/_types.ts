@@ -1,4 +1,4 @@
-export type PricingMode = 'PER_SET' | 'PER_WHEEL';
+export type ServicePricingType = 'FLAT' | 'VARIANTS' | 'RIM_SIZES';
 
 export const RIM_SIZES = [
   'R13',
@@ -17,54 +17,37 @@ export const RIM_SIZES = [
 
 export type RimSize = (typeof RIM_SIZES)[number];
 
-export interface RimTierState {
-  id: string; // lokalny UUID (Math.random().toString())
-  rimSizes: string[]; // ["R13","R14","R15"]
-  pricePln: string; // string bo input
+export interface ServiceVariantState {
+  id: string;
+  name: string | null; // variant name for VARIANTS type; null for FLAT/RIM_SIZES
+  rimSizes: string[]; // non-empty for RIM_SIZES type
+  pricePln: string;
   durationMinutes: string;
   sortOrder: number;
 }
 
-export interface SubServiceState {
+export interface ServiceState {
   id: string;
   name: string;
-  included: boolean;
+  description: string | null;
+  pricingType: ServicePricingType;
   enabled: boolean;
-  fromCatalog: boolean;
-  // null = inherit (domyślny tryb — kłódka zamknięta)
-  pricePln: string | null;
-  durationMinutes: string | null;
-  sortOrder: number;
-}
-
-export interface ServiceVariantState {
-  id: string;
-  name: string;
-  enabled: boolean;
-  sortOrder: number;
-  rimTiers: RimTierState[];
-  subServices: SubServiceState[];
-}
-
-export interface ServiceGroupState {
-  id: string;
-  name: string;
-  pricingMode: PricingMode;
   sortOrder: number;
   variants: ServiceVariantState[];
+  subServiceIds: string[];
+  addonIds: string[];
 }
 
-export interface SurchargeState {
+export interface AddonState {
   id: string;
   name: string;
-  enabled: boolean;
-  scope: 'PER_WHEEL' | 'PER_SENSOR';
   pricePln: string;
+  durationMinutes: string | null;
+  enabled: boolean;
   sortOrder: number;
 }
 
-// Stan całej strony
 export interface ServicesPageState {
-  groups: ServiceGroupState[];
-  surcharges: SurchargeState[];
+  services: ServiceState[];
+  addons: AddonState[];
 }

@@ -3,6 +3,7 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
+  border-top: 1px solid var(--border);
 }
 
 .expLabel {
@@ -18,34 +19,19 @@
   background: var(--border);
 }
 
-.legend {
-  display: inline-flex;
+.flatRow {
+  display: flex;
   align-items: center;
-  gap: 7px;
-}
-
-.legendItem {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  color: var(--text-muted);
-}
-
-.legendItemAccent {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  color: var(--accent);
-}
-
-.legendDot {
-  width: 3px;
-  height: 3px;
-  border-radius: 50%;
-  background: var(--border-strong);
+  gap: 12px;
 }
 
 .rimTiers {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.variantsList {
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -69,25 +55,93 @@
   color: var(--accent);
 }
 
-.subSvcList {
+.chips {
   display: flex;
-  flex-direction: column;
-  gap: 3px;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
 }
 
-.addSubSvcBtn {
-  display: flex;
+.chip {
+  display: inline-flex;
   align-items: center;
-  gap: 7px;
-  width: 100%;
-  padding: 6px 10px;
-  border-radius: 7px;
-  border: 1px solid var(--accent-border);
-  background: var(--accent-muted);
+  gap: 4px;
+  padding: 3px 6px;
+  border-radius: 5px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border-strong);
+}
+
+.chipX {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  background: transparent;
+  color: var(--text-muted);
+  border: none;
   cursor: pointer;
+  padding: 0;
+}
+
+.chipX:hover {
+  background: var(--danger-muted);
+  color: var(--danger);
+}
+
+.chipAddWrap {
+  position: relative;
+}
+
+.chipAdd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px 6px;
+  border-radius: 5px;
+  border: 1px dashed var(--border);
+  color: var(--text-muted);
+  background: transparent;
+  cursor: pointer;
+}
+
+.chipAdd:hover {
+  border-color: var(--accent-border);
   color: var(--accent);
 }
 
-.addSubSvcBtn:hover {
-  background: rgba(255, 107, 26, 0.2);
+.subDropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 100;
+  background: var(--surface-raised);
+  border: 1px solid var(--border-strong);
+  border-radius: 7px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3);
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  min-width: 160px;
+  max-width: 260px;
+}
+
+.subOption {
+  padding: 5px 9px;
+  border-radius: 4px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.subOption:hover {
+  background: var(--accent-muted);
+  color: var(--accent);
 }

@@ -1123,17 +1123,17 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/v1/providers/me/service-groups': {
+  '/v1/providers/me/services': {
     parameters: {
       query?: never;
       header?: never;
       path?: never;
       cookie?: never;
     };
-    /** Pobierz grupy usług warsztatu */
-    get: operations['ServiceGroupsController_getGroups'];
-    /** Zastąp grupy usług warsztatu (pełna synchronizacja) */
-    put: operations['ServiceGroupsController_replaceGroups'];
+    /** Pobierz listę usług warsztatu */
+    get: operations['ServicesController_getServices'];
+    /** Zastąp listę usług warsztatu (pełna synchronizacja) */
+    put: operations['ServicesController_replaceServices'];
     post?: never;
     delete?: never;
     options?: never;
@@ -1141,17 +1141,17 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/v1/providers/me/surcharges': {
+  '/v1/providers/me/addons': {
     parameters: {
       query?: never;
       header?: never;
       path?: never;
       cookie?: never;
     };
-    /** Pobierz dopłaty warsztatu */
-    get: operations['ServiceGroupsController_getSurcharges'];
-    /** Zastąp dopłaty warsztatu (pełna synchronizacja) */
-    put: operations['ServiceGroupsController_replaceSurcharges'];
+    /** Pobierz kolekcję dodatków warsztatu */
+    get: operations['ServicesController_getAddons'];
+    /** Zastąp kolekcję dodatków warsztatu (pełna synchronizacja) */
+    put: operations['ServicesController_replaceAddons'];
     post?: never;
     delete?: never;
     options?: never;
@@ -1887,49 +1887,68 @@ export interface components {
     UpsertServiceConfigsDto: {
       configs: components['schemas']['ServiceConfigItemDto'][];
     };
-    RimTierDto: {
-      id?: string;
+    ServiceVariantResponseDto: {
+      id: string;
+      name?: string | null;
       rimSizes: string[];
       pricePln: number;
       durationMinutes: number;
       sortOrder: number;
     };
-    SubServiceConfigDto: {
-      id?: string;
-      name: string;
-      included: boolean;
-      enabled: boolean;
-      fromCatalog: boolean;
-      pricePln?: number | null;
-      durationMinutes?: Record<string, never> | null;
-      sortOrder: number;
-    };
-    ServiceVariantResponseDto: {
+    ServiceResponseDto: {
       id: string;
       name: string;
+      description?: string | null;
+      /** @enum {string} */
+      pricingType: 'FLAT' | 'VARIANTS' | 'RIM_SIZES';
       enabled: boolean;
-      sortOrder: number;
-      rimTiers: components['schemas']['RimTierDto'][];
-      subServices: components['schemas']['SubServiceConfigDto'][];
-    };
-    ServiceGroupResponseDto: {
-      id: string;
-      name: string;
-      pricingMode: string;
       sortOrder: number;
       variants: components['schemas']['ServiceVariantResponseDto'][];
+      subServiceIds: string[];
+      addonIds: string[];
     };
-    UpsertServiceGroupsDto: Record<string, never>;
-    SurchargeResponseDto: {
-      id: string;
-      name: string;
-      enabled: boolean;
-      /** @enum {string} */
-      scope: 'PER_WHEEL' | 'PER_SENSOR';
+    UpsertServiceVariantDto: {
+      id?: string;
+      name?: string | null;
+      rimSizes: string[];
       pricePln: number;
+      durationMinutes: number;
       sortOrder: number;
     };
-    UpsertSurchargesDto: Record<string, never>;
+    UpsertServiceDto: {
+      id?: string;
+      name: string;
+      description?: string | null;
+      /** @enum {string} */
+      pricingType: 'FLAT' | 'VARIANTS' | 'RIM_SIZES';
+      enabled: boolean;
+      sortOrder: number;
+      variants: components['schemas']['UpsertServiceVariantDto'][];
+      subServiceIds: string[];
+      addonIds: string[];
+    };
+    UpsertServicesDto: {
+      services: components['schemas']['UpsertServiceDto'][];
+    };
+    AddonResponseDto: {
+      id: string;
+      name: string;
+      pricePln: number;
+      durationMinutes?: number | null;
+      enabled: boolean;
+      sortOrder: number;
+    };
+    UpsertAddonDto: {
+      id?: string;
+      name: string;
+      pricePln: number;
+      durationMinutes?: number | null;
+      enabled: boolean;
+      sortOrder: number;
+    };
+    UpsertAddonsDto: {
+      addons: components['schemas']['UpsertAddonDto'][];
+    };
     NotificationPreferencesDto: {
       newBookingSms: boolean;
       newBookingEmail: boolean;
@@ -3967,7 +3986,7 @@ export interface operations {
       };
     };
   };
-  ServiceGroupsController_getGroups: {
+  ServicesController_getServices: {
     parameters: {
       query?: never;
       header?: never;
@@ -3981,12 +4000,12 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': components['schemas']['ServiceGroupResponseDto'][];
+          'application/json': components['schemas']['ServiceResponseDto'][];
         };
       };
     };
   };
-  ServiceGroupsController_replaceGroups: {
+  ServicesController_replaceServices: {
     parameters: {
       query?: never;
       header?: never;
@@ -3995,7 +4014,7 @@ export interface operations {
     };
     requestBody: {
       content: {
-        'application/json': components['schemas']['UpsertServiceGroupsDto'];
+        'application/json': components['schemas']['UpsertServicesDto'];
       };
     };
     responses: {
@@ -4004,12 +4023,12 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': components['schemas']['ServiceGroupResponseDto'][];
+          'application/json': components['schemas']['ServiceResponseDto'][];
         };
       };
     };
   };
-  ServiceGroupsController_getSurcharges: {
+  ServicesController_getAddons: {
     parameters: {
       query?: never;
       header?: never;
@@ -4023,12 +4042,12 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': components['schemas']['SurchargeResponseDto'][];
+          'application/json': components['schemas']['AddonResponseDto'][];
         };
       };
     };
   };
-  ServiceGroupsController_replaceSurcharges: {
+  ServicesController_replaceAddons: {
     parameters: {
       query?: never;
       header?: never;
@@ -4037,7 +4056,7 @@ export interface operations {
     };
     requestBody: {
       content: {
-        'application/json': components['schemas']['UpsertSurchargesDto'];
+        'application/json': components['schemas']['UpsertAddonsDto'];
       };
     };
     responses: {
@@ -4046,7 +4065,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': components['schemas']['SurchargeResponseDto'][];
+          'application/json': components['schemas']['AddonResponseDto'][];
         };
       };
     };

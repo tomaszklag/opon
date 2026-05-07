@@ -55,7 +55,6 @@
   color: var(--text-muted);
   background: transparent;
   cursor: pointer;
-  font-size: 9px;
 }
 
 .chipAdd:hover {
@@ -89,9 +88,6 @@
   border: none;
   background: transparent;
   color: var(--text-secondary);
-  font-family: var(--font-mono);
-  font-size: 10px;
-  font-weight: 700;
   cursor: pointer;
   text-align: center;
   transition: background var(--transition-fast), color var(--transition-fast);

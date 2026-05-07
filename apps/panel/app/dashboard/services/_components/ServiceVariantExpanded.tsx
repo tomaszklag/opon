@@ -1,192 +1,349 @@
 'use client';
 
-import { Text } from '@opony/design-system-web';
-import { IconPlus } from '../../../../components/icons';
+import { useEffect, useRef, useState } from 'react';
+import { Input, Text, NumberStepper } from '@opony/design-system-web';
+import {
+  IconPlus,
+  IconXClose,
+  IconDollar,
+  IconList,
+  IconRim,
+  IconLinkChain,
+  IconPlusCircle,
+} from '../../../../components/icons';
 import { RimTierRow } from './RimTierRow';
-import { SubServiceRow } from './SubServiceRow';
-import type { RimTierState, ServiceVariantState, SubServiceState } from '../_types';
+import { ServiceVariantRow } from './ServiceVariantRow';
+import type { ServiceState, ServiceVariantState, AddonState } from '../_types';
 import styles from './ServiceVariantExpanded.module.css';
 
 interface Props {
-  variant: ServiceVariantState;
-  onChange: (updated: ServiceVariantState) => void;
+  service: ServiceState;
+  allServices: ServiceState[];
+  allAddons: AddonState[];
+  onChange: (updated: ServiceState) => void;
 }
 
-export function ServiceVariantExpanded({ variant, onChange }: Props) {
-  function updateTier(tierId: string, updated: RimTierState) {
+export function ServiceVariantExpanded({ service, allServices, allAddons, onChange }: Props) {
+  const [lastAddedVariantId, setLastAddedVariantId] = useState<string | null>(null);
+  const [subDropdown, setSubDropdown] = useState(false);
+  const [addonDropdown, setAddonDropdown] = useState(false);
+  const subWrapRef = useRef<HTMLDivElement>(null);
+  const addonWrapRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!subDropdown && !addonDropdown) return;
+    function onMouseDown(e: MouseEvent) {
+      if (subWrapRef.current && !subWrapRef.current.contains(e.target as Node)) {
+        setSubDropdown(false);
+      }
+      if (addonWrapRef.current && !addonWrapRef.current.contains(e.target as Node)) {
+        setAddonDropdown(false);
+      }
+    }
+    document.addEventListener('mousedown', onMouseDown);
+    return () => document.removeEventListener('mousedown', onMouseDown);
+  }, [subDropdown, addonDropdown]);
+
+  function updateVariant(variantId: string, updated: ServiceVariantState) {
     onChange({
-      ...variant,
-      rimTiers: variant.rimTiers.map((t) => (t.id === tierId ? updated : t)),
+      ...service,
+      variants: service.variants.map((v) => (v.id === variantId ? updated : v)),
     });
   }
 
-  function deleteTier(tierId: string) {
-    onChange({
-      ...variant,
-      rimTiers: variant.rimTiers.filter((t) => t.id !== tierId),
-    });
+  function deleteVariant(variantId: string) {
+    onChange({ ...service, variants: service.variants.filter((v) => v.id !== variantId) });
   }
 
-  function addTier() {
-    const newTier: RimTierState = {
-      id: Math.random().toString(36).slice(2),
+  function addVariant() {
+    const newId = Math.random().toString(36).slice(2);
+    const newVariant: ServiceVariantState = {
+      id: newId,
+      name: service.pricingType === 'VARIANTS' ? '' : null,
       rimSizes: [],
       pricePln: '',
       durationMinutes: '',
-      sortOrder: variant.rimTiers.length,
+      sortOrder: service.variants.length,
     };
-    onChange({ ...variant, rimTiers: [...variant.rimTiers, newTier] });
+    onChange({ ...service, variants: [...service.variants, newVariant] });
+    setLastAddedVariantId(newId);
   }
 
-  function updateSubService(subId: string, updated: SubServiceState) {
+  function toggleSubService(subId: string) {
+    const has = service.subServiceIds.includes(subId);
     onChange({
-      ...variant,
-      subServices: variant.subServices.map((s) => (s.id === subId ? updated : s)),
+      ...service,
+      subServiceIds: has
+        ? service.subServiceIds.filter((id) => id !== subId)
+        : [...service.subServiceIds, subId],
     });
   }
 
-  function deleteSubService(subId: string) {
+  function toggleAddon(addonId: string) {
+    const has = service.addonIds.includes(addonId);
     onChange({
-      ...variant,
-      subServices: variant.subServices.filter((s) => s.id !== subId),
+      ...service,
+      addonIds: has
+        ? service.addonIds.filter((id) => id !== addonId)
+        : [...service.addonIds, addonId],
     });
   }
+
+  const flatVariant = service.variants[0];
+  const otherServices = allServices.filter((s) => s.id !== service.id);
 
   return (
     <div className={styles.expanded}>
-      {/* Rim Tiers Section */}
-      <div className={styles.expLabel}>
-        <RimCircleIcon />
-        <Text variant="kicker-sm" as="span">
-          Zakresy rozmiarów
-        </Text>
-        <span className={styles.line} />
-      </div>
+      {/* ── Name ── */}
+      <Input
+        type="text"
+        placeholder="Nazwa usługi…"
+        value={service.name}
+        onChange={(e) => onChange({ ...service, name: e.target.value })}
+        aria-label="Nazwa usługi"
+      />
 
-      <div className={styles.rimTiers}>
-        {variant.rimTiers.map((tier) => (
-          <RimTierRow
-            key={tier.id}
-            tier={tier}
-            onChange={(updated) => updateTier(tier.id, updated)}
-            onDelete={() => deleteTier(tier.id)}
-          />
-        ))}
-      </div>
+      {/* ── Pricing section ── */}
+      {service.pricingType === 'FLAT' && (
+        <>
+          <div className={styles.expLabel}>
+            <IconDollar width="8" height="8" />
+            <Text variant="kicker-sm" as="span">
+              Cena &amp; czas
+            </Text>
+            <span className={styles.line} />
+          </div>
+          <div className={styles.flatRow}>
+            <NumberStepper
+              value={flatVariant?.pricePln ?? ''}
+              onChange={(v) =>
+                flatVariant && updateVariant(flatVariant.id, { ...flatVariant, pricePln: v })
+              }
+              unit="zł"
+              min={0}
+              step={5}
+              inputWidth={64}
+              aria-label="Cena w złotych"
+            />
+            <NumberStepper
+              value={flatVariant?.durationMinutes ?? ''}
+              onChange={(v) =>
+                flatVariant && updateVariant(flatVariant.id, { ...flatVariant, durationMinutes: v })
+              }
+              unit="min"
+              min={0}
+              step={5}
+              inputWidth={52}
+              aria-label="Czas trwania"
+            />
+          </div>
+        </>
+      )}
 
-      <button className={styles.addTierBtn} onClick={addTier}>
-        <IconPlus width="9" height="9" />
-        <Text variant="nano" as="span">
-          Dodaj zakres
-        </Text>
-      </button>
+      {service.pricingType === 'VARIANTS' && (
+        <>
+          <div className={styles.expLabel}>
+            <IconList width="8" height="8" />
+            <Text variant="kicker-sm" as="span">
+              Warianty
+            </Text>
+            <span className={styles.line} />
+          </div>
+          <div className={styles.variantsList}>
+            {service.variants.map((v) => (
+              <ServiceVariantRow
+                key={v.id}
+                variant={v}
+                onChange={(updated) => updateVariant(v.id, updated)}
+                onDelete={() => deleteVariant(v.id)}
+                autoFocusName={v.id === lastAddedVariantId}
+              />
+            ))}
+          </div>
+          <button className={styles.addTierBtn} onClick={addVariant}>
+            <IconPlus width="9" height="9" />
+            <Text variant="nano" as="span">
+              Dodaj wariant
+            </Text>
+          </button>
+        </>
+      )}
 
-      {/* Sub-services Section */}
-      <div className={styles.expLabel}>
-        <CheckboxIcon />
-        <Text variant="kicker-sm" as="span">
-          Pod-usługi
-        </Text>
-        <span className={styles.line} />
-        <span className={styles.legend}>
-          <span className={styles.legendItem}>
-            <InheritLegendIcon />
+      {service.pricingType === 'RIM_SIZES' && (
+        <>
+          <div className={styles.expLabel}>
+            <IconRim width="8" height="8" />
+            <Text variant="kicker-sm" as="span">
+              Zakresy rozmiarów
+            </Text>
+            <span className={styles.line} />
+          </div>
+          <div className={styles.rimTiers}>
+            {service.variants.map((v) => (
+              <RimTierRow
+                key={v.id}
+                tier={v}
+                onChange={(updated) => updateVariant(v.id, updated)}
+                onDelete={() => deleteVariant(v.id)}
+              />
+            ))}
+          </div>
+          <button className={styles.addTierBtn} onClick={addVariant}>
+            <IconPlus width="9" height="9" />
+            <Text variant="nano" as="span">
+              Dodaj zakres
+            </Text>
+          </button>
+        </>
+      )}
+
+      {/* ── Sub-services ── */}
+      {otherServices.length > 0 && (
+        <>
+          <div className={styles.expLabel}>
+            <IconLinkChain width="8" height="8" />
+            <Text variant="kicker-sm" as="span">
+              Podusługi
+            </Text>
+            <span className={styles.line} />
             <Text variant="nano" as="span" color="secondary">
-              jak usł. = dziedziczy
+              sugerowane przy rezerwacji
             </Text>
-          </span>
-          <span className={styles.legendDot} />
-          <span className={styles.legendItemAccent}>
-            <OverrideLegendIcon />
-            <Text variant="nano" as="span" color="accent">
-              otwarta = własna cena/czas
-            </Text>
-          </span>
-        </span>
-      </div>
+          </div>
+          <div className={styles.chips}>
+            {service.subServiceIds.map((id) => {
+              const sub = otherServices.find((s) => s.id === id);
+              if (!sub) return null;
+              return (
+                <span key={id} className={styles.chip}>
+                  <Text variant="nano" as="span">
+                    {sub.name}
+                  </Text>
+                  <button
+                    className={styles.chipX}
+                    onClick={() => toggleSubService(id)}
+                    aria-label={`Usuń ${sub.name}`}
+                  >
+                    <IconXClose width="8" height="8" />
+                  </button>
+                </span>
+              );
+            })}
 
-      <div className={styles.subSvcList}>
-        {variant.subServices.map((sub) => (
-          <SubServiceRow
-            key={sub.id}
-            sub={sub}
-            onChange={(updated) => updateSubService(sub.id, updated)}
-            onDelete={() => deleteSubService(sub.id)}
-          />
-        ))}
-      </div>
+            {service.subServiceIds.length < otherServices.length && (
+              <div className={styles.chipAddWrap} ref={subWrapRef}>
+                <button
+                  className={styles.chipAdd}
+                  onClick={() => setSubDropdown((v) => !v)}
+                  aria-label="Dodaj podusługę"
+                  aria-expanded={subDropdown}
+                >
+                  <IconPlus width="7" height="7" />
+                </button>
+                {subDropdown && (
+                  <div className={styles.subDropdown}>
+                    {otherServices
+                      .filter((s) => !service.subServiceIds.includes(s.id))
+                      .map((s) => (
+                        <button
+                          key={s.id}
+                          className={styles.subOption}
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            toggleSubService(s.id);
+                          }}
+                        >
+                          <Text variant="nano" as="span">
+                            {s.name}
+                          </Text>
+                        </button>
+                      ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </>
+      )}
+
+      {/* ── Addons ── */}
+      {allAddons.length > 0 && (
+        <>
+          <div className={styles.expLabel}>
+            <IconPlusCircle width="8" height="8" />
+            <Text variant="kicker-sm" as="span">
+              Dodatki
+            </Text>
+            <span className={styles.line} />
+            <Text variant="nano" as="span" color="secondary">
+              opcjonalne przy rezerwacji
+            </Text>
+          </div>
+          <div className={styles.chips}>
+            {service.addonIds.map((id) => {
+              const addon = allAddons.find((a) => a.id === id);
+              if (!addon) return null;
+              return (
+                <span key={id} className={styles.chip}>
+                  <Text variant="nano" as="span">
+                    {addon.name}
+                  </Text>
+                  {addon.pricePln && (
+                    <Text variant="nano" as="span" color="secondary" mono>
+                      +{addon.pricePln} zł
+                    </Text>
+                  )}
+                  <button
+                    className={styles.chipX}
+                    onClick={() => toggleAddon(id)}
+                    aria-label={`Usuń ${addon.name}`}
+                  >
+                    <IconXClose width="8" height="8" />
+                  </button>
+                </span>
+              );
+            })}
+
+            {service.addonIds.length < allAddons.length && (
+              <div className={styles.chipAddWrap} ref={addonWrapRef}>
+                <button
+                  className={styles.chipAdd}
+                  onClick={() => setAddonDropdown((v) => !v)}
+                  aria-label="Dodaj dodatek"
+                  aria-expanded={addonDropdown}
+                >
+                  <IconPlus width="7" height="7" />
+                </button>
+                {addonDropdown && (
+                  <div className={styles.subDropdown}>
+                    {allAddons
+                      .filter((a) => !service.addonIds.includes(a.id))
+                      .map((a) => (
+                        <button
+                          key={a.id}
+                          className={styles.subOption}
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            toggleAddon(a.id);
+                          }}
+                        >
+                          <Text variant="nano" as="span">
+                            {a.name}
+                          </Text>
+                          {a.pricePln && (
+                            <Text variant="nano" as="span" color="secondary" mono>
+                              &nbsp;+{a.pricePln} zł
+                            </Text>
+                          )}
+                        </button>
+                      ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </>
+      )}
     </div>
-  );
-}
-
-function RimCircleIcon() {
-  return (
-    <svg
-      width="8"
-      height="8"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.2"
-      aria-hidden="true"
-    >
-      <circle cx="12" cy="12" r="10" />
-      <circle cx="12" cy="12" r="3" />
-    </svg>
-  );
-}
-
-function CheckboxIcon() {
-  return (
-    <svg
-      width="8"
-      height="8"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.2"
-      aria-hidden="true"
-    >
-      <polyline points="9 11 12 14 22 4" />
-      <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
-    </svg>
-  );
-}
-
-function InheritLegendIcon() {
-  return (
-    <svg
-      width="8"
-      height="8"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
-      <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
-    </svg>
-  );
-}
-
-function OverrideLegendIcon() {
-  return (
-    <svg
-      width="8"
-      height="8"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="var(--accent)"
-      strokeWidth="2.2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <rect x="3" y="11" width="18" height="11" rx="2" />
-      <path d="M7 11V7a5 5 0 0 1 9.9-1" />
-    </svg>
   );
 }
