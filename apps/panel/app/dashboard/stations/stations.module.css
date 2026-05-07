@@ -697,12 +697,12 @@
 
 .wgBar {
   position: absolute;
-  top: 0;
   bottom: 0;
-  background: linear-gradient(90deg, var(--accent), var(--accent-hover));
-  border-radius: 3px;
+  left: 0;
+  right: 0;
+  background: linear-gradient(180deg, var(--accent-hover), var(--accent));
+  border-radius: 3px 3px 0 0;
   box-shadow: 0 0 6px var(--accent-glow);
-  opacity: 0.75;
 }
 
 /* ── Coverage list ── */

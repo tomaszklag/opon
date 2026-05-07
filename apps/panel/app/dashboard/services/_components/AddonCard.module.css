@@ -3,10 +3,18 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
+  border-top: 1px solid var(--border);
 }
 
-.steppers {
+.fieldRow {
   display: flex;
-  align-items: center;
-  gap: 12px;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.fieldLabel {
+  width: 80px;
+  flex-shrink: 0;
+  padding-top: 8px;
+  text-transform: uppercase;
 }

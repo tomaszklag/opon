@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { Input, NumberStepper } from '@opony/design-system-web';
+import { Input, NumberStepper, Text } from '@opony/design-system-web';
 import { IconPlusCircle } from '../../../../components/icons';
 import { AccordionCard } from './AccordionCard';
 import { PriceTag } from './PriceTag';
@@ -48,15 +48,23 @@ export function AddonCard({ addon, onChange, onDelete, onToggle, defaultOpen }: 
       deleteLabel={`Usuń ${addon.name || 'dodatek'}`}
     >
       <div className={styles.body}>
-        <Input
-          ref={inputRef}
-          type="text"
-          placeholder="Nazwa dodatku…"
-          value={addon.name}
-          onChange={(e) => onChange({ ...addon, name: e.target.value })}
-          aria-label="Nazwa dodatku"
-        />
-        <div className={styles.steppers}>
+        <div className={styles.fieldRow}>
+          <Text variant="nano" as="span" weight="bold" color="muted" className={styles.fieldLabel}>
+            Nazwa
+          </Text>
+          <Input
+            ref={inputRef}
+            type="text"
+            placeholder="Nazwa dodatku…"
+            value={addon.name}
+            onChange={(e) => onChange({ ...addon, name: e.target.value })}
+            aria-label="Nazwa dodatku"
+          />
+        </div>
+        <div className={styles.fieldRow}>
+          <Text variant="nano" as="span" weight="bold" color="muted" className={styles.fieldLabel}>
+            Cena
+          </Text>
           <NumberStepper
             value={addon.pricePln}
             onChange={(v) => onChange({ ...addon, pricePln: v })}
@@ -66,6 +74,11 @@ export function AddonCard({ addon, onChange, onDelete, onToggle, defaultOpen }: 
             inputWidth={60}
             aria-label="Cena w złotych"
           />
+        </div>
+        <div className={styles.fieldRow}>
+          <Text variant="nano" as="span" weight="bold" color="muted" className={styles.fieldLabel}>
+            Czas
+          </Text>
           <NumberStepper
             value={addon.durationMinutes ?? ''}
             onChange={(v) => onChange({ ...addon, durationMinutes: v || null })}

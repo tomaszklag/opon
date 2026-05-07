@@ -222,6 +222,7 @@ export function StationCard({
       meta={serviceMeta}
       onDelete={onDelete}
       deleteLabel="Usuń stanowisko"
+      confirmDelete={`Czy na pewno chcesz usunąć stanowisko „${station.name}"? Tej operacji nie można cofnąć.`}
     >
       <div className={styles.cardBody}>
         {/* Name */}

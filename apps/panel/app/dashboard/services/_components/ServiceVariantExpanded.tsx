@@ -2,15 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { Input, Text, NumberStepper } from '@opony/design-system-web';
-import {
-  IconPlus,
-  IconXClose,
-  IconDollar,
-  IconList,
-  IconRim,
-  IconLinkChain,
-  IconPlusCircle,
-} from '../../../../components/icons';
+import { IconPlus, IconXClose } from '../../../../components/icons';
 import { RimTierRow } from './RimTierRow';
 import { ServiceVariantRow } from './ServiceVariantRow';
 import { PriceTag } from './PriceTag';
@@ -96,25 +88,32 @@ export function ServiceVariantExpanded({ service, allServices, allAddons, onChan
   return (
     <div className={styles.expanded}>
       {/* ── Name ── */}
-      <Input
-        type="text"
-        placeholder="Nazwa usługi…"
-        value={service.name}
-        onChange={(e) => onChange({ ...service, name: e.target.value })}
-        aria-label="Nazwa usługi"
-      />
+      <div className={styles.fieldRow}>
+        <Text variant="nano" as="span" weight="bold" color="muted" className={styles.fieldLabel}>
+          Nazwa
+        </Text>
+        <Input
+          type="text"
+          placeholder="Nazwa usługi…"
+          value={service.name}
+          onChange={(e) => onChange({ ...service, name: e.target.value })}
+          aria-label="Nazwa usługi"
+        />
+      </div>
 
-      {/* ── Pricing section ── */}
+      {/* ── Pricing FLAT ── */}
       {service.pricingType === 'FLAT' && (
         <>
-          <div className={styles.expLabel}>
-            <IconDollar width="8" height="8" />
-            <Text variant="kicker-sm" as="span">
-              Cena &amp; czas
+          <div className={styles.fieldRow}>
+            <Text
+              variant="nano"
+              as="span"
+              weight="bold"
+              color="muted"
+              className={styles.fieldLabel}
+            >
+              Cena
             </Text>
-            <span className={styles.line} />
-          </div>
-          <div className={styles.flatRow}>
             <NumberStepper
               value={flatVariant?.pricePln ?? ''}
               onChange={(v) =>
@@ -126,6 +125,17 @@ export function ServiceVariantExpanded({ service, allServices, allAddons, onChan
               inputWidth={64}
               aria-label="Cena w złotych"
             />
+          </div>
+          <div className={styles.fieldRow}>
+            <Text
+              variant="nano"
+              as="span"
+              weight="bold"
+              color="muted"
+              className={styles.fieldLabel}
+            >
+              Czas
+            </Text>
             <NumberStepper
               value={flatVariant?.durationMinutes ?? ''}
               onChange={(v) =>
@@ -141,211 +151,199 @@ export function ServiceVariantExpanded({ service, allServices, allAddons, onChan
         </>
       )}
 
+      {/* ── Pricing VARIANTS ── */}
       {service.pricingType === 'VARIANTS' && (
-        <>
-          <div className={styles.expLabel}>
-            <IconList width="8" height="8" />
-            <Text variant="kicker-sm" as="span">
-              Warianty
-            </Text>
-            <span className={styles.line} />
+        <div className={styles.fieldRow}>
+          <Text variant="nano" as="span" weight="bold" color="muted" className={styles.fieldLabel}>
+            Warianty
+          </Text>
+          <div className={styles.variantContent}>
+            <div className={styles.variantsList}>
+              {service.variants.map((v) => (
+                <ServiceVariantRow
+                  key={v.id}
+                  variant={v}
+                  onChange={(updated) => updateVariant(v.id, updated)}
+                  onDelete={() => deleteVariant(v.id)}
+                  autoFocusName={v.id === lastAddedVariantId}
+                />
+              ))}
+            </div>
+            <button className={styles.addTierBtn} onClick={addVariant}>
+              <IconPlus width="9" height="9" />
+              <Text variant="nano" as="span">
+                Dodaj wariant
+              </Text>
+            </button>
           </div>
-          <div className={styles.variantsList}>
-            {service.variants.map((v) => (
-              <ServiceVariantRow
-                key={v.id}
-                variant={v}
-                onChange={(updated) => updateVariant(v.id, updated)}
-                onDelete={() => deleteVariant(v.id)}
-                autoFocusName={v.id === lastAddedVariantId}
-              />
-            ))}
-          </div>
-          <button className={styles.addTierBtn} onClick={addVariant}>
-            <IconPlus width="9" height="9" />
-            <Text variant="nano" as="span">
-              Dodaj wariant
-            </Text>
-          </button>
-        </>
+        </div>
       )}
 
+      {/* ── Pricing RIM_SIZES ── */}
       {service.pricingType === 'RIM_SIZES' && (
-        <>
-          <div className={styles.expLabel}>
-            <IconRim width="8" height="8" />
-            <Text variant="kicker-sm" as="span">
-              Zakresy rozmiarów
-            </Text>
-            <span className={styles.line} />
+        <div className={styles.fieldRow}>
+          <Text variant="nano" as="span" weight="bold" color="muted" className={styles.fieldLabel}>
+            Rozmiary
+          </Text>
+          <div className={styles.variantContent}>
+            <div className={styles.rimTiers}>
+              {service.variants.map((v) => (
+                <RimTierRow
+                  key={v.id}
+                  tier={v}
+                  onChange={(updated) => updateVariant(v.id, updated)}
+                  onDelete={() => deleteVariant(v.id)}
+                />
+              ))}
+            </div>
+            <button className={styles.addTierBtn} onClick={addVariant}>
+              <IconPlus width="9" height="9" />
+              <Text variant="nano" as="span">
+                Dodaj zakres
+              </Text>
+            </button>
           </div>
-          <div className={styles.rimTiers}>
-            {service.variants.map((v) => (
-              <RimTierRow
-                key={v.id}
-                tier={v}
-                onChange={(updated) => updateVariant(v.id, updated)}
-                onDelete={() => deleteVariant(v.id)}
-              />
-            ))}
-          </div>
-          <button className={styles.addTierBtn} onClick={addVariant}>
-            <IconPlus width="9" height="9" />
-            <Text variant="nano" as="span">
-              Dodaj zakres
-            </Text>
-          </button>
-        </>
+        </div>
       )}
 
       {/* ── Sub-services ── */}
       {otherServices.length > 0 && (
-        <>
-          <div className={styles.expLabel}>
-            <IconLinkChain width="8" height="8" />
-            <Text variant="kicker-sm" as="span">
-              Podusługi
-            </Text>
-            <span className={styles.line} />
-            <Text variant="nano" as="span" color="secondary">
-              sugerowane przy rezerwacji
-            </Text>
-          </div>
-          <div className={styles.chips}>
-            {service.subServiceIds.map((id) => {
-              const sub = otherServices.find((s) => s.id === id);
-              if (!sub) return null;
-              return (
-                <span
-                  key={id}
-                  className={`${styles.chip}${!sub.enabled ? ' ' + styles.chipDisabled : ''}`}
-                >
-                  <Text variant="nano" as="span">
-                    {sub.name}
-                  </Text>
-                  <button
-                    className={styles.chipX}
-                    onClick={() => toggleSubService(id)}
-                    aria-label={`Usuń ${sub.name}`}
+        <div className={styles.fieldRow}>
+          <Text variant="nano" as="span" weight="bold" color="muted" className={styles.fieldLabel}>
+            Sugerowane podusługi
+          </Text>
+          <div className={styles.chipsWrap}>
+            <div className={styles.chips}>
+              {service.subServiceIds.map((id) => {
+                const sub = otherServices.find((s) => s.id === id);
+                if (!sub) return null;
+                return (
+                  <span
+                    key={id}
+                    className={`${styles.chip}${!sub.enabled ? ' ' + styles.chipDisabled : ''}`}
                   >
-                    <IconXClose width="8" height="8" />
-                  </button>
-                </span>
-              );
-            })}
+                    <Text variant="nano" as="span">
+                      {sub.name}
+                    </Text>
+                    <button
+                      className={styles.chipX}
+                      onClick={() => toggleSubService(id)}
+                      aria-label={`Usuń ${sub.name}`}
+                    >
+                      <IconXClose width="8" height="8" />
+                    </button>
+                  </span>
+                );
+              })}
 
-            <div className={styles.chipAddWrap} ref={subWrapRef}>
-              {(service.subServiceIds.length < otherServices.length || subDropdown) && (
-                <button
-                  className={styles.chipAdd}
-                  onClick={() => setSubDropdown((v) => !v)}
-                  aria-label="Dodaj podusługę"
-                  aria-expanded={subDropdown}
-                >
-                  <IconPlus width="7" height="7" />
-                </button>
-              )}
-              {subDropdown && (
-                <div className={styles.subDropdown}>
-                  {otherServices
-                    .filter((s) => !service.subServiceIds.includes(s.id))
-                    .map((s) => (
-                      <button
-                        key={s.id}
-                        className={styles.subOption}
-                        onMouseDown={(e) => {
-                          e.preventDefault();
-                          toggleSubService(s.id);
-                        }}
-                      >
-                        <Text variant="nano" as="span">
-                          {s.name}
-                        </Text>
-                      </button>
-                    ))}
-                </div>
-              )}
-            </div>
-          </div>
-        </>
-      )}
-
-      {/* ── Addons ── */}
-      {allAddons.length > 0 && (
-        <>
-          <div className={styles.expLabel}>
-            <IconPlusCircle width="8" height="8" />
-            <Text variant="kicker-sm" as="span">
-              Dodatki
-            </Text>
-            <span className={styles.line} />
-            <Text variant="nano" as="span" color="secondary">
-              opcjonalne przy rezerwacji
-            </Text>
-          </div>
-          <div className={styles.chips}>
-            {service.addonIds.map((id) => {
-              const addon = allAddons.find((a) => a.id === id);
-              if (!addon) return null;
-              return (
-                <span
-                  key={id}
-                  className={`${styles.chip}${!addon.enabled ? ' ' + styles.chipDisabled : ''}`}
-                >
-                  <Text variant="nano" as="span">
-                    {addon.name}
-                  </Text>
-                  {parseFloat(addon.pricePln) > 0 && (
-                    <PriceTag value={parseFloat(addon.pricePln)} prefix="+" muted />
-                  )}
+              <div className={styles.chipAddWrap} ref={subWrapRef}>
+                {(service.subServiceIds.length < otherServices.length || subDropdown) && (
                   <button
-                    className={styles.chipX}
-                    onClick={() => toggleAddon(id)}
-                    aria-label={`Usuń ${addon.name}`}
+                    className={styles.chipAdd}
+                    onClick={() => setSubDropdown((v) => !v)}
+                    aria-label="Dodaj podusługę"
+                    aria-expanded={subDropdown}
                   >
-                    <IconXClose width="8" height="8" />
+                    <IconPlus width="7" height="7" />
                   </button>
-                </span>
-              );
-            })}
-
-            {service.addonIds.length < allAddons.length && (
-              <div className={styles.chipAddWrap} ref={addonWrapRef}>
-                <button
-                  className={styles.chipAdd}
-                  onClick={() => setAddonDropdown((v) => !v)}
-                  aria-label="Dodaj dodatek"
-                  aria-expanded={addonDropdown}
-                >
-                  <IconPlus width="7" height="7" />
-                </button>
-                {addonDropdown && (
+                )}
+                {subDropdown && (
                   <div className={styles.subDropdown}>
-                    {allAddons
-                      .filter((a) => !service.addonIds.includes(a.id))
-                      .map((a) => (
+                    {otherServices
+                      .filter((s) => !service.subServiceIds.includes(s.id))
+                      .map((s) => (
                         <button
-                          key={a.id}
+                          key={s.id}
                           className={styles.subOption}
                           onMouseDown={(e) => {
                             e.preventDefault();
-                            toggleAddon(a.id);
+                            toggleSubService(s.id);
                           }}
                         >
                           <Text variant="nano" as="span">
-                            {a.name}
+                            {s.name}
                           </Text>
-                          {parseFloat(a.pricePln) > 0 && (
-                            <PriceTag value={parseFloat(a.pricePln)} prefix="+" muted />
-                          )}
                         </button>
                       ))}
                   </div>
                 )}
               </div>
-            )}
+            </div>
           </div>
-        </>
+        </div>
+      )}
+
+      {/* ── Addons ── */}
+      {allAddons.length > 0 && (
+        <div className={styles.fieldRow}>
+          <Text variant="nano" as="span" weight="bold" color="muted" className={styles.fieldLabel}>
+            Opcjonalne dodatki
+          </Text>
+          <div className={styles.chipsWrap}>
+            <div className={styles.chips}>
+              {service.addonIds.map((id) => {
+                const addon = allAddons.find((a) => a.id === id);
+                if (!addon) return null;
+                return (
+                  <span
+                    key={id}
+                    className={`${styles.chip}${!addon.enabled ? ' ' + styles.chipDisabled : ''}`}
+                  >
+                    <Text variant="nano" as="span">
+                      {addon.name}
+                    </Text>
+                    {parseFloat(addon.pricePln) > 0 && (
+                      <PriceTag value={parseFloat(addon.pricePln)} prefix="+" muted />
+                    )}
+                    <button
+                      className={styles.chipX}
+                      onClick={() => toggleAddon(id)}
+                      aria-label={`Usuń ${addon.name}`}
+                    >
+                      <IconXClose width="8" height="8" />
+                    </button>
+                  </span>
+                );
+              })}
+
+              {service.addonIds.length < allAddons.length && (
+                <div className={styles.chipAddWrap} ref={addonWrapRef}>
+                  <button
+                    className={styles.chipAdd}
+                    onClick={() => setAddonDropdown((v) => !v)}
+                    aria-label="Dodaj dodatek"
+                    aria-expanded={addonDropdown}
+                  >
+                    <IconPlus width="7" height="7" />
+                  </button>
+                  {addonDropdown && (
+                    <div className={styles.subDropdown}>
+                      {allAddons
+                        .filter((a) => !service.addonIds.includes(a.id))
+                        .map((a) => (
+                          <button
+                            key={a.id}
+                            className={styles.subOption}
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              toggleAddon(a.id);
+                            }}
+                          >
+                            <Text variant="nano" as="span">
+                              {a.name}
+                            </Text>
+                            {parseFloat(a.pricePln) > 0 && (
+                              <PriceTag value={parseFloat(a.pricePln)} prefix="+" muted />
+                            )}
+                          </button>
+                        ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

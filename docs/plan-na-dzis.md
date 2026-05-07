@@ -19,3 +19,5 @@ przyjętej architektury
 zaplanowanego design
 
 Depot (przechowywanie) to największy nieobecny — warsztaty zarabiają na nim 120–360 zł/sezon per zestaw. Wymaga osobnego modułu (zarządzanie składem). Priorytet Sprint 3–4.
+
+przejdźmy do modułu "pracownicy" - lista pracowników powinna być z tego komponentu co stanowiska - chodzi mi o te rozwijane wiersze. Przycisk i zachowanie dodawania teżpowinno być takie samo i mieć takie same style

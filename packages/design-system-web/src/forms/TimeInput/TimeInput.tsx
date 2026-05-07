@@ -1,31 +1,10 @@
 'use client';
-import React, { useEffect, useRef, useState } from 'react';
+
+import React, { useRef, useState } from 'react';
 import styles from './TimeInput.module.css';
 
-const HOURS = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'));
-const MINUTES = Array.from({ length: 12 }, (_, i) => String(i * 5).padStart(2, '0'));
-
-function ClockIcon() {
-  return (
-    <svg
-      width="12"
-      height="12"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <circle cx="12" cy="12" r="9" />
-      <polyline points="12 7 12 12 15 15" />
-    </svg>
-  );
-}
-
 export interface TimeInputProps {
-  value: string;
+  value: string; // "HH:MM"
   onChange: (value: string) => void;
   label?: string;
   error?: boolean;
@@ -41,138 +20,170 @@ export function TimeInput({
   disabled,
   'aria-label': ariaLabel,
 }: TimeInputProps) {
-  const [open, setOpen] = useState(false);
-  const wrapRef = useRef<HTMLDivElement>(null);
-  const hourRef = useRef<HTMLDivElement>(null);
-  const minRef = useRef<HTMLDivElement>(null);
+  const parts = (value || '00:00').split(':');
+  const hhVal = (parts[0] ?? '00').padStart(2, '0');
+  const mmVal = (parts[1] ?? '00').padStart(2, '0');
+  const curH = parseInt(hhVal, 10);
+  const curM = parseInt(mmVal, 10);
 
-  const [hh, mm] = value ? value.split(':') : ['', ''];
-  const selectedH = hh ?? '';
-  const selectedM = mm ? String(Math.round(parseInt(mm) / 5) * 5).padStart(2, '0') : '';
+  const [focused, setFocused] = useState<'hh' | 'mm' | null>(null);
+  const [pending, setPending] = useState('');
 
-  useEffect(() => {
-    if (!open) return;
-    function onMouseDown(e: MouseEvent) {
-      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
-    }
-    document.addEventListener('mousedown', onMouseDown);
-    return () => document.removeEventListener('mousedown', onMouseDown);
-  }, [open]);
+  const hhRef = useRef<HTMLSpanElement>(null);
+  const mmRef = useRef<HTMLSpanElement>(null);
 
-  useEffect(() => {
-    if (!open) return;
-    // Scroll selected options into view
-    const scrollTo = (
-      ref: React.RefObject<HTMLDivElement | null>,
-      val: string,
-      items: string[],
-    ) => {
-      const el = ref.current;
-      if (!el) return;
-      const idx = items.indexOf(val);
-      if (idx < 0) return;
-      // Each option ~27px, colLabel ~24px
-      el.scrollTop = idx * 27;
-    };
-    requestAnimationFrame(() => {
-      scrollTo(hourRef, selectedH, HOURS);
-      scrollTo(minRef, selectedM, MINUTES);
-    });
-  }, [open, selectedH, selectedM]);
-
-  function select(h: string, m: string) {
-    onChange(`${h}:${m}`);
+  function emitHH(h: number) {
+    onChange(`${String(Math.max(0, Math.min(23, h))).padStart(2, '0')}:${mmVal}`);
   }
 
-  function toggle() {
-    if (!disabled) setOpen((v) => !v);
+  function emitMM(m: number) {
+    onChange(`${hhVal}:${String(Math.max(0, Math.min(59, m))).padStart(2, '0')}`);
+  }
+
+  function focusMM() {
+    setPending('');
+    mmRef.current?.focus();
+  }
+
+  function focusHH() {
+    setPending('');
+    hhRef.current?.focus();
+  }
+
+  function handleDigit(d: number, seg: 'hh' | 'mm') {
+    const max = seg === 'hh' ? 23 : 59;
+    const emit = seg === 'hh' ? emitHH : emitMM;
+    // digit that can't start a valid 2-digit value → single digit, advance
+    const earlyAdvance = seg === 'hh' ? d >= 3 : d >= 6;
+
+    if (pending === '') {
+      if (earlyAdvance) {
+        emit(d);
+        if (seg === 'hh') focusMM();
+      } else {
+        setPending(String(d));
+        emit(d); // show tentative value
+      }
+    } else {
+      const full = parseInt(pending + d, 10);
+      setPending('');
+      emit(full <= max ? full : d);
+      if (seg === 'hh') focusMM();
+    }
+  }
+
+  function handleHhKey(e: React.KeyboardEvent) {
+    if (disabled) return;
+    // Let Tab propagate naturally for focus management
+    if (e.key === 'Tab') {
+      setPending('');
+      return;
+    }
+    e.preventDefault();
+    if (e.key === 'ArrowUp') {
+      emitHH((curH + 1) % 24);
+      setPending('');
+    } else if (e.key === 'ArrowDown') {
+      emitHH((curH - 1 + 24) % 24);
+      setPending('');
+    } else if (e.key === 'ArrowRight') {
+      focusMM();
+    } else if (/^\d$/.test(e.key)) {
+      handleDigit(parseInt(e.key, 10), 'hh');
+    }
+  }
+
+  function handleMmKey(e: React.KeyboardEvent) {
+    if (disabled) return;
+    if (e.key === 'Tab') {
+      setPending('');
+      return;
+    }
+    e.preventDefault();
+    if (e.key === 'ArrowUp') {
+      emitMM((curM + 1) % 60);
+      setPending('');
+    } else if (e.key === 'ArrowDown') {
+      emitMM((curM - 1 + 60) % 60);
+      setPending('');
+    } else if (e.key === 'ArrowLeft') {
+      focusHH();
+    } else if (/^\d$/.test(e.key)) {
+      handleDigit(parseInt(e.key, 10), 'mm');
+    }
   }
 
   return (
     <div
-      ref={wrapRef}
       className={[
         styles.wrap,
-        open ? styles.wrapOpen : '',
+        focused ? styles.wrapFocused : '',
         error ? styles.wrapError : '',
         disabled ? styles.wrapDisabled : '',
       ]
         .filter(Boolean)
         .join(' ')}
+      aria-label={ariaLabel}
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) {
+          e.preventDefault();
+          hhRef.current?.focus();
+        }
+      }}
     >
       {label && <span className={styles.label}>{label}</span>}
 
       <span
-        className={[styles.display, !value ? styles.displayEmpty : ''].filter(Boolean).join(' ')}
-        onClick={toggle}
-        role="button"
+        ref={hhRef}
+        role="spinbutton"
+        aria-label="Godziny"
+        aria-valuenow={curH}
+        aria-valuemin={0}
+        aria-valuemax={23}
         tabIndex={disabled ? -1 : 0}
-        aria-label={ariaLabel ?? label ?? 'Wybierz godzinę'}
-        aria-expanded={open}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            toggle();
-          }
+        className={[styles.seg, focused === 'hh' ? styles.segFocused : '']
+          .filter(Boolean)
+          .join(' ')}
+        onFocus={() => {
+          setFocused('hh');
+          setPending('');
         }}
+        onBlur={() => {
+          setFocused(null);
+          setPending('');
+        }}
+        onKeyDown={handleHhKey}
       >
-        {value || '--:--'}
+        {hhVal}
       </span>
 
-      <button
-        type="button"
-        className={styles.iconBtn}
-        onClick={toggle}
-        tabIndex={-1}
-        aria-hidden="true"
-        disabled={disabled}
+      <span className={styles.colon} aria-hidden="true">
+        :
+      </span>
+
+      <span
+        ref={mmRef}
+        role="spinbutton"
+        aria-label="Minuty"
+        aria-valuenow={curM}
+        aria-valuemin={0}
+        aria-valuemax={59}
+        tabIndex={disabled ? -1 : 0}
+        className={[styles.seg, focused === 'mm' ? styles.segFocused : '']
+          .filter(Boolean)
+          .join(' ')}
+        onFocus={() => {
+          setFocused('mm');
+          setPending('');
+        }}
+        onBlur={() => {
+          setFocused(null);
+          setPending('');
+        }}
+        onKeyDown={handleMmKey}
       >
-        <ClockIcon />
-      </button>
-
-      {open && (
-        <div className={styles.popover} role="dialog" aria-label="Wybór godziny">
-          {/* Hours */}
-          <div className={styles.col} ref={hourRef}>
-            <div className={styles.colLabel}>godz.</div>
-            {HOURS.map((h) => (
-              <div
-                key={h}
-                className={[styles.option, h === selectedH ? styles.optionSelected : '']
-                  .filter(Boolean)
-                  .join(' ')}
-                onMouseDown={(e) => {
-                  e.preventDefault();
-                  select(h, selectedM || '00');
-                }}
-              >
-                {h}
-              </div>
-            ))}
-          </div>
-
-          {/* Minutes */}
-          <div className={styles.col} ref={minRef}>
-            <div className={styles.colLabel}>min.</div>
-            {MINUTES.map((m) => (
-              <div
-                key={m}
-                className={[styles.option, m === selectedM ? styles.optionSelected : '']
-                  .filter(Boolean)
-                  .join(' ')}
-                onMouseDown={(e) => {
-                  e.preventDefault();
-                  select(selectedH || '08', m);
-                }}
-              >
-                {m}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+        {mmVal}
+      </span>
     </div>
   );
 }
