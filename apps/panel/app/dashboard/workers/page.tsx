@@ -5,7 +5,6 @@ import { Heading, Spinner, Text } from '@opony/design-system-web';
 import { useAuthGuard } from '../../../lib/hooks/use-auth-guard';
 import { useWorkers } from '../../../lib/hooks/use-workers';
 import { WorkerCard } from './_components/WorkerCard';
-import { AddWorkerForm } from './_components/AddWorkerForm';
 import { AbsenceTimeline } from './_components/AbsenceTimeline';
 import { IconPlus } from '../../../components/icons';
 import styles from './workers.module.css';
@@ -17,8 +16,6 @@ export default function WorkersPage() {
     loading,
     saving,
     error,
-    expandedId,
-    setExpandedId,
     createWorker,
     updateWorker,
     deleteWorker,
@@ -26,7 +23,18 @@ export default function WorkersPage() {
     removeLeave,
   } = useWorkers();
 
-  const [showAddForm, setShowAddForm] = useState(false);
+  const [newWorkerId, setNewWorkerId] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
+
+  async function handleCreate() {
+    setCreating(true);
+    try {
+      const id = await createWorker(`Nowy pracownik ${workers.length + 1}`);
+      setNewWorkerId(id);
+    } finally {
+      setCreating(false);
+    }
+  }
 
   if (authLoading || loading) {
     return (
@@ -85,9 +93,8 @@ export default function WorkersPage() {
               key={worker.id}
               worker={worker}
               index={index}
-              isExpanded={expandedId === worker.id}
               saving={saving}
-              onToggle={() => setExpandedId(expandedId === worker.id ? null : worker.id)}
+              defaultOpen={worker.id === newWorkerId}
               onUpdate={(patch) => updateWorker(worker.id, patch)}
               onDelete={() => deleteWorker(worker.id)}
               onAddLeave={(leave) => addLeave(worker.id, leave)}
@@ -95,28 +102,18 @@ export default function WorkersPage() {
             />
           ))}
 
-          {/* Add worker */}
-          {showAddForm ? (
-            <AddWorkerForm
-              saving={saving}
-              onAdd={async (name, role) => {
-                await createWorker(name, role);
-                setShowAddForm(false);
-              }}
-              onCancel={() => setShowAddForm(false)}
-            />
-          ) : (
-            <button
-              type="button"
-              className={styles.addWorkerTrigger}
-              onClick={() => setShowAddForm(true)}
-            >
-              <IconPlus width="14" height="14" />
-              <Text variant="body-sm" as="span" weight="bold" color="accent">
-                Dodaj pracownika
-              </Text>
-            </button>
-          )}
+          {/* Add worker button */}
+          <button
+            type="button"
+            className={styles.addWorkerBtn}
+            onClick={handleCreate}
+            disabled={creating || saving}
+          >
+            <IconPlus width="12" height="12" />
+            <Text variant="nano" as="span" weight="bold" color="accent">
+              Dodaj pracownika
+            </Text>
+          </button>
         </div>
 
         {/* Right panel */}

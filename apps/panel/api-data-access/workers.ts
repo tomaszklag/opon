@@ -32,7 +32,7 @@ export const workersApi = {
   update: (id: string, body: UpdateWorkerBody) => api.put<Worker>(`${BASE}/${id}`, body),
   remove: (id: string) => api.del<void>(`${BASE}/${id}`),
   addLeave: (workerId: string, body: CreateLeaveBody) =>
-    api.post<WorkerLeave>(`${BASE}/${workerId}/leaves`, body),
+    api.post<Worker>(`${BASE}/${workerId}/leaves`, body),
   removeLeave: (workerId: string, leaveId: string) =>
     api.del<void>(`${BASE}/${workerId}/leaves/${leaveId}`),
 };

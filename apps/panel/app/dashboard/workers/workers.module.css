@@ -200,11 +200,26 @@
 
 /* ── Card body ── */
 .workerBody {
-  padding: 0 16px 16px;
+  padding: 12px 16px 16px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  border-top: 1px solid var(--border);
+  gap: 12px;
+}
+
+.fieldRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.fieldLabel {
+  width: 90px;
+  flex-shrink: 0;
+  padding-top: 8px;
+  text-transform: uppercase;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .sectionLabel {
@@ -451,24 +466,28 @@
   gap: 8px;
 }
 
-.addWorkerTrigger {
-  display: flex;
+.addWorkerBtn {
+  display: inline-flex;
   align-items: center;
-  justify-content: center;
   gap: 8px;
-  padding: 14px;
+  padding: 9px 14px;
+  border-radius: 9px;
   border: 1px dashed var(--accent-border);
-  border-radius: 14px;
   background: transparent;
   color: var(--accent);
   cursor: pointer;
-  width: 100%;
+  align-self: flex-start;
   transition: background 0.14s, border-color 0.14s;
 }
 
-.addWorkerTrigger:hover {
+.addWorkerBtn:hover {
   background: var(--accent-muted);
   border-color: var(--accent);
+}
+
+.addWorkerBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 /* ── Right: preview col ── */

@@ -56,6 +56,10 @@ interface BarSegment {
   type: 'vacation' | 'soon';
 }
 
+function toDate(iso: string): Date {
+  return new Date(iso.slice(0, 10) + 'T00:00:00');
+}
+
 function getBarForMonth(
   startDate: string,
   endDate: string,
@@ -65,8 +69,8 @@ function getBarForMonth(
 ): BarSegment | null {
   const monthStart = new Date(year, month, 1);
   const monthEnd = new Date(year, month + 1, 0);
-  const leaveStart = new Date(startDate + 'T00:00:00');
-  const leaveEnd = new Date(endDate + 'T00:00:00');
+  const leaveStart = toDate(startDate);
+  const leaveEnd = toDate(endDate);
 
   if (leaveEnd < monthStart || leaveStart > monthEnd) return null;
 
@@ -93,9 +97,7 @@ function getFirstNameInitial(name: string): string {
 function isOnLeaveToday(startDate: string, endDate: string): boolean {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  const start = new Date(startDate + 'T00:00:00');
-  const end = new Date(endDate + 'T00:00:00');
-  return today >= start && today <= end;
+  return today >= toDate(startDate) && today <= toDate(endDate);
 }
 
 function isWorkerAbsentToday(worker: Worker): boolean {
@@ -115,7 +117,7 @@ function isSoonLeave(startDate: string): boolean {
   today.setHours(0, 0, 0, 0);
   const in30 = new Date(today);
   in30.setDate(in30.getDate() + 30);
-  const start = new Date(startDate + 'T00:00:00');
+  const start = toDate(startDate);
   return start > today && start <= in30;
 }
 
