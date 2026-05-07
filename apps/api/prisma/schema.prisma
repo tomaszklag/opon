@@ -552,7 +552,7 @@ model Station {
   id         String        @id @default(cuid())
   providerId String
   name       String        @db.VarChar(100)
-  services   ServiceType[]
+  serviceIds String[]      // IDs usług z modelu Service
   schedule   Json          // DaySchedule[] — grafik tygodniowy
   createdAt  DateTime      @default(now())
   updatedAt  DateTime      @updatedAt

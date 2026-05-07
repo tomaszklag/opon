@@ -1,0 +1,157 @@
+.wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  cursor: text;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  position: relative;
+}
+
+.wrapOpen,
+.wrap:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-muted);
+}
+
+.wrapError {
+  border-color: var(--danger);
+}
+
+.wrapError:focus-within {
+  box-shadow: 0 0 0 3px rgba(255, 87, 87, 0.16);
+}
+
+.wrapDisabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.label {
+  font-family: var(--font-mono, monospace);
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  white-space: nowrap;
+  pointer-events: none;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.display {
+  flex: 1;
+  min-width: 48px;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text-primary);
+  font-family: var(--font-mono, monospace);
+  font-weight: var(--font-bold);
+  font-size: var(--text-base);
+  letter-spacing: var(--tracking-wider);
+  text-align: center;
+  padding: 0;
+  cursor: pointer;
+  user-select: none;
+}
+
+.displayEmpty {
+  color: var(--text-muted);
+}
+
+/* Hidden native input for form submission / value backing */
+.nativeInput {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+  width: 0;
+  height: 0;
+}
+
+.iconBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: var(--text-muted);
+  flex-shrink: 0;
+  line-height: 0;
+  transition: color var(--transition-fast);
+}
+
+.iconBtn:hover,
+.wrapOpen .iconBtn {
+  color: var(--accent);
+}
+
+/* ── Popover ── */
+.popover {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 200;
+  background: var(--surface-raised);
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+  display: flex;
+  overflow: hidden;
+  min-width: 120px;
+}
+
+.col {
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  max-height: 196px;
+  padding: 4px;
+  flex: 1;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+
+.col:first-child {
+  border-right: 1px solid var(--border);
+}
+
+.colLabel {
+  font-family: var(--font-mono, monospace);
+  font-size: 9px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  text-align: center;
+  padding: 4px 0 2px;
+  position: sticky;
+  top: 0;
+  background: var(--surface-raised);
+  user-select: none;
+}
+
+.option {
+  padding: 5px 0;
+  text-align: center;
+  cursor: pointer;
+  font-family: var(--font-mono, monospace);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  border-radius: 5px;
+  user-select: none;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.option:hover {
+  background: var(--accent-muted);
+  color: var(--accent);
+}
+
+.optionSelected {
+  background: var(--accent-muted);
+  color: var(--accent);
+  font-weight: var(--font-bold);
+}

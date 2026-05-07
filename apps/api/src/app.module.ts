@@ -26,6 +26,7 @@ import { RealtimeModule } from './realtime/realtime.module';
 import { ServiceConfigsModule } from './service-configs/service-configs.module';
 import { ServicesModule } from './services/services.module';
 import { NotificationPreferencesModule } from './notification-preferences/notification-preferences.module';
+import { ScheduleExceptionsModule } from './schedule-exceptions/schedule-exceptions.module';
 
 @Module({
   imports: [
@@ -56,6 +57,7 @@ import { NotificationPreferencesModule } from './notification-preferences/notifi
     ServiceConfigsModule,
     ServicesModule,
     NotificationPreferencesModule,
+    ScheduleExceptionsModule,
   ],
   providers: [
     // Globalny guard — wszystkie endpointy wymagają JWT, chyba że @Public()

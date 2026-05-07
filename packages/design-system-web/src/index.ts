@@ -15,6 +15,7 @@ export * from './forms/SegmentedControl';
 export * from './forms/NumberStepper';
 export * from './forms/Select';
 export * from './forms/Textarea';
+export * from './forms/TimeInput';
 export * from './forms/Toggle';
 
 // display

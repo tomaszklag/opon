@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma, ServiceType, Station, StationWorker } from '@prisma/client';
+import { Prisma, Station, StationWorker } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
 type StationWithWorkers = Prisma.StationGetPayload<{
@@ -39,13 +39,13 @@ export class StationsRepository {
 
   create(
     providerId: string,
-    data: { name: string; services: ServiceType[]; schedule: Prisma.InputJsonValue },
+    data: { name: string; serviceIds: string[]; schedule: Prisma.InputJsonValue },
   ): Promise<StationWithWorkers> {
     return this.prisma.station.create({
       data: {
         providerId,
         name: data.name,
-        services: data.services,
+        serviceIds: data.serviceIds,
         schedule: data.schedule,
       },
       include: {

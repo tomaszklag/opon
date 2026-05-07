@@ -5,7 +5,8 @@ import { Button, Heading, Modal, Spinner, Text } from '@opony/design-system-web'
 import { useAuthGuard } from '../../../lib/hooks/use-auth-guard';
 import { useNavigationGuard } from '../../../lib/hooks/use-navigation-guard';
 import { useStations } from '../../../lib/hooks/use-stations';
-import { type ServiceType, type DaySchedule } from '../../../api-data-access/stations';
+import { useServicesPage } from '../../../lib/hooks/use-services-page';
+import { type DaySchedule } from '../../../api-data-access/stations';
 import { StationsActionBar } from './_components/StationsActionBar';
 import { StationsEmptyState } from './_components/StationsEmptyState';
 import { StationCard } from './_components/StationCard';
@@ -13,11 +14,14 @@ import { StationsPreview } from './_components/StationsPreview';
 import { IconPlus } from '../../../components/icons';
 import styles from './stations.module.css';
 
-// All services are considered "available" until we have a pricing API integration
-const ALL_SERVICES: ServiceType[] = ['SEASONAL_SWAP', 'WHEEL_SWAP', 'BALANCING', 'PUNCTURE_REPAIR'];
-
 export default function StationsPage() {
   const { isLoading: authLoading } = useAuthGuard('/dashboard');
+  const { state: servicesState, isLoading: servicesLoading } = useServicesPage();
+  const availableServices = servicesState.services.map((s) => ({
+    id: s.id,
+    name: s.name || 'Usługa bez nazwy',
+    enabled: s.enabled,
+  }));
   const {
     stations,
     loading,
@@ -30,6 +34,7 @@ export default function StationsPage() {
     deleteStation,
     removeWorker,
     updateStationLocal,
+    saveAll,
     revert,
   } = useStations();
 
@@ -49,13 +54,10 @@ export default function StationsPage() {
   }
 
   function handleSave() {
-    // For stations, each mutation is directly saved via API.
-    // The "save" here is a no-op if all local changes have been pushed.
-    // This button resets dirty state if somehow it's still set.
-    revert();
+    saveAll(stations);
   }
 
-  if (authLoading || loading) {
+  if (authLoading || loading || servicesLoading) {
     return (
       <div className={styles.loadingWrap}>
         <Spinner size="md" label="Ładowanie stanowisk…" />
@@ -141,15 +143,15 @@ export default function StationsPage() {
                   <StationCard
                     key={station.id}
                     station={station}
-                    availableServices={ALL_SERVICES}
+                    availableServices={availableServices}
                     onUpdateName={(name) => {
                       updateStation(station.id, { name });
                     }}
-                    onToggleService={(svc) => {
-                      const services = station.services.includes(svc)
-                        ? station.services.filter((s) => s !== svc)
-                        : [...station.services, svc];
-                      updateStation(station.id, { services });
+                    onToggleService={(serviceId) => {
+                      const serviceIds = station.serviceIds.includes(serviceId)
+                        ? station.serviceIds.filter((id) => id !== serviceId)
+                        : [...station.serviceIds, serviceId];
+                      updateStationLocal(station.id, { serviceIds });
                     }}
                     onUpdateSchedule={(schedule: DaySchedule[]) => {
                       updateStationLocal(station.id, { schedule });
@@ -169,8 +171,10 @@ export default function StationsPage() {
                   onClick={handleCreate}
                   disabled={creating || saving}
                 >
-                  <IconPlus width="14" height="14" />
-                  Dodaj stanowisko
+                  <IconPlus width="12" height="12" />
+                  <Text variant="nano" as="span" weight="bold" color="accent">
+                    Dodaj stanowisko
+                  </Text>
                 </button>
               </>
             )}
@@ -178,7 +182,7 @@ export default function StationsPage() {
 
           {/* Right preview column */}
           <div className={styles.previewCol}>
-            <StationsPreview stations={stations} />
+            <StationsPreview stations={stations} availableServices={availableServices} />
           </div>
         </div>
       </div>

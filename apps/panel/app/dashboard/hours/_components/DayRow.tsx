@@ -1,4 +1,4 @@
-import { Button, IconButton, Select, Text, Toggle } from '@opony/design-system-web';
+import { Button, IconButton, Select, Text, TimeInput, Toggle } from '@opony/design-system-web';
 import { type CapacityBlock, type DayEntry } from '../../../../lib/hooks/use-working-hours';
 import { IconCopy, IconMinus, IconPlus, IconSplit } from '../../../../components/icons';
 import { DAY_META, SLOT_OPTIONS, computeSlotsForDay, formatDuration } from './utils';
@@ -75,26 +75,18 @@ export function DayRow({
         </Text>
       ) : (
         <>
-          <label className={[styles.timeInput, error ? styles.timeInputError : ''].join(' ')}>
-            <Text variant="nano" as="span" color="muted">
-              Od
-            </Text>
-            <input
-              type="time"
-              value={day.openTime}
-              onChange={(e) => onUpdate(day.dayOfWeek, { openTime: e.target.value })}
-            />
-          </label>
-          <label className={[styles.timeInput, error ? styles.timeInputError : ''].join(' ')}>
-            <Text variant="nano" as="span" color="muted">
-              Do
-            </Text>
-            <input
-              type="time"
-              value={day.closeTime}
-              onChange={(e) => onUpdate(day.dayOfWeek, { closeTime: e.target.value })}
-            />
-          </label>
+          <TimeInput
+            label="Od"
+            value={day.openTime}
+            onChange={(v) => onUpdate(day.dayOfWeek, { openTime: v })}
+            error={!!error}
+          />
+          <TimeInput
+            label="Do"
+            value={day.closeTime}
+            onChange={(v) => onUpdate(day.dayOfWeek, { closeTime: v })}
+            error={!!error}
+          />
 
           {/* Slot select */}
           <div className={styles.slotSelectWrap}>

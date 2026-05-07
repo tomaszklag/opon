@@ -1,23 +1,17 @@
 import { Heading, Text } from '@opony/design-system-web';
-import {
-  type Station,
-  type ServiceType,
-  SERVICE_LABELS,
-} from '../../../../api-data-access/stations';
+import { type Station, type DaySchedule } from '../../../../api-data-access/stations';
+import { type ServiceOption } from './StationCard';
 import styles from '../stations.module.css';
-
-import type { DaySchedule } from '../../../../api-data-access/stations';
 
 const WEEK_LABELS = ['PON', 'WT', 'ŚR', 'CZW', 'PT', 'SOB', 'ND'];
 const WEEK_DOWS: DaySchedule['dayOfWeek'][] = [1, 2, 3, 4, 5, 6, 0];
 
-const ALL_SERVICES: ServiceType[] = ['SEASONAL_SWAP', 'WHEEL_SWAP', 'BALANCING', 'PUNCTURE_REPAIR'];
-
 interface Props {
   stations: Station[];
+  availableServices: ServiceOption[];
 }
 
-export function StationsPreview({ stations }: Props) {
+export function StationsPreview({ stations, availableServices }: Props) {
   const todayDow = new Date().getDay();
 
   return (
@@ -176,30 +170,46 @@ export function StationsPreview({ stations }: Props) {
         </div>
 
         <div className={styles.coverageList}>
-          {ALL_SERVICES.map((svc) => {
-            const count = stations.filter((s) => s.services.includes(svc)).length;
-            return (
-              <div key={svc} className={styles.coverageItem}>
-                <Text variant="body-sm" as="span" style={{ flex: 1 }}>
-                  {SERVICE_LABELS[svc]}
-                </Text>
-                <div className={styles.coverageDots}>
-                  {stations.map((s) => (
-                    <span
-                      key={s.id}
-                      className={[styles.cdot, s.services.includes(svc) ? '' : styles.cdotOff].join(
-                        ' ',
-                      )}
-                      title={s.name}
-                    />
-                  ))}
+          {availableServices.length === 0 ? (
+            <Text variant="nano" as="span" color="muted">
+              Brak zdefiniowanych usług.
+            </Text>
+          ) : (
+            availableServices.map((svc) => {
+              const count = stations.filter((s) => s.serviceIds.includes(svc.id)).length;
+              return (
+                <div key={svc.id} className={styles.coverageItem}>
+                  <Text
+                    variant="body-sm"
+                    as="span"
+                    color={svc.enabled ? undefined : 'muted'}
+                    style={{
+                      flex: 1,
+                      textDecoration: svc.enabled ? undefined : 'line-through',
+                    }}
+                  >
+                    {svc.name}
+                  </Text>
+                  <div className={styles.coverageDots}>
+                    {stations.map((s) => (
+                      <span
+                        key={s.id}
+                        className={[
+                          styles.cdot,
+                          s.serviceIds.includes(svc.id) ? '' : styles.cdotOff,
+                        ].join(' ')}
+                        style={svc.enabled ? undefined : { opacity: 0.35 }}
+                        title={s.name}
+                      />
+                    ))}
+                  </div>
+                  <Text variant="nano" as="span" color="secondary" mono weight="bold">
+                    {count} st.
+                  </Text>
                 </div>
-                <Text variant="nano" as="span" color="secondary" mono weight="bold">
-                  {count} st.
-                </Text>
-              </div>
-            );
-          })}
+              );
+            })
+          )}
         </div>
       </div>
     </>

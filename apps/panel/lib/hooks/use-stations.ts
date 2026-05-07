@@ -1,12 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import {
-  stationsApi,
-  type Station,
-  type DaySchedule,
-  type ServiceType,
-} from '../../api-data-access/stations';
+import { stationsApi, type Station, type DaySchedule } from '../../api-data-access/stations';
 
 function defaultSchedule(): DaySchedule[] {
   return [
@@ -65,7 +60,7 @@ export function useStations() {
     try {
       const station = await stationsApi.create({
         name,
-        services: [],
+        serviceIds: [],
         schedule: defaultSchedule(),
       });
       const updated = [...stations, station];
@@ -78,7 +73,7 @@ export function useStations() {
 
   async function updateStation(
     id: string,
-    patch: { name?: string; services?: ServiceType[]; schedule?: DaySchedule[] },
+    patch: { name?: string; serviceIds?: string[]; schedule?: DaySchedule[] },
   ) {
     setSaving(true);
     setError(null);
@@ -165,10 +160,35 @@ export function useStations() {
     setError(null);
   }
 
-  // Local optimistic update helper (for UI state before saving)
   function updateStationLocal(id: string, patch: Partial<Station>) {
     setStations((prev) => prev.map((s) => (s.id === id ? { ...s, ...patch } : s)));
     markDirty();
+  }
+
+  async function saveAll(current: Station[]) {
+    setSaving(true);
+    setError(null);
+    try {
+      for (const station of current) {
+        const saved = savedStations.find((s) => s.id === station.id);
+        if (!saved) continue;
+        if (
+          station.name !== saved.name ||
+          JSON.stringify(station.serviceIds) !== JSON.stringify(saved.serviceIds) ||
+          JSON.stringify(station.schedule) !== JSON.stringify(saved.schedule)
+        ) {
+          await stationsApi.update(station.id, {
+            name: station.name,
+            serviceIds: station.serviceIds,
+            schedule: station.schedule,
+          });
+        }
+      }
+      markSaved(current);
+    } catch {
+      setError('Błąd zapisu zmian. Spróbuj ponownie.');
+      setSaving(false);
+    }
   }
 
   return {
@@ -185,6 +205,7 @@ export function useStations() {
     removeWorker,
     updateShift,
     updateStationLocal,
+    saveAll,
     revert,
   };
 }

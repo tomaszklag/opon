@@ -1565,7 +1565,7 @@ export interface components {
       id: string;
       providerId: string;
       name: string;
-      services: ('SEASONAL_SWAP' | 'WHEEL_SWAP' | 'BALANCING' | 'PUNCTURE_REPAIR')[];
+      serviceIds: string[];
       schedule: Record<string, never>;
       workers: components['schemas']['StationWorkerResponseDto'][];
       /** Format: date-time */
@@ -1594,7 +1594,7 @@ export interface components {
       /** @example Stanowisko 1 */
       name: string;
       /** @default [] */
-      services: ('SEASONAL_SWAP' | 'WHEEL_SWAP' | 'BALANCING' | 'PUNCTURE_REPAIR')[];
+      serviceIds: string[];
       /**
        * @description DaySchedule[] — grafik tygodniowy (JSON)
        * @example [
@@ -1611,7 +1611,7 @@ export interface components {
     UpdateStationDto: {
       /** @example Stanowisko 1 */
       name?: string;
-      services?: ('SEASONAL_SWAP' | 'WHEEL_SWAP' | 'BALANCING' | 'PUNCTURE_REPAIR')[];
+      serviceIds?: string[];
       /**
        * @description DaySchedule[] — grafik tygodniowy (JSON)
        * @example [
@@ -1638,6 +1638,28 @@ export interface components {
        * @example 16:00
        */
       shiftEnd?: string;
+    };
+    ScheduleExceptionResponseDto: {
+      id: string;
+      /** @example 2026-12-25 */
+      date: string;
+      /** @example Boże Narodzenie */
+      reason: string;
+      isClosed: boolean;
+      /** @example 10:00 */
+      customOpenTime: string | null;
+      /** @example 14:00 */
+      customCloseTime: string | null;
+    };
+    CreateScheduleExceptionDto: {
+      /** @example 2026-12-25 */
+      date: string;
+      /** @example Boże Narodzenie */
+      reason: string;
+      /** @example 10:00 */
+      customOpenTime?: string;
+      /** @example 14:00 */
+      customCloseTime?: string;
     };
     UpdateShiftDto: {
       /**

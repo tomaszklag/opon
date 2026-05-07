@@ -1,4 +1,4 @@
-import { Button, IconButton, Text } from '@opony/design-system-web';
+import { Button, IconButton, Text, TimeInput } from '@opony/design-system-web';
 import { type CapacityBlock } from '../../../../lib/hooks/use-working-hours';
 import { IconPlus, IconTrash } from '../../../../components/icons';
 import { computeSlots } from './utils';
@@ -29,26 +29,12 @@ export function CapacityBlockEditor({
         const blockSlots = computeSlots(block.from, block.to, slotMinutes);
         return (
           <div key={i} className={styles.blockRow}>
-            <label className={styles.timeInput}>
-              <Text variant="nano" as="span" color="muted">
-                Od
-              </Text>
-              <input
-                type="time"
-                value={block.from}
-                onChange={(e) => onUpdateBlock(i, { from: e.target.value })}
-              />
-            </label>
-            <label className={styles.timeInput}>
-              <Text variant="nano" as="span" color="muted">
-                Do
-              </Text>
-              <input
-                type="time"
-                value={block.to}
-                onChange={(e) => onUpdateBlock(i, { to: e.target.value })}
-              />
-            </label>
+            <TimeInput
+              label="Od"
+              value={block.from}
+              onChange={(v) => onUpdateBlock(i, { from: v })}
+            />
+            <TimeInput label="Do" value={block.to} onChange={(v) => onUpdateBlock(i, { to: v })} />
             <Text variant="nano" as="span" color="muted" className={styles.blockSlotInfo}>
               {blockSlots} sl.
             </Text>

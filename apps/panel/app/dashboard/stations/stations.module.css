@@ -58,6 +58,8 @@
   grid-template-columns: 1fr 360px;
   gap: 22px;
   align-items: start;
+  background: var(--bg);
+  --accordion-sticky-top: -24px;
 }
 
 /* ── Left: form ── */
@@ -298,11 +300,10 @@
 
 /* ── Card body ── */
 .cardBody {
-  padding: 0 16px 16px;
+  padding: 12px 16px 16px;
   display: flex;
   flex-direction: column;
   gap: 12px;
-  border-top: 1px solid var(--border);
 }
 
 .fieldRow {
@@ -398,61 +399,106 @@
 }
 
 /* ── Services check list ── */
-.svcCheckList {
+.chips {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
   flex: 1;
 }
 
-.svcCheckItem {
-  display: flex;
+.chip {
+  display: inline-flex;
   align-items: center;
-  gap: 10px;
-  padding: 8px 12px;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 9px;
-  cursor: pointer;
-  transition: border-color 0.14s;
-}
-
-.svcCheckItemChecked {
-  border-color: var(--accent-border);
-  background: var(--accent-muted);
-}
-
-.svcCheckItemDisabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.checkbox {
-  width: 18px;
-  height: 18px;
+  gap: 4px;
+  padding: 3px 6px;
   border-radius: 5px;
-  border: 1px solid var(--border-strong);
   background: var(--surface-raised);
+  border: 1px solid var(--border-strong);
+}
+
+.chipDisabled {
+  opacity: 0.5;
+  text-decoration: line-through;
+}
+
+.chipX {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
-  transition: background 0.14s, border-color 0.14s;
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  background: transparent;
+  color: var(--text-muted);
+  border: none;
+  cursor: pointer;
+  padding: 0;
 }
 
-.checkboxChecked {
-  background: var(--accent);
-  border-color: var(--accent);
+.chipX:hover {
+  background: var(--danger-muted);
+  color: var(--danger);
 }
 
-.offBadge {
-  margin-left: auto;
-  padding: 2px 6px;
+.chipAddWrap {
+  position: relative;
+}
+
+.chipAdd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px 6px;
+  border-radius: 5px;
+  border: 1px dashed var(--border);
+  color: var(--text-muted);
+  background: transparent;
+  cursor: pointer;
+}
+
+.chipAdd:hover {
+  border-color: var(--accent-border);
+  color: var(--accent);
+}
+
+.svcDropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 100;
+  background: var(--surface-raised);
+  border: 1px solid var(--border-strong);
+  border-radius: 7px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3);
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  min-width: 160px;
+  max-width: 260px;
+}
+
+.svcOption {
+  padding: 5px 9px;
   border-radius: 4px;
-  background: var(--warning-muted);
-  border: 1px solid var(--warning-border);
-  color: var(--warning);
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  text-align: left;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.svcOption:hover {
+  background: var(--accent-muted);
+  color: var(--accent);
+}
+
+.svcOptionDisabled {
+  opacity: 0.5;
+  text-decoration: line-through;
 }
 
 /* ── Overlap info note ── */
@@ -486,17 +532,45 @@
 
 .schedRow {
   display: grid;
-  grid-template-columns: 48px 38px 110px 110px 1fr;
+  grid-template-columns: 52px 1fr 1fr 1fr 38px;
   align-items: center;
   gap: 8px;
   padding: 7px 10px;
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: 8px;
+  position: relative;
 }
 
 .schedRowClosed {
   opacity: 0.5;
+}
+
+.schedRowToday {
+  border-color: var(--accent-border);
+  background: linear-gradient(135deg, var(--accent-muted), transparent);
+}
+
+.schedRowToday::before {
+  content: '';
+  position: absolute;
+  left: -1px;
+  top: 10px;
+  bottom: 10px;
+  width: 3px;
+  background: var(--accent);
+  border-radius: 2px;
+}
+
+.todayTag {
+  display: inline-block;
+  padding: 1px 5px;
+  background: var(--accent);
+  color: var(--text-on-accent);
+  text-transform: uppercase;
+  border-radius: 3px;
+  font-size: 8px;
+  line-height: 1.4;
 }
 
 .timeInput {
@@ -532,25 +606,25 @@
 
 /* ── Add station btn ── */
 .addStationBtn {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 14px;
+  gap: 7px;
+  padding: 7px 12px;
+  border-radius: 9px;
   border: 1px dashed var(--accent-border);
-  border-radius: 14px;
   background: transparent;
   color: var(--accent);
   cursor: pointer;
-  width: 100%;
-  transition: background 0.14s, border-color 0.14s;
-  font-size: 13px;
-  font-weight: 700;
+  align-self: flex-start;
 }
 
 .addStationBtn:hover {
   background: var(--accent-muted);
-  border-color: var(--accent);
+}
+
+.addStationBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 /* ── Right: preview col ── */
@@ -710,25 +784,6 @@
   color: var(--danger);
 }
 
-/* ── Name input (inline edit) ── */
-.nameInput {
-  width: 100%;
-  background: var(--surface-raised);
-  border: 1px solid var(--border-strong);
-  border-radius: 8px;
-  padding: 7px 10px;
-  font-size: var(--text-sm, 13px);
-  font-weight: 600;
-  color: var(--text-primary);
-  outline: none;
-  font-family: var(--font-sans, inherit);
-  transition: border-color 0.14s;
-}
-
-.nameInput:focus {
-  border-color: var(--accent);
-}
-
 /* ── Delete action row ── */
 .deleteRow {
   display: flex;
@@ -755,4 +810,10 @@
   align-items: center;
   justify-content: center;
   height: 100%;
+}
+
+
+.inlineLink {
+  color: var(--accent);
+  text-decoration: underline;
 }
