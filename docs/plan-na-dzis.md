@@ -20,4 +20,6 @@ zaplanowanego design
 
 Depot (przechowywanie) to największy nieobecny — warsztaty zarabiają na nim 120–360 zł/sezon per zestaw. Wymaga osobnego modułu (zarządzanie składem). Priorytet Sprint 3–4.
 
-przejdźmy do modułu "pracownicy" - lista pracowników powinna być z tego komponentu co stanowiska - chodzi mi o te rozwijane wiersze. Przycisk i zachowanie dodawania teżpowinno być takie samo i mieć takie same style
+teraz coś sie popsuło z warstwami i nie wyświetlaja się kalendarz na popupie oraz dropdown
+
+Tak sobie myślę że może dodamy ten widget "Nieobecności" na cała szerokość tego page? Wtedy ten klaendarz jako linia czasu powinien mieć konkrente bni jako komórki. Wtedy pewnie zmieszczą się max 2 miesiące albo nawet mniej

@@ -550,6 +550,26 @@ export class BookingsService {
       workerOnLeave = !!leave;
     }
 
+    // Check station-level leave: if all assigned workers are on leave → block all slots
+    let stationAllWorkersOnLeave = false;
+    if (query.stationId) {
+      const stationWorkers = await this.prisma.stationWorker.findMany({
+        where: { stationId: query.stationId },
+        select: { workerId: true },
+      });
+      if (stationWorkers.length > 0) {
+        const workerIds = stationWorkers.map((sw) => sw.workerId);
+        const onLeaveCount = await this.prisma.workerLeave.count({
+          where: {
+            workerId: { in: workerIds },
+            startDate: { lte: parsedDate },
+            endDate: { gte: parsedDate },
+          },
+        });
+        stationAllWorkersOnLeave = onLeaveCount >= stationWorkers.length;
+      }
+    }
+
     // Check worker task conflicts if workerId provided
     let workerTaskConflicts: { startAt: Date; endAt: Date }[] = [];
     if (query.workerId) {
@@ -596,7 +616,11 @@ export class BookingsService {
         (t) => t.startAt < slotEnd && t.endAt > slotStart,
       );
 
-      const isAvailable = !workerOnLeave && !taskConflict && conflictCount < workstations;
+      const isAvailable =
+        !workerOnLeave &&
+        !taskConflict &&
+        !stationAllWorkersOnLeave &&
+        conflictCount < workstations;
 
       slots.push({
         startAt: slotStart.toISOString(),

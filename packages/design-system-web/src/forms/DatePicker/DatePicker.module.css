@@ -47,10 +47,7 @@
 
 /* ── Calendar popup ── */
 .popup {
-  position: absolute;
-  top: calc(100% + 4px);
-  left: 0;
-  z-index: 200;
+  /* position/top/left/z-index applied via inline style (portal) */
   background: var(--surface-raised);
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-md);
@@ -195,6 +192,12 @@
 
 .daySelected:hover {
   background: var(--accent);
+}
+
+.dayDisabled {
+  opacity: 0.25;
+  cursor: not-allowed;
+  pointer-events: none;
 }
 
 /* ── Hint + error ── */

@@ -82,11 +82,7 @@
 
 /* Dropdown listbox */
 .listbox {
-  position: absolute;
-  top: calc(100% + 4px);
-  left: 0;
-  right: 0;
-  z-index: 200;
+  /* position/top/left/width/z-index applied via inline style (portal) */
   list-style: none;
   margin: 0;
   padding: 4px;

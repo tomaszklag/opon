@@ -5,6 +5,7 @@ import { Button, Heading, Modal, Spinner, Text } from '@opony/design-system-web'
 import { useAuthGuard } from '../../../lib/hooks/use-auth-guard';
 import { useNavigationGuard } from '../../../lib/hooks/use-navigation-guard';
 import { useStations } from '../../../lib/hooks/use-stations';
+import { useWorkers } from '../../../lib/hooks/use-workers';
 import { useServicesPage } from '../../../lib/hooks/use-services-page';
 import { type DaySchedule } from '../../../api-data-access/stations';
 import { StationsActionBar } from './_components/StationsActionBar';
@@ -32,11 +33,14 @@ export default function StationsPage() {
     createStation,
     updateStation,
     deleteStation,
+    assignWorker,
     removeWorker,
     updateStationLocal,
     saveAll,
     revert,
   } = useStations();
+
+  const { workers, loading: workersLoading } = useWorkers();
 
   const {
     showModal: showNavWarning,
@@ -57,7 +61,7 @@ export default function StationsPage() {
     saveAll(stations);
   }
 
-  if (authLoading || loading || servicesLoading) {
+  if (authLoading || loading || servicesLoading || workersLoading) {
     return (
       <div className={styles.loadingWrap}>
         <Spinner size="md" label="Ładowanie stanowisk…" />
@@ -144,6 +148,7 @@ export default function StationsPage() {
                     key={station.id}
                     station={station}
                     availableServices={availableServices}
+                    workers={workers}
                     onUpdateName={(name) => {
                       updateStation(station.id, { name });
                     }}
@@ -155,6 +160,9 @@ export default function StationsPage() {
                     }}
                     onUpdateSchedule={(schedule: DaySchedule[]) => {
                       updateStationLocal(station.id, { schedule });
+                    }}
+                    onAssignWorker={(workerId) => {
+                      assignWorker(station.id, workerId);
                     }}
                     onRemoveWorker={(workerId) => {
                       removeWorker(station.id, workerId);

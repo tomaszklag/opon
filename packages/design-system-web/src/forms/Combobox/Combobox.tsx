@@ -1,5 +1,6 @@
 'use client';
 import React, { useState, useMemo, useRef, useEffect, useId } from 'react';
+import { createPortal } from 'react-dom';
 import { FieldLabel } from '../FieldLabel/FieldLabel';
 import styles from './Combobox.module.css';
 
@@ -22,6 +23,12 @@ export interface ComboboxProps {
   disabled?: boolean;
 }
 
+interface PopupPos {
+  top: number;
+  left: number;
+  width: number;
+}
+
 export function Combobox({
   label,
   value,
@@ -41,6 +48,7 @@ export function Combobox({
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [activeIndex, setActiveIndex] = useState(-1);
+  const [popupPos, setPopupPos] = useState<PopupPos | null>(null);
 
   const wrapperRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -57,18 +65,38 @@ export function Combobox({
     return options.filter((o) => o.label.toLowerCase().includes(q));
   }, [options, query]);
 
-  // Close on outside click
+  function computePos(): PopupPos | null {
+    if (!wrapperRef.current) return null;
+    const rect = wrapperRef.current.getBoundingClientRect();
+    return { top: rect.bottom + 4, left: rect.left, width: rect.width };
+  }
+
+  // Close on outside click — check both wrapper and portalled list
   useEffect(() => {
     if (!isOpen) return;
     function handleMouseDown(e: MouseEvent) {
-      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
-        setIsOpen(false);
-        setQuery('');
-        setActiveIndex(-1);
-      }
+      const target = e.target as Node;
+      if (wrapperRef.current?.contains(target) || listRef.current?.contains(target)) return;
+      setIsOpen(false);
+      setQuery('');
+      setActiveIndex(-1);
     }
     document.addEventListener('mousedown', handleMouseDown);
     return () => document.removeEventListener('mousedown', handleMouseDown);
+  }, [isOpen]);
+
+  // Update popup position on scroll/resize while open
+  useEffect(() => {
+    if (!isOpen) return;
+    function update() {
+      setPopupPos(computePos());
+    }
+    window.addEventListener('scroll', update, true);
+    window.addEventListener('resize', update);
+    return () => {
+      window.removeEventListener('scroll', update, true);
+      window.removeEventListener('resize', update);
+    };
   }, [isOpen]);
 
   // Scroll active option into view
@@ -82,6 +110,7 @@ export function Combobox({
   function open() {
     setQuery('');
     setActiveIndex(-1);
+    setPopupPos(computePos());
     setIsOpen(true);
   }
 
@@ -144,6 +173,74 @@ export function Combobox({
 
   const activeOptionId = isOpen && activeIndex >= 0 ? `${listId}-${activeIndex}` : undefined;
 
+  const listbox =
+    isOpen && popupPos
+      ? createPortal(
+          <ul
+            ref={listRef}
+            id={listId}
+            role="listbox"
+            aria-label={label}
+            className={styles.listbox}
+            style={{
+              position: 'fixed',
+              top: popupPos.top,
+              left: popupPos.left,
+              width: popupPos.width,
+              zIndex: 9999,
+            }}
+          >
+            {filteredOptions.length === 0 ? (
+              <li className={styles.empty} aria-live="polite">
+                Brak wyników
+              </li>
+            ) : (
+              filteredOptions.map((opt, i) => (
+                <li
+                  key={opt.value}
+                  id={`${listId}-${i}`}
+                  role="option"
+                  aria-selected={opt.value === value}
+                  aria-disabled={opt.disabled}
+                  className={[
+                    styles.option,
+                    i === activeIndex ? styles.optionActive : '',
+                    opt.value === value ? styles.optionSelected : '',
+                    opt.disabled ? styles.optionDisabled : '',
+                  ]
+                    .filter(Boolean)
+                    .join(' ')}
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    selectOption(opt);
+                  }}
+                  onMouseEnter={() => setActiveIndex(i)}
+                >
+                  {opt.label}
+                  {opt.value === value && (
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className={styles.checkmark}
+                      aria-hidden="true"
+                    >
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                  )}
+                </li>
+              ))
+            )}
+          </ul>,
+          document.body,
+        )
+      : null;
+
   return (
     <div className={styles.wrapper}>
       {label && (
@@ -192,62 +289,7 @@ export function Combobox({
           </svg>
         </button>
 
-        {isOpen && (
-          <ul
-            ref={listRef}
-            id={listId}
-            role="listbox"
-            aria-label={label}
-            className={styles.listbox}
-          >
-            {filteredOptions.length === 0 ? (
-              <li className={styles.empty} aria-live="polite">
-                Brak wyników
-              </li>
-            ) : (
-              filteredOptions.map((opt, i) => (
-                <li
-                  key={opt.value}
-                  id={`${listId}-${i}`}
-                  role="option"
-                  aria-selected={opt.value === value}
-                  aria-disabled={opt.disabled}
-                  className={[
-                    styles.option,
-                    i === activeIndex ? styles.optionActive : '',
-                    opt.value === value ? styles.optionSelected : '',
-                    opt.disabled ? styles.optionDisabled : '',
-                  ]
-                    .filter(Boolean)
-                    .join(' ')}
-                  onMouseDown={(e) => {
-                    e.preventDefault(); // prevent blur before click
-                    selectOption(opt);
-                  }}
-                  onMouseEnter={() => setActiveIndex(i)}
-                >
-                  {opt.label}
-                  {opt.value === value && (
-                    <svg
-                      width="14"
-                      height="14"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2.5"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      className={styles.checkmark}
-                      aria-hidden="true"
-                    >
-                      <polyline points="20 6 9 17 4 12" />
-                    </svg>
-                  )}
-                </li>
-              ))
-            )}
-          </ul>
-        )}
+        {listbox}
       </div>
 
       {hint && !error && <p className={styles.hint}>{hint}</p>}

@@ -14,9 +14,16 @@ interface Props {
   enabled?: boolean;
   onToggle?: () => void;
   defaultOpen?: boolean;
+  /** Controlled open state — if provided, AccordionCard becomes controlled */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
   onDelete: () => void;
   deleteLabel?: string;
   confirmDelete?: string;
+  /** When false, the delete button is hidden. Default: true */
+  showDelete?: boolean;
+  /** Extra action buttons rendered in the header before the delete button */
+  headerActions?: React.ReactNode;
   children: React.ReactNode;
 }
 
@@ -29,13 +36,23 @@ export function AccordionCard({
   enabled = true,
   onToggle,
   defaultOpen,
+  open: controlledOpen,
+  onOpenChange,
   onDelete,
   deleteLabel = 'Usuń',
   confirmDelete,
+  showDelete = true,
+  headerActions,
   children,
 }: Props) {
-  const [open, setOpen] = useState(defaultOpen ?? false);
+  const [internalOpen, setInternalOpen] = useState(defaultOpen ?? false);
   const [confirming, setConfirming] = useState(false);
+
+  const isOpen = controlledOpen !== undefined ? controlledOpen : internalOpen;
+  function setOpen(v: boolean) {
+    if (onOpenChange) onOpenChange(v);
+    else setInternalOpen(v);
+  }
 
   function handleDelete(e: React.MouseEvent) {
     e.stopPropagation();
@@ -47,7 +64,7 @@ export function AccordionCard({
   }
 
   function handleHeaderKey(e: React.KeyboardEvent) {
-    if (e.key === 'Enter' || e.key === ' ') setOpen((v) => !v);
+    if (e.key === 'Enter' || e.key === ' ') setOpen(!isOpen);
   }
 
   return (
@@ -83,19 +100,19 @@ export function AccordionCard({
       )}
       <div className={`${styles.card} ${!enabled ? styles.cardDisabled : ''}`}>
         <div
-          className={`${styles.header} ${open ? styles.headerOpen : ''}`}
-          onClick={() => setOpen((v) => !v)}
+          className={`${styles.header} ${isOpen ? styles.headerOpen : ''}`}
+          onClick={() => setOpen(!isOpen)}
           role="button"
           tabIndex={0}
           onKeyDown={handleHeaderKey}
-          aria-expanded={open}
+          aria-expanded={isOpen}
         >
-          <span className={`${styles.chevron} ${open ? styles.chevronOpen : ''}`}>
+          <span className={`${styles.chevron} ${isOpen ? styles.chevronOpen : ''}`}>
             <IconChevronRight
               width="8"
               height="8"
               style={{
-                transform: open ? 'rotate(90deg)' : 'rotate(0deg)',
+                transform: isOpen ? 'rotate(90deg)' : 'rotate(0deg)',
                 transition: 'transform 0.15s ease',
               }}
             />
@@ -124,12 +141,20 @@ export function AccordionCard({
             </span>
           )}
 
-          <button className={styles.delBtn} onClick={handleDelete} aria-label={deleteLabel}>
-            <IconTrash width="11" height="11" />
-          </button>
+          {headerActions && (
+            <span className={styles.headerActions} onClick={(e) => e.stopPropagation()}>
+              {headerActions}
+            </span>
+          )}
+
+          {showDelete && (
+            <button className={styles.delBtn} onClick={handleDelete} aria-label={deleteLabel}>
+              <IconTrash width="11" height="11" />
+            </button>
+          )}
         </div>
 
-        {open && <div className={styles.body}>{children}</div>}
+        {isOpen && <div className={styles.body}>{children}</div>}
       </div>
     </>
   );

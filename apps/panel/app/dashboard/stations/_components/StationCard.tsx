@@ -1,9 +1,10 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Input, Text, TimeInput, Toggle } from '@opony/design-system-web';
+import { Combobox, Input, Text, TimeInput, Toggle } from '@opony/design-system-web';
 import { IconXClose, IconPlus, IconUserAdd, IconAlertCircle } from '../../../../components/icons';
 import { type Station, type DaySchedule } from '../../../../api-data-access/stations';
+import { type Worker } from '../../../../api-data-access/workers';
 import { AccordionCard } from '../../services/_components/AccordionCard';
 import styles from '../stations.module.css';
 
@@ -80,9 +81,11 @@ function detectOverlap(station: Station): { hasOverlap: boolean; overlapStr: str
 interface Props {
   station: Station;
   availableServices: ServiceOption[];
+  workers: Worker[];
   onUpdateName: (name: string) => void;
   onToggleService: (serviceId: string) => void;
   onUpdateSchedule: (schedule: DaySchedule[]) => void;
+  onAssignWorker: (workerId: string) => void;
   onRemoveWorker: (workerId: string) => void;
   onDelete: () => void;
 }
@@ -90,9 +93,11 @@ interface Props {
 export function StationCard({
   station,
   availableServices,
+  workers,
   onUpdateName,
   onToggleService,
   onUpdateSchedule,
+  onAssignWorker,
   onRemoveWorker,
   onDelete,
 }: Props) {
@@ -100,6 +105,7 @@ export function StationCard({
 
   const [nameVal, setNameVal] = useState(station.name);
   const [svcDropdown, setSvcDropdown] = useState(false);
+  const [addWorkerVal, setAddWorkerVal] = useState('');
   const svcWrapRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -115,6 +121,11 @@ export function StationCard({
 
   const hasWorkers = station.workers.length > 0;
   const { hasOverlap, overlapStr } = detectOverlap(station);
+
+  const assignedWorkerIds = new Set(station.workers.map((w) => w.workerId));
+  const unassignedWorkerOptions = workers
+    .filter((w) => !assignedWorkerIds.has(w.id))
+    .map((w) => ({ value: w.id, label: w.name }));
 
   const schedMap = new Map<number, DaySchedule>();
   for (const d of station.schedule) {
@@ -277,10 +288,18 @@ export function StationCard({
                 </button>
               </div>
             ))}
-            <button className={styles.addWorkerBtn} disabled>
-              <IconPlus width="12" height="12" />
-              Przypisz pracownika
-            </button>
+            {unassignedWorkerOptions.length > 0 && (
+              <Combobox
+                value={addWorkerVal}
+                onChange={(val) => {
+                  if (!val) return;
+                  onAssignWorker(val);
+                  setAddWorkerVal('');
+                }}
+                options={unassignedWorkerOptions}
+                placeholder="+ Przypisz pracownika"
+              />
+            )}
           </div>
         </div>
 

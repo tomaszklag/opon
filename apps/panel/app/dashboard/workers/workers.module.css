@@ -223,11 +223,7 @@
 }
 
 .sectionLabel {
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 1.3px;
   text-transform: uppercase;
-  color: var(--text-muted);
   padding-bottom: 4px;
   border-bottom: 1px solid var(--border);
   margin-bottom: 2px;
@@ -259,6 +255,60 @@
   background: var(--accent-muted);
   border: 1px solid var(--accent-border);
   color: var(--accent);
+}
+
+/* ── Identity read/edit ── */
+.identityRead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+}
+
+.identityReadText {
+  flex: 1;
+  min-width: 0;
+}
+
+.identityEditBtn {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: color 0.14s, border-color 0.14s, background 0.14s;
+}
+
+.identityEditBtn:hover {
+  color: var(--accent);
+  border-color: var(--accent-border);
+  background: var(--accent-muted);
+}
+
+.identityEdit {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--accent-border);
+  border-radius: 8px;
+  background: var(--accent-muted);
+}
+
+.identityEditActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 /* ── Leave list ── */
@@ -364,6 +414,12 @@
   color: var(--danger);
   border-color: var(--danger-border);
   background: var(--danger-muted);
+}
+
+.leaveActionBtnEdit:hover {
+  color: var(--accent);
+  border-color: var(--accent-border);
+  background: var(--accent-muted);
 }
 
 /* ── Add leave button ── */
@@ -490,6 +546,48 @@
   cursor: not-allowed;
 }
 
+/* ── Filter bar ── */
+.filterBar {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.filterPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: transparent;
+  cursor: pointer;
+  transition: border-color 0.14s, background 0.14s;
+}
+
+.filterPill:hover {
+  border-color: var(--accent-border);
+  background: var(--accent-muted);
+}
+
+.filterPillActive {
+  border-color: var(--accent-border);
+  background: var(--accent-muted);
+}
+
+.filterCount {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 4px;
+  background: var(--accent);
+  /* #fff for contrast on accent background */
+  color: #fff;
+}
+
 /* ── Right: preview col ── */
 .previewCol {
   position: sticky;
@@ -537,7 +635,7 @@
 
 .timelineHead {
   display: grid;
-  grid-template-columns: 68px 1fr 1fr 1fr 1fr;
+  grid-template-columns: 68px 1fr 1fr 1fr 1fr 24px;
   border-bottom: 1px solid var(--border);
   padding-bottom: 5px;
   margin-bottom: 4px;
@@ -550,15 +648,12 @@
 
 .timelineRow {
   display: grid;
-  grid-template-columns: 68px 1fr 1fr 1fr 1fr;
+  grid-template-columns: 68px 1fr 1fr 1fr 1fr 24px;
   margin-bottom: 4px;
   align-items: center;
 }
 
 .tlName {
-  font-size: 10px;
-  font-weight: 700;
-  color: var(--text-secondary);
   padding-right: 8px;
   white-space: nowrap;
   overflow: hidden;
@@ -583,27 +678,101 @@
   border-radius: 4px;
 }
 
-.tlBarVacation {
-  background: var(--accent);
-  opacity: 0.8;
-}
-
-.tlBarSoon {
-  background: var(--warning);
+.tlBarSolid {
   opacity: 0.85;
 }
 
-.tlBarAccent {
+.tlBarDashed {
+  opacity: 0.5;
+  border: 1px dashed;
+  border-radius: 4px;
+}
+
+/* ── Today line ── */
+.todayLine {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
   background: var(--accent);
-  opacity: 0.8;
+  opacity: 0.6;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* ── Add button per row ── */
+.tlAddBtn {
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+  border: 1px dashed var(--accent-border);
+  background: transparent;
+  color: var(--accent);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 0.15s;
+  padding: 0;
+}
+
+.timelineRow:hover .tlAddBtn {
+  opacity: 1;
+}
+
+/* ── Coverage row ── */
+.coverageRow {
+  display: grid;
+  grid-template-columns: 68px 1fr 1fr 1fr 1fr 24px;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border);
+  align-items: center;
+}
+
+.coverageCell {
+  text-align: center;
+}
+
+/* ── Month navigation ── */
+.tlNav {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tlNavBtn {
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  transition: color 0.14s, border-color 0.14s;
+}
+
+.tlNavBtn:hover:not(:disabled) {
+  color: var(--text-primary);
+  border-color: var(--accent-border);
+}
+
+.tlNavBtn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
 }
 
 .tlEmpty {
-  font-family: var(--font-mono);
-  font-size: 9px;
-  color: var(--border-strong);
-  text-align: center;
-  line-height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
 }
 
 .timelineLegend {
@@ -627,13 +796,7 @@
   border-radius: 2px;
 }
 
-.tlLegendDotVacation {
-  background: var(--accent);
-}
-
-.tlLegendDotSoon {
-  background: var(--warning);
-}
+/* Legend dot color is set via inline style */
 
 /* ── Today list ── */
 .todayList {
@@ -689,4 +852,120 @@
   color: var(--accent);
   flex-shrink: 0;
   margin-top: 1px;
+}
+
+/* ── Return section (Today panel) ── */
+.returnSection {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+  margin-top: 4px;
+}
+
+.returnItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 0;
+}
+
+/* ── Leaves full-width section ── */
+.leavesSection {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.leavesSectionHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ── Leave table ── */
+.leaveTable {
+  display: flex;
+  flex-direction: column;
+}
+
+.leaveTableRow {
+  display: grid;
+  grid-template-columns: 8px 1fr max-content max-content max-content 52px;
+  gap: 10px;
+  align-items: center;
+  padding: 6px 2px;
+  border-bottom: 1px solid var(--border);
+}
+
+.leaveTableRow:last-child {
+  border-bottom: none;
+}
+
+.leaveTableRowPast {
+  opacity: 0.55;
+}
+
+.leaveTableRowCancelled {
+  opacity: 0.4;
+  text-decoration: line-through;
+}
+
+.leaveTypeDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.leaveTableType {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.leaveTableNote {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.leaveTableDate {
+  white-space: nowrap;
+}
+
+.leaveTableDays {
+  white-space: nowrap;
+  text-align: right;
+}
+
+/* ── Year summary strip ── */
+.leaveSummary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+}
+
+.leaveSummaryChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: 5px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+}
+
+.leaveSummaryDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 2px;
+  flex-shrink: 0;
 }

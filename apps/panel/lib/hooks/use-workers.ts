@@ -102,6 +102,28 @@ export function useWorkers() {
     }
   }, []);
 
+  const updateLeave = useCallback(
+    async (workerId: string, leaveId: string, leave: CreateLeaveBody) => {
+      if (leave.endDate < leave.startDate) {
+        throw new Error('Data końca nieobecności musi być po dacie początku');
+      }
+      setSaving(true);
+      setError(null);
+      try {
+        await workersApi.removeLeave(workerId, leaveId);
+        const updated = await workersApi.addLeave(workerId, leave);
+        setWorkers((prev) => prev.map((w) => (w.id === workerId ? updated : w)));
+      } catch (err) {
+        const msg = getLeaveConflictMessage(err);
+        setError(msg);
+        throw new Error(msg);
+      } finally {
+        setSaving(false);
+      }
+    },
+    [],
+  );
+
   const removeLeave = useCallback(async (workerId: string, leaveId: string) => {
     setSaving(true);
     setError(null);
@@ -129,6 +151,7 @@ export function useWorkers() {
     updateWorker,
     deleteWorker,
     addLeave,
+    updateLeave,
     removeLeave,
   };
 }

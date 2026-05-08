@@ -1,5 +1,6 @@
 'use client';
 import React, { useState, useRef, useEffect, useCallback, useId } from 'react';
+import { createPortal } from 'react-dom';
 import { FieldLabel } from '../FieldLabel/FieldLabel';
 import styles from './DatePicker.module.css';
 
@@ -14,6 +15,10 @@ export interface DatePickerProps {
   hint?: string;
   id?: string;
   disabled?: boolean;
+  /** Earliest selectable date, ISO "YYYY-MM-DD" */
+  min?: string;
+  /** Latest selectable date, ISO "YYYY-MM-DD" */
+  max?: string;
 }
 
 const MONTHS_PL = [
@@ -74,6 +79,12 @@ function daysInMonth(year: number, month: number): number {
   return new Date(year, month + 1, 0).getDate();
 }
 
+interface PopupPos {
+  top: number;
+  left: number;
+  width: number;
+}
+
 export function DatePicker({
   label,
   value,
@@ -84,6 +95,8 @@ export function DatePicker({
   hint,
   id,
   disabled,
+  min,
+  max,
 }: DatePickerProps) {
   const uid = useId();
   const inputId = id ?? `datepicker-${uid}`;
@@ -93,26 +106,54 @@ export function DatePicker({
   const [inputText, setInputText] = useState(() => (value ? toEditable(value) : ''));
   const [displayYear, setDisplayYear] = useState(() => new Date().getFullYear());
   const [displayMonth, setDisplayMonth] = useState(() => new Date().getMonth());
+  const [popupPos, setPopupPos] = useState<PopupPos | null>(null);
 
   const wrapperRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const popupRef = useRef<HTMLDivElement>(null);
 
   const todayISO = today();
   const tomorrowISO = addDays(todayISO, 1);
 
-  // Sync input text when value changes from outside (e.g. quick filter, parent reset)
-  // but only when the input isn't focused
+  function isOutOfRange(iso: string): boolean {
+    if (min && iso < min) return true;
+    if (max && iso > max) return true;
+    return false;
+  }
+
+  function computePos(): PopupPos | null {
+    if (!wrapperRef.current) return null;
+    const rect = wrapperRef.current.getBoundingClientRect();
+    return { top: rect.bottom + 4, left: rect.left, width: rect.width };
+  }
+
+  // Sync input text when value changes from outside
   useEffect(() => {
     if (document.activeElement !== inputRef.current) {
       setInputText(value ? toEditable(value) : '');
     }
   }, [value]);
 
+  // Update popup position on scroll/resize while open
+  useEffect(() => {
+    if (!isOpen) return;
+    function update() {
+      setPopupPos(computePos());
+    }
+    window.addEventListener('scroll', update, true);
+    window.addEventListener('resize', update);
+    return () => {
+      window.removeEventListener('scroll', update, true);
+      window.removeEventListener('resize', update);
+    };
+  }, [isOpen]);
+
   const openAtDate = useCallback(
     (iso: string) => {
       const d = new Date((iso || todayISO) + 'T12:00:00');
       setDisplayYear(d.getFullYear());
       setDisplayMonth(d.getMonth());
+      setPopupPos(computePos());
       setIsOpen(true);
     },
     [todayISO],
@@ -121,6 +162,7 @@ export function DatePicker({
   const close = useCallback(() => setIsOpen(false), []);
 
   function selectDate(iso: string) {
+    if (isOutOfRange(iso)) return;
     setInputText(toEditable(iso));
     onChange(iso);
     close();
@@ -128,6 +170,7 @@ export function DatePicker({
   }
 
   function selectQuick(iso: string) {
+    if (isOutOfRange(iso)) return;
     setInputText(toEditable(iso));
     onChange(iso);
     const d = new Date(iso + 'T12:00:00');
@@ -148,15 +191,14 @@ export function DatePicker({
     } else setDisplayMonth((m) => m + 1);
   }
 
-  // Close on outside click
+  // Close on outside click (check both wrapper and portalled popup)
   useEffect(() => {
     if (!isOpen) return;
     function onMouseDown(e: MouseEvent) {
-      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
-        close();
-        // Revert text to last valid value if what was typed is incomplete
-        setInputText(value ? toEditable(value) : '');
-      }
+      const target = e.target as Node;
+      if (wrapperRef.current?.contains(target) || popupRef.current?.contains(target)) return;
+      close();
+      setInputText(value ? toEditable(value) : '');
     }
     document.addEventListener('mousedown', onMouseDown);
     return () => document.removeEventListener('mousedown', onMouseDown);
@@ -167,12 +209,10 @@ export function DatePicker({
   }
 
   function handleBlur() {
-    // Revert to current value if the typed text isn't a fully valid date
     const parsed = parseEditable(inputText);
     if (!parsed) {
       setInputText(value ? toEditable(value) : '');
     }
-    // Delay close so calendar clicks can fire first
     setTimeout(close, 120);
   }
 
@@ -181,9 +221,8 @@ export function DatePicker({
     setInputText(text);
 
     const parsed = parseEditable(text);
-    if (parsed) {
+    if (parsed && !isOutOfRange(parsed)) {
       onChange(parsed);
-      // Navigate calendar to the newly typed date
       const d = new Date(parsed + 'T12:00:00');
       setDisplayYear(d.getFullYear());
       setDisplayMonth(d.getMonth());
@@ -198,7 +237,6 @@ export function DatePicker({
     }
   }
 
-  // Calendar grid cells: null = leading empty, number = day-of-month
   const leading = firstWeekday(displayYear, displayMonth);
   const total = daysInMonth(displayYear, displayMonth);
   const cells: (number | null)[] = [
@@ -206,45 +244,28 @@ export function DatePicker({
     ...Array.from({ length: total }, (_, i) => i + 1),
   ];
 
-  return (
-    <div className={styles.wrapper} ref={wrapperRef}>
-      {label && (
-        <FieldLabel htmlFor={inputId} required={required}>
-          {label}
-        </FieldLabel>
-      )}
-
-      <div className={styles.inputWrap}>
-        <input
-          ref={inputRef}
-          id={inputId}
-          type="text"
-          inputMode="numeric"
-          role="combobox"
-          aria-haspopup="dialog"
-          aria-expanded={isOpen}
-          aria-controls={popupId}
-          aria-required={required}
-          aria-invalid={error ? 'true' : undefined}
-          disabled={disabled}
-          placeholder={placeholder}
-          value={inputText}
-          onChange={handleInputChange}
-          onFocus={handleFocus}
-          onBlur={handleBlur}
-          onKeyDown={handleKeyDown}
-          className={[styles.input, isOpen ? styles.inputOpen : '', error ? styles.inputError : '']
-            .filter(Boolean)
-            .join(' ')}
-          autoComplete="off"
-        />
-
-        {isOpen && (
-          <div id={popupId} role="dialog" aria-label="Wybierz datę" className={styles.popup}>
+  const popup =
+    isOpen && popupPos
+      ? createPortal(
+          <div
+            ref={popupRef}
+            id={popupId}
+            role="dialog"
+            aria-label="Wybierz datę"
+            className={styles.popup}
+            style={{
+              position: 'fixed',
+              top: popupPos.top,
+              left: popupPos.left,
+              minWidth: popupPos.width,
+              zIndex: 9999,
+            }}
+          >
             {/* Quick filters */}
             <div className={styles.quickFilters}>
               <button
                 type="button"
+                disabled={isOutOfRange(todayISO)}
                 className={`${styles.quickBtn} ${value === todayISO ? styles.quickBtnActive : ''}`}
                 onMouseDown={(e) => {
                   e.preventDefault();
@@ -255,6 +276,7 @@ export function DatePicker({
               </button>
               <button
                 type="button"
+                disabled={isOutOfRange(tomorrowISO)}
                 className={`${styles.quickBtn} ${value === tomorrowISO ? styles.quickBtnActive : ''}`}
                 onMouseDown={(e) => {
                   e.preventDefault();
@@ -324,16 +346,19 @@ export function DatePicker({
                 const cellISO = `${displayYear}-${String(displayMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
                 const isSelected = cellISO === value;
                 const isToday = cellISO === todayISO;
+                const isDisabled = isOutOfRange(cellISO);
                 return (
                   <button
                     key={cellISO}
                     type="button"
                     aria-label={cellISO}
                     aria-pressed={isSelected}
+                    disabled={isDisabled}
                     className={[
                       styles.day,
                       isSelected ? styles.daySelected : '',
                       isToday && !isSelected ? styles.dayToday : '',
+                      isDisabled ? styles.dayDisabled : '',
                     ]
                       .filter(Boolean)
                       .join(' ')}
@@ -347,8 +372,45 @@ export function DatePicker({
                 );
               })}
             </div>
-          </div>
-        )}
+          </div>,
+          document.body,
+        )
+      : null;
+
+  return (
+    <div className={styles.wrapper} ref={wrapperRef}>
+      {label && (
+        <FieldLabel htmlFor={inputId} required={required}>
+          {label}
+        </FieldLabel>
+      )}
+
+      <div className={styles.inputWrap}>
+        <input
+          ref={inputRef}
+          id={inputId}
+          type="text"
+          inputMode="numeric"
+          role="combobox"
+          aria-haspopup="dialog"
+          aria-expanded={isOpen}
+          aria-controls={popupId}
+          aria-required={required}
+          aria-invalid={error ? 'true' : undefined}
+          disabled={disabled}
+          placeholder={placeholder}
+          value={inputText}
+          onChange={handleInputChange}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
+          onKeyDown={handleKeyDown}
+          className={[styles.input, isOpen ? styles.inputOpen : '', error ? styles.inputError : '']
+            .filter(Boolean)
+            .join(' ')}
+          autoComplete="off"
+        />
+
+        {popup}
       </div>
 
       {hint && !error && <p className={styles.hint}>{hint}</p>}
