@@ -31,10 +31,9 @@ export default function StationsPage() {
     dirty,
     error,
     createStation,
-    updateStation,
     deleteStation,
-    assignWorker,
-    removeWorker,
+    assignWorkerLocal,
+    removeWorkerLocal,
     updateStationLocal,
     saveAll,
     revert,
@@ -48,13 +47,8 @@ export default function StationsPage() {
     cancel: cancelNav,
   } = useNavigationGuard(dirty);
 
-  const [creating, setCreating] = useState(false);
-
-  async function handleCreate() {
-    setCreating(true);
-    const count = stations.length + 1;
-    await createStation(`Stanowisko ${count}`);
-    setCreating(false);
+  function handleCreate() {
+    createStation(`Stanowisko ${stations.length + 1}`);
   }
 
   function handleSave() {
@@ -140,7 +134,7 @@ export default function StationsPage() {
 
             {/* Station list or empty state */}
             {stations.length === 0 ? (
-              <StationsEmptyState onCreate={handleCreate} creating={creating} />
+              <StationsEmptyState onCreate={handleCreate} creating={false} />
             ) : (
               <>
                 {stations.map((station) => (
@@ -150,7 +144,7 @@ export default function StationsPage() {
                     availableServices={availableServices}
                     workers={workers}
                     onUpdateName={(name) => {
-                      updateStation(station.id, { name });
+                      updateStationLocal(station.id, { name });
                     }}
                     onToggleService={(serviceId) => {
                       const serviceIds = station.serviceIds.includes(serviceId)
@@ -162,10 +156,12 @@ export default function StationsPage() {
                       updateStationLocal(station.id, { schedule });
                     }}
                     onAssignWorker={(workerId) => {
-                      assignWorker(station.id, workerId);
+                      const w = workers.find((x) => x.id === workerId);
+                      if (!w) return;
+                      assignWorkerLocal(station.id, workerId, w.name, w.role ?? null);
                     }}
                     onRemoveWorker={(workerId) => {
-                      removeWorker(station.id, workerId);
+                      removeWorkerLocal(station.id, workerId);
                     }}
                     onDelete={() => {
                       deleteStation(station.id);
@@ -174,11 +170,7 @@ export default function StationsPage() {
                 ))}
 
                 {/* Add station button */}
-                <button
-                  className={styles.addStationBtn}
-                  onClick={handleCreate}
-                  disabled={creating || saving}
-                >
+                <button className={styles.addStationBtn} onClick={handleCreate} disabled={saving}>
                   <IconPlus width="12" height="12" />
                   <Text variant="nano" as="span" weight="bold" color="accent">
                     Dodaj stanowisko
@@ -190,7 +182,11 @@ export default function StationsPage() {
 
           {/* Right preview column */}
           <div className={styles.previewCol}>
-            <StationsPreview stations={stations} availableServices={availableServices} />
+            <StationsPreview
+              stations={stations}
+              availableServices={availableServices}
+              workers={workers}
+            />
           </div>
         </div>
       </div>

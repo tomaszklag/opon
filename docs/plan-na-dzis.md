@@ -20,6 +20,9 @@ zaplanowanego design
 
 Depot (przechowywanie) to największy nieobecny — warsztaty zarabiają na nim 120–360 zł/sezon per zestaw. Wymaga osobnego modułu (zarządzanie składem). Priorytet Sprint 3–4.
 
-teraz coś sie popsuło z warstwami i nie wyświetlaja się kalendarz na popupie oraz dropdown
+teraz
 
-Tak sobie myślę że może dodamy ten widget "Nieobecności" na cała szerokość tego page? Wtedy ten klaendarz jako linia czasu powinien mieć konkrente bni jako komórki. Wtedy pewnie zmieszczą się max 2 miesiące albo nawet mniej
+jak przypisuje pracownika do stanowiska to czmu leci od razu zapis?
+
+dodać przypisanie opcjonalnego enuma typu samochodu do usługi
+Dodać opcję w cenniku definiowania per koło oraz per zetaw (4 koła)

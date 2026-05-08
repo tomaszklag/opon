@@ -373,7 +373,7 @@ export function DatePicker({
               })}
             </div>
           </div>,
-          document.body,
+          document.querySelector('dialog[open]') ?? document.body,
         )
       : null;
 

@@ -42,7 +42,7 @@ export const stationsApi = {
   assignWorker: (stationId: string, body: AssignWorkerBody) =>
     api.post<Station>(`${BASE}/${stationId}/workers`, body),
   removeWorker: (stationId: string, workerId: string) =>
-    api.del<Station>(`${BASE}/${stationId}/workers/${workerId}`),
+    api.del<void>(`${BASE}/${stationId}/workers/${workerId}`),
   updateShift: (
     stationId: string,
     workerId: string,

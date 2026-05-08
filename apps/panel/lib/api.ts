@@ -43,10 +43,9 @@ async function request<T>(path: string, options: ApiOptions = {}, retry = true):
     throw new ApiError(res.status, parsed.message ?? 'Nieznany błąd', parsed.code);
   }
 
-  // 204 No Content
-  if (res.status === 204) return undefined as T;
-
-  return res.json() as Promise<T>;
+  const text = await res.text();
+  if (!text.trim()) return undefined as T;
+  return JSON.parse(text) as T;
 }
 
 export class ApiError extends Error {

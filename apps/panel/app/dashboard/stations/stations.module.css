@@ -379,6 +379,39 @@
   gap: 8px;
 }
 
+.workerPool {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 7px 10px;
+  border: 1px dashed var(--accent-border);
+  border-radius: 9px;
+  background: var(--accent-muted);
+}
+
+.workerPoolChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  flex: 1;
+}
+
+.workerPoolChip {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  border-radius: 5px;
+  border: 1px solid var(--accent-border);
+  background: var(--surface);
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s;
+}
+
+.workerPoolChip:hover {
+  background: var(--accent-border);
+  border-color: var(--accent);
+}
+
 .addWorkerBtn {
   display: flex;
   align-items: center;
@@ -604,6 +637,25 @@
   grid-column: 3 / -1;
 }
 
+/* ── Schedule read-only ── */
+.schedGridRead {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+
+.schedRowRead {
+  display: grid;
+  grid-template-columns: 30px 1fr;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  position: relative;
+}
+
 /* ── Add station btn ── */
 .addStationBtn {
   display: inline-flex;
@@ -703,6 +755,117 @@
   background: linear-gradient(180deg, var(--accent-hover), var(--accent));
   border-radius: 3px 3px 0 0;
   box-shadow: 0 0 6px var(--accent-glow);
+}
+
+.wgBarLeave {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  border-radius: 3px 3px 0 0;
+  background: var(--danger);
+  opacity: 0.8;
+}
+
+.wgBarPartial {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  border-radius: 3px 3px 0 0;
+  background: var(--warning);
+  opacity: 0.85;
+}
+
+.wgLeaveDot {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.wgLeaveDotFull {
+  background: var(--danger);
+}
+
+.wgLeaveDotPartial {
+  background: var(--warning);
+}
+
+/* Leave warnings summary */
+.wgLeaveWarnings {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 8px 10px;
+  border: 1px solid var(--danger-border);
+  border-radius: 8px;
+  background: var(--danger-muted);
+}
+
+.wgLeaveWarningRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.wgWarnIconDanger {
+  color: var(--danger);
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.wgWarnIconWarning {
+  color: var(--warning);
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.wgWarnDanger {
+  color: var(--danger);
+  font-weight: 700;
+}
+
+.wgWarnWarning {
+  color: var(--warning);
+  font-weight: 700;
+}
+
+/* Info note legend swatches */
+.infoLeafDanger {
+  color: var(--danger);
+}
+
+.infoLeafWarning {
+  color: var(--warning);
+}
+
+/* ── Station leave warning badges ── */
+.leaveWarnFull {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  border-radius: 5px;
+  background: var(--danger-muted);
+  border: 1px solid var(--danger-border);
+  color: var(--danger);
+  white-space: nowrap;
+}
+
+.leaveWarnPartial {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  border-radius: 5px;
+  background: var(--warning-muted);
+  border: 1px solid var(--warning-border);
+  color: var(--warning);
+  white-space: nowrap;
 }
 
 /* ── Coverage list ── */

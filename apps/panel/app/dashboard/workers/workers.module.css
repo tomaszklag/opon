@@ -778,8 +778,8 @@
 
 .timelineLegend {
   display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .tlLegendItem {
@@ -983,6 +983,34 @@
   gap: 12px;
 }
 
+/* ── Body row: grid + sidebar ── */
+.tlBody {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.tlMain {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* ── Right sidebar box ── */
+.tlSidebar {
+  flex-shrink: 0;
+  width: 220px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
 /* ── Day grid wrapper (horizontal scroll) ── */
 .dayGridWrap {
   overflow-x: auto;
@@ -1022,15 +1050,21 @@
   align-items: center;
   justify-content: center;
   border-bottom: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.dgDayNumWeekend {
+  background: var(--surface-hover);
 }
 
 /* ── Worker name cell ── */
 .dgName {
-  height: 22px;
+  min-height: 36px;
   display: flex;
   align-items: center;
   padding-right: 6px;
   overflow: hidden;
+  gap: 4px;
 }
 
 /* Sticky left column */
@@ -1043,7 +1077,7 @@
 
 /* ── Day data cell ── */
 .dgCell {
-  height: 22px;
+  min-height: 36px;
   position: relative;
   border-bottom: 1px solid var(--border);
 }
@@ -1063,6 +1097,26 @@
   background: var(--surface-hover);
 }
 
+/* Holiday column */
+.dgCellHoliday {
+  background: color-mix(in srgb, var(--warning-muted) 60%, transparent);
+}
+
+/* Holiday flag in day header */
+.dgDayNumHoliday {
+  position: relative;
+}
+
+.dgHolidayFlag {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--warning);
+  opacity: 0.7;
+}
+
 /* ── Leave fill pill ── */
 .dgFill {
   position: absolute;
@@ -1075,4 +1129,364 @@
 .dgCovCell {
   border-top: 1px solid var(--border);
   border-bottom: none;
+}
+
+/* ── Worker name + role stack ── */
+.workerInfo {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+/* ── Pencil button in name cell ── */
+.workerEditBtn {
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  padding: 0;
+  opacity: 0;
+  transition: opacity 0.14s, color 0.14s, border-color 0.14s, background 0.14s;
+}
+
+.dgName:hover .workerEditBtn {
+  opacity: 1;
+}
+
+.workerEditBtn:hover {
+  color: var(--accent);
+  border-color: var(--accent-border);
+  background: var(--accent-muted);
+}
+
+/* ── Floating edit panel (portalled) ── */
+.workerEditPanel {
+  background: var(--surface);
+  border: 1px solid var(--accent-border);
+  border-radius: 12px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 260px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.18);
+}
+
+.workerEditBtns {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ── Delete button in edit panel ── */
+.workerDeleteBtn {
+  margin-left: auto;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  transition: color 0.14s, border-color 0.14s, background 0.14s;
+}
+
+.workerDeleteBtn:hover {
+  color: var(--danger);
+  border-color: var(--danger-border);
+  background: var(--danger-muted);
+}
+
+/* ── Add worker row button ── */
+.addWorkerRowBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 9px;
+  border: 1px dashed var(--accent-border);
+  background: transparent;
+  color: var(--accent);
+  cursor: pointer;
+  align-self: flex-start;
+  transition: background 0.14s, border-color 0.14s;
+}
+
+.addWorkerRowBtn:hover {
+  background: var(--accent-muted);
+  border-color: var(--accent);
+}
+
+/* ── Inline create worker form ── */
+.workerCreateForm {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--accent-border);
+  border-radius: 10px;
+  background: var(--accent-muted);
+}
+
+.workerCreateBtns {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ── Leaves history popup ── */
+.leavesPopup {
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 12px;
+  width: 300px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.28);
+  overflow: hidden;
+  max-height: 480px;
+}
+
+.leavesPopupHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 12px 12px 10px;
+  border-bottom: 1px solid var(--border);
+  gap: 8px;
+}
+
+.leavesPopupClose {
+  width: 22px;
+  height: 22px;
+  border-radius: 5px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  padding: 0;
+  transition: background 0.12s, color 0.12s;
+}
+
+.leavesPopupClose:hover {
+  background: var(--surface-hover);
+  color: var(--text-primary);
+}
+
+.leavesFilterBar {
+  display: flex;
+  gap: 4px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.leavesFilterPill {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  border-radius: 5px;
+  border: 1px solid transparent;
+  background: transparent;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s;
+}
+
+.leavesFilterPill:hover {
+  background: var(--surface-hover);
+}
+
+.leavesFilterPillActive {
+  border-color: var(--accent-border);
+  background: var(--accent-muted);
+}
+
+.leavesPopupBody {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.leavesPopupEmpty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+}
+
+.leavesPopupItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  transition: background 0.1s;
+}
+
+.leavesPopupItem:last-child {
+  border-bottom: none;
+}
+
+.leavesPopupItem:hover {
+  background: var(--surface-hover);
+}
+
+.leavesPopupItemActive {
+  background: var(--accent-muted);
+}
+
+.leavesPopupItemPast {
+  opacity: 0.5;
+}
+
+.leavesPopupDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  flex-shrink: 0;
+  margin-top: 3px;
+}
+
+.leavesPopupItemInfo {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.leavesPopupItemRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.leavesPopupNote {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.leavesPopupFooter {
+  padding: 8px 10px;
+  border-top: 1px solid var(--border);
+}
+
+
+/* ── Station section inside edit popup ── */
+.editStationsSection {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.editStationTags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+}
+
+.editStationTag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 6px 3px 8px;
+  border-radius: 5px;
+  background: var(--accent-muted);
+  border: 1px solid var(--accent-border);
+}
+
+.editStationTagX {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  border: none;
+  background: transparent;
+  color: var(--accent);
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.12s;
+}
+
+.editStationTagX:hover {
+  background: var(--accent-border);
+}
+
+.editStationTagX:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ── Upcoming widget ── */
+.upcomingWidget {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.upcomingWidgetTitle {
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 0;
+}
+
+.upcomingList {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 6px 16px;
+}
+
+.upcomingItem {
+  display: grid;
+  grid-template-columns: 30px 7px 1fr;
+  align-items: start;
+  gap: 5px;
+}
+
+.upcomingDate {
+  text-align: right;
+  padding-top: 1px;
+}
+
+.upcomingDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-top: 3px;
+}
+
+.upcomingInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
 }

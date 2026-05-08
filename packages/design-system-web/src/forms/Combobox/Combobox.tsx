@@ -237,7 +237,7 @@ export function Combobox({
               ))
             )}
           </ul>,
-          document.body,
+          document.querySelector('dialog[open]') ?? document.body,
         )
       : null;
 

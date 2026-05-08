@@ -124,6 +124,10 @@ export function useWorkers() {
     [],
   );
 
+  const patchWorkerStations = useCallback((workerId: string, stations: Worker['stations']) => {
+    setWorkers((prev) => prev.map((w) => (w.id === workerId ? { ...w, stations } : w)));
+  }, []);
+
   const removeLeave = useCallback(async (workerId: string, leaveId: string) => {
     setSaving(true);
     setError(null);
@@ -150,6 +154,7 @@ export function useWorkers() {
     createWorker,
     updateWorker,
     deleteWorker,
+    patchWorkerStations,
     addLeave,
     updateLeave,
     removeLeave,
