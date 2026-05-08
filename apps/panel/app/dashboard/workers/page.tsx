@@ -214,14 +214,11 @@ export default function WorkersPage() {
           </button>
         </div>
 
-        {/* Right panel */}
-        <div className={styles.previewCol}>
-          <AbsenceTimeline
-            workers={workers}
-            saving={saving}
-            onRequestAddLeave={(workerId) => setAddLeaveModal({ isOpen: true, workerId })}
-          />
-        </div>
+        {/* Full-width timeline */}
+        <AbsenceTimeline
+          workers={workers}
+          onRequestAddLeave={(workerId) => setAddLeaveModal({ isOpen: true, workerId })}
+        />
       </div>
 
       <AddLeaveModal

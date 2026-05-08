@@ -553,20 +553,24 @@ export class BookingsService {
     // Check station-level leave: if all assigned workers are on leave → block all slots
     let stationAllWorkersOnLeave = false;
     if (query.stationId) {
+      // Include station: { providerId } to enforce provider ownership silently
       const stationWorkers = await this.prisma.stationWorker.findMany({
-        where: { stationId: query.stationId },
+        where: { stationId: query.stationId, station: { providerId } },
         select: { workerId: true },
       });
       if (stationWorkers.length > 0) {
         const workerIds = stationWorkers.map((sw) => sw.workerId);
-        const onLeaveCount = await this.prisma.workerLeave.count({
+        // Use distinct to count unique workers on leave (one worker may have multiple leave records)
+        const workersOnLeave = await this.prisma.workerLeave.findMany({
           where: {
             workerId: { in: workerIds },
             startDate: { lte: parsedDate },
             endDate: { gte: parsedDate },
           },
+          select: { workerId: true },
+          distinct: ['workerId'],
         });
-        stationAllWorkersOnLeave = onLeaveCount >= stationWorkers.length;
+        stationAllWorkersOnLeave = workersOnLeave.length >= stationWorkers.length;
       }
     }
 

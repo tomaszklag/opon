@@ -28,10 +28,9 @@
   min-height: 0;
   overflow-y: auto;
   padding: 24px 28px 40px;
-  display: grid;
-  grid-template-columns: 1fr 360px;
-  gap: 22px;
-  align-items: start;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
 }
 
 /* ── Left: form col ── */
@@ -39,6 +38,7 @@
   display: flex;
   flex-direction: column;
   gap: 14px;
+  max-width: 800px;
 }
 
 .pageHero {
@@ -713,12 +713,13 @@
   justify-content: center;
   cursor: pointer;
   flex-shrink: 0;
-  opacity: 0;
+  align-self: center;
+  opacity: 0.5;
   transition: opacity 0.15s;
   padding: 0;
 }
 
-.timelineRow:hover .tlAddBtn {
+.tlAddBtn:hover {
   opacity: 1;
 }
 
@@ -968,4 +969,110 @@
   height: 6px;
   border-radius: 2px;
   flex-shrink: 0;
+}
+
+/* ── Full-width timeline section ── */
+.timelineSection {
+  margin-top: 28px;
+  padding: 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* ── Day grid wrapper (horizontal scroll) ── */
+.dayGridWrap {
+  overflow-x: auto;
+  overflow-y: visible;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+
+/* ── Day grid (columns set via inline style) ── */
+.dayGrid {
+  display: grid;
+}
+
+/* ── Header rows — empty name placeholder ── */
+.dgNameHdr {
+  height: 20px;
+}
+
+/* ── Month header ── */
+.dgMonthHdr {
+  height: 20px;
+  display: flex;
+  align-items: center;
+  padding-left: 4px;
+  border-bottom: 1px solid var(--border-strong);
+  overflow: hidden;
+}
+
+.dgMonthHdr2 {
+  border-left: 2px solid var(--border-strong);
+}
+
+/* ── Day number header ── */
+.dgDayNum {
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-bottom: 1px solid var(--border);
+}
+
+/* ── Worker name cell ── */
+.dgName {
+  height: 22px;
+  display: flex;
+  align-items: center;
+  padding-right: 6px;
+  overflow: hidden;
+}
+
+/* Sticky left column */
+.dgNameSticky {
+  position: sticky;
+  left: 0;
+  background: var(--surface);
+  z-index: 2;
+}
+
+/* ── Day data cell ── */
+.dgCell {
+  height: 22px;
+  position: relative;
+  border-bottom: 1px solid var(--border);
+}
+
+/* Month boundary */
+.dgCellMonthStart {
+  border-left: 2px solid var(--border-strong);
+}
+
+/* Today column */
+.dgCellToday {
+  background: var(--accent-muted);
+}
+
+/* Weekend column */
+.dgCellWeekend {
+  background: var(--surface-hover);
+}
+
+/* ── Leave fill pill ── */
+.dgFill {
+  position: absolute;
+  inset: 2px 1px;
+  border-radius: 2px;
+  opacity: 0.85;
+}
+
+/* ── Coverage row ── */
+.dgCovCell {
+  border-top: 1px solid var(--border);
+  border-bottom: none;
 }
