@@ -945,6 +945,50 @@ Elementy o podwójnej roli (pudełko + tekst z typografią) — np. numerki sekc
 }
 ```
 
+#### Wzorzec: multi-state status chip (np. „W składzie" / „Wydany")
+
+Status chipy z kilkoma stanami kolorystycznymi i tekstem słownym są częstym źródłem naruszeń — bo naturalnym impulsem jest wpisanie `font-size`, `font-weight`, `text-transform`, `letter-spacing` bezpośrednio do CSS klasy chipu.
+
+```tsx
+// ❌ NIE — raw span, cała typografia w CSS → naruszenie reguły
+// .statusChip { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+// .statusInDepot { background: var(--success-muted); color: var(--success); border: ... }
+<span className={`${styles.statusChip} ${styles.statusInDepot}`}>W składzie</span>
+```
+
+```tsx
+// ✅ TAK — kontener CSS odpowiada wyłącznie za geometrię i kolor tła/ramki;
+//          DS <Text> dostarcza typografię i kolor tekstu
+<span className={`${styles.statusChip} ${styles.statusInDepot}`}>
+  <Text variant="nano" as="span" weight="bold" mono color="accent">
+    W składzie
+  </Text>
+</span>
+```
+
+```css
+/* ✅ TAK — CSS tylko geometria: padding, border-radius, background, border */
+/* Brak font-size / font-weight / text-transform / letter-spacing / color na tekście */
+.statusChip {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+.statusInDepot {
+  background: var(--success-muted);
+  border: 1px solid var(--success-border);
+}
+.statusPickedUp {
+  background: var(--bg);
+  border: 1px solid var(--border);
+}
+```
+
+Uwaga: DS `variant="nano"` zawiera już `uppercase`, `letter-spacing` i odpowiedni `font-size` — nie dodawaj tych wartości do CSS chipu.
+
+Kolor tekstu pochodzi z `color` prop na `<Text>` (`accent`, `secondary`, `warning`, `danger`). Dla koloru `success` (niedostępnego w `TextColor`) użyj `color="accent"` jako najbliższego odpowiednika lub wzorca wrapper-span opisanego wyżej.
+
 #### Wyjątek: dekoracyjne pseudoelementy CSS (`::after` / `::before`)
 
 Reguła „no typography in CSS" dotyczy **elementów DOM z treścią w JSX**. Pseudoelementy CSS (`::after`/`::before` z `content:`) są generowane wyłącznie przez CSS, nie mają odpowiednika komponentu DS i podlegają wyjątkowi — mogą zawierać `font-family`, `font-size`, `letter-spacing` itp.:

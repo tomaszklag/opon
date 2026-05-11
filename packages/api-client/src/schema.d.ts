@@ -1141,6 +1141,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/v1/providers/me/services/{id}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /** Usuń usługę (hard lub soft delete w zależności od historii rezerwacji) */
+    delete: operations['ServicesController_deleteService'];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/v1/providers/me/addons': {
     parameters: {
       query?: never;
@@ -1154,6 +1171,23 @@ export interface paths {
     put: operations['ServicesController_replaceAddons'];
     post?: never;
     delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/providers/me/addons/{id}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /** Usuń dodatek (hard lub soft delete w zależności od historii rezerwacji) */
+    delete: operations['ServicesController_deleteAddon'];
     options?: never;
     head?: never;
     patch?: never;
@@ -1190,6 +1224,180 @@ export interface paths {
     post: operations['PushSubscriptionsController_register'];
     /** Wyrejestruj Web Push subscription (po wyłączeniu push w ustawieniach) */
     delete: operations['PushSubscriptionsController_unregister'];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/providers/me/schedule-exceptions': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Lista wyjątków (od -7 dni wzwyż) */
+    get: operations['ScheduleExceptionsController_list'];
+    put?: never;
+    /** Dodaj / zaktualizuj wyjątek (upsert per data) */
+    post: operations['ScheduleExceptionsController_create'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/providers/me/schedule-exceptions/{id}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /** Usuń wyjątek */
+    delete: operations['ScheduleExceptionsController_remove'];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/providers/me/depot': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List tire sets (paginated) */
+    get: operations['DepotController_list'];
+    put?: never;
+    /** Add tire set to depot */
+    post: operations['DepotController_create'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/providers/me/depot/stats': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Depot KPI stats */
+    get: operations['DepotController_getStats'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/providers/me/depot/slots': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List all depot slots with occupancy */
+    get: operations['DepotController_getSlots'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/providers/me/depot/slots/bulk': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Bulk create depot slots */
+    post: operations['DepotController_bulkCreateSlots'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/providers/me/depot/{id}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get tire set detail */
+    get: operations['DepotController_getById'];
+    put?: never;
+    post?: never;
+    /** Delete tire set (only PICKED_UP) */
+    delete: operations['DepotController_remove'];
+    options?: never;
+    head?: never;
+    /** Update tire set data / location / condition */
+    patch: operations['DepotController_update'];
+    trace?: never;
+  };
+  '/v1/providers/me/depot/{id}/pickup': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Mark tire set as picked up by client */
+    post: operations['DepotController_pickup'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/providers/me/depot/{id}/store': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Re-admit picked-up tire set back to depot */
+    post: operations['DepotController_store'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/providers/me/depot/slots/{slotId}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /** Delete empty depot slot */
+    delete: operations['DepotController_removeSlot'];
     options?: never;
     head?: never;
     patch?: never;
@@ -1378,6 +1586,12 @@ export interface components {
       vehicleTypes?: string[];
       tireSizes?: string[];
       additionalServices?: string[];
+      /** @description Dopłata TPMS per sensor (PLN) */
+      tpmsPricePln?: number;
+      /** @description Opłata dojazd strefa 1: 0–10 km (PLN) */
+      travelFeeZone1Pln?: number;
+      /** @description Opłata dojazd strefa 2: 10–15 km (PLN) */
+      travelFeeZone2Pln?: number;
     };
     PhotoResponseDto: {
       id: string;
@@ -1639,28 +1853,6 @@ export interface components {
        */
       shiftEnd?: string;
     };
-    ScheduleExceptionResponseDto: {
-      id: string;
-      /** @example 2026-12-25 */
-      date: string;
-      /** @example Boże Narodzenie */
-      reason: string;
-      isClosed: boolean;
-      /** @example 10:00 */
-      customOpenTime: string | null;
-      /** @example 14:00 */
-      customCloseTime: string | null;
-    };
-    CreateScheduleExceptionDto: {
-      /** @example 2026-12-25 */
-      date: string;
-      /** @example Boże Narodzenie */
-      reason: string;
-      /** @example 10:00 */
-      customOpenTime?: string;
-      /** @example 14:00 */
-      customCloseTime?: string;
-    };
     UpdateShiftDto: {
       /**
        * @description Godzina rozpoczęcia zmiany (HH:MM)
@@ -1856,6 +2048,7 @@ export interface components {
       rejectReason?: string | null;
       cancelReason?: string | null;
       isManual: boolean;
+      hasTireSetsInDepot: boolean;
       createdAt: string;
       confirmedAt?: string | null;
       startedAt?: string | null;
@@ -2016,6 +2209,155 @@ export interface components {
       p256dh: string;
       auth: string;
       userAgent?: string;
+    };
+    ScheduleExceptionResponseDto: {
+      id: string;
+      /** @example 2026-12-25 */
+      date: string;
+      /** @example Boże Narodzenie */
+      reason: string;
+      isClosed: boolean;
+      /** @example 10:00 */
+      customOpenTime?: Record<string, never>;
+      /** @example 14:00 */
+      customCloseTime?: Record<string, never>;
+    };
+    CreateScheduleExceptionDto: {
+      /**
+       * @description Data (YYYY-MM-DD)
+       * @example 2026-12-25
+       */
+      date: string;
+      /** @example Boże Narodzenie */
+      reason: string;
+      /**
+       * @description Jeśli brak — dzień zamknięty
+       * @example 10:00
+       */
+      customOpenTime?: string;
+      /** @example 14:00 */
+      customCloseTime?: string;
+    };
+    TireSetResponseDto: {
+      id: string;
+      clientName: string;
+      clientPhone: string;
+      vehicleName?: string | null;
+      licensePlate?: string | null;
+      brand?: string | null;
+      model?: string | null;
+      tireSize: string;
+      tireType: string;
+      isOnRims: boolean;
+      condition: string;
+      status: string;
+      slotId?: string | null;
+      slotLabel?: string | null;
+      storagePricePln?: number | null;
+      releaseDue?: string | null;
+      createdAt: string;
+    };
+    TireSetPageResponseDto: {
+      items: components['schemas']['TireSetResponseDto'][];
+      total: number;
+      page: number;
+      pageSize: number;
+    };
+    DepotStatsResponseDto: {
+      inDepot: number;
+      dueSoon: number;
+      revenueMonth: number;
+    };
+    DepotSlotResponseDto: {
+      id: string;
+      section: string;
+      row: number;
+      position: number;
+      label?: string | null;
+      occupied: boolean;
+      tireSetId?: string | null;
+      tireSetClientName?: string | null;
+    };
+    CreateTireSetDto: {
+      clientName: string;
+      clientPhone: string;
+      vehicleName?: string;
+      licensePlate?: string;
+      brand?: string;
+      model?: string;
+      tireSize: string;
+      /** @enum {string} */
+      tireType: 'SUMMER' | 'WINTER' | 'ALL_SEASON';
+      isOnRims: boolean;
+      dotCode?: string;
+      treadDepthMm?: number;
+      slotId?: string;
+      storagePricePln?: number;
+      storedAt?: string;
+      releaseDue?: string;
+      sourceBookingId?: string;
+      notes?: string;
+    };
+    StoragePeriodResponseDto: {
+      id: string;
+      storedAt: string;
+      releaseDue?: string | null;
+      pickedUpAt?: string | null;
+      pricePln?: number | null;
+      notes?: string | null;
+    };
+    TireSetDetailResponseDto: {
+      id: string;
+      clientId?: string | null;
+      clientName: string;
+      clientPhone: string;
+      vehicleName?: string | null;
+      licensePlate?: string | null;
+      brand?: string | null;
+      model?: string | null;
+      tireSize: string;
+      tireType: string;
+      isOnRims: boolean;
+      dotCode?: string | null;
+      treadDepthMm?: number | null;
+      condition: string;
+      slotId?: string | null;
+      slotLabel?: string | null;
+      status: string;
+      storagePricePln?: number | null;
+      sourceBookingId?: string | null;
+      notes?: string | null;
+      createdAt: string;
+      updatedAt: string;
+      periods: components['schemas']['StoragePeriodResponseDto'][];
+    };
+    UpsertDepotSlotsDto: {
+      /** @description Section label, e.g. "A" */
+      section: string;
+      /** @description First row number (inclusive) */
+      rowFrom: number;
+      /** @description Last row number (inclusive) */
+      rowTo: number;
+      /** @description Number of positions per row */
+      positionsPerRow: number;
+    };
+    UpdateTireSetDto: {
+      clientName?: string;
+      vehicleName?: string;
+      licensePlate?: string;
+      brand?: string;
+      model?: string;
+      tireSize?: string;
+      /** @enum {string} */
+      tireType?: 'SUMMER' | 'WINTER' | 'ALL_SEASON';
+      isOnRims?: boolean;
+      dotCode?: string;
+      treadDepthMm?: number;
+      /** @enum {string} */
+      condition?: 'GOOD' | 'WORN' | 'CRITICAL';
+      slotId?: Record<string, never> | null;
+      storagePricePln?: number;
+      notes?: string;
     };
   };
   responses: never;
@@ -3384,7 +3726,7 @@ export interface operations {
     };
     requestBody?: never;
     responses: {
-      200: {
+      204: {
         headers: {
           [name: string]: unknown;
         };
@@ -3455,7 +3797,7 @@ export interface operations {
     };
     requestBody?: never;
     responses: {
-      200: {
+      204: {
         headers: {
           [name: string]: unknown;
         };
@@ -3768,6 +4110,7 @@ export interface operations {
       query: {
         date: string;
         workerId?: string;
+        stationId?: string;
       };
       header?: never;
       path?: never;
@@ -4050,6 +4393,25 @@ export interface operations {
       };
     };
   };
+  ServicesController_deleteService: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
   ServicesController_getAddons: {
     parameters: {
       query?: never;
@@ -4089,6 +4451,25 @@ export interface operations {
         content: {
           'application/json': components['schemas']['AddonResponseDto'][];
         };
+      };
+    };
+  };
+  ServicesController_deleteAddon: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
       };
     };
   };
@@ -4167,6 +4548,301 @@ export interface operations {
         'application/json': components['schemas']['RegisterPushSubscriptionDto'];
       };
     };
+    responses: {
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  ScheduleExceptionsController_list: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ScheduleExceptionResponseDto'][];
+        };
+      };
+    };
+  };
+  ScheduleExceptionsController_create: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CreateScheduleExceptionDto'];
+      };
+    };
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ScheduleExceptionResponseDto'];
+        };
+      };
+    };
+  };
+  ScheduleExceptionsController_remove: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  DepotController_list: {
+    parameters: {
+      query?: {
+        status?: 'IN_DEPOT' | 'PICKED_UP';
+        search?: string;
+        page?: number;
+        pageSize?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['TireSetPageResponseDto'];
+        };
+      };
+    };
+  };
+  DepotController_create: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CreateTireSetDto'];
+      };
+    };
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['TireSetDetailResponseDto'];
+        };
+      };
+    };
+  };
+  DepotController_getStats: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['DepotStatsResponseDto'];
+        };
+      };
+    };
+  };
+  DepotController_getSlots: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['DepotSlotResponseDto'][];
+        };
+      };
+    };
+  };
+  DepotController_bulkCreateSlots: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['UpsertDepotSlotsDto'];
+      };
+    };
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['DepotSlotResponseDto'][];
+        };
+      };
+    };
+  };
+  DepotController_getById: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['TireSetDetailResponseDto'];
+        };
+      };
+    };
+  };
+  DepotController_remove: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  DepotController_update: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['UpdateTireSetDto'];
+      };
+    };
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['TireSetDetailResponseDto'];
+        };
+      };
+    };
+  };
+  DepotController_pickup: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['TireSetDetailResponseDto'];
+        };
+      };
+    };
+  };
+  DepotController_store: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['TireSetDetailResponseDto'];
+        };
+      };
+    };
+  };
+  DepotController_removeSlot: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        slotId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
     responses: {
       204: {
         headers: {

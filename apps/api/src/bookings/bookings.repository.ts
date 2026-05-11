@@ -289,4 +289,8 @@ export class BookingsRepository {
       select: { pausedUntil: true },
     });
   }
+
+  countTireSetsForBooking(bookingId: string): Promise<number> {
+    return this.prisma.tireSet.count({ where: { sourceBookingId: bookingId } });
+  }
 }

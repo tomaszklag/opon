@@ -103,6 +103,23 @@ enum DataExportStatus {
   CANCELLED
 }
 
+enum TireType {
+  SUMMER
+  WINTER
+  ALL_SEASON
+}
+
+enum TireCondition {
+  GOOD
+  WORN
+  CRITICAL
+}
+
+enum TireSetStatus {
+  IN_DEPOT
+  PICKED_UP
+}
+
 // ──────────────────────────────────────────────
 // USER
 // ──────────────────────────────────────────────
@@ -127,6 +144,7 @@ model User {
   consentLogs  ConsentLog[]
   auditLogs    AuditLog[]
   sessions     Session[]
+  tireSets     TireSet[]
 
   @@map("users")
 }
@@ -211,6 +229,8 @@ model Provider {
   dataExportRequests         DataExportRequest[]
   notificationPreferences    NotificationPreferences?
   pushSubscriptions          PushSubscription[]
+  depotSlots                 DepotSlot[]
+  tireSets                   TireSet[]
 
   @@map("providers")
 }
@@ -352,6 +372,7 @@ model Booking {
   station     Station?     @relation(fields: [stationId], references: [id])
   worker      Worker?      @relation(fields: [workerId], references: [id], onDelete: SetNull)
   review      Review?
+  tireSets    TireSet[]
 
   @@index([providerId, startAt])
   @@index([clientId, startAt(sort: Desc)])
@@ -821,4 +842,82 @@ model DataExportRequest {
   @@index([providerId])
   @@index([status, requestedAt])
   @@map("data_export_requests")
+}
+
+// ──────────────────────────────────────────────
+// DEPOT — skład opon
+// ──────────────────────────────────────────────
+
+model DepotSlot {
+  id         String  @id @default(uuid())
+  providerId String
+  section    String  @db.VarChar(10)
+  row        Int
+  position   Int
+  label      String? @db.VarChar(50)
+
+  provider Provider  @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  tireSets TireSet[]
+
+  @@unique([providerId, section, row, position])
+  @@index([providerId])
+  @@map("depot_slots")
+}
+
+model TireSet {
+  id          String @id @default(uuid())
+  providerId  String
+
+  clientId    String?
+  clientName  String  @db.VarChar(200)
+  clientPhone String  @db.VarChar(20)
+
+  vehicleName  String? @db.VarChar(100)
+  licensePlate String? @db.VarChar(20)
+
+  brand        String?        @db.VarChar(100)
+  model        String?        @db.VarChar(100)
+  tireSize     String         @db.VarChar(20)
+  tireType     TireType
+  isOnRims     Boolean        @default(true)
+  dotCode      String?        @db.VarChar(20)
+  treadDepthMm Float?
+  condition    TireCondition  @default(GOOD)
+
+  slotId String?
+
+  status TireSetStatus @default(IN_DEPOT)
+
+  storagePricePln Decimal? @db.Decimal(10, 2)
+
+  sourceBookingId String?
+
+  notes     String? @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  provider      Provider        @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  client        User?           @relation(fields: [clientId], references: [id])
+  slot          DepotSlot?      @relation(fields: [slotId], references: [id])
+  sourceBooking Booking?        @relation(fields: [sourceBookingId], references: [id])
+  periods       StoragePeriod[]
+
+  @@index([providerId, status])
+  @@index([providerId, clientPhone])
+  @@map("tire_sets")
+}
+
+model StoragePeriod {
+  id         String    @id @default(uuid())
+  tireSetId  String
+  storedAt   DateTime
+  releaseDue DateTime?
+  pickedUpAt DateTime?
+  pricePln   Decimal?  @db.Decimal(10, 2)
+  notes      String?   @db.Text
+
+  tireSet TireSet @relation(fields: [tireSetId], references: [id], onDelete: Cascade)
+
+  @@index([tireSetId])
+  @@map("storage_periods")
 }

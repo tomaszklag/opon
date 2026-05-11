@@ -20,6 +20,7 @@ import {
   IconSettings,
   IconStations,
   IconWorkers,
+  IconWarehouse,
 } from '../../../components/icons';
 import styles from './DashboardNav.module.css';
 
@@ -51,6 +52,7 @@ const PAGE_TITLE: Record<string, string> = {
   '/dashboard/closures': 'Zamknięcia & Wyjątki',
   '/dashboard/workers': 'Pracownicy',
   '/dashboard/bookings': 'Rezerwacje',
+  '/dashboard/depot': 'Skład opon',
   '/dashboard/profile': 'Profil firmy',
   '/dashboard/reviews': 'Opinie',
   '/dashboard/settings': 'Ustawienia konta',
@@ -156,6 +158,13 @@ export default function DashboardNav() {
           >
             <IconWorkers width="15" height="15" />
             Pracownicy
+          </a>
+          <a
+            href="/dashboard/depot"
+            className={`${styles.navItem} ${isActive('/dashboard/depot') ? styles.navActive : ''}`}
+          >
+            <IconWarehouse width="15" height="15" />
+            Skład
           </a>
           <a
             href="/dashboard/hours"

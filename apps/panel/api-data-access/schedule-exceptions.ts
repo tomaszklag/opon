@@ -1,7 +1,15 @@
 import { api } from '../lib/api';
 import type { components } from '@opony/api-client';
 
-export type ScheduleException = components['schemas']['ScheduleExceptionResponseDto'];
+type _ScheduleExceptionDto = components['schemas']['ScheduleExceptionResponseDto'];
+// Override time fields — openapi-typescript mis-generates Time type as Record<string,never>
+export type ScheduleException = Omit<
+  _ScheduleExceptionDto,
+  'customOpenTime' | 'customCloseTime'
+> & {
+  customOpenTime?: string;
+  customCloseTime?: string;
+};
 export type CreateScheduleExceptionBody = components['schemas']['CreateScheduleExceptionDto'];
 
 const BASE = '/v1/providers/me/schedule-exceptions';

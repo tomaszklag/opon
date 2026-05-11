@@ -1296,3 +1296,23 @@ export function IconClock(props: SVGProps<SVGSVGElement>) {
     </svg>
   );
 }
+
+export function IconWarehouse(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      {...props}
+    >
+      <path d="M3 9.5 12 4l9 5.5V20H3V9.5Z" />
+      <rect x="9" y="14" width="6" height="6" />
+      <line x1="9" y1="14" x2="9" y2="20" />
+      <line x1="15" y1="14" x2="15" y2="20" />
+    </svg>
+  );
+}

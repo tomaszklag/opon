@@ -86,6 +86,7 @@ export class BookingsService {
   private toDetailResponseDto(
     booking: BookingWithDetail,
     bookingCount: number,
+    hasTireSetsInDepot: boolean,
   ): BookingDetailResponseDto {
     const { client, vehicle } = booking;
     const fullName = [client.firstName, client.lastName].filter(Boolean).join(' ').trim();
@@ -126,6 +127,7 @@ export class BookingsService {
       rejectReason: booking.rejectReason ?? null,
       cancelReason: booking.cancelReason ?? null,
       isManual: booking.isManual,
+      hasTireSetsInDepot,
       createdAt: booking.createdAt.toISOString(),
       confirmedAt: booking.confirmedAt?.toISOString() ?? null,
       startedAt: booking.startedAt?.toISOString() ?? null,
@@ -251,12 +253,12 @@ export class BookingsService {
       throw new AppException(ErrorCode.BOOKING_NOT_FOUND, 'Rezerwacja nie istnieje.', 404);
     }
 
-    const bookingCount = await this.bookingsRepository.countClientBookings(
-      booking.clientId,
-      providerId,
-    );
+    const [bookingCount, tireSetCount] = await Promise.all([
+      this.bookingsRepository.countClientBookings(booking.clientId, providerId),
+      this.bookingsRepository.countTireSetsForBooking(booking.id),
+    ]);
 
-    return this.toDetailResponseDto(booking, bookingCount);
+    return this.toDetailResponseDto(booking, bookingCount, tireSetCount > 0);
   }
 
   // ── update status ─────────────────────────────────────────────────────────
