@@ -212,7 +212,6 @@ model Provider {
   owner              User                       @relation("ProviderOwner", fields: [ownerId], references: [id], onDelete: Restrict)
   photos             ProviderPhoto[]
   pricingTiers       PricingTier[]
-  workingHours       WorkingHours[]
   scheduleExceptions ScheduleException[]
   bookings           Booking[]                  @relation("ProviderBookings")
   reviews            Review[]                   @relation("ProviderReviews")
@@ -281,27 +280,6 @@ model PricingTier {
 
   @@unique([providerId, sizeTier])
   @@map("pricing_tiers")
-}
-
-// ──────────────────────────────────────────────
-// WORKING HOURS
-// ──────────────────────────────────────────────
-
-model WorkingHours {
-  id           String   @id @default(uuid())
-  providerId   String
-  dayOfWeek    Int      // 0=niedziela … 6=sobota
-  openTime     DateTime @db.Time(6)
-  closeTime    DateTime @db.Time(6)
-  slotMinutes  Int      @default(45)
-  isClosed     Boolean  @default(false)
-  workstations Int      @default(1)
-  blocks       Json?    @db.JsonB
-
-  provider Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
-
-  @@unique([providerId, dayOfWeek])
-  @@map("working_hours")
 }
 
 // ──────────────────────────────────────────────

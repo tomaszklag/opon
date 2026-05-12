@@ -2,7 +2,11 @@ import { Injectable, Logger } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
 import { NotificationPreferences } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { BookingCreatedEvent, BookingStatusChangedEvent } from '../realtime/events/booking.events';
+import {
+  BookingCreatedEvent,
+  BookingRescheduledEvent,
+  BookingStatusChangedEvent,
+} from '../realtime/events/booking.events';
 import { ReviewCreatedEvent } from '../realtime/events/review.events';
 import { EmailChannelService } from './channels/email-channel.service';
 import { PushChannelService } from './channels/push-channel.service';
@@ -15,6 +19,7 @@ import {
   newBookingSms,
   newReviewEmail,
   newReviewSms,
+  rescheduleSms,
 } from './templates/notification-templates';
 
 const CANCELATION_STATUSES: Record<string, 'CLIENT' | 'PROVIDER' | 'SYSTEM'> = {
@@ -66,6 +71,37 @@ export class NotificationDispatcherService {
       this.emailChannel.send(provider.email, cancelationEmail(ctx));
     if (prefs.cancelationPush)
       void this.push.send(event.providerId, 'Anulowanie rezerwacji', `#${event.referenceCode}`);
+  }
+
+  @OnEvent(BookingRescheduledEvent.EVENT)
+  async onBookingRescheduled(event: BookingRescheduledEvent): Promise<void> {
+    if (!event.notifyClient || !event.clientPhone) return;
+
+    const provider = await this.prisma.provider.findUnique({
+      where: { id: event.providerId },
+      select: { name: true },
+    });
+
+    const newStart = new Date(event.newStartAtIso);
+    const formattedDate = newStart.toLocaleDateString('pl-PL', {
+      day: 'numeric',
+      month: 'long',
+      timeZone: 'Europe/Warsaw',
+    });
+    const formattedTime = newStart.toLocaleTimeString('pl-PL', {
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZone: 'Europe/Warsaw',
+    });
+
+    this.sms.send(
+      event.clientPhone,
+      rescheduleSms({
+        referenceCode: event.referenceCode,
+        newStartAt: `${formattedDate} o ${formattedTime}`,
+        providerName: provider?.name ?? 'warsztatu',
+      }),
+    );
   }
 
   // Gotowy handler — wyzwoli się gdy zostanie dodany endpoint tworzenia opinii przez klienta

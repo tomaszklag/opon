@@ -12,7 +12,6 @@ import {
   IconBookings,
   IconCalendar,
   IconCalendarOff,
-  IconHours,
   IconPause,
   IconProfile,
   IconReviews,
@@ -46,7 +45,6 @@ const STATUS_CLASS: Record<ProviderStatus, string> = {
 const PAGE_TITLE: Record<string, string> = {
   '/dashboard': 'Dashboard',
   '/dashboard/calendar': 'Kalendarz',
-  '/dashboard/hours': 'Godziny pracy',
   '/dashboard/services': 'Usługi & Cennik',
   '/dashboard/stations': 'Stanowiska',
   '/dashboard/closures': 'Zamknięcia & Wyjątki',
@@ -165,13 +163,6 @@ export default function DashboardNav() {
           >
             <IconWarehouse width="15" height="15" />
             Skład
-          </a>
-          <a
-            href="/dashboard/hours"
-            className={`${styles.navItem} ${isActive('/dashboard/hours') ? styles.navActive : ''}`}
-          >
-            <IconHours width="15" height="15" />
-            Godziny pracy
           </a>
           <a
             href="/dashboard/closures"

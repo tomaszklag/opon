@@ -124,6 +124,21 @@ export class BookingsRepository {
     });
   }
 
+  async rescheduleBooking(
+    bookingId: string,
+    startAt: Date,
+    endAt: Date,
+  ): Promise<BookingWithClient> {
+    return this.prisma.booking.update({
+      where: { id: bookingId },
+      data: { startAt, endAt },
+      include: {
+        client: { select: { phone: true, firstName: true, lastName: true } },
+        worker: { select: { name: true } },
+      },
+    });
+  }
+
   countClientBookings(clientId: string, providerId: string): Promise<number> {
     return this.prisma.booking.count({ where: { clientId, providerId } });
   }

@@ -17,6 +17,7 @@ import { BookingDetailResponseDto } from './dto/booking-detail-response.dto';
 import { BookingListQueryDto } from './dto/booking-list-query.dto';
 import { BookingResponseDto } from './dto/booking-response.dto';
 import { UpdateBookingStatusDto } from './dto/update-booking-status.dto';
+import { RescheduleBookingDto } from './dto/reschedule-booking.dto';
 import { BookingsService } from './bookings.service';
 import { BookingAdminListQueryDto } from './dto/booking-admin-list-query.dto';
 import { BookingPageResponseDto } from './dto/booking-page-response.dto';
@@ -122,6 +123,21 @@ export class BookingsController {
   ): Promise<BookingDetailResponseDto> {
     const provider = await this.providersService.getMyProvider(user.sub);
     return this.service.getDetail(provider.id, referenceCode);
+  }
+
+  // ── PATCH /v1/providers/me/bookings/:referenceCode/reschedule ────────────
+
+  @Patch(':referenceCode/reschedule')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Reschedule a booking (move to new date/time)' })
+  @ApiResponse({ status: 200, type: BookingResponseDto })
+  async reschedule(
+    @CurrentUser() user: JwtPayload,
+    @Param('referenceCode') referenceCode: string,
+    @Body() dto: RescheduleBookingDto,
+  ): Promise<BookingResponseDto> {
+    const provider = await this.providersService.getMyProvider(user.sub);
+    return this.service.reschedule(provider.id, referenceCode, dto);
   }
 
   // ── PATCH /v1/providers/me/bookings/:referenceCode/status ─────────────────

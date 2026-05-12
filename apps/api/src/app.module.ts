@@ -14,7 +14,6 @@ import { PhotosModule } from './photos/photos.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { PricingTiersModule } from './pricing-tiers/pricing-tiers.module';
 import { ProvidersModule } from './providers/providers.module';
-import { WorkingHoursModule } from './working-hours/working-hours.module';
 import { EmailModule } from './email/email.module';
 import { GusModule } from './gus/gus.module';
 import { BookingsModule } from './bookings/bookings.module';
@@ -45,7 +44,6 @@ import { DepotModule } from './depot/depot.module';
     AuthModule,
     ProvidersModule,
     PricingTiersModule,
-    WorkingHoursModule,
     GusModule,
     PhotosModule,
     AdminModule,

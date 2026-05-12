@@ -20,6 +20,12 @@ export type ReminderCtx = {
   startAt: string; // "HH:MM"
 };
 
+export type RescheduleCtx = {
+  referenceCode: string;
+  newStartAt: string; // "DD MMMM o HH:MM"
+  providerName: string;
+};
+
 // ── SMS templates (max ~160 znaków) ──────────────────────────────────────────
 
 export function newBookingSms(ctx: NewBookingCtx): string {
@@ -43,4 +49,8 @@ export function newReviewSms(ctx: NewReviewCtx): string {
 
 export function reminderSms(ctx: ReminderCtx): string {
   return `[Opony.app] Przypomnienie: rezerwacja #${ctx.referenceCode} o ${ctx.startAt} (za ~30 min).`;
+}
+
+export function rescheduleSms(ctx: RescheduleCtx): string {
+  return `[Opony.app] Twoja wizyta #${ctx.referenceCode} w ${ctx.providerName} została przeniesiona na ${ctx.newStartAt}.`;
 }

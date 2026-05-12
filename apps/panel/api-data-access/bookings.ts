@@ -88,9 +88,15 @@ export const bookingsApi = {
     api.patch<void>('/v1/providers/me/bookings/bulk-status', { ids, action }),
   createManual: (payload: ManualBookingPayload) =>
     api.post<Booking>('/v1/providers/me/bookings/manual', payload),
+  reschedule: (referenceCode: string, startAt: string, endAt: string, notifyClient: boolean) =>
+    api.patch<Booking>(`/v1/providers/me/bookings/${referenceCode}/reschedule`, {
+      startAt,
+      endAt,
+      notifyClient,
+    }),
   getAvailability: (date: string, workerId?: string) => {
     const qs = workerId ? `?date=${date}&workerId=${workerId}` : `?date=${date}`;
-    return api.get<AvailabilityResponse>(`/v1/providers/me/availability${qs}`);
+    return api.get<AvailabilityResponse>(`/v1/providers/me/bookings/availability${qs}`);
   },
 };
 

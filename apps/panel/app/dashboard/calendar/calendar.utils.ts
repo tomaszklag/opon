@@ -184,8 +184,22 @@ export function matchesFilter(booking: Booking, filter: FilterType): boolean {
   return true;
 }
 
+export function toISODate(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
 export function visitCountLabel(n: number): string {
   if (n === 1) return '1 wizyta';
   if (n < 5) return `${n} wizyty`;
   return `${n} wizyt`;
+}
+
+export function snapTimeFromOffset(offsetY: number): string {
+  const startMins = (HOURS[0] ?? 8) * 60;
+  const rawMins = startMins + (offsetY / PX_PER_HOUR) * 60;
+  const snapped = Math.round(rawMins / 15) * 15;
+  const clamped = Math.min(Math.max(snapped, startMins), 21 * 60 + 45);
+  const h = Math.floor(clamped / 60);
+  const m = clamped % 60;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 }

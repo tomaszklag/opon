@@ -2,7 +2,9 @@
 
 import { Spinner, Text } from '@opony/design-system-web';
 import type { Booking, BookingStatus } from '../../../../api-data-access/bookings';
+import type { ScheduleException } from '../../../../api-data-access/schedule-exceptions';
 import { IconInfo, IconArrowRight } from '../../../../components/icons';
+import { HOLIDAY_MAP } from '../../../../lib/holidays';
 import {
   MONTH_NAMES,
   buildMonthGrid,
@@ -12,6 +14,7 @@ import {
   formatDayDate,
   timeAgo,
   visitCountLabel,
+  toISODate,
 } from '../calendar.utils';
 import styles from '../calendar.module.css';
 
@@ -21,7 +24,10 @@ const MAX_CHIPS = 3;
 interface MonthViewProps {
   month: Date;
   bookings: Booking[];
+  exceptions: ScheduleException[];
   isLoading: boolean;
+  onBookingClick?: (booking: Booking) => void;
+  onSlotClick?: (date: Date, time: string, x: number, y: number) => void;
 }
 
 function getChipClass(status: BookingStatus): string {
@@ -39,7 +45,14 @@ function getChipClass(status: BookingStatus): string {
   }
 }
 
-export function MonthView({ month, bookings, isLoading }: MonthViewProps) {
+export function MonthView({
+  month,
+  bookings,
+  exceptions,
+  isLoading,
+  onBookingClick,
+  onSlotClick,
+}: MonthViewProps) {
   const grid = buildMonthGrid(month);
 
   const totalCount = bookings.length;
@@ -80,6 +93,11 @@ export function MonthView({ month, bookings, isLoading }: MonthViewProps) {
             const visible = dayBookings.slice(0, MAX_CHIPS);
             const overflow = dayBookings.length - MAX_CHIPS;
 
+            const iso = toISODate(day);
+            const holiday = HOLIDAY_MAP.get(iso);
+            const exception = exceptions.find((e) => e.date.slice(0, 10) === iso);
+
+            const isInteractive = !isSunday && !isOutOfMonth;
             return (
               <div
                 key={day.toISOString()}
@@ -88,9 +106,17 @@ export function MonthView({ month, bookings, isLoading }: MonthViewProps) {
                   todayDay ? styles.monthCellToday : '',
                   isOutOfMonth ? styles.monthCellOuter : '',
                   isSunday ? styles.monthCellSunday : '',
+                  isInteractive ? styles.monthCellInteractive : '',
                 ]
                   .filter(Boolean)
                   .join(' ')}
+                onClick={
+                  isInteractive
+                    ? (e) => {
+                        onSlotClick?.(day, '09:00', e.clientX, e.clientY);
+                      }
+                    : undefined
+                }
               >
                 <div className={`${styles.monthDayNum} ${todayDay ? styles.monthDayNumToday : ''}`}>
                   {day.getDate()}
@@ -101,12 +127,34 @@ export function MonthView({ month, bookings, isLoading }: MonthViewProps) {
                   )}
                 </div>
 
+                {holiday && <div className={styles.monthHolidayChip}>{holiday}</div>}
+                {exception && (
+                  <div
+                    className={`${styles.monthExceptChip} ${exception.isClosed ? styles.monthExceptChipClosed : styles.monthExceptChipModified}`}
+                    title={exception.reason}
+                  >
+                    {exception.isClosed
+                      ? `Zamknięte`
+                      : `Sk. godz. ${exception.customOpenTime ?? ''}–${exception.customCloseTime ?? ''}`}
+                  </div>
+                )}
+
                 {!isSunday &&
                   visible.map((b) => (
                     <div
                       key={b.id}
+                      role="button"
+                      tabIndex={0}
                       className={`${styles.monthBookingChip} ${getChipClass(b.status)}`}
+                      style={{ cursor: 'pointer' }}
                       title={`${b.clientName} — ${formatTime(b.startAt)} – ${formatTime(b.endAt)}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onBookingClick?.(b);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') onBookingClick?.(b);
+                      }}
                     >
                       <span className={styles.monthChipTime}>{formatTime(b.startAt)}</span>
                       <span className={styles.monthChipName}>{b.clientName}</span>

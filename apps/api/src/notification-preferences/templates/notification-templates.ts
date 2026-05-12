@@ -1,5 +1,17 @@
-export type { NewBookingCtx, CancelationCtx, NewReviewCtx, ReminderCtx } from './sms-templates';
-export { newBookingSms, cancelationSms, newReviewSms, reminderSms } from './sms-templates';
+export type {
+  NewBookingCtx,
+  CancelationCtx,
+  NewReviewCtx,
+  ReminderCtx,
+  RescheduleCtx,
+} from './sms-templates';
+export {
+  newBookingSms,
+  cancelationSms,
+  newReviewSms,
+  reminderSms,
+  rescheduleSms,
+} from './sms-templates';
 
 export type { EmailContent } from './email-templates';
 export {

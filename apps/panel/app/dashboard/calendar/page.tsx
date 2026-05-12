@@ -6,9 +6,15 @@ import { useAuthGuard } from '../../../lib/hooks/use-auth-guard';
 import { useBookings } from '../../../lib/hooks/use-bookings';
 import { useBookingsMonth } from '../../../lib/hooks/use-bookings-month';
 import { useWorkerTasks } from '../../../lib/hooks/use-worker-tasks';
+import { useScheduleExceptions } from '../../../lib/hooks/use-schedule-exceptions';
+import { useWorkersList } from '../../../lib/hooks/use-workers-list';
 import { IconChevronLeft, IconChevronRight } from '../../../components/icons';
 import { ManualBookingModal } from '../_components/ManualBookingModal';
 import { WorkerTaskModal } from '../_components/WorkerTaskModal';
+import { BookingDetailModal } from '../_components/BookingDetailModal';
+import type { Booking } from '../../../api-data-access/bookings';
+import { bookingsApi } from '../../../api-data-access/bookings';
+import { toast } from '@opony/design-system-web';
 import {
   CalendarView,
   getWeekStart,
@@ -23,10 +29,12 @@ import {
   MONTH_NAMES_GEN,
   MONTH_NAMES,
   DAY_NAMES_FULL,
+  toISODate,
 } from './calendar.utils';
 import { WeekView } from './_components/WeekView';
 import { DayView } from './_components/DayView';
 import { MonthView } from './_components/MonthView';
+import { RescheduleConfirmModal } from './_components/RescheduleConfirmModal';
 import { BookingTopbarActions } from '../_components/BookingTopbarActions';
 import styles from './calendar.module.css';
 
@@ -43,12 +51,86 @@ export default function CalendarPage() {
   const [nowTime, setNowTime] = useState<string>(() => formatTime(new Date().toISOString()));
   const [isManualOpen, setIsManualOpen] = useState(false);
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
+  const [detailRefCode, setDetailRefCode] = useState<string | null>(null);
+  const [slotMenu, setSlotMenu] = useState<{
+    date: Date;
+    time: string;
+    x: number;
+    y: number;
+  } | null>(null);
+  const [prefillDate, setPrefillDate] = useState('');
+  const [prefillTime, setPrefillTime] = useState('');
+  const [rescheduleState, setRescheduleState] = useState<{
+    booking: Booking;
+    newStartAt: string;
+    newEndAt: string;
+  } | null>(null);
+  const [rescheduleLoading, setRescheduleLoading] = useState(false);
+
+  function handleBookingClick(booking: Booking) {
+    setDetailRefCode(booking.referenceCode);
+  }
+
+  function handleSlotClick(date: Date, time: string, x: number, y: number) {
+    setSlotMenu({ date, time, x, y });
+  }
+
+  function openBookingFromSlot() {
+    if (!slotMenu) return;
+    setPrefillDate(toISODate(slotMenu.date));
+    setPrefillTime('');
+    setSlotMenu(null);
+    setIsManualOpen(true);
+  }
+
+  function handleReschedule(booking: Booking, newDate: Date, newTime: string) {
+    const [h, m] = newTime.split(':').map(Number);
+    const newStart = new Date(newDate);
+    newStart.setHours(h!, m!, 0, 0);
+    const durationMs = new Date(booking.endAt).getTime() - new Date(booking.startAt).getTime();
+    const newEnd = new Date(newStart.getTime() + durationMs);
+    setRescheduleState({
+      booking,
+      newStartAt: newStart.toISOString(),
+      newEndAt: newEnd.toISOString(),
+    });
+  }
+
+  async function confirmReschedule(notifyClient: boolean) {
+    if (!rescheduleState) return;
+    setRescheduleLoading(true);
+    try {
+      await bookingsApi.reschedule(
+        rescheduleState.booking.referenceCode,
+        rescheduleState.newStartAt,
+        rescheduleState.newEndAt,
+        notifyClient,
+      );
+      await mutate();
+      setRescheduleState(null);
+      toast.success('Rezerwacja przeniesiona.');
+    } catch {
+      toast.error('Nie udało się przenieść rezerwacji.');
+    } finally {
+      setRescheduleLoading(false);
+    }
+  }
+
+  function openTaskFromSlot() {
+    if (!slotMenu) return;
+    setPrefillDate(toISODate(slotMenu.date));
+    setPrefillTime(slotMenu.time);
+    setSlotMenu(null);
+    setIsTaskModalOpen(true);
+  }
 
   // Week/day data — disabled in month view
   const weekStart = getWeekStart(currentDate);
   const weekStartStr = view !== 'month' ? formatWeekStart(weekStart) : null;
   const { bookings, isLoading, mutate } = useBookings(weekStartStr);
   const { tasks, mutate: mutateTasks } = useWorkerTasks(weekStartStr);
+  const { exceptions } = useScheduleExceptions();
+  const { workers } = useWorkersList();
 
   // Month data — parallel SWR per week, disabled outside month view
   const monthWeekStarts =
@@ -184,9 +266,14 @@ export default function CalendarPage() {
           year={year}
           bookings={bookings}
           tasks={tasks}
+          exceptions={exceptions}
+          workers={workers}
           isLoading={isLoading}
           nowLineTop={nowLineTop}
           nowTime={nowTime}
+          onBookingClick={handleBookingClick}
+          onSlotClick={handleSlotClick}
+          onReschedule={handleReschedule}
         />
       )}
       {view === 'day' && (
@@ -194,28 +281,97 @@ export default function CalendarPage() {
           day={currentDate}
           bookings={bookings}
           tasks={tasks}
+          exceptions={exceptions}
+          workers={workers}
           isLoading={isLoading}
           nowLineTop={nowLineTop}
           nowTime={nowTime}
+          onBookingClick={handleBookingClick}
+          onSlotClick={handleSlotClick}
+          onReschedule={handleReschedule}
         />
       )}
       {view === 'month' && (
-        <MonthView month={currentDate} bookings={monthBookings} isLoading={monthLoading} />
+        <MonthView
+          month={currentDate}
+          bookings={monthBookings}
+          exceptions={exceptions}
+          isLoading={monthLoading}
+          onBookingClick={handleBookingClick}
+          onSlotClick={handleSlotClick}
+        />
       )}
+
+      <BookingDetailModal referenceCode={detailRefCode} onClose={() => setDetailRefCode(null)} />
 
       <ManualBookingModal
         isOpen={isManualOpen}
-        onClose={() => setIsManualOpen(false)}
+        onClose={() => {
+          setIsManualOpen(false);
+          setPrefillDate('');
+        }}
         onSuccess={() => mutate()}
+        initialDate={prefillDate || undefined}
       />
       <WorkerTaskModal
         isOpen={isTaskModalOpen}
-        onClose={() => setIsTaskModalOpen(false)}
+        onClose={() => {
+          setIsTaskModalOpen(false);
+          setPrefillDate('');
+          setPrefillTime('');
+        }}
         onSuccess={() => {
           void mutateTasks();
         }}
         weekStart={weekStartStr ?? ''}
+        initialDate={prefillDate || undefined}
+        initialTime={prefillTime || undefined}
       />
+
+      <RescheduleConfirmModal
+        booking={rescheduleState?.booking ?? null}
+        newStartAt={rescheduleState?.newStartAt ?? ''}
+        newEndAt={rescheduleState?.newEndAt ?? ''}
+        isLoading={rescheduleLoading}
+        onConfirm={confirmReschedule}
+        onCancel={() => setRescheduleState(null)}
+      />
+
+      {slotMenu && (
+        <>
+          <div className={styles.slotMenuBackdrop} onClick={() => setSlotMenu(null)} />
+          <div
+            className={styles.slotMenu}
+            style={{
+              left: Math.min(slotMenu.x + 8, window.innerWidth - 210),
+              top: Math.min(slotMenu.y - 8, window.innerHeight - 130),
+            }}
+          >
+            <div className={styles.slotMenuHeader}>
+              {slotMenu.date.toLocaleDateString('pl-PL', {
+                weekday: 'short',
+                day: 'numeric',
+                month: 'short',
+              })}{' '}
+              · {slotMenu.time}
+            </div>
+            <button
+              type="button"
+              className={`${styles.slotMenuItem} ${styles.slotMenuItemBooking}`}
+              onClick={openBookingFromSlot}
+            >
+              + Dodaj rezerwację
+            </button>
+            <button
+              type="button"
+              className={`${styles.slotMenuItem} ${styles.slotMenuItemTask}`}
+              onClick={openTaskFromSlot}
+            >
+              + Dodaj zadanie pracownika
+            </button>
+          </div>
+        </>
+      )}
     </main>
   );
 }

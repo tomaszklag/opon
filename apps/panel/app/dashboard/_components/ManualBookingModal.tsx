@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import {
   Modal,
   Button,
@@ -27,6 +27,7 @@ interface ManualBookingModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess?: () => void;
+  initialDate?: string;
 }
 
 type RimTier = ServiceVariantResponse['rimTiers'][number];
@@ -65,7 +66,12 @@ function subDurMinutes(sub: SubService): number {
     : 0;
 }
 
-export function ManualBookingModal({ isOpen, onClose, onSuccess }: ManualBookingModalProps) {
+export function ManualBookingModal({
+  isOpen,
+  onClose,
+  onSuccess,
+  initialDate,
+}: ManualBookingModalProps) {
   const { createBooking, isLoading, error } = useCreateManualBooking();
   const { workers } = useWorkersList();
   const { groups: serviceGroups } = useServiceGroups();
@@ -155,6 +161,11 @@ export function ManualBookingModal({ isOpen, onClose, onSuccess }: ManualBooking
     { value: '', label: 'Dowolny' },
     ...workers.map((w) => ({ value: w.id, label: w.name })),
   ];
+
+  useEffect(() => {
+    if (!isOpen) return;
+    if (initialDate) setDate(initialDate);
+  }, [isOpen, initialDate]);
 
   const resetForm = useCallback(() => {
     setClientName('');

@@ -1,14 +1,18 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Spinner, Text } from '@opony/design-system-web';
 import type { Booking, BookingStatus } from '../../../../api-data-access/bookings';
 import type { WorkerTask } from '../../../../api-data-access/worker-tasks';
+import type { ScheduleException } from '../../../../api-data-access/schedule-exceptions';
+import type { Worker } from '../../../../api-data-access/workers';
 import { IconInfo, IconArrowRight } from '../../../../components/icons';
+import { HOLIDAY_MAP } from '../../../../lib/holidays';
 import {
   HOURS,
   PX_PER_HOUR,
   GRID_HEIGHT,
+  HOUR_START,
   DAY_ABBR,
   FilterType,
   FILTER_LABELS,
@@ -20,6 +24,8 @@ import {
   timeAgo,
   matchesFilter,
   visitCountLabel,
+  toISODate,
+  snapTimeFromOffset,
 } from '../calendar.utils';
 import styles from '../calendar.module.css';
 
@@ -27,9 +33,18 @@ interface DayViewProps {
   day: Date;
   bookings: Booking[];
   tasks: WorkerTask[];
+  exceptions: ScheduleException[];
+  workers: Worker[];
   isLoading: boolean;
   nowLineTop: number;
   nowTime: string;
+  onBookingClick?: (booking: Booking) => void;
+  onSlotClick?: (date: Date, time: string, x: number, y: number) => void;
+  onReschedule?: (booking: Booking, newDate: Date, newTime: string) => void;
+}
+
+function isDraggable(status: BookingStatus): boolean {
+  return status === 'PENDING' || status === 'CONFIRMED' || status === 'IN_PROGRESS';
 }
 
 function getStatusClass(status: BookingStatus): string {
@@ -47,8 +62,119 @@ function getStatusClass(status: BookingStatus): string {
   }
 }
 
-export function DayView({ day, bookings, tasks, isLoading, nowLineTop, nowTime }: DayViewProps) {
+function leavePillClass(type: Worker['leaves'][number]['type']): string {
+  if (type === 'VACATION') return styles.leavePillVacation ?? '';
+  if (type === 'SICK') return styles.leavePillSick ?? '';
+  return styles.leavePillOther ?? '';
+}
+
+function leavePrefix(type: Worker['leaves'][number]['type']): string {
+  if (type === 'VACATION') return 'Urlop';
+  if (type === 'SICK') return 'L4';
+  if (type === 'UNPAID') return 'Bezpł.';
+  return '';
+}
+
+export function DayView({
+  day,
+  bookings,
+  tasks,
+  exceptions,
+  workers,
+  isLoading,
+  nowLineTop,
+  nowTime,
+  onBookingClick,
+  onSlotClick,
+  onReschedule,
+}: DayViewProps) {
   const [activeFilter, setActiveFilter] = useState<FilterType>('all');
+  const [hoverTop, setHoverTop] = useState<number | null>(null);
+  const [hoverTime, setHoverTime] = useState<string>('');
+  const [dragDisplay, setDragDisplay] = useState<{
+    bookingId: string;
+    top: number;
+    height: number;
+    time: string;
+    clientName: string;
+  } | null>(null);
+  const dragRef = useRef<{ booking: Booking; grabOffsetY: number; heightPx: number } | null>(null);
+  const dragDisplayRef = useRef(dragDisplay);
+  dragDisplayRef.current = dragDisplay;
+
+  function startBookingDrag(e: React.MouseEvent, booking: Booking) {
+    if (!isDraggable(booking.status) || !onReschedule) return;
+    e.preventDefault();
+    e.stopPropagation();
+
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const grabOffsetY = e.clientY - rect.top;
+    const startObj = new Date(booking.startAt);
+    const endObj = new Date(booking.endAt);
+    const startMins = startObj.getHours() * 60 + startObj.getMinutes();
+    const endMins = endObj.getHours() * 60 + endObj.getMinutes();
+    const heightPx = Math.max(endMins - startMins, 20);
+
+    dragRef.current = { booking, grabOffsetY, heightPx };
+    const initDisplay = {
+      bookingId: booking.id,
+      top: startMins - HOUR_START * 60,
+      height: heightPx,
+      time: formatTime(booking.startAt),
+      clientName: booking.clientName,
+    };
+    setDragDisplay(initDisplay);
+    dragDisplayRef.current = initDisplay;
+
+    document.body.style.userSelect = 'none';
+    document.body.style.cursor = 'grabbing';
+
+    function onMove(me: MouseEvent) {
+      const drag = dragRef.current;
+      if (!drag) return;
+      const colEl = (document.elementFromPoint(me.clientX, me.clientY) as Element | null)?.closest(
+        '[data-calday]',
+      ) as HTMLElement | null;
+      if (!colEl) return;
+      const colRect = colEl.getBoundingClientRect();
+      const rawTop = me.clientY - colRect.top - drag.grabOffsetY;
+      const snappedTop = Math.max(
+        0,
+        Math.min(Math.round(rawTop / 15) * 15, GRID_HEIGHT - drag.heightPx),
+      );
+      const next = {
+        bookingId: drag.booking.id,
+        top: snappedTop,
+        height: drag.heightPx,
+        time: snapTimeFromOffset(snappedTop),
+        clientName: drag.booking.clientName,
+      };
+      dragDisplayRef.current = next;
+      setDragDisplay(next);
+    }
+
+    function onUp() {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+      document.body.style.userSelect = '';
+      document.body.style.cursor = '';
+
+      const drag = dragRef.current;
+      const display = dragDisplayRef.current;
+      dragRef.current = null;
+      setDragDisplay(null);
+      setHoverTop(null);
+
+      if (!drag || !display) return;
+      const origTime = formatTime(drag.booking.startAt);
+      if (display.time !== origTime) {
+        onReschedule?.(drag.booking, day, display.time);
+      }
+    }
+
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  }
 
   const todayDay = isToday(day);
   const isSunday = day.getDay() === 0;
@@ -65,6 +191,13 @@ export function DayView({ day, bookings, tasks, isLoading, nowLineTop, nowTime }
   const completedCount = allDayBookings.filter((b) => b.status === 'COMPLETED').length;
   const inProgressCount = allDayBookings.filter((b) => b.status === 'IN_PROGRESS').length;
   const pendingBookings = allDayBookings.filter((b) => b.status === 'PENDING');
+
+  const iso = toISODate(day);
+  const holiday = HOLIDAY_MAP.get(iso);
+  const exception = exceptions.find((e) => e.date.slice(0, 10) === iso);
+  const workersOnLeave = workers.filter((w) =>
+    w.leaves.some((l) => iso >= l.startDate.slice(0, 10) && iso <= l.endDate.slice(0, 10)),
+  );
 
   return (
     <div className={styles.content}>
@@ -84,6 +217,37 @@ export function DayView({ day, bookings, tasks, isLoading, nowLineTop, nowTime }
             >
               {allDayBookings.length > 0 ? visitCountLabel(allDayBookings.length) : '—'}
             </span>
+            {holiday && <span className={styles.holidayBadge}>{holiday}</span>}
+            {exception && (
+              <span
+                className={`${styles.exceptBadge} ${exception.isClosed ? styles.exceptBadgeClosed : styles.exceptBadgeModified}`}
+                title={exception.reason}
+              >
+                {exception.isClosed
+                  ? `Zamknięte`
+                  : `Sk. godz. ${exception.customOpenTime ?? ''}–${exception.customCloseTime ?? ''}`}
+              </span>
+            )}
+            {workersOnLeave.length > 0 && (
+              <div className={styles.leavePills}>
+                {workersOnLeave.map((w) => {
+                  const leave = w.leaves.find(
+                    (l) => iso >= l.startDate.slice(0, 10) && iso <= l.endDate.slice(0, 10),
+                  )!;
+                  const prefix = leavePrefix(leave.type);
+                  return (
+                    <span
+                      key={w.id}
+                      className={`${styles.leavePill} ${leavePillClass(leave.type)}`}
+                      title={`${w.name}${leave.note ? `: ${leave.note}` : ''}`}
+                    >
+                      {prefix ? `${prefix}: ` : ''}
+                      {w.name}
+                    </span>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
 
@@ -98,10 +262,47 @@ export function DayView({ day, bookings, tasks, isLoading, nowLineTop, nowTime }
           <div
             className={`${styles.dayViewCol} ${todayDay ? styles.today : ''} ${isSunday ? styles.closed : ''}`}
           >
-            <div className={styles.dayColInner} style={{ height: `${GRID_HEIGHT}px` }}>
+            <div
+              data-calday={day.toISOString()}
+              className={styles.dayColInner}
+              style={{ height: `${GRID_HEIGHT}px` }}
+              onMouseMove={
+                !isSunday
+                  ? (e) => {
+                      if (dragRef.current) return;
+                      const rect = e.currentTarget.getBoundingClientRect();
+                      const rawTop = e.clientY - rect.top;
+                      setHoverTop(Math.min(Math.round(rawTop / 15) * 15, GRID_HEIGHT - 60));
+                      setHoverTime(snapTimeFromOffset(rawTop));
+                    }
+                  : undefined
+              }
+              onMouseLeave={() => {
+                if (!dragRef.current) setHoverTop(null);
+              }}
+              onClick={(e) => {
+                if (!onSlotClick || isSunday || dragDisplay) return;
+                const rect = e.currentTarget.getBoundingClientRect();
+                onSlotClick(day, snapTimeFromOffset(e.clientY - rect.top), e.clientX, e.clientY);
+              }}
+            >
               {gridlines.map((top) => (
                 <div key={top} className={styles.hourGridline} style={{ top: `${top}px` }} />
               ))}
+              {!isSunday && !dragDisplay && hoverTop !== null && (
+                <div className={styles.slotGhost} style={{ top: hoverTop }}>
+                  <span className={styles.slotGhostLabel}>{hoverTime}</span>
+                </div>
+              )}
+              {!isSunday && dragDisplay && (
+                <div
+                  className={styles.bookingDragGhost}
+                  style={{ top: `${dragDisplay.top}px`, height: `${dragDisplay.height}px` }}
+                >
+                  <span className={styles.bookingDragGhostTime}>{dragDisplay.time}</span>
+                  <span className={styles.bookingDragGhostName}>{dragDisplay.clientName}</span>
+                </div>
+              )}
 
               {isSunday && <span className={styles.closedMsg}>Niedziela · nieczynne</span>}
 
@@ -114,6 +315,7 @@ export function DayView({ day, bookings, tasks, isLoading, nowLineTop, nowTime }
                       className={styles.workerTask}
                       style={getBookingStyle(task.startAt, task.endAt)}
                       title={`${task.title}${task.workerName ? ` — ${task.workerName}` : ''} · ${formatTime(task.startAt)}–${formatTime(task.endAt)}`}
+                      onClick={(e) => e.stopPropagation()}
                     >
                       <Text
                         variant="nano"
@@ -146,9 +348,26 @@ export function DayView({ day, bookings, tasks, isLoading, nowLineTop, nowTime }
                   return (
                     <div
                       key={booking.id}
-                      className={`${styles.booking} ${getStatusClass(booking.status)}`}
+                      role="button"
+                      tabIndex={0}
+                      className={[
+                        styles.booking,
+                        getStatusClass(booking.status),
+                        isDraggable(booking.status) && onReschedule ? styles.bookingDraggable : '',
+                        dragDisplay?.bookingId === booking.id ? styles.bookingDragging : '',
+                      ]
+                        .filter(Boolean)
+                        .join(' ')}
                       style={getBookingStyle(booking.startAt, booking.endAt)}
                       title={`${booking.clientName} — ${formatTime(booking.startAt)} – ${formatTime(booking.endAt)}`}
+                      onMouseDown={(e) => startBookingDrag(e, booking)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onBookingClick?.(booking);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') onBookingClick?.(booking);
+                      }}
                     >
                       {(showPendingBadge || showProgressBadge) && (
                         <span className={styles.bookingBadge}>

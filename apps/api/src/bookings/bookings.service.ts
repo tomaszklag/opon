@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { BookingStatus, Prisma } from '@prisma/client';
+import { BookingStatus, Prisma, ServiceType } from '@prisma/client';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { AppException, ErrorCode } from '../common/errors';
 import { WorkerTasksService } from '../worker-tasks/worker-tasks.service';
@@ -17,9 +17,18 @@ import { AvailabilityResponseDto, AvailabilitySlotDto } from './dto/availability
 import { PrismaService } from '../prisma/prisma.service';
 import {
   BookingCreatedEvent,
+  BookingRescheduledEvent,
   BookingStatusChangedEvent,
   BookingBulkStatusChangedEvent,
 } from '../realtime/events/booking.events';
+import { RescheduleBookingDto } from './dto/reschedule-booking.dto';
+
+interface DaySchedule {
+  dayOfWeek: number;
+  open: boolean;
+  startTime: string;
+  endTime: string;
+}
 
 type BookingWithClient = Prisma.BookingGetPayload<{
   include: {
@@ -147,15 +156,19 @@ export class BookingsService {
     const dayOfWeek = startAt.getUTCDay();
     const dateStr = startAt.toISOString().slice(0, 10);
 
-    const [workingHours, provider, exception] = await Promise.all([
-      this.prisma.workingHours.findUnique({
-        where: { providerId_dayOfWeek: { providerId, dayOfWeek } },
-      }),
+    const [stations, provider, exception] = await Promise.all([
+      this.prisma.station.findMany({ where: { providerId }, select: { schedule: true } }),
       this.prisma.provider.findUnique({ where: { id: providerId } }),
       this.prisma.scheduleException.findUnique({
         where: { providerId_date: { providerId, date: new Date(dateStr) } },
       }),
     ]);
+
+    const isOpenDay = stations.some((s) =>
+      ((s.schedule as unknown as DaySchedule[]) ?? []).some(
+        (d) => d.dayOfWeek === dayOfWeek && d.open,
+      ),
+    );
 
     if (exception) {
       if (!exception.customOpenTime) {
@@ -165,7 +178,7 @@ export class BookingsService {
           422,
         );
       }
-    } else if (!workingHours || workingHours.isClosed) {
+    } else if (!isOpenDay) {
       throw new AppException(
         ErrorCode.BOOKING_OUTSIDE_HOURS,
         'Warsztat jest zamknięty w tym dniu.',
@@ -212,6 +225,12 @@ export class BookingsService {
     const status = dto.autoConfirm !== false ? BookingStatus.CONFIRMED : BookingStatus.PENDING;
     const confirmedAt = status === BookingStatus.CONFIRMED ? new Date() : null;
 
+    const validServiceTypes = Object.values(ServiceType) as string[];
+    const serviceType =
+      dto.serviceType && validServiceTypes.includes(dto.serviceType)
+        ? (dto.serviceType as ServiceType)
+        : null;
+
     const booking = await this.bookingsRepository.createManual({
       clientPhone: dto.clientPhone,
       clientName: dto.clientName,
@@ -220,7 +239,7 @@ export class BookingsService {
       endAt: new Date(dto.endAt),
       tireSize: dto.tireSize ?? null,
       totalPricePln: dto.totalPricePln ?? null,
-      serviceType: dto.serviceType ?? null,
+      serviceType,
       notes: dto.notes ?? null,
       status,
       confirmedAt,
@@ -239,6 +258,62 @@ export class BookingsService {
     );
 
     return this.toResponseDto(booking);
+  }
+
+  // ── reschedule ────────────────────────────────────────────────────────────
+
+  async reschedule(
+    providerId: string,
+    referenceCode: string,
+    dto: RescheduleBookingDto,
+  ): Promise<BookingResponseDto> {
+    const existing = await this.bookingsRepository.findDetailByReferenceCode(
+      providerId,
+      referenceCode,
+    );
+
+    if (!existing) {
+      throw new AppException(ErrorCode.BOOKING_NOT_FOUND, 'Rezerwacja nie istnieje.', 404);
+    }
+
+    const reschedulableStatuses: BookingStatus[] = [
+      BookingStatus.PENDING,
+      BookingStatus.CONFIRMED,
+      BookingStatus.IN_PROGRESS,
+    ];
+    if (!reschedulableStatuses.includes(existing.status)) {
+      throw new AppException(
+        ErrorCode.VALIDATION_ERROR,
+        'Rezerwacja w tym statusie nie może być przeniesiona.',
+        422,
+      );
+    }
+
+    const oldWeekStart = this.getWeekStart(existing.startAt);
+    const newStartAt = new Date(dto.startAt);
+    const newEndAt = new Date(dto.endAt);
+
+    const updated = await this.bookingsRepository.rescheduleBooking(
+      existing.id,
+      newStartAt,
+      newEndAt,
+    );
+
+    this.eventEmitter.emit(
+      BookingRescheduledEvent.EVENT,
+      new BookingRescheduledEvent(
+        providerId,
+        existing.id,
+        referenceCode,
+        oldWeekStart,
+        this.getWeekStart(newStartAt),
+        dto.notifyClient ?? false,
+        existing.client.phone,
+        dto.startAt,
+      ),
+    );
+
+    return this.toResponseDto(updated);
   }
 
   // ── get detail ────────────────────────────────────────────────────────────
@@ -448,50 +523,62 @@ export class BookingsService {
     // dayOfWeek: 0=Sun…6=Sat
     const dayOfWeek = parsedDate.getUTCDay();
 
-    // Fetch working hours for this day
-    const workingHours = await this.prisma.workingHours.findUnique({
-      where: { providerId_dayOfWeek: { providerId, dayOfWeek } },
-    });
+    const stationsWhere = query.stationId ? { id: query.stationId, providerId } : { providerId };
 
-    // Check provider pause
-    const providerData = await this.prisma.provider.findUnique({
-      where: { id: providerId },
-    });
+    const [stations, providerData, exception] = await Promise.all([
+      this.prisma.station.findMany({ where: stationsWhere, select: { schedule: true } }),
+      this.prisma.provider.findUnique({ where: { id: providerId } }),
+      this.prisma.scheduleException.findUnique({
+        where: { providerId_date: { providerId, date: parsedDate } },
+      }),
+    ]);
+
+    const SLOT_MINUTES = 45;
+
     const pausedUntil = (providerData as unknown as { pausedUntil?: Date | null })?.pausedUntil;
     if (pausedUntil && pausedUntil > new Date()) {
-      return {
-        slots: [],
-        slotMinutes: workingHours?.slotMinutes ?? 45,
-        isClosedDay: true,
-      };
+      return { slots: [], slotMinutes: SLOT_MINUTES, isClosedDay: true };
     }
-
-    // Fetch schedule exception for this date
-    const exception = await this.prisma.scheduleException.findUnique({
-      where: { providerId_date: { providerId, date: parsedDate } },
-    });
 
     // If exception exists with no custom open time → closed day
     if (exception && !exception.customOpenTime) {
       return { slots: [], slotMinutes: 0, isClosedDay: true };
     }
 
-    // If no working hours at all or marked closed (and no exception override)
-    if (!workingHours || (workingHours.isClosed && !exception?.customOpenTime)) {
+    // Collect schedule entries for this day across all queried stations
+    const openEntries = stations
+      .flatMap((s) => (s.schedule as unknown as DaySchedule[]) ?? [])
+      .filter((d) => d.dayOfWeek === dayOfWeek && d.open);
+
+    if (!exception?.customOpenTime && openEntries.length === 0) {
       return { slots: [], slotMinutes: 0, isClosedDay: true };
     }
 
     // Determine effective open/close times
-    const openTimeRaw = exception?.customOpenTime ?? workingHours.openTime;
-    const closeTimeRaw = exception?.customCloseTime ?? workingHours.closeTime;
-    const slotMinutes = workingHours.slotMinutes;
-    const workstations = workingHours.workstations ?? 1;
+    let openHour: number;
+    let openMin: number;
+    let closeHour: number;
+    let closeMin: number;
 
-    // Extract HH:MM from stored DateTime (Time type stored as 1970-01-01THH:MM:SS.000Z)
-    const openHour = openTimeRaw.getUTCHours();
-    const openMin = openTimeRaw.getUTCMinutes();
-    const closeHour = closeTimeRaw.getUTCHours();
-    const closeMin = closeTimeRaw.getUTCMinutes();
+    if (exception?.customOpenTime) {
+      // Exception overrides: Prisma Time stored as 1970-01-01THH:MM:SS.000Z
+      openHour = (exception.customOpenTime as unknown as Date).getUTCHours();
+      openMin = (exception.customOpenTime as unknown as Date).getUTCMinutes();
+      closeHour = (exception.customCloseTime as unknown as Date).getUTCHours();
+      closeMin = (exception.customCloseTime as unknown as Date).getUTCMinutes();
+    } else {
+      // Earliest start / latest end across all open stations
+      const earliest = openEntries.reduce((a, b) => (a.startTime < b.startTime ? a : b));
+      const latest = openEntries.reduce((a, b) => (a.endTime > b.endTime ? a : b));
+      openHour = Number(earliest.startTime.split(':')[0]);
+      openMin = Number(earliest.startTime.split(':')[1]);
+      closeHour = Number(latest.endTime.split(':')[0]);
+      closeMin = Number(latest.endTime.split(':')[1]);
+    }
+
+    const slotMinutes = SLOT_MINUTES;
+    // Capacity = number of stations open on this day (or 1 if driven by exception only)
+    const workstations = openEntries.length || 1;
 
     // Build slot boundaries as full ISO strings for the given date (UTC)
     const dayStart = new Date(
