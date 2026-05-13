@@ -167,6 +167,7 @@ export function useLoginFlow() {
     isRateLimited,
     clientRoleError,
     authLoading: status === 'loading',
+    isAuthenticated: status === 'authenticated',
     handleDigitsChange,
     handlePhoneSubmit,
     handleOtpSubmit,

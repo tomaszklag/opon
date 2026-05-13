@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import useSWR from 'swr';
 import Link from 'next/link';
 import { Heading, Text, Button, EmptyState } from '@opony/design-system-web';
@@ -22,6 +23,7 @@ import {
 } from '../../../api-data-access/data-exports';
 import type { DataExportRequestDto } from '../../../api-data-access/data-exports';
 import type { ProviderStatus } from '../../../lib/auth';
+import { logout } from '../../../api-data-access/auth';
 import {
   IconBriefcase,
   IconCheck,
@@ -30,6 +32,7 @@ import {
   IconMobilePhone,
   IconMail,
   IconTrash,
+  IconLogOut,
 } from '../../../components/icons';
 import styles from './providers.module.css';
 
@@ -350,7 +353,13 @@ function DataExportRow({
 }
 
 export default function AdminProvidersPage() {
+  const router = useRouter();
   const { isLoading: authLoading } = useAuthGuard('/admin/providers');
+
+  async function handleLogout() {
+    await logout().catch(() => {});
+    router.push('/login');
+  }
   const {
     data,
     isLoading: dataLoading,
@@ -486,7 +495,13 @@ export default function AdminProvidersPage() {
             ADMIN PANEL
           </Text>
         </Link>
-        <CeidgStatusBadge />
+        <div className={styles.topStripRight}>
+          <CeidgStatusBadge />
+          <Button variant="ghost" size="sm" onClick={() => void handleLogout()}>
+            <IconLogOut width={14} height={14} />
+            Wyloguj
+          </Button>
+        </div>
       </header>
 
       <div className={styles.content}>

@@ -21,6 +21,12 @@
   flex-shrink: 0;
 }
 
+.topStripRight {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .brand {
   display: inline-flex;
   align-items: center;

@@ -43,3 +43,7 @@ export function revokeSession(id: string): Promise<void> {
 export function revokeOtherSessions(): Promise<void> {
   return api.del<void>('/v1/auth/sessions');
 }
+
+export function logout(): Promise<void> {
+  return api.post<void>('/v1/auth/logout');
+}

@@ -1688,9 +1688,14 @@ Ochrona tras działa na dwóch poziomach:
 
 **Warstwa 1 — Middleware (`middleware.ts`, edge)**
 
-Sprawdza samo istnienie cookie `access_token`. Brak cookie → natychmiastowy redirect do `/login` zanim React w ogóle się uruchomi. Chroni: `/dashboard/**`, `/register/**`, `/onboarding/**`.
+Sprawdza samo istnienie cookie `access_token`. Uruchamiany przed wysłaniem jakiegokolwiek HTML — eliminuje "flash" błędnej strony przy hard refresh.
 
-Middleware **nie waliduje JWT** — tylko sprawdza obecność cookie. Faktyczna walidość tokenu jest weryfikowana przez backend przy każdym API request.
+Matcher obejmuje:
+
+- `/dashboard/**`, `/admin/**`, `/register/**`, `/onboarding/**` — brak tokenu → redirect do `/login`
+- `/login` — obecność tokenu → redirect do `/dashboard` (reverse guard: zalogowany użytkownik nie widzi strony logowania)
+
+Middleware **nie waliduje JWT** — tylko sprawdza obecność cookie. Faktyczna ważność tokenu jest weryfikowana przez backend przy każdym API request.
 
 **Warstwa 2 — Hook (`lib/hooks/use-auth-guard.ts`, client)**
 
@@ -1704,7 +1709,12 @@ if (isLoading) return <Spinner />;
 
 Hook porównuje `canonicalRoute(user)` z przekazanym `pageRoute`. Jeśli się różnią → `router.replace(canonicalRoute(user))`.
 
-**Strona logowania** używa `canonicalRoute` bezpośrednio w `useLoginFlow` — przekierowuje zalogowanego użytkownika do jego kanonicznego celu.
+**Strona logowania** blokuje render w dwóch przypadkach — oba konieczne:
+
+1. `authLoading` — stan auth jeszcze nieznany (request do `/v1/auth/me` w toku)
+2. `isAuthenticated` — stan auth już znany, ale `useEffect` z redirectem jeszcze nie odpalił (jeden frame opóźnienia w React)
+
+Bez warunku `isAuthenticated` strona logowania renderuje się przez jeden frame przy nawigacji SPA do `/login` przez zalogowanego użytkownika. Middleware blokuje to przy hard refresh, ale nie przy klienckim `router.push('/login')`.
 
 ### 9.5. RBAC — Role-Based Access Control
 
