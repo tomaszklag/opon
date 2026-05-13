@@ -3,6 +3,7 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { AppException, ErrorCode } from '../common/errors';
 import { WorkerTasksRepository } from './worker-tasks.repository';
 import { CreateWorkerTaskDto } from './dto/create-worker-task.dto';
+import { UpdateWorkerTaskDto } from './dto/update-worker-task.dto';
 import { WorkerTaskResponseDto } from './dto/worker-task-response.dto';
 import { WorkerTaskListQueryDto } from './dto/worker-task-list-query.dto';
 import {
@@ -25,6 +26,7 @@ export class WorkerTasksService {
   }
 
   private toDto(task: Awaited<ReturnType<WorkerTasksRepository['create']>>): WorkerTaskResponseDto {
+    const lb = task.linkedBooking;
     return {
       id: task.id,
       providerId: task.providerId,
@@ -34,6 +36,14 @@ export class WorkerTasksService {
       startAt: task.startAt.toISOString(),
       endAt: task.endAt.toISOString(),
       notes: task.notes ?? null,
+      linkedBookingId: task.linkedBookingId ?? null,
+      linkedBooking: lb
+        ? {
+            referenceCode: lb.referenceCode,
+            clientName: [lb.client.firstName, lb.client.lastName].filter(Boolean).join(' '),
+            startAt: lb.startAt.toISOString(),
+          }
+        : null,
       createdAt: task.createdAt.toISOString(),
     };
   }
@@ -72,6 +82,30 @@ export class WorkerTasksService {
     weekEnd.setUTCDate(weekEnd.getUTCDate() + 7);
     const tasks = await this.repo.findByWeek(providerId, weekStart, weekEnd);
     return tasks.map((t) => this.toDto(t));
+  }
+
+  async findById(providerId: string, id: string): Promise<WorkerTaskResponseDto> {
+    const task = await this.repo.findOne(id, providerId);
+    if (!task) {
+      throw new AppException(ErrorCode.NOT_FOUND, 'Zadanie nie istnieje.', 404);
+    }
+    return this.toDto(task);
+  }
+
+  async update(
+    providerId: string,
+    id: string,
+    dto: UpdateWorkerTaskDto,
+  ): Promise<WorkerTaskResponseDto> {
+    const task = await this.repo.findOne(id, providerId);
+    if (!task) {
+      throw new AppException(ErrorCode.NOT_FOUND, 'Zadanie nie istnieje.', 404);
+    }
+    const updated = await this.repo.update(id, providerId, {
+      notes: dto.notes,
+      linkedBookingId: dto.linkedBookingId,
+    });
+    return this.toDto(updated);
   }
 
   async delete(providerId: string, id: string): Promise<void> {

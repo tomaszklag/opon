@@ -87,6 +87,65 @@ pnpm prisma migrate reset     # ⚠ resetuje bazę i aplikuje od nowa (dev only)
 pnpm prisma studio
 ```
 
+**Windows — EPERM przy `prisma generate`:**
+
+Na Windows `prisma generate` może zakończyć się błędem `EPERM: operation not permitted, rename ... query_engine-windows.dll.node`. Dzieje się tak gdy serwer API jest uruchomiony i trzyma blokadę na pliku DLL. **TypeScript typy (`.d.ts`) są jednak wygenerowane poprawnie** — tylko rename DLL failuje. Workaround: zatrzymaj API przed uruchomieniem `prisma generate`, lub po prostu zrestartuj serwer po migracji — pobierze nowe typy przy ponownym starcie.
+
+### 2.4. Typowanie include w repository — wzorzec `satisfies`
+
+Używanie `as const` na obiekcie `include` powoduje błędy TypeScript gdy include zawiera zagnieżdżone relacje (np. `linkedBooking.select.client`). `as const` produkuje typy `readonly`, które nie są assignowalne do Prisma's mutable include types.
+
+```ts
+// ❌ NIE — `as const` powoduje TS2322 przy zagnieżdżonych relacjach
+const myInclude = {
+  worker: { select: { name: true } },
+  linkedBooking: { select: { referenceCode: true } },
+} as const;
+
+// ✅ TAK — `satisfies` weryfikuje typ bez zawężania go do `readonly`
+import { Prisma } from '@prisma/client';
+
+const myInclude = {
+  worker: { select: { name: true } },
+  linkedBooking: {
+    select: {
+      referenceCode: true,
+      startAt: true,
+      client: { select: { firstName: true, lastName: true } },
+    } satisfies Prisma.BookingSelect,
+  },
+} satisfies Prisma.WorkerTaskInclude;
+```
+
+`satisfies` sprawdza zgodność z typem Prisma **w miejscu deklaracji**, zachowując precyzyjne wąskie typy dla inferencji zwracanych danych. Stosuj ten wzorzec dla wszystkich stałych `include` w repozytoriach.
+
+### 2.5. Model User — struktura pól osobowych
+
+Model `User` (tabela `users`) **nie ma pola `clientName`**. Imię i nazwisko są przechowywane oddzielnie:
+
+```prisma
+model User {
+  firstName String? @db.VarChar(100)
+  lastName  String? @db.VarChar(100)
+  // brak clientName!
+}
+```
+
+Składanie pełnej nazwy klienta w serwisie:
+
+```ts
+const clientName = [user.firstName, user.lastName].filter(Boolean).join(' ');
+```
+
+W select Prisma:
+
+```ts
+client: { select: { firstName: true, lastName: true } }
+// Nie: client: { select: { clientName: true } }  ← pole nie istnieje
+```
+
+`clientName` jako gotowe pole istnieje TYLKO w `TireSet` (skład opon) — tam jest denormalizowane przy przyjęciu zestawu. Wszędzie indziej musisz je złożyć z `firstName + lastName`.
+
 ---
 
 ## 3. Typy API — generowanie i utrzymanie

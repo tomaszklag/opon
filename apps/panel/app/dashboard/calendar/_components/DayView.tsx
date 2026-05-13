@@ -270,6 +270,10 @@ export function DayView({
                 !isSunday
                   ? (e) => {
                       if (dragRef.current) return;
+                      if ((e.target as Element).closest('[data-booking]')) {
+                        setHoverTop(null);
+                        return;
+                      }
                       const rect = e.currentTarget.getBoundingClientRect();
                       const rawTop = e.clientY - rect.top;
                       setHoverTop(Math.min(Math.round(rawTop / 15) * 15, GRID_HEIGHT - 60));
@@ -350,6 +354,7 @@ export function DayView({
                       key={booking.id}
                       role="button"
                       tabIndex={0}
+                      data-booking="true"
                       className={[
                         styles.booking,
                         getStatusClass(booking.status),

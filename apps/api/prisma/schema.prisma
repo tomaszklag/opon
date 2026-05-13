@@ -351,6 +351,7 @@ model Booking {
   worker      Worker?      @relation(fields: [workerId], references: [id], onDelete: SetNull)
   review      Review?
   tireSets    TireSet[]
+  workerTasks WorkerTask[]
 
   @@index([providerId, startAt])
   @@index([clientId, startAt(sort: Desc)])
@@ -625,17 +626,19 @@ model WorkerLeave {
 // ──────────────────────────────────────────────
 
 model WorkerTask {
-  id         String    @id @default(cuid())
-  providerId String
-  workerId   String?
-  title      String    @db.VarChar(200)
-  startAt    DateTime
-  endAt      DateTime
-  notes      String?   @db.Text
-  createdAt  DateTime  @default(now())
+  id              String    @id @default(cuid())
+  providerId      String
+  workerId        String?
+  title           String    @db.VarChar(200)
+  startAt         DateTime
+  endAt           DateTime
+  notes           String?   @db.Text
+  linkedBookingId String?   @db.VarChar(36)
+  createdAt       DateTime  @default(now())
 
-  provider Provider  @relation(fields: [providerId], references: [id], onDelete: Cascade)
-  worker   Worker?   @relation(fields: [workerId], references: [id], onDelete: SetNull)
+  provider      Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  worker        Worker?  @relation(fields: [workerId], references: [id], onDelete: SetNull)
+  linkedBooking Booking? @relation(fields: [linkedBookingId], references: [id], onDelete: SetNull)
 
   @@index([providerId, startAt])
   @@map("worker_tasks")

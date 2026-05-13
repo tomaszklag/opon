@@ -115,6 +115,10 @@ export function WeekView({
 
   function handleColumnMouseMove(e: React.MouseEvent<HTMLDivElement>, day: Date) {
     if (dragRef.current) return;
+    if ((e.target as Element).closest('[data-booking]')) {
+      setHoverInfo(null);
+      return;
+    }
     const rect = e.currentTarget.getBoundingClientRect();
     const rawTop = e.clientY - rect.top;
     const snappedTop = Math.min(Math.round(rawTop / 15) * 15, GRID_HEIGHT - 60);
@@ -399,6 +403,7 @@ export function WeekView({
                           key={booking.id}
                           role="button"
                           tabIndex={0}
+                          data-booking="true"
                           className={[
                             styles.booking,
                             getStatusClass(booking.status),
