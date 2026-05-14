@@ -426,6 +426,7 @@ export class BookingsService {
 
     const updated = await this.bookingsRepository.rescheduleBooking(
       existing.id,
+      providerId,
       newStartAt,
       newEndAt,
     );
@@ -527,6 +528,7 @@ export class BookingsService {
 
     await this.bookingsRepository.updateStatus(
       booking.id,
+      providerId,
       newStatus,
       timestamps,
       dto.reason,
@@ -642,6 +644,14 @@ export class BookingsService {
       BookingBulkStatusChangedEvent.EVENT,
       new BookingBulkStatusChangedEvent(providerId, updatedIds, dto.action),
     );
+  }
+
+  // ── client search ─────────────────────────────────────────────────────────
+
+  async searchClients(providerId: string, q: string): Promise<{ phone: string; name: string }[]> {
+    const clean = q.trim();
+    if (clean.length < 2) return [];
+    return this.bookingsRepository.searchClients(providerId, clean);
   }
 
   // ── availability ──────────────────────────────────────────────────────────

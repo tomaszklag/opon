@@ -139,14 +139,38 @@ model User {
 
   vehicles     Vehicle[]
   provider     Provider?    @relation("ProviderOwner")
-  bookings     Booking[]    @relation("ClientBookings")
-  reviews      Review[]     @relation("ClientReviews")
   consentLogs  ConsentLog[]
   auditLogs    AuditLog[]
   sessions     Session[]
-  tireSets     TireSet[]
+  clients      Client[]
 
   @@map("users")
+}
+
+// ──────────────────────────────────────────────
+// CLIENT — klient warsztatu (per-provider CRM)
+// ──────────────────────────────────────────────
+
+model Client {
+  id         String   @id @default(uuid()) @db.Uuid
+  providerId String
+  phone      String   @db.VarChar(20)
+  firstName  String?  @db.VarChar(100)
+  lastName   String?  @db.VarChar(100)
+  notes      String?  @db.Text
+  userId     String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  provider Provider  @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  user     User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  bookings Booking[]
+  reviews  Review[]
+  tireSets TireSet[]
+
+  @@unique([providerId, phone])
+  @@index([providerId, lastName])
+  @@map("clients")
 }
 
 // ──────────────────────────────────────────────
@@ -230,6 +254,7 @@ model Provider {
   pushSubscriptions          PushSubscription[]
   depotSlots                 DepotSlot[]
   tireSets                   TireSet[]
+  clients                    Client[]
 
   @@map("providers")
 }
@@ -307,7 +332,7 @@ model ScheduleException {
 model Booking {
   id              String        @id @default(uuid())
   referenceCode   String        @unique @db.VarChar(10)
-  clientId        String
+  clientId        String        @db.Uuid
   providerId      String
   vehicleId       String?
   pricingTierId   String?
@@ -343,7 +368,7 @@ model Booking {
   isManual        Boolean      @default(false)
   reminderSentAt  DateTime?
 
-  client      User         @relation("ClientBookings", fields: [clientId], references: [id])
+  client      Client       @relation(fields: [clientId], references: [id])
   provider    Provider     @relation("ProviderBookings", fields: [providerId], references: [id])
   vehicle     Vehicle?     @relation("VehicleBookings", fields: [vehicleId], references: [id])
   pricingTier PricingTier? @relation("TierBookings", fields: [pricingTierId], references: [id])
@@ -354,7 +379,7 @@ model Booking {
   workerTasks WorkerTask[]
 
   @@index([providerId, startAt])
-  @@index([clientId, startAt(sort: Desc)])
+  @@index([clientId])
   // UWAGA: partial unique index zapobiegający double-booking dodany w migracji SQL:
   // CREATE UNIQUE INDEX bookings_no_double_booking
   //   ON bookings (provider_id, start_at)
@@ -369,7 +394,7 @@ model Booking {
 model Review {
   id                String    @id @default(uuid())
   bookingId         String    @unique
-  clientId          String
+  clientId          String    @db.Uuid
   providerId        String
   rating            Int       // 1–5; CHECK (rating BETWEEN 1 AND 5) dodany w migracji SQL
   comment           String?   @db.Text
@@ -383,7 +408,7 @@ model Review {
   createdAt         DateTime  @default(now())
 
   booking  Booking  @relation(fields: [bookingId], references: [id])
-  client   User     @relation("ClientReviews", fields: [clientId], references: [id])
+  client   Client   @relation(fields: [clientId], references: [id])
   provider Provider @relation("ProviderReviews", fields: [providerId], references: [id])
 
   @@index([providerId, createdAt(sort: Desc)])
@@ -848,10 +873,7 @@ model DepotSlot {
 model TireSet {
   id          String @id @default(uuid())
   providerId  String
-
-  clientId    String?
-  clientName  String  @db.VarChar(200)
-  clientPhone String  @db.VarChar(20)
+  clientId    String @db.Uuid
 
   vehicleName  String? @db.VarChar(100)
   licensePlate String? @db.VarChar(20)
@@ -878,13 +900,13 @@ model TireSet {
   updatedAt DateTime @updatedAt
 
   provider      Provider        @relation(fields: [providerId], references: [id], onDelete: Cascade)
-  client        User?           @relation(fields: [clientId], references: [id])
+  client        Client          @relation(fields: [clientId], references: [id])
   slot          DepotSlot?      @relation(fields: [slotId], references: [id])
   sourceBooking Booking?        @relation(fields: [sourceBookingId], references: [id])
   periods       StoragePeriod[]
 
   @@index([providerId, status])
-  @@index([providerId, clientPhone])
+  @@index([providerId, clientId])
   @@map("tire_sets")
 }
 

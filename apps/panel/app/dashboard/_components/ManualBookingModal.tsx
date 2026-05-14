@@ -16,6 +16,7 @@ import { useCreateManualBooking } from '../../../lib/hooks/use-create-manual-boo
 import { useWorkersList } from '../../../lib/hooks/use-workers-list';
 import { useAvailability } from '../../../lib/hooks/use-availability';
 import { useServiceGroups } from '../../../lib/hooks/use-service-groups';
+import { useClientSearch } from '../../../lib/hooks/use-client-search';
 import type {
   ServiceGroupResponse,
   ServiceVariantResponse,
@@ -97,6 +98,10 @@ export function ManualBookingModal({
   const [notes, setNotes] = useState('');
   const [autoConfirm, setAutoConfirm] = useState(true);
   const [validationError, setValidationError] = useState<string | null>(null);
+
+  const { suggestions } = useClientSearch(clientPhone);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const phoneWrapperRef = useRef<HTMLDivElement>(null);
 
   const {
     availability,
@@ -237,6 +242,16 @@ export function ManualBookingModal({
     if (initialTime) setTimeInput(initialTime);
   }, [isOpen, initialDate, initialTime]);
 
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (phoneWrapperRef.current && !phoneWrapperRef.current.contains(e.target as Node)) {
+        setShowSuggestions(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   const resetForm = useCallback(() => {
     setClientName('');
     setClientPhone('');
@@ -265,6 +280,14 @@ export function ManualBookingModal({
 
   function handleWorkerChange(newWorkerId: string) {
     setWorkerId(newWorkerId);
+  }
+
+  function selectSuggestion(phone: string, name: string) {
+    const digits = phone.replace(/\D/g, '');
+    const phoneDigits = digits.startsWith('48') && digits.length === 11 ? digits.slice(2) : digits;
+    setClientPhone(phoneDigits);
+    setClientName(name);
+    setShowSuggestions(false);
   }
 
   function toggleSubService(subName: string) {
@@ -354,59 +377,55 @@ export function ManualBookingModal({
       }
     >
       <form id="manual-booking-form" onSubmit={handleSubmit} className={styles.form}>
-        {/* ── Kolumna 1: Klient + Szczegóły ── */}
+        {/* ── Kolumna lewa: Klient + Usługa + Szczegóły ── */}
         <div className={styles.colLeft}>
           {/* Klient */}
           <div className={styles.section}>
             <Text variant="kicker-sm" color="muted" className={styles.sectionLabel}>
               Klient
             </Text>
-            <Input
-              label="Imię i nazwisko"
-              value={clientName}
-              onChange={(e) => setClientName(e.target.value)}
-              required
-              autoComplete="off"
-            />
-            <PhoneInput
-              label="Telefon"
-              value={clientPhone}
-              onChange={(e) => setClientPhone(e.target.value)}
-              required
-            />
-          </div>
-
-          {/* Szczegóły */}
-          <div className={styles.section}>
-            <Text variant="kicker-sm" color="muted" className={styles.sectionLabel}>
-              Szczegóły
-            </Text>
-            <Input
-              label="Cena końcowa (zł)"
-              type="number"
-              value={priceInputValue}
-              onChange={(e) => setTotalPricePln(e.target.value)}
-              min={0}
-              placeholder={autoPrice !== null ? String(autoPrice) : 'auto'}
-            />
-            <Textarea
-              label="Notatki"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              rows={3}
-            />
-            <div className={styles.toggleRow}>
-              <Toggle
-                label="Potwierdź automatycznie"
-                checked={autoConfirm}
-                onChange={(e) => setAutoConfirm(e.target.checked)}
+            <div className={styles.row2}>
+              <Input
+                label="Imię i nazwisko"
+                value={clientName}
+                onChange={(e) => setClientName(e.target.value)}
+                required
+                autoComplete="off"
               />
+              <div ref={phoneWrapperRef} className={styles.phoneWrapper}>
+                <PhoneInput
+                  label="Telefon"
+                  value={clientPhone}
+                  onChange={(e) => {
+                    setClientPhone(e.target.value);
+                    setShowSuggestions(true);
+                  }}
+                  required
+                  compact
+                />
+                {showSuggestions && suggestions.length > 0 && (
+                  <div className={styles.phoneDropdown}>
+                    {suggestions.map((s) => (
+                      <button
+                        key={s.phone}
+                        type="button"
+                        className={styles.phoneDropdownItem}
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          selectSuggestion(s.phone, s.name);
+                        }}
+                      >
+                        <span className={styles.phoneDropdownName}>{s.name}</span>
+                        <span className={styles.phoneDropdownPhone}>{s.phone}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* ── Kolumna 2: Usługa → rim chips → pod-usługi ── */}
-        <div className={styles.colMid}>
+          {/* Usługa */}
           <div className={styles.section}>
             <Text variant="kicker-sm" color="muted" className={styles.sectionLabel}>
               Usługa
@@ -511,9 +530,37 @@ export function ManualBookingModal({
               </div>
             )}
           </div>
+
+          {/* Szczegóły */}
+          <div className={styles.section}>
+            <Text variant="kicker-sm" color="muted" className={styles.sectionLabel}>
+              Szczegóły
+            </Text>
+            <Input
+              label="Cena końcowa (zł)"
+              type="number"
+              value={priceInputValue}
+              onChange={(e) => setTotalPricePln(e.target.value)}
+              min={0}
+              placeholder={autoPrice !== null ? String(autoPrice) : 'auto'}
+            />
+            <Textarea
+              label="Notatki"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              rows={3}
+            />
+            <div className={styles.toggleRow}>
+              <Toggle
+                label="Potwierdź automatycznie"
+                checked={autoConfirm}
+                onChange={(e) => setAutoConfirm(e.target.checked)}
+              />
+            </div>
+          </div>
         </div>
 
-        {/* ── Kolumna 3: Termin + Sloty + Podsumowanie ── */}
+        {/* ── Kolumna prawa: Termin + Godzina + Podsumowanie ── */}
         <div className={styles.colRight}>
           {/* Termin */}
           <div className={styles.section}>

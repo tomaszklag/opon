@@ -44,6 +44,8 @@ export class AuthService {
       user = await this.authRepository.createUser(phone);
     }
     this.assertUserActive(user);
+    // Lazy-link: ghost Client records with this phone get linked to the User account
+    void this.authRepository.linkClientsByPhone(phone, user.id);
     return this.buildUserWithProvider(user);
   }
 

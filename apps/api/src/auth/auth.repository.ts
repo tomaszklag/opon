@@ -97,6 +97,13 @@ export class AuthRepository {
     await this.prisma.user.update({ where: { id: userId }, data: { phone: newPhone } });
   }
 
+  async linkClientsByPhone(phone: string, userId: string): Promise<void> {
+    await this.prisma.client.updateMany({
+      where: { phone, userId: null },
+      data: { userId },
+    });
+  }
+
   async revokeOtherSessions(userId: string, currentJti: string): Promise<number> {
     const result = await this.prisma.session.updateMany({
       where: { userId, id: { not: currentJti }, revokedAt: null },

@@ -11,7 +11,6 @@ import {
 import { TireCondition, TireType } from '@prisma/client';
 
 export class UpdateTireSetDto {
-  @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(200) clientName?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(100) vehicleName?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(20) licensePlate?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(100) brand?: string;

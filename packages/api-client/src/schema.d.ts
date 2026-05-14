@@ -858,10 +858,27 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    get?: never;
+    get: operations['WorkerTasksController_findById'];
     put?: never;
     post?: never;
     delete: operations['WorkerTasksController_delete'];
+    options?: never;
+    head?: never;
+    patch: operations['WorkerTasksController_update'];
+    trace?: never;
+  };
+  '/v1/providers/me/bookings/clients': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Search clients by phone/name for autocomplete */
+    get: operations['BookingsController_searchClients'];
+    put?: never;
+    post?: never;
+    delete?: never;
     options?: never;
     head?: never;
     patch?: never;
@@ -1931,6 +1948,32 @@ export interface components {
       endAt: string;
       notes?: string;
     };
+    UpdateWorkerTaskDto: {
+      notes?: string | null;
+      linkedBookingId?: string | null;
+    };
+    LinkedBookingDto: {
+      referenceCode: string;
+      clientName: string;
+      startAt: string;
+    };
+    WorkerTaskResponseDto: {
+      id: string;
+      providerId: string;
+      workerId: string | null;
+      workerName: string | null;
+      title: string;
+      startAt: string;
+      endAt: string;
+      notes: string | null;
+      linkedBookingId: string | null;
+      linkedBooking: components['schemas']['LinkedBookingDto'] | null;
+      createdAt: string;
+    };
+    ClientSearchResultDto: {
+      phone: string;
+      name: string;
+    };
     BookingResponseDto: {
       id: string;
       referenceCode: string;
@@ -2001,6 +2044,11 @@ export interface components {
        * @example false
        */
       skipAvailabilityCheck?: boolean;
+      /**
+       * @description Fingerprint z GET /availability. Jeśli podany i nieaktualny, serwer zwraca 409 z aktualną dostępnością.
+       * @example a1b2c3d4
+       */
+      availabilityVersion?: string;
     };
     AvailabilitySlotDto: {
       startAt: string;
@@ -3948,10 +3996,10 @@ export interface operations {
     requestBody?: never;
     responses: {
       200: {
-        headers: {
-          [name: string]: unknown;
+        headers: { [name: string]: unknown };
+        content: {
+          'application/json': components['schemas']['WorkerTaskResponseDto'][];
         };
-        content?: never;
       };
     };
   };
@@ -3969,10 +4017,48 @@ export interface operations {
     };
     responses: {
       201: {
-        headers: {
-          [name: string]: unknown;
+        headers: { [name: string]: unknown };
+        content: {
+          'application/json': components['schemas']['WorkerTaskResponseDto'];
         };
-        content?: never;
+      };
+    };
+  };
+  WorkerTasksController_findById: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: { id: string };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: { [name: string]: unknown };
+        content: {
+          'application/json': components['schemas']['WorkerTaskResponseDto'];
+        };
+      };
+    };
+  };
+  WorkerTasksController_update: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: { id: string };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['UpdateWorkerTaskDto'];
+      };
+    };
+    responses: {
+      200: {
+        headers: { [name: string]: unknown };
+        content: {
+          'application/json': components['schemas']['WorkerTaskResponseDto'];
+        };
       };
     };
   };
@@ -3988,10 +4074,25 @@ export interface operations {
     requestBody?: never;
     responses: {
       200: {
-        headers: {
-          [name: string]: unknown;
-        };
+        headers: { [name: string]: unknown };
         content?: never;
+      };
+    };
+  };
+  BookingsController_searchClients: {
+    parameters: {
+      query: { q: string };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: { [name: string]: unknown };
+        content: {
+          'application/json': components['schemas']['ClientSearchResultDto'][];
+        };
       };
     };
   };

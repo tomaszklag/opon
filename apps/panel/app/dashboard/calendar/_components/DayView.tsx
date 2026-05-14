@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Spinner, Text } from '@opony/design-system-web';
 import type { Booking, BookingStatus } from '../../../../api-data-access/bookings';
 import type { WorkerTask } from '../../../../api-data-access/worker-tasks';
@@ -104,6 +104,14 @@ export function DayView({
   const dragDisplayRef = useRef(dragDisplay);
   dragDisplayRef.current = dragDisplay;
   const justDraggedRef = useRef(false);
+
+  const containerRef = useRef<HTMLDivElement>(null);
+  const initNowTop = useRef(nowLineTop);
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el || initNowTop.current < 0) return;
+    el.scrollTop = Math.max(0, initNowTop.current - el.clientHeight / 2);
+  }, []);
   function startBookingDrag(e: React.MouseEvent, booking: Booking) {
     if (!isDraggable(booking.status) || !onReschedule) return;
     e.stopPropagation();
@@ -212,7 +220,7 @@ export function DayView({
   return (
     <div className={styles.content}>
       {/* ── Calendar grid ── */}
-      <div className={styles.calContainer}>
+      <div className={styles.calContainer} ref={containerRef}>
         {/* Day header */}
         <div className={styles.dayViewHeader}>
           <div className={styles.dayHeaderTz}>CET</div>

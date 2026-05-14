@@ -119,32 +119,46 @@ const myInclude = {
 
 `satisfies` sprawdza zgodność z typem Prisma **w miejscu deklaracji**, zachowując precyzyjne wąskie typy dla inferencji zwracanych danych. Stosuj ten wzorzec dla wszystkich stałych `include` w repozytoriach.
 
-### 2.5. Model User — struktura pól osobowych
+### 2.5. Model User — rola w systemie
 
-Model `User` (tabela `users`) **nie ma pola `clientName`**. Imię i nazwisko są przechowywane oddzielnie:
+`User` (tabela `users`) to **wyłącznie tożsamość auth** — numer telefonu OTP, rola, sesje. Nie przechowuje danych biznesowych klienta warsztatu.
+
+**Dane biznesowe klienta (imię, nazwisko, notatki) trzyma model `Client` — patrz §25.**
 
 ```prisma
 model User {
-  firstName String? @db.VarChar(100)
-  lastName  String? @db.VarChar(100)
-  // brak clientName!
+  id        String    @id
+  phone     String    @unique
+  role      UserRole
+  firstName String?   @db.VarChar(100)   // opcjonalne — dane profilowe konta
+  lastName  String?   @db.VarChar(100)
+  // relacje: sessions, clients (Client.userId → User)
 }
 ```
 
-Składanie pełnej nazwy klienta w serwisie:
+Pola `firstName`/`lastName` na `User` to dane profilowe konta (wypełniane opcjonalnie przez użytkownika). Nie używaj ich do wyświetlania „klienta rezerwacji" — zamiast tego czytaj z `Client`:
 
 ```ts
-const clientName = [user.firstName, user.lastName].filter(Boolean).join(' ');
+// ✅ poprawnie — z relacji Client
+client: { select: { firstName: true, lastName: true, phone: true } }
+
+// ❌ błąd — User nie jest klientem warsztatu
+user: { select: { firstName: true, lastName: true } }
 ```
 
-W select Prisma:
+Składanie pełnej nazwy klienta (helper w serwisach):
 
 ```ts
-client: { select: { firstName: true, lastName: true } }
-// Nie: client: { select: { clientName: true } }  ← pole nie istnieje
+function clientName(c: {
+  firstName: string | null;
+  lastName: string | null;
+  phone: string;
+}): string {
+  return [c.firstName, c.lastName].filter(Boolean).join(' ').trim() || c.phone;
+}
 ```
 
-`clientName` jako gotowe pole istnieje TYLKO w `TireSet` (skład opon) — tam jest denormalizowane przy przyjęciu zestawu. Wszędzie indziej musisz je złożyć z `firstName + lastName`.
+`clientName` **nie istnieje jako gotowe pole** w żadnej tabeli — zawsze składasz je z `firstName + lastName`.
 
 ---
 
@@ -3388,3 +3402,160 @@ Zadania renderowane są na siatce kalendarza (WeekView, DayView) obok rezerwacji
 ```
 
 Tekst wewnątrz bloku zadania — obowiązuje zasada DS: `<Text variant="nano">` z propsami `weight` i `color`, nigdy `font-size` w CSS module.
+
+---
+
+## 25. Model Client — CRM per provider
+
+### Architektura
+
+`Client` (tabela `clients`) to per-providerowy rekord klienta warsztatu — niezależny od konta `User`. Każda para `(providerId, phone)` jest unikalna:
+
+```prisma
+model Client {
+  id         String    @id @default(uuid())
+  providerId String
+  phone      String    @db.VarChar(20)
+  firstName  String?   @db.VarChar(100)
+  lastName   String?   @db.VarChar(100)
+  notes      String?
+  userId     String?   // null = "ghost client" (nie zalogowany w systemie)
+
+  provider Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  user     User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  bookings Booking[]
+  tireSets TireSet[]
+
+  @@unique([providerId, phone])   // klucz biznesowy
+  @@index([providerId, lastName])
+  @@map("clients")
+}
+```
+
+Kluczowe właściwości:
+
+- Ten sam klient fizyczny w dwóch warsztatach → **dwa osobne rekordy `Client`** (różne `providerId`).
+- `userId` jest opcjonalny — klient może istnieć zanim założy konto (ghost client).
+- Dane klienta widoczne w UI zawsze przez relację `client` — nigdy surowe pola `clientName`/`clientPhone` (te kolumny nie istnieją).
+
+### Wzorzec upsertClient
+
+Przy tworzeniu rezerwacji lub zestawu opon (operacja zapisu) zawsze upsertuj `Client` po kluczu biznesowym `(providerId, phone)`:
+
+```ts
+function splitName(fullName: string): { firstName: string; lastName: string | null } {
+  const [first, ...rest] = fullName.trim().split(/\s+/);
+  return { firstName: first ?? fullName, lastName: rest.join(' ') || null };
+}
+
+const { firstName, lastName } = splitName(dto.clientName);
+const client = await prisma.client.upsert({
+  where: { providerId_phone: { providerId, phone: dto.clientPhone } },
+  create: { providerId, phone: dto.clientPhone, firstName, lastName },
+  update: {}, // nie nadpisuj danych przy kolejnej rezerwacji
+  select: { id: true },
+});
+// → client.id trafia do booking.clientId / tireSet.clientId
+```
+
+`update: {}` jest celowy — istniejący klient zachowuje swoje dane (mogły zostać edytowane).
+
+### Ghost client → lazy-link (powiązanie z kontem User)
+
+Rezerwacja ręczna od operatora tworzy `Client` z `userId = null` (ghost). Gdy klient zaloguje się przez OTP na tym samym numerze telefonu, ghost recordy zostają powiązane z jego kontem:
+
+```ts
+// auth.service.ts — findOrCreateUser (wywoływane po verify-otp)
+void this.authRepository.linkClientsByPhone(phone, user.id);
+
+// auth.repository.ts
+async linkClientsByPhone(phone: string, userId: string): Promise<void> {
+  await this.prisma.client.updateMany({
+    where: { phone, userId: null },
+    data: { userId },
+  });
+}
+```
+
+Wywołanie jest fire-and-forget (`void`) — błąd linkowania nie blokuje logowania.
+
+### Multi-tenant isolation — 4 warstwy
+
+Aplikacja jest SaaS: klienci jednego warsztatu **nie mogą wyciec do innego**. Izolacja jest wymuszana na 4 poziomach:
+
+#### 1. `providerId` pochodzi zawsze z JWT
+
+```ts
+// controller
+@Get()
+list(@JwtPayload() payload: JwtPayloadDto) {
+  return this.service.list(payload.providerId);  // ← z tokenu, nie z body/query
+}
+```
+
+Nigdy nie przyjmuj `providerId` od klienta (body, query param). Jedyny wyjątek: admin endpoint z RBAC guard.
+
+#### 2. Repository zawsze wymaga `providerId`
+
+Każda metoda repository operująca na danych providera przyjmuje `providerId` jako obowiązkowy argument:
+
+```ts
+// ✅ poprawnie
+findById(providerId: string, id: string): Promise<TireSet | null> {
+  return this.prisma.tireSet.findFirst({ where: { id, providerId } });
+}
+
+// ❌ błąd — brak izolacji tenantów
+findById(id: string): Promise<TireSet | null> {
+  return this.prisma.tireSet.findUnique({ where: { id } });
+}
+```
+
+Reguła: **`findFirst({ where: { id, providerId } })` zamiast `findUnique({ where: { id } })`** dla każdego zasobu per-provider.
+
+#### 3. Ownership check przed mutacją
+
+Przed każdym `update`/`delete` zrób lookup z `providerId`. Jeśli rekord nie istnieje (lub należy do innego tenanta) → 404, nigdy 403 (nie ujawniaj, że rekord istnieje).
+
+```ts
+async update(providerId: string, id: string, dto: UpdateDto) {
+  const existing = await this.repo.findById(providerId, id);
+  if (!existing) throw new NotFoundException('Not found');
+  return this.repo.update(providerId, id, dto);
+}
+```
+
+#### 4. `userId` nie trafia do DTO
+
+`Client.userId` to wewnętrzne powiązanie do tabeli `users` — nie wystawiaj go w response DTO. DTO klienta zawiera tylko: `id`, `providerId`, `phone`, `firstName`, `lastName`, `notes`.
+
+```ts
+// ❌ nie rób tego
+@ApiProperty() userId?: string;
+
+// ✅ pomiń userId w DTO
+```
+
+### Wyszukiwanie klientów (autocomplete telefonu)
+
+Endpoint `GET /v1/providers/me/clients/search?q=` zwraca klientów pasujących do zapytania (telefon, imię, nazwisko) wyłącznie dla bieżącego providera:
+
+```ts
+// clients.repository.ts
+searchClients(providerId: string, q: string) {
+  return this.prisma.client.findMany({
+    where: {
+      providerId,
+      OR: [
+        { phone: { contains: q } },
+        { firstName: { contains: q, mode: 'insensitive' } },
+        { lastName: { contains: q, mode: 'insensitive' } },
+      ],
+    },
+    take: 10,
+    orderBy: { lastName: 'asc' },
+  });
+}
+```
+
+Hook panelowy: `useClientSearch(query)` — 220 ms debounce, wynik: `{ phone, name }[]`.

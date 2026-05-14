@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { BookingStatus, Prisma, UserRole } from '@prisma/client';
+import { BookingStatus, Prisma } from '@prisma/client';
 import { randomBytes } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { AdminStatusFilter } from './dto/booking-admin-list-query.dto';
@@ -70,11 +70,20 @@ export class BookingsRepository {
     };
   }
 
+  private splitName(fullName: string): { firstName: string; lastName: string | null } {
+    const parts = fullName.trim().split(/\s+/);
+    const firstName = parts[0] ?? fullName;
+    const lastName = parts.slice(1).join(' ') || null;
+    return { firstName, lastName };
+  }
+
   async createManual(data: ManualBookingData): Promise<BookingWithClient> {
-    const client = await this.prisma.user.upsert({
-      where: { phone: data.clientPhone },
-      create: { phone: data.clientPhone, firstName: data.clientName, role: UserRole.CLIENT },
+    const { firstName, lastName } = this.splitName(data.clientName);
+    const client = await this.prisma.client.upsert({
+      where: { providerId_phone: { providerId: data.providerId, phone: data.clientPhone } },
+      create: { providerId: data.providerId, phone: data.clientPhone, firstName, lastName },
       update: {},
+      select: { id: true },
     });
     const referenceCode = this.generateReferenceCode();
     return this.prisma.booking.create({
@@ -91,10 +100,12 @@ export class BookingsRepository {
     tx: Prisma.TransactionClient,
     data: ManualBookingData,
   ): Promise<BookingWithClient> {
-    const client = await tx.user.upsert({
-      where: { phone: data.clientPhone },
-      create: { phone: data.clientPhone, firstName: data.clientName, role: UserRole.CLIENT },
+    const { firstName, lastName } = this.splitName(data.clientName);
+    const client = await tx.client.upsert({
+      where: { providerId_phone: { providerId: data.providerId, phone: data.clientPhone } },
+      create: { providerId: data.providerId, phone: data.clientPhone, firstName, lastName },
       update: {},
+      select: { id: true },
     });
     const referenceCode = this.generateReferenceCode();
     return tx.booking.create({
@@ -143,11 +154,12 @@ export class BookingsRepository {
 
   async rescheduleBooking(
     bookingId: string,
+    providerId: string,
     startAt: Date,
     endAt: Date,
   ): Promise<BookingWithClient> {
     return this.prisma.booking.update({
-      where: { id: bookingId },
+      where: { id: bookingId, providerId },
       data: { startAt, endAt },
       include: {
         client: { select: { phone: true, firstName: true, lastName: true } },
@@ -158,6 +170,31 @@ export class BookingsRepository {
 
   countClientBookings(clientId: string, providerId: string): Promise<number> {
     return this.prisma.booking.count({ where: { clientId, providerId } });
+  }
+
+  async searchClients(
+    providerId: string,
+    q: string,
+    limit = 8,
+  ): Promise<{ phone: string; name: string }[]> {
+    const clients = await this.prisma.client.findMany({
+      where: {
+        providerId,
+        OR: [
+          { phone: { contains: q } },
+          { firstName: { contains: q, mode: 'insensitive' } },
+          { lastName: { contains: q, mode: 'insensitive' } },
+        ],
+      },
+      select: { phone: true, firstName: true, lastName: true },
+      orderBy: { updatedAt: 'desc' },
+      take: limit,
+    });
+
+    return clients.map(({ phone, firstName, lastName }) => ({
+      phone,
+      name: [firstName, lastName].filter(Boolean).join(' ').trim() || phone,
+    }));
   }
 
   async findAdminList(
@@ -295,6 +332,7 @@ export class BookingsRepository {
 
   async updateStatus(
     id: string,
+    providerId: string,
     status: BookingStatus,
     timestamps: Partial<{
       confirmedAt: Date;
@@ -306,7 +344,7 @@ export class BookingsRepository {
     isReject = false,
   ): Promise<void> {
     await this.prisma.booking.update({
-      where: { id },
+      where: { id, providerId },
       data: {
         status,
         ...timestamps,

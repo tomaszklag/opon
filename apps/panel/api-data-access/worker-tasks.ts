@@ -1,37 +1,10 @@
 import { api } from '../lib/api';
+import type { components } from '@opony/api-client';
 
-export interface LinkedBooking {
-  referenceCode: string;
-  clientName: string;
-  startAt: string;
-}
-
-export interface WorkerTask {
-  id: string;
-  providerId: string;
-  workerId: string | null;
-  workerName: string | null;
-  title: string;
-  startAt: string;
-  endAt: string;
-  notes: string | null;
-  linkedBookingId: string | null;
-  linkedBooking: LinkedBooking | null;
-  createdAt: string;
-}
-
-export interface CreateWorkerTaskBody {
-  title: string;
-  workerId?: string;
-  startAt: string;
-  endAt: string;
-  notes?: string;
-}
-
-export interface UpdateWorkerTaskBody {
-  notes?: string | null;
-  linkedBookingId?: string | null;
-}
+export type WorkerTask = components['schemas']['WorkerTaskResponseDto'];
+export type LinkedBooking = components['schemas']['LinkedBookingDto'];
+export type CreateWorkerTaskBody = components['schemas']['CreateWorkerTaskDto'];
+export type UpdateWorkerTaskBody = components['schemas']['UpdateWorkerTaskDto'];
 
 export const workerTasksApi = {
   list: (weekStart: string) =>

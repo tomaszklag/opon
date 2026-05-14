@@ -13,6 +13,8 @@ export interface PhoneInputProps extends Omit<React.InputHTMLAttributes<HTMLInpu
   /** Shows amber "Nie mamy takiego numeru" pill with register link */
   notRegistered?: boolean;
   countryCode?: string;
+  /** Fuses prefix and input into a single control — no gap */
+  compact?: boolean;
   className?: string;
 }
 
@@ -34,6 +36,7 @@ export function PhoneInput({
   recognizedName,
   notRegistered = false,
   countryCode = '+48',
+  compact = false,
   className,
   id,
   required,
@@ -67,6 +70,16 @@ export function PhoneInput({
     });
   }
 
+  const prefixBox = (
+    <div className={styles.prefixBox} aria-hidden="true">
+      <span className={styles.flag}>
+        <span className={styles.flagTop} />
+        <span className={styles.flagBottom} />
+      </span>
+      <span className={styles.prefixCode}>{countryCode}</span>
+    </div>
+  );
+
   return (
     <div className={[styles.field, className].filter(Boolean).join(' ')}>
       {label && (
@@ -75,26 +88,37 @@ export function PhoneInput({
         </FieldLabel>
       )}
 
-      <div className={styles.phoneGrid}>
-        <div className={styles.prefixBox} aria-hidden="true">
-          <span className={styles.flag}>
-            <span className={styles.flagTop} />
-            <span className={styles.flagBottom} />
-          </span>
-          <span className={styles.prefixCode}>{countryCode}</span>
+      {compact ? (
+        <div className={styles.phoneGridCompact}>
+          {prefixBox}
+          <input
+            ref={inputRef}
+            id={inputId}
+            type="tel"
+            inputMode="numeric"
+            value={displayValue}
+            onChange={handleChange}
+            required={required}
+            className={styles.compactInput}
+            {...props}
+          />
         </div>
-        <Input
-          ref={inputRef}
-          id={inputId}
-          type="tel"
-          inputMode="numeric"
-          value={displayValue}
-          onChange={handleChange}
-          error={error}
-          required={required}
-          {...props}
-        />
-      </div>
+      ) : (
+        <div className={styles.phoneGrid}>
+          {prefixBox}
+          <Input
+            ref={inputRef}
+            id={inputId}
+            type="tel"
+            inputMode="numeric"
+            value={displayValue}
+            onChange={handleChange}
+            error={error}
+            required={required}
+            {...props}
+          />
+        </div>
+      )}
 
       {hint && !error && !recognizedName && <p className={styles.hint}>{hint}</p>}
 

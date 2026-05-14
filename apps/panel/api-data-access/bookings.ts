@@ -96,25 +96,17 @@ export const bookingsApi = {
       endAt,
       notifyClient,
     }),
+  searchClients: (q: string) =>
+    api.get<components['schemas']['ClientSearchResultDto'][]>(
+      `/v1/providers/me/bookings/clients?q=${encodeURIComponent(q)}`,
+    ),
   getAvailability: (date: string, workerId?: string) => {
     const qs = workerId ? `?date=${date}&workerId=${workerId}` : `?date=${date}`;
     return api.get<AvailabilityResponse>(`/v1/providers/me/bookings/availability${qs}`);
   },
 };
 
-export interface ManualBookingPayload {
-  clientName: string;
-  clientPhone: string;
-  startAt: string;
-  endAt: string;
-  tireSize?: string;
-  totalPricePln?: number;
-  serviceType?: string;
-  workerId?: string;
-  notes?: string;
-  autoConfirm?: boolean;
-  availabilityVersion?: string;
-}
+export type ManualBookingPayload = components['schemas']['CreateManualBookingDto'];
 
 export interface AvailabilitySlot {
   startAt: string;

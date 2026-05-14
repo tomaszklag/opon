@@ -25,12 +25,20 @@ export class DepotService {
     return slot.label ?? `${slot.section}${slot.row}-${slot.position}`;
   }
 
+  private clientName(ts: {
+    client: { firstName: string | null; lastName: string | null; phone: string };
+  }): string {
+    return (
+      [ts.client.firstName, ts.client.lastName].filter(Boolean).join(' ').trim() || ts.client.phone
+    );
+  }
+
   private mapToResponse(ts: any): TireSetResponseDto {
     const activePeriod = ts.periods?.[0] ?? null;
     return {
       id: ts.id,
-      clientName: ts.clientName,
-      clientPhone: ts.clientPhone,
+      clientName: this.clientName(ts),
+      clientPhone: ts.client.phone,
       vehicleName: ts.vehicleName,
       licensePlate: ts.licensePlate,
       brand: ts.brand,
@@ -63,8 +71,8 @@ export class DepotService {
     return {
       id: ts.id,
       clientId: ts.clientId,
-      clientName: ts.clientName,
-      clientPhone: ts.clientPhone,
+      clientName: this.clientName(ts),
+      clientPhone: ts.client.phone,
       vehicleName: ts.vehicleName,
       licensePlate: ts.licensePlate,
       brand: ts.brand,
@@ -142,7 +150,6 @@ export class DepotService {
     if (!existing) throw new NotFoundException('TireSet not found');
 
     const ts = await this.repo.update(providerId, id, {
-      clientName: dto.clientName,
       vehicleName: dto.vehicleName,
       licensePlate: dto.licensePlate,
       brand: dto.brand,
@@ -198,18 +205,26 @@ export class DepotService {
     await this.repo.remove(providerId, id);
   }
 
-  async getSlots(providerId: string): Promise<DepotSlotResponseDto[]> {
-    const slots = await this.repo.findSlots(providerId);
-    return slots.map((s) => ({
+  private mapSlot(s: any): DepotSlotResponseDto {
+    const ts = s.tireSets[0] ?? null;
+    const clientName = ts?.client
+      ? [ts.client.firstName, ts.client.lastName].filter(Boolean).join(' ').trim() || null
+      : null;
+    return {
       id: s.id,
       section: s.section,
       row: s.row,
       position: s.position,
       label: s.label,
       occupied: s.tireSets.length > 0,
-      tireSetId: s.tireSets[0]?.id ?? null,
-      tireSetClientName: s.tireSets[0]?.clientName ?? null,
-    }));
+      tireSetId: ts?.id ?? null,
+      tireSetClientName: clientName,
+    };
+  }
+
+  async getSlots(providerId: string): Promise<DepotSlotResponseDto[]> {
+    const slots = await this.repo.findSlots(providerId);
+    return slots.map((s) => this.mapSlot(s));
   }
 
   async bulkCreateSlots(
@@ -223,16 +238,7 @@ export class DepotService {
       dto.rowTo,
       dto.positionsPerRow,
     );
-    return slots.map((s) => ({
-      id: s.id,
-      section: s.section,
-      row: s.row,
-      position: s.position,
-      label: s.label,
-      occupied: s.tireSets.length > 0,
-      tireSetId: s.tireSets[0]?.id ?? null,
-      tireSetClientName: s.tireSets[0]?.clientName ?? null,
-    }));
+    return slots.map((s) => this.mapSlot(s));
   }
 
   async removeSlot(providerId: string, slotId: string): Promise<void> {

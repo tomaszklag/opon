@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Spinner, Text } from '@opony/design-system-web';
 import type { Booking, BookingStatus } from '../../../../api-data-access/bookings';
 import type { WorkerTask } from '../../../../api-data-access/worker-tasks';
@@ -116,6 +116,14 @@ export function WeekView({
   dragDisplayRef.current = dragDisplay;
   const justDraggedRef = useRef(false);
   const GHOST_H = 60;
+
+  const containerRef = useRef<HTMLDivElement>(null);
+  const initNowTop = useRef(nowLineTop);
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el || initNowTop.current < 0) return;
+    el.scrollTop = Math.max(0, initNowTop.current - el.clientHeight / 2);
+  }, []);
 
   function handleColumnMouseMove(e: React.MouseEvent<HTMLDivElement>, day: Date) {
     if (dragRef.current || isSlotMenuOpen) return;
@@ -265,7 +273,7 @@ export function WeekView({
   return (
     <div className={styles.content}>
       {/* ── Calendar grid ── */}
-      <div className={styles.calContainer}>
+      <div className={styles.calContainer} ref={containerRef}>
         {/* Day header row */}
         <div className={styles.dayHeader}>
           <div className={styles.dayHeaderTz}>CET</div>

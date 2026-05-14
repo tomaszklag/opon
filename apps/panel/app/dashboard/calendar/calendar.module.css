@@ -300,14 +300,8 @@
   gap: 2px;
   overflow: hidden;
   cursor: pointer;
-  transition: transform 140ms ease, filter 140ms ease;
   font-family: var(--font-body);
   font-size: 11px;
-}
-
-.booking:hover {
-  transform: translateY(-1px);
-  filter: brightness(1.1);
 }
 
 .confirmed {

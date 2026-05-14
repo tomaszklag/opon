@@ -11,7 +11,7 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { IdempotencyInterceptor } from '../common/idempotency/idempotency.interceptor';
-import { ApiCookieAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiCookieAuth, ApiOkResponse, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { JwtPayload } from '../auth/types/jwt-payload.interface';
 import { ProvidersService } from '../providers/providers.service';
@@ -21,6 +21,7 @@ import { BookingResponseDto } from './dto/booking-response.dto';
 import { UpdateBookingStatusDto } from './dto/update-booking-status.dto';
 import { RescheduleBookingDto } from './dto/reschedule-booking.dto';
 import { BookingsService } from './bookings.service';
+import { ClientSearchResultDto } from './dto/client-search-result.dto';
 import { BookingAdminListQueryDto } from './dto/booking-admin-list-query.dto';
 import { BookingPageResponseDto } from './dto/booking-page-response.dto';
 import { BookingStatsResponseDto } from './dto/booking-stats-response.dto';
@@ -100,6 +101,19 @@ export class BookingsController {
   ): Promise<BookingResponseDto> {
     const provider = await this.providersService.getMyProvider(user.sub);
     return this.service.createManual(provider.id, dto);
+  }
+
+  // ── GET /v1/providers/me/bookings/clients?q= ─────────────────────────────
+
+  @Get('clients')
+  @ApiOperation({ summary: 'Search clients by phone/name for autocomplete' })
+  @ApiOkResponse({ type: ClientSearchResultDto, isArray: true })
+  async searchClients(
+    @CurrentUser() user: JwtPayload,
+    @Query('q') q: string,
+  ): Promise<ClientSearchResultDto[]> {
+    const provider = await this.providersService.getMyProvider(user.sub);
+    return this.service.searchClients(provider.id, q ?? '');
   }
 
   // ── GET /v1/providers/me/bookings/availability ────────────────────────────

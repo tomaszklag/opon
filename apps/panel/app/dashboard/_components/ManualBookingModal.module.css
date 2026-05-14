@@ -1,18 +1,12 @@
-/* 3-column grid: klient+szczegóły | usługa+chipy+pod-usługi | termin+sloty+summary */
+/* 2-column grid: klient+usługa+szczegóły | termin+godzina+summary */
 .form {
   display: grid;
-  grid-template-columns: 220px 1fr 1fr;
+  grid-template-columns: 1fr 1fr;
   gap: 0 20px;
   align-items: start;
 }
 
 .colLeft {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.colMid {
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -426,4 +420,55 @@
   white-space: nowrap;
   flex-shrink: 0;
   letter-spacing: 0.5px;
+}
+
+/* ── Phone autocomplete dropdown ── */
+.phoneWrapper {
+  position: relative;
+}
+
+.phoneDropdown {
+  position: absolute;
+  top: calc(100% + 2px);
+  left: 0;
+  right: 0;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  z-index: 200;
+  overflow: hidden;
+}
+
+.phoneDropdownItem {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  padding: 7px 12px;
+  text-align: left;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: background 80ms;
+}
+
+.phoneDropdownItem:last-child {
+  border-bottom: none;
+}
+
+.phoneDropdownItem:hover {
+  background: var(--accent-muted);
+}
+
+.phoneDropdownName {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.phoneDropdownPhone {
+  font-size: 11px;
+  color: var(--text-muted);
 }

@@ -1,9 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma, TireCondition, TireSetStatus, TireType, UserRole } from '@prisma/client';
+import { Prisma, TireCondition, TireSetStatus, TireType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
 type TireSetWithRelations = Prisma.TireSetGetPayload<{
   include: {
+    client: { select: { id: true; phone: true; firstName: true; lastName: true } };
     slot: { select: { section: true; row: true; position: true; label: true } };
     periods: { orderBy: { storedAt: 'desc' }; take: 1 };
   };
@@ -11,6 +12,7 @@ type TireSetWithRelations = Prisma.TireSetGetPayload<{
 
 type TireSetDetail = Prisma.TireSetGetPayload<{
   include: {
+    client: { select: { id: true; phone: true; firstName: true; lastName: true } };
     slot: { select: { section: true; row: true; position: true; label: true } };
     periods: { orderBy: { storedAt: 'desc' } };
   };
@@ -19,6 +21,17 @@ type TireSetDetail = Prisma.TireSetGetPayload<{
 @Injectable()
 export class DepotRepository {
   constructor(private readonly prisma: PrismaService) {}
+
+  private splitName(fullName: string): { firstName: string; lastName: string | null } {
+    const parts = fullName.trim().split(/\s+/);
+    const firstName = parts[0] ?? fullName;
+    const lastName = parts.slice(1).join(' ') || null;
+    return { firstName, lastName };
+  }
+
+  private clientInclude = {
+    client: { select: { id: true, phone: true, firstName: true, lastName: true } },
+  } as const;
 
   async findMany(
     providerId: string,
@@ -30,8 +43,9 @@ export class DepotRepository {
       ...(opts.search
         ? {
             OR: [
-              { clientName: { contains: opts.search, mode: 'insensitive' } },
-              { clientPhone: { contains: opts.search } },
+              { client: { firstName: { contains: opts.search, mode: 'insensitive' } } },
+              { client: { lastName: { contains: opts.search, mode: 'insensitive' } } },
+              { client: { phone: { contains: opts.search } } },
               { licensePlate: { contains: opts.search, mode: 'insensitive' } },
             ],
           }
@@ -39,6 +53,7 @@ export class DepotRepository {
     };
 
     const include = {
+      ...this.clientInclude,
       slot: { select: { section: true, row: true, position: true, label: true } },
       periods: { orderBy: { storedAt: 'desc' as const }, take: 1 },
     };
@@ -58,9 +73,10 @@ export class DepotRepository {
   }
 
   findById(providerId: string, id: string): Promise<TireSetDetail | null> {
-    return this.prisma.tireSet.findUnique({
+    return this.prisma.tireSet.findFirst({
       where: { id, providerId },
       include: {
+        ...this.clientInclude,
         slot: { select: { section: true, row: true, position: true, label: true } },
         periods: { orderBy: { storedAt: 'desc' } },
       },
@@ -87,18 +103,18 @@ export class DepotRepository {
     sourceBookingId?: string;
     notes?: string;
   }): Promise<TireSetDetail> {
-    const client = await this.prisma.user.upsert({
-      where: { phone: data.clientPhone },
-      create: { phone: data.clientPhone, firstName: data.clientName, role: UserRole.CLIENT },
+    const { firstName, lastName } = this.splitName(data.clientName);
+    const client = await this.prisma.client.upsert({
+      where: { providerId_phone: { providerId: data.providerId, phone: data.clientPhone } },
+      create: { providerId: data.providerId, phone: data.clientPhone, firstName, lastName },
       update: {},
+      select: { id: true },
     });
 
     return this.prisma.tireSet.create({
       data: {
         providerId: data.providerId,
         clientId: client.id,
-        clientName: data.clientName,
-        clientPhone: data.clientPhone,
         vehicleName: data.vehicleName ?? null,
         licensePlate: data.licensePlate ?? null,
         brand: data.brand ?? null,
@@ -122,6 +138,7 @@ export class DepotRepository {
         },
       },
       include: {
+        ...this.clientInclude,
         slot: { select: { section: true, row: true, position: true, label: true } },
         periods: { orderBy: { storedAt: 'desc' } },
       },
@@ -132,7 +149,6 @@ export class DepotRepository {
     providerId: string,
     id: string,
     data: {
-      clientName?: string;
       vehicleName?: string | null;
       licensePlate?: string | null;
       brand?: string | null;
@@ -150,11 +166,9 @@ export class DepotRepository {
   ): Promise<TireSetDetail> {
     return this.prisma.tireSet.update({
       where: { id, providerId },
-      data: {
-        ...data,
-        storagePricePln: data.storagePricePln !== undefined ? data.storagePricePln : undefined,
-      },
+      data,
       include: {
+        ...this.clientInclude,
         slot: { select: { section: true, row: true, position: true, label: true } },
         periods: { orderBy: { storedAt: 'desc' } },
       },
@@ -165,7 +179,7 @@ export class DepotRepository {
     const now = new Date();
 
     await this.prisma.storagePeriod.updateMany({
-      where: { tireSetId: id, pickedUpAt: null },
+      where: { tireSetId: id, pickedUpAt: null, tireSet: { providerId } },
       data: { pickedUpAt: now },
     });
 
@@ -173,6 +187,7 @@ export class DepotRepository {
       where: { id, providerId },
       data: { status: TireSetStatus.PICKED_UP, slotId: null },
       include: {
+        ...this.clientInclude,
         slot: { select: { section: true, row: true, position: true, label: true } },
         periods: { orderBy: { storedAt: 'desc' } },
       },
@@ -198,6 +213,7 @@ export class DepotRepository {
         },
       },
       include: {
+        ...this.clientInclude,
         slot: { select: { section: true, row: true, position: true, label: true } },
         periods: { orderBy: { storedAt: 'desc' } },
       },
@@ -249,7 +265,10 @@ export class DepotRepository {
       include: {
         tireSets: {
           where: { status: TireSetStatus.IN_DEPOT },
-          select: { id: true, clientName: true },
+          select: {
+            id: true,
+            client: { select: { firstName: true, lastName: true } },
+          },
         },
       },
       orderBy: [{ section: 'asc' }, { row: 'asc' }, { position: 'asc' }],

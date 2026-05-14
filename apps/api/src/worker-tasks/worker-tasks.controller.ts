@@ -1,5 +1,5 @@
 import { Controller, Post, Get, Patch, Delete, Body, Param, Query } from '@nestjs/common';
-import { ApiTags, ApiCookieAuth } from '@nestjs/swagger';
+import { ApiTags, ApiCookieAuth, ApiOkResponse, ApiCreatedResponse } from '@nestjs/swagger';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { JwtPayload } from '../auth/types/jwt-payload.interface';
 import { ProvidersService } from '../providers/providers.service';
@@ -19,6 +19,7 @@ export class WorkerTasksController {
   ) {}
 
   @Post()
+  @ApiCreatedResponse({ type: WorkerTaskResponseDto })
   async create(
     @CurrentUser() user: JwtPayload,
     @Body() dto: CreateWorkerTaskDto,
@@ -28,6 +29,7 @@ export class WorkerTasksController {
   }
 
   @Get()
+  @ApiOkResponse({ type: WorkerTaskResponseDto, isArray: true })
   async list(
     @CurrentUser() user: JwtPayload,
     @Query() query: WorkerTaskListQueryDto,
@@ -37,6 +39,7 @@ export class WorkerTasksController {
   }
 
   @Get(':id')
+  @ApiOkResponse({ type: WorkerTaskResponseDto })
   async findById(
     @CurrentUser() user: JwtPayload,
     @Param('id') id: string,
@@ -46,6 +49,7 @@ export class WorkerTasksController {
   }
 
   @Patch(':id')
+  @ApiOkResponse({ type: WorkerTaskResponseDto })
   async update(
     @CurrentUser() user: JwtPayload,
     @Param('id') id: string,
