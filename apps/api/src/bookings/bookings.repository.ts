@@ -4,6 +4,22 @@ import { randomBytes } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { AdminStatusFilter } from './dto/booking-admin-list-query.dto';
 
+export interface ManualBookingData {
+  clientPhone: string;
+  clientName: string;
+  providerId: string;
+  startAt: Date;
+  endAt: Date;
+  tireSize: string | null;
+  totalPricePln: number | null;
+  serviceType: string | null;
+  notes: string | null;
+  status: BookingStatus;
+  confirmedAt: Date | null;
+  workerId: string | null;
+  stationId: string | null;
+}
+
 type BookingWithClient = Prisma.BookingGetPayload<{
   include: {
     client: {
@@ -34,57 +50,58 @@ export class BookingsRepository {
       .join('');
   }
 
-  async createManual(data: {
-    clientPhone: string;
-    clientName: string;
-    providerId: string;
-    startAt: Date;
-    endAt: Date;
-    tireSize: string | null;
-    totalPricePln: number | null;
-    serviceType: string | null;
-    notes: string | null;
-    status: BookingStatus;
-    confirmedAt: Date | null;
-    workerId: string | null;
-    stationId: string | null;
-  }): Promise<BookingWithClient> {
+  private bookingCreatePayload(data: ManualBookingData, clientId: string, referenceCode: string) {
+    return {
+      referenceCode,
+      clientId,
+      providerId: data.providerId,
+      startAt: data.startAt,
+      endAt: data.endAt,
+      tireSize: data.tireSize,
+      totalPricePln: data.totalPricePln,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      serviceType: data.serviceType as any,
+      notes: data.notes,
+      isManual: true,
+      status: data.status,
+      confirmedAt: data.confirmedAt,
+      workerId: data.workerId,
+      stationId: data.stationId,
+    };
+  }
+
+  async createManual(data: ManualBookingData): Promise<BookingWithClient> {
     const client = await this.prisma.user.upsert({
       where: { phone: data.clientPhone },
-      create: {
-        phone: data.clientPhone,
-        firstName: data.clientName,
-        role: UserRole.CLIENT,
-      },
+      create: { phone: data.clientPhone, firstName: data.clientName, role: UserRole.CLIENT },
       update: {},
     });
-
     const referenceCode = this.generateReferenceCode();
-
     return this.prisma.booking.create({
-      data: {
-        referenceCode,
-        clientId: client.id,
-        providerId: data.providerId,
-        startAt: data.startAt,
-        endAt: data.endAt,
-        tireSize: data.tireSize,
-        totalPricePln: data.totalPricePln,
-        serviceType: data.serviceType as any,
-        notes: data.notes,
-        isManual: true,
-        status: data.status,
-        confirmedAt: data.confirmedAt,
-        workerId: data.workerId,
-        stationId: data.stationId,
-      },
+      data: this.bookingCreatePayload(data, client.id, referenceCode),
       include: {
-        client: {
-          select: { phone: true, firstName: true, lastName: true },
-        },
-        worker: {
-          select: { name: true },
-        },
+        client: { select: { phone: true, firstName: true, lastName: true } },
+        worker: { select: { name: true } },
+      },
+    });
+  }
+
+  /** Variant that runs inside an already-open Prisma interactive transaction. */
+  async createManualTx(
+    tx: Prisma.TransactionClient,
+    data: ManualBookingData,
+  ): Promise<BookingWithClient> {
+    const client = await tx.user.upsert({
+      where: { phone: data.clientPhone },
+      create: { phone: data.clientPhone, firstName: data.clientName, role: UserRole.CLIENT },
+      update: {},
+    });
+    const referenceCode = this.generateReferenceCode();
+    return tx.booking.create({
+      data: this.bookingCreatePayload(data, client.id, referenceCode),
+      include: {
+        client: { select: { phone: true, firstName: true, lastName: true } },
+        worker: { select: { name: true } },
       },
     });
   }

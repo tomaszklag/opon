@@ -109,15 +109,6 @@
   scrollbar-width: thin;
 }
 
-.formScroll::-webkit-scrollbar {
-  width: 6px;
-}
-
-.formScroll::-webkit-scrollbar-thumb {
-  background: var(--border);
-  border-radius: 3px;
-}
-
 /* ── Form inner wrapper ── */
 .formInner {
   width: 100%;

@@ -294,10 +294,46 @@
 }
 
 .conflictBanner {
-  padding: 7px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 10px;
   background: var(--warning-muted);
   border: 1px solid var(--warning-border);
   border-radius: var(--radius-md);
+}
+
+.slotSuggestion {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 10px;
+  background: var(--accent-muted);
+  border: 1px solid var(--accent-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  text-align: left;
+  transition: opacity 80ms;
+  width: 100%;
+}
+
+.slotSuggestion:hover {
+  opacity: 0.8;
+}
+
+.slotSuggestionLabel {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.slotSuggestionHint {
+  margin-left: auto;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--accent);
+  opacity: 0.6;
+  white-space: nowrap;
 }
 
 .spinnerRow {

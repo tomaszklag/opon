@@ -1,9 +1,9 @@
 import type { Booking, BookingStatus } from '../../../api-data-access/bookings';
 
 // ── Grid constants ────────────────────────────────────────────────────────────
-export const HOUR_START = 8;
-export const HOUR_END = 18;
-export const HOURS = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18];
+export const HOUR_START = 6;
+export const HOUR_END = 20;
+export const HOURS = [6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20];
 export const PX_PER_HOUR = 60;
 export const GRID_HEIGHT = (HOUR_END - HOUR_START + 1) * PX_PER_HOUR;
 

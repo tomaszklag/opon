@@ -4,12 +4,12 @@ import { bookingsApi, type AvailabilityResponse } from '../../api-data-access/bo
 
 export function useAvailability(date: string | null, workerId?: string) {
   const key = date ? ['availability', date, workerId ?? ''] : null;
-  const { data, error, isLoading } = useSWR(
+  const { data, error, isLoading, mutate } = useSWR(
     key,
     () => bookingsApi.getAvailability(date!, workerId),
     { revalidateOnFocus: false },
   );
-  return { availability: data ?? null, isLoading, error };
+  return { availability: data ?? null, isLoading, error, mutate };
 }
 
 export type { AvailabilityResponse };

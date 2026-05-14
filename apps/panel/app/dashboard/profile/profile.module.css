@@ -79,15 +79,6 @@
   scrollbar-width: thin;
 }
 
-.formCol::-webkit-scrollbar {
-  width: 6px;
-}
-
-.formCol::-webkit-scrollbar-thumb {
-  background: var(--border);
-  border-radius: 3px;
-}
-
 /* ── Preview column ── */
 .previewCol {
   border-left: 1px solid var(--border);

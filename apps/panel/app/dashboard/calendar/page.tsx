@@ -6,6 +6,7 @@ import { useAuthGuard } from '../../../lib/hooks/use-auth-guard';
 import { useBookings } from '../../../lib/hooks/use-bookings';
 import { useBookingsMonth } from '../../../lib/hooks/use-bookings-month';
 import { useWorkerTasks } from '../../../lib/hooks/use-worker-tasks';
+import { useWorkerTasksMonth } from '../../../lib/hooks/use-worker-tasks-month';
 import { useScheduleExceptions } from '../../../lib/hooks/use-schedule-exceptions';
 import { useWorkersList } from '../../../lib/hooks/use-workers-list';
 import { IconChevronLeft, IconChevronRight } from '../../../components/icons';
@@ -78,7 +79,7 @@ export default function CalendarPage() {
   function openBookingFromSlot() {
     if (!slotMenu) return;
     setPrefillDate(toISODate(slotMenu.date));
-    setPrefillTime('');
+    setPrefillTime(slotMenu.time);
     setSlotMenu(null);
     setIsManualOpen(true);
   }
@@ -136,6 +137,7 @@ export default function CalendarPage() {
   const monthWeekStarts =
     view === 'month' ? buildMonthGrid(currentDate).map((w) => formatWeekStart(w[0]!)) : [];
   const { bookings: monthBookings, isLoading: monthLoading } = useBookingsMonth(monthWeekStarts);
+  const { tasks: monthTasks } = useWorkerTasksMonth(monthWeekStarts);
 
   useEffect(() => {
     const id = setInterval(() => {
@@ -271,6 +273,7 @@ export default function CalendarPage() {
           isLoading={isLoading}
           nowLineTop={nowLineTop}
           nowTime={nowTime}
+          isSlotMenuOpen={!!slotMenu}
           onBookingClick={handleBookingClick}
           onSlotClick={handleSlotClick}
           onReschedule={handleReschedule}
@@ -286,6 +289,7 @@ export default function CalendarPage() {
           isLoading={isLoading}
           nowLineTop={nowLineTop}
           nowTime={nowTime}
+          isSlotMenuOpen={!!slotMenu}
           onBookingClick={handleBookingClick}
           onSlotClick={handleSlotClick}
           onReschedule={handleReschedule}
@@ -295,10 +299,14 @@ export default function CalendarPage() {
         <MonthView
           month={currentDate}
           bookings={monthBookings}
+          tasks={monthTasks}
           exceptions={exceptions}
+          workers={workers}
           isLoading={monthLoading}
+          selectedDate={slotMenu?.date ?? null}
           onBookingClick={handleBookingClick}
           onSlotClick={handleSlotClick}
+          onReschedule={handleReschedule}
         />
       )}
 
@@ -309,9 +317,11 @@ export default function CalendarPage() {
         onClose={() => {
           setIsManualOpen(false);
           setPrefillDate('');
+          setPrefillTime('');
         }}
         onSuccess={() => mutate()}
         initialDate={prefillDate || undefined}
+        initialTime={prefillTime || undefined}
       />
       <WorkerTaskModal
         isOpen={isTaskModalOpen}
@@ -367,7 +377,7 @@ export default function CalendarPage() {
               className={`${styles.slotMenuItem} ${styles.slotMenuItemTask}`}
               onClick={openTaskFromSlot}
             >
-              + Dodaj zadanie pracownika
+              + Dodaj zadanie
             </button>
           </div>
         </>

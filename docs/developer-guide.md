@@ -2927,12 +2927,12 @@ Urlop pracownika to **twardy blok** — slot engine pomija pracownika dla całeg
 
 **Krytyczne wymagania implementacyjne:**
 
-| #   | Problem                                     | Wymaganie                                                                                                                                                                                               |
-| --- | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| T1  | Booking musi znać stanowisko                | Model `Booking` musi mieć `stationId` — bez tego slot engine nie sprawdzi kolizji per stanowisko                                                                                                        |
-| T2  | Race condition przy równoległych requestach | Użyj `SELECT FOR UPDATE` na wierszu stanowiska przy tworzeniu rezerwacji (PostgreSQL advisory lock lub transakcja z lock) — `unique(startAt)` nie wystarczy dla okien nakładających się                 |
-| T3  | Urlop dodany po istniejącej rezerwacji      | Przy dodawaniu `WorkerLeave` sprawdź istniejące `Booking` w zakresie dat — jeśli są i pracownik jest jedynym na stanowisku → zwróć error `WORKER_LEAVE_BOOKING_CONFLICT` z listą dotkniętych rezerwacji |
-| T4  | Obsługa DST                                 | Wszystkie operacje na datach muszą używać strefy `Europe/Warsaw` przez `luxon` lub `date-fns-tz`. Nigdy nie przechowuj ani nie porównuj naiwnych `Date()` UTC dla wyznaczania slotów                    |
+| #   | Problem                                     | Wymaganie                                                                                                                                                                                                    |
+| --- | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| T1  | Booking musi znać stanowisko                | Model `Booking` musi mieć `stationId` — bez tego slot engine nie sprawdzi kolizji per stanowisko                                                                                                             |
+| T2  | Race condition przy równoległych requestach | `createManual` używa `Prisma.TransactionIsolationLevel.Serializable` — PostgreSQL wykrywa konflikty równoległych transakcji i zwraca P2034, który mapuje na `BOOKING_SLOT_TAKEN` 409. Szczegóły w sekcji 23. |
+| T3  | Urlop dodany po istniejącej rezerwacji      | Przy dodawaniu `WorkerLeave` sprawdź istniejące `Booking` w zakresie dat — jeśli są i pracownik jest jedynym na stanowisku → zwróć error `WORKER_LEAVE_BOOKING_CONFLICT` z listą dotkniętych rezerwacji      |
+| T4  | Obsługa DST                                 | Wszystkie operacje na datach muszą używać strefy `Europe/Warsaw` przez `luxon` lub `date-fns-tz`. Nigdy nie przechowuj ani nie porównuj naiwnych `Date()` UTC dla wyznaczania slotów                         |
 
 Stare pola `slotMinutes`, `capacityBlocks`, `CapacityBlock[]` są zastąpione przez model Stanowisk i ich grafiki.
 
@@ -2956,8 +2956,53 @@ Dodaj do `apps/api/src/common/errors/error-code.enum.ts`:
 | `WORKER_LEAVE_CONFLICT`         | 409    | Daty urlopu nakładają się na istniejący urlop pracownika                                                    |
 | `WORKER_LEAVE_BOOKING_CONFLICT` | 409    | Dodanie urlopu koliduje z istniejącymi rezerwacjami — odpowiedź powinna zawierać listę `affectedBookingIds` |
 | `SERVICE_CONFIG_NOT_FOUND`      | 404    | Konfiguracja usługi nie istnieje                                                                            |
-| `BOOKING_SLOT_UNAVAILABLE`      | 409    | Wybrany slot jest już zajęty (race condition lub nieświeży cache)                                           |
+| `BOOKING_SLOT_TAKEN`            | 409    | Wybrany slot jest już zajęty — race condition lub pojemność wyczerpana                                      |
+| `BOOKING_VERSION_MISMATCH`      | 409    | `availabilityVersion` nie zgadza się z aktualnym stanem — klient musi odświeżyć dostępność                  |
+| `IDEMPOTENCY_CONFLICT`          | 422    | Ten sam `X-Idempotency-Key` użyty z innym ciałem żądania                                                    |
 | `BOOKING_NOT_FOUND`             | 404    | Rezerwacja nie istnieje lub nie należy do klienta/providera                                                 |
+
+---
+
+## 23. Booking — mechanizm współbieżności (3 warstwy)
+
+`POST /v1/providers/me/bookings/manual` jest chroniony trzema warstwami przed double-booking:
+
+### Warstwa 1 — Serializable transaction (DB)
+
+```typescript
+await prisma.$transaction(async (tx) => {
+  const overlap = await tx.booking.count({ where: { startAt: { lt: endAt }, endAt: { gt: startAt }, ... } });
+  if (overlap >= capacity) throw AppException(BOOKING_SLOT_TAKEN, 409);
+  return bookingsRepository.createManualTx(tx, data);
+}, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+```
+
+PostgreSQL SERIALIZABLE wykrywa konflikt odczytu-zapisu między równoległymi transakcjami i zwraca kod `40001` (serialization_failure). Prisma mapuje to na `P2034` — catch blok zamienia to na `BOOKING_SLOT_TAKEN` 409.
+
+`skipAvailabilityCheck: true` omija warstwy 2 i 3 (recepcjonistka jawnie nadpisuje blokadę) — warstwa 1 (DB) jest zawsze aktywna.
+
+### Warstwa 2 — Idempotency keys
+
+Nagłówek: `X-Idempotency-Key: <uuid>` (do 128 znaków)
+
+Model: `IdempotencyKey` w `apps/api/prisma/schema.prisma` — TTL 5 min, czyszczony co godzinę przez `@Cron`.
+
+Zachowanie:
+
+- Brak klucza → bez idempotentności (normalny request)
+- Klucz nowy → wykonaj request, zapisz odpowiedź
+- Klucz znany + identyczny payload → zwróć cached odpowiedź
+- Klucz znany + inny payload → `IDEMPOTENCY_CONFLICT` 422
+
+Panel generuje UUID na otwarcie modalu (`crypto.randomUUID()`), rotuje po błędzie 409.
+
+### Warstwa 3 — Availability version token (fast-check)
+
+`GET /v1/providers/me/bookings/availability` zwraca `version: string` — SHA-256 (pierwsze 8 hex) posortowanych ID + czasów aktywnych rezerwacji na dany dzień.
+
+Panel wysyła go jako `availabilityVersion` w body `createManual`. Przed wejściem do transakcji serwis sprawdza czy wersja się zgadza — jeśli nie, zwraca `BOOKING_VERSION_MISMATCH` 409 bez blokowania DB.
+
+Panel po otrzymaniu 409 (`BOOKING_SLOT_TAKEN` lub `BOOKING_VERSION_MISMATCH`) automatycznie odświeża dostępność (`mutateAvailability()`).
 
 ---
 

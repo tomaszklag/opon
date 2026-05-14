@@ -111,15 +111,6 @@
   scrollbar-width: thin;
 }
 
-.content::-webkit-scrollbar {
-  width: 6px;
-}
-
-.content::-webkit-scrollbar-thumb {
-  background: var(--border);
-  border-radius: 3px;
-}
-
 .inner {
   width: 100%;
   max-width: 900px;

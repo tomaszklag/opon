@@ -902,3 +902,19 @@ model StoragePeriod {
   @@index([tireSetId])
   @@map("storage_periods")
 }
+
+// ── Concurrency: idempotency keys ─────────────────────────────────────────
+// Stores the result of POST requests for 5 minutes so retries return the
+// same response without creating duplicate bookings.
+
+model IdempotencyKey {
+  // scopedKey = "<userId>:<client-supplied UUID>"
+  scopedKey   String   @id @db.VarChar(200)
+  payloadHash String   @db.VarChar(64)  // SHA-256 of request body
+  statusCode  Int
+  response    Json
+  expiresAt   DateTime
+
+  @@index([expiresAt])
+  @@map("idempotency_keys")
+}

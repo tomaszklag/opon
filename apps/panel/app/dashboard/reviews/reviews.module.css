@@ -27,8 +27,6 @@
   gap: 18px;
   scrollbar-width: thin;
 }
-.content::-webkit-scrollbar { width: 6px; }
-.content::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 
 /* ── Loading ── */
 .loadingWrap {

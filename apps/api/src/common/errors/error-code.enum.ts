@@ -114,6 +114,14 @@ export enum ErrorCode {
   PROVIDER_PAUSED = 'PROVIDER_PAUSED',
   /** Pracownik jest na urlopie */
   WORKER_ON_LEAVE = 'WORKER_ON_LEAVE',
+  /** Termin zajęty — pojemność stanowisk wyczerpana lub pracownik niedostępny */
+  BOOKING_SLOT_TAKEN = 'BOOKING_SLOT_TAKEN',
+  /** Dostępność zmieniła się od ostatniego sprawdzenia (wersja nieaktualna) */
+  BOOKING_VERSION_MISMATCH = 'BOOKING_VERSION_MISMATCH',
+
+  // ── IDEMPOTENCY ───────────────────────────────────────────────────────────
+  /** Ten sam klucz idempotentności użyty z innym ciałem żądania */
+  IDEMPOTENCY_CONFLICT = 'IDEMPOTENCY_CONFLICT',
 
   // ── REVIEW ────────────────────────────────────────────────────────────────
   /** Opinia nie istnieje lub brak dostępu */

@@ -6,7 +6,7 @@ import type { Booking, BookingStatus } from '../../../../api-data-access/booking
 import type { WorkerTask } from '../../../../api-data-access/worker-tasks';
 import type { ScheduleException } from '../../../../api-data-access/schedule-exceptions';
 import type { Worker } from '../../../../api-data-access/workers';
-import { IconInfo, IconArrowRight } from '../../../../components/icons';
+import { IconInfo, IconArrowRight, IconGripVertical } from '../../../../components/icons';
 import { HOLIDAY_MAP } from '../../../../lib/holidays';
 import {
   HOURS,
@@ -43,6 +43,7 @@ interface WeekViewProps {
   isLoading: boolean;
   nowLineTop: number;
   nowTime: string;
+  isSlotMenuOpen?: boolean;
   onBookingClick?: (booking: Booking) => void;
   onSlotClick?: (date: Date, time: string, x: number, y: number) => void;
   onReschedule?: (booking: Booking, newDate: Date, newTime: string) => void;
@@ -100,6 +101,7 @@ export function WeekView({
   isLoading,
   nowLineTop,
   nowTime,
+  isSlotMenuOpen,
   onBookingClick,
   onSlotClick,
   onReschedule,
@@ -112,26 +114,44 @@ export function WeekView({
   const dragRef = useRef<{ booking: Booking; grabOffsetY: number; heightPx: number } | null>(null);
   const dragDisplayRef = useRef<DragDisplay | null>(null);
   dragDisplayRef.current = dragDisplay;
+  const justDraggedRef = useRef(false);
+  const GHOST_H = 60;
 
   function handleColumnMouseMove(e: React.MouseEvent<HTMLDivElement>, day: Date) {
-    if (dragRef.current) return;
+    if (dragRef.current || isSlotMenuOpen) return;
     if ((e.target as Element).closest('[data-booking]')) {
       setHoverInfo(null);
       return;
     }
     const rect = e.currentTarget.getBoundingClientRect();
     const rawTop = e.clientY - rect.top;
-    const snappedTop = Math.min(Math.round(rawTop / 15) * 15, GRID_HEIGHT - 60);
-    const time = snapTimeFromOffset(rawTop);
-    setHoverInfo({ dayKey: day.toISOString(), top: snappedTop, time });
+    const snappedTop = Math.min(Math.round(rawTop / 15) * 15, GRID_HEIGHT - GHOST_H);
+    const overlaps = bookings
+      .filter((b) => isSameDay(new Date(b.startAt), day))
+      .some((b) => {
+        const s = new Date(b.startAt);
+        const en = new Date(b.endAt);
+        const minToY = (h: number, m: number) =>
+          (h * 60 + m - HOUR_START * 60) * (PX_PER_HOUR / 60);
+        const bTop = minToY(s.getHours(), s.getMinutes());
+        const bBot = minToY(en.getHours(), en.getMinutes());
+        return snappedTop < bBot && snappedTop + GHOST_H > bTop;
+      });
+    if (overlaps) {
+      setHoverInfo(null);
+      return;
+    }
+    setHoverInfo({ dayKey: day.toISOString(), top: snappedTop, time: snapTimeFromOffset(rawTop) });
   }
 
   function startBookingDrag(e: React.MouseEvent, booking: Booking, day: Date) {
     if (!isDraggable(booking.status) || !onReschedule) return;
-    e.preventDefault();
     e.stopPropagation();
 
-    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const bookingEl =
+      ((e.currentTarget as HTMLElement).closest('[data-booking]') as HTMLElement) ??
+      (e.currentTarget as HTMLElement);
+    const rect = bookingEl.getBoundingClientRect();
     const grabOffsetY = e.clientY - rect.top;
     const startObj = new Date(booking.startAt);
     const endObj = new Date(booking.endAt);
@@ -194,6 +214,11 @@ export function WeekView({
       setDragDisplay(null);
       setHoverInfo(null);
 
+      justDraggedRef.current = true;
+      setTimeout(() => {
+        justDraggedRef.current = false;
+      }, 0);
+
       if (!drag || !display) return;
 
       const targetDay = weekDays.find((d) => d.toISOString() === display.dayKey);
@@ -252,6 +277,7 @@ export function WeekView({
             ).length;
             const iso = toISODate(day);
             const holiday = HOLIDAY_MAP.get(iso);
+            const isDayOff = isSunday || !!holiday;
             const exception = exceptions.find((e) => e.date.slice(0, 10) === iso);
             const workersOnLeave = workers.filter((w) =>
               w.leaves.some(
@@ -261,7 +287,7 @@ export function WeekView({
             return (
               <div
                 key={day.toISOString()}
-                className={`${styles.dayColHead} ${todayDay ? styles.today : ''} ${isSunday ? styles.closed : ''}`}
+                className={`${styles.dayColHead} ${todayDay ? styles.today : ''} ${isDayOff ? styles.closed : ''}`}
               >
                 {todayDay && <span className={styles.todayBadge}>Dziś</span>}
                 <span className={styles.dayAbbr}>{DAY_ABBR[day.getDay()]}</span>
@@ -318,22 +344,24 @@ export function WeekView({
           {weekDays.map((day) => {
             const todayDay = isToday(day);
             const isSunday = day.getDay() === 0;
+            const colIso = toISODate(day);
+            const isDayOff = isSunday || !!HOLIDAY_MAP.get(colIso);
             const dayBookings = getDayBookings(day);
             return (
               <div
                 key={day.toISOString()}
-                className={`${styles.dayCol} ${todayDay ? styles.today : ''} ${isSunday ? styles.closed : ''}`}
+                className={`${styles.dayCol} ${todayDay ? styles.today : ''} ${isDayOff ? styles.closed : ''}`}
               >
                 <div
                   data-calday={day.toISOString()}
                   className={styles.dayColInner}
                   style={{ height: `${GRID_HEIGHT}px` }}
-                  onMouseMove={!isSunday ? (e) => handleColumnMouseMove(e, day) : undefined}
+                  onMouseMove={!isDayOff ? (e) => handleColumnMouseMove(e, day) : undefined}
                   onMouseLeave={() => {
-                    if (!dragRef.current) setHoverInfo(null);
+                    if (!dragRef.current && !isSlotMenuOpen) setHoverInfo(null);
                   }}
                   onClick={(e) => {
-                    if (!onSlotClick || isSunday || dragDisplay) return;
+                    if (!onSlotClick || isDayOff || dragDisplay || justDraggedRef.current) return;
                     const rect = e.currentTarget.getBoundingClientRect();
                     onSlotClick(
                       day,
@@ -346,12 +374,12 @@ export function WeekView({
                   {gridlines.map((top) => (
                     <div key={top} className={styles.hourGridline} style={{ top: `${top}px` }} />
                   ))}
-                  {!isSunday && !dragDisplay && hoverInfo?.dayKey === day.toISOString() && (
+                  {!isDayOff && !dragDisplay && hoverInfo?.dayKey === day.toISOString() && (
                     <div className={styles.slotGhost} style={{ top: hoverInfo.top }}>
                       <span className={styles.slotGhostLabel}>{hoverInfo.time}</span>
                     </div>
                   )}
-                  {!isSunday && dragDisplay?.dayKey === day.toISOString() && (
+                  {!isDayOff && dragDisplay?.dayKey === day.toISOString() && (
                     <div
                       className={styles.bookingDragGhost}
                       style={{ top: `${dragDisplay.top}px`, height: `${dragDisplay.height}px` }}
@@ -360,8 +388,7 @@ export function WeekView({
                       <span className={styles.bookingDragGhostName}>{dragDisplay.clientName}</span>
                     </div>
                   )}
-                  {isSunday && <span className={styles.closedMsg}>Niedziela · nieczynne</span>}
-                  {!isSunday &&
+                  {!isDayOff &&
                     getDayTasks(day).map((task) => (
                       <div
                         key={task.id}
@@ -390,7 +417,7 @@ export function WeekView({
                         )}
                       </div>
                     ))}
-                  {!isSunday &&
+                  {!isDayOff &&
                     dayBookings.map((booking) => {
                       const showPendingBadge = booking.status === 'PENDING';
                       const showProgressBadge = booking.status === 'IN_PROGRESS';
@@ -416,7 +443,6 @@ export function WeekView({
                             .join(' ')}
                           style={getBookingStyle(booking.startAt, booking.endAt)}
                           title={`${booking.clientName} — ${formatTime(booking.startAt)} – ${formatTime(booking.endAt)}`}
-                          onMouseDown={(e) => startBookingDrag(e, booking, day)}
                           onClick={(e) => {
                             e.stopPropagation();
                             onBookingClick?.(booking);
@@ -436,6 +462,18 @@ export function WeekView({
                           <span className={styles.bookingClient}>{booking.clientName}</span>
                           {metaParts.length > 0 && (
                             <span className={styles.bookingMeta}>{metaParts.join(' · ')}</span>
+                          )}
+                          {isDraggable(booking.status) && onReschedule && (
+                            <div
+                              className={styles.dragHandle}
+                              onMouseDown={(e) => {
+                                e.stopPropagation();
+                                startBookingDrag(e, booking, day);
+                              }}
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <IconGripVertical width="10" height="10" />
+                            </div>
                           )}
                         </div>
                       );
@@ -553,6 +591,15 @@ export function WeekView({
               </Text>
               <Text variant="kicker-sm" as="span" className={styles.legendCount}>
                 {completedCount}
+              </Text>
+            </div>
+            <div className={styles.legendItem}>
+              <span className={`${styles.legendSwatch} ${styles.legendSwatchTask}`} />
+              <Text variant="body-sm" as="span" color="secondary">
+                Zadanie
+              </Text>
+              <Text variant="kicker-sm" as="span" className={styles.legendCount}>
+                {tasks.length}
               </Text>
             </div>
           </div>

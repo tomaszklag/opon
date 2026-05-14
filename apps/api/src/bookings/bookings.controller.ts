@@ -8,7 +8,9 @@ import {
   Patch,
   Post,
   Query,
+  UseInterceptors,
 } from '@nestjs/common';
+import { IdempotencyInterceptor } from '../common/idempotency/idempotency.interceptor';
 import { ApiCookieAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { JwtPayload } from '../auth/types/jwt-payload.interface';
@@ -89,6 +91,7 @@ export class BookingsController {
 
   @Post('manual')
   @HttpCode(HttpStatus.CREATED)
+  @UseInterceptors(IdempotencyInterceptor)
   @ApiOperation({ summary: 'Create manual booking (provider-initiated)' })
   @ApiResponse({ status: 201, type: BookingResponseDto })
   async createManual(

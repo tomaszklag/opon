@@ -74,4 +74,14 @@ export class CreateManualBookingDto {
   @IsOptional()
   @IsBoolean()
   skipAvailabilityCheck?: boolean;
+
+  @ApiPropertyOptional({
+    example: 'a1b2c3d4',
+    description:
+      'Fingerprint z GET /availability. Jeśli podany i nieaktualny, serwer zwraca 409 z aktualną dostępnością.',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(8)
+  availabilityVersion?: string;
 }

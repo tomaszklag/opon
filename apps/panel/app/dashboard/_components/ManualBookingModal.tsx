@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import {
   Modal,
   Button,
@@ -20,7 +20,7 @@ import type {
   ServiceGroupResponse,
   ServiceVariantResponse,
 } from '../../../api-data-access/service-groups';
-import type { AvailabilitySlot } from '../../../api-data-access/bookings';
+import { IconCheck } from '../../../components/icons';
 import styles from './ManualBookingModal.module.css';
 
 interface ManualBookingModalProps {
@@ -28,6 +28,7 @@ interface ManualBookingModalProps {
   onClose: () => void;
   onSuccess?: () => void;
   initialDate?: string;
+  initialTime?: string;
 }
 
 type RimTier = ServiceVariantResponse['rimTiers'][number];
@@ -38,7 +39,8 @@ function getDefaultDate(): string {
 }
 
 function formatSlotTime(iso: string): string {
-  return new Date(iso).toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' });
+  const d = new Date(iso);
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 }
 
 function pluralConflicts(n: number): string {
@@ -71,10 +73,13 @@ export function ManualBookingModal({
   onClose,
   onSuccess,
   initialDate,
+  initialTime,
 }: ManualBookingModalProps) {
   const { createBooking, isLoading, error } = useCreateManualBooking();
   const { workers } = useWorkersList();
   const { groups: serviceGroups } = useServiceGroups();
+  // Stable UUID per modal session — rotated on each open
+  const idempotencyKeyRef = useRef<string | null>(null);
 
   const [clientName, setClientName] = useState('');
   const [clientPhone, setClientPhone] = useState('');
@@ -86,14 +91,18 @@ export function ManualBookingModal({
   const [checkedSubNames, setCheckedSubNames] = useState<Set<string>>(new Set());
   const [workerId, setWorkerId] = useState('');
   const [date, setDate] = useState(getDefaultDate);
-  const [selectedSlot, setSelectedSlot] = useState<AvailabilitySlot | null>(null);
+  const [timeInput, setTimeInput] = useState('');
   // manual price override; empty = use auto-calculated price
   const [totalPricePln, setTotalPricePln] = useState('');
   const [notes, setNotes] = useState('');
   const [autoConfirm, setAutoConfirm] = useState(true);
   const [validationError, setValidationError] = useState<string | null>(null);
 
-  const { availability, isLoading: availLoading } = useAvailability(date, workerId || undefined);
+  const {
+    availability,
+    isLoading: availLoading,
+    mutate: mutateAvailability,
+  } = useAvailability(date, workerId || undefined);
 
   // Resolve selected variant + its group from the loaded catalog
   const selectedVariantRef = useMemo<{
@@ -162,10 +171,71 @@ export function ManualBookingModal({
     ...workers.map((w) => ({ value: w.id, label: w.name })),
   ];
 
+  // Derive ISO startAt/endAt from free time input
+  const startAt = useMemo(() => {
+    if (!date || !/^\d{2}:\d{2}$/.test(timeInput)) return null;
+    return new Date(`${date}T${timeInput}:00`).toISOString();
+  }, [date, timeInput]);
+
+  const endAt = useMemo(() => {
+    if (!startAt) return null;
+    const dur = totalDurationMinutes ?? 60;
+    return new Date(new Date(startAt).getTime() + dur * 60_000).toISOString();
+  }, [startAt, totalDurationMinutes]);
+
+  // Slots that overlap [startAt, endAt] and have conflicts
+  const overlapSlots = useMemo(() => {
+    if (!startAt || !endAt || !availability?.slots) return [];
+    return availability.slots.filter(
+      (s) => s.startAt < endAt && s.endAt > startAt && (!s.isAvailable || s.conflictCount > 0),
+    );
+  }, [startAt, endAt, availability]);
+
+  const hasConflict = overlapSlots.length > 0;
+  const totalConflictCount = overlapSlots.reduce((n, s) => n + s.conflictCount, 0);
+
+  // Nearest fully-free slot at or after entered time
+  const nearestFreeSlot = useMemo(() => {
+    if (!availability?.slots?.length || !timeInput) return null;
+    const [h, m] = timeInput.split(':');
+    const targetMin = Number(h) * 60 + Number(m ?? 0);
+    return (
+      availability.slots.find((s) => {
+        const d = new Date(s.startAt);
+        return (
+          d.getHours() * 60 + d.getMinutes() >= targetMin && s.isAvailable && s.conflictCount === 0
+        );
+      }) ?? null
+    );
+  }, [availability, timeInput]);
+
+  // Best-fit slot: free slot adjacent to a booked slot → minimises idle gaps
+  const bestFitSlot = useMemo(() => {
+    if (!availability?.slots?.length) return null;
+    const free = availability.slots.filter((s) => s.isAvailable && s.conflictCount === 0);
+    if (!free.length) return null;
+    const busy = availability.slots.filter((s) => !s.isAvailable || s.conflictCount > 0);
+    if (!busy.length) return free[0] ?? null;
+    const scored = free.map((slot) => ({
+      slot,
+      score:
+        (busy.some((b) => b.endAt === slot.startAt) ? 2 : 0) +
+        (busy.some((b) => b.startAt === slot.endAt) ? 1 : 0),
+    }));
+    scored.sort(
+      (a, b) =>
+        b.score - a.score ||
+        new Date(a.slot.startAt).getTime() - new Date(b.slot.startAt).getTime(),
+    );
+    return scored[0]?.slot ?? null;
+  }, [availability]);
+
   useEffect(() => {
     if (!isOpen) return;
+    idempotencyKeyRef.current = crypto.randomUUID();
     if (initialDate) setDate(initialDate);
-  }, [isOpen, initialDate]);
+    if (initialTime) setTimeInput(initialTime);
+  }, [isOpen, initialDate, initialTime]);
 
   const resetForm = useCallback(() => {
     setClientName('');
@@ -175,7 +245,7 @@ export function ManualBookingModal({
     setCheckedSubNames(new Set());
     setWorkerId('');
     setDate(getDefaultDate());
-    setSelectedSlot(null);
+    setTimeInput('');
     setTotalPricePln('');
     setNotes('');
     setAutoConfirm(true);
@@ -191,12 +261,10 @@ export function ManualBookingModal({
 
   function handleDateChange(newDate: string) {
     setDate(newDate);
-    setSelectedSlot(null);
   }
 
   function handleWorkerChange(newWorkerId: string) {
     setWorkerId(newWorkerId);
-    setSelectedSlot(null);
   }
 
   function toggleSubService(subName: string) {
@@ -215,8 +283,8 @@ export function ManualBookingModal({
       setValidationError('Wypełnij imię i nazwisko oraz telefon.');
       return;
     }
-    if (!selectedSlot) {
-      setValidationError('Wybierz godzinę wizyty.');
+    if (!startAt || !endAt) {
+      setValidationError('Podaj godzinę wizyty (format GG:MM).');
       return;
     }
 
@@ -230,23 +298,31 @@ export function ManualBookingModal({
 
     const resolvedPrice = totalPricePln ? Number(totalPricePln) : (autoPrice ?? undefined);
 
-    const ok = await createBooking({
-      clientName: clientName.trim(),
-      clientPhone: `+48${clientPhone.trim()}`,
-      startAt: selectedSlot.startAt,
-      endAt: selectedSlot.endAt,
-      tireSize: resolvedTireSize,
-      serviceType: resolvedServiceType,
-      workerId: workerId || undefined,
-      totalPricePln: resolvedPrice,
-      notes: notes.trim() || undefined,
-      autoConfirm,
-    });
+    const result = await createBooking(
+      {
+        clientName: clientName.trim(),
+        clientPhone: `+48${clientPhone.trim()}`,
+        startAt,
+        endAt,
+        tireSize: resolvedTireSize,
+        serviceType: resolvedServiceType,
+        workerId: workerId || undefined,
+        totalPricePln: resolvedPrice,
+        notes: notes.trim() || undefined,
+        autoConfirm,
+        availabilityVersion: availability?.version,
+      },
+      idempotencyKeyRef.current ?? undefined,
+    );
 
-    if (ok) {
+    if (result.success) {
       onSuccess?.();
       onClose();
       resetForm();
+    } else if (result.code === 'BOOKING_SLOT_TAKEN' || result.code === 'BOOKING_VERSION_MISMATCH') {
+      // Refresh availability so user sees current state; rotate idempotency key for retry
+      void mutateAvailability();
+      idempotencyKeyRef.current = crypto.randomUUID();
     }
   }
 
@@ -400,19 +476,7 @@ export function ManualBookingModal({
                         <span
                           className={`${styles.subChk} ${sub.included ? styles.subChkLocked : isChecked ? styles.subChkChecked : ''}`}
                         >
-                          {(sub.included || isChecked) && (
-                            <svg
-                              width="8"
-                              height="8"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="3"
-                              aria-hidden="true"
-                            >
-                              <polyline points="20 6 9 17 4 12" />
-                            </svg>
-                          )}
+                          {(sub.included || isChecked) && <IconCheck width={8} height={8} />}
                         </span>
                         <div className={styles.subInfo}>
                           <Text variant="body-sm" as="span">
@@ -468,17 +532,19 @@ export function ManualBookingModal({
             </div>
           </div>
 
-          {/* Slot picker */}
+          {/* Time picker */}
           <div className={styles.slotArea}>
             <Text variant="kicker-sm" color="muted" className={styles.sectionLabel}>
               Godzina
-              {selectedSlot && (
-                <span className={styles.selectedTime}>
-                  {' '}
-                  · {formatSlotTime(selectedSlot.startAt)}
-                </span>
-              )}
             </Text>
+
+            <Input
+              label="Godzina wizyty"
+              type="time"
+              value={timeInput}
+              onChange={(e) => setTimeInput(e.target.value)}
+              required
+            />
 
             {availLoading && (
               <div className={styles.spinnerRow}>
@@ -492,35 +558,39 @@ export function ManualBookingModal({
               </Text>
             )}
 
-            {!availLoading && availability && !availability.isClosedDay && (
-              <div className={styles.slotGrid}>
-                {availability.slots.map((slot) => {
-                  const isSelected =
-                    selectedSlot?.startAt === slot.startAt && selectedSlot?.endAt === slot.endAt;
-                  const hasConflict = !slot.isAvailable || slot.conflictCount > 0;
-                  return (
-                    <button
-                      key={slot.startAt}
-                      type="button"
-                      className={`${styles.slotBtn} ${isSelected ? styles.slotBtnSelected : ''} ${hasConflict ? styles.slotBtnConflict : ''}`}
-                      onClick={() => setSelectedSlot(slot)}
-                    >
-                      <Text variant="kicker-sm" as="span">
-                        {formatSlotTime(slot.startAt)}
-                      </Text>
-                      {hasConflict && <span className={styles.conflictDot} />}
-                    </button>
-                  );
-                })}
-              </div>
+            {/* Best-fit suggestion when no time entered yet */}
+            {!timeInput && !availLoading && bestFitSlot && (
+              <button
+                type="button"
+                className={styles.slotSuggestion}
+                onClick={() => setTimeInput(formatSlotTime(bestFitSlot.startAt))}
+              >
+                <span className={styles.slotSuggestionLabel}>
+                  Sugerujemy {formatSlotTime(bestFitSlot.startAt)}
+                </span>
+                <span className={styles.slotSuggestionHint}>minimalizuje przerwy →</span>
+              </button>
             )}
 
-            {selectedSlot && (!selectedSlot.isAvailable || selectedSlot.conflictCount > 0) && (
+            {/* Conflict warning */}
+            {timeInput && hasConflict && (
               <div className={styles.conflictBanner}>
                 <Text variant="body-sm" color="warning" as="p">
-                  Slot ma {selectedSlot.conflictCount} {pluralConflicts(selectedSlot.conflictCount)}{' '}
-                  — zapis możliwy.
+                  Wizyta zachodzi na {totalConflictCount} {pluralConflicts(totalConflictCount)} —
+                  zapis możliwy.
                 </Text>
+                {nearestFreeSlot && (
+                  <button
+                    type="button"
+                    className={styles.slotSuggestion}
+                    onClick={() => setTimeInput(formatSlotTime(nearestFreeSlot.startAt))}
+                  >
+                    <span className={styles.slotSuggestionLabel}>
+                      Najbliższy wolny: {formatSlotTime(nearestFreeSlot.startAt)}
+                    </span>
+                    <span className={styles.slotSuggestionHint}>użyj →</span>
+                  </button>
+                )}
               </div>
             )}
           </div>
@@ -588,7 +658,7 @@ export function ManualBookingModal({
                     </Text>
                     {totalDurationMinutes !== null && (
                       <Text variant="nano" color="muted" as="span" className={styles.sumSub}>
-                        {selectedSlot ? `${formatSlotTime(selectedSlot.startAt)} → ` : ''}
+                        {timeInput ? `${timeInput} → ` : ''}
                         {totalDurationMinutes} min
                       </Text>
                     )}

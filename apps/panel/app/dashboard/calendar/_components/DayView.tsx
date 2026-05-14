@@ -6,7 +6,7 @@ import type { Booking, BookingStatus } from '../../../../api-data-access/booking
 import type { WorkerTask } from '../../../../api-data-access/worker-tasks';
 import type { ScheduleException } from '../../../../api-data-access/schedule-exceptions';
 import type { Worker } from '../../../../api-data-access/workers';
-import { IconInfo, IconArrowRight } from '../../../../components/icons';
+import { IconInfo, IconArrowRight, IconGripVertical } from '../../../../components/icons';
 import { HOLIDAY_MAP } from '../../../../lib/holidays';
 import {
   HOURS,
@@ -38,6 +38,7 @@ interface DayViewProps {
   isLoading: boolean;
   nowLineTop: number;
   nowTime: string;
+  isSlotMenuOpen?: boolean;
   onBookingClick?: (booking: Booking) => void;
   onSlotClick?: (date: Date, time: string, x: number, y: number) => void;
   onReschedule?: (booking: Booking, newDate: Date, newTime: string) => void;
@@ -84,6 +85,7 @@ export function DayView({
   isLoading,
   nowLineTop,
   nowTime,
+  isSlotMenuOpen,
   onBookingClick,
   onSlotClick,
   onReschedule,
@@ -101,13 +103,15 @@ export function DayView({
   const dragRef = useRef<{ booking: Booking; grabOffsetY: number; heightPx: number } | null>(null);
   const dragDisplayRef = useRef(dragDisplay);
   dragDisplayRef.current = dragDisplay;
-
+  const justDraggedRef = useRef(false);
   function startBookingDrag(e: React.MouseEvent, booking: Booking) {
     if (!isDraggable(booking.status) || !onReschedule) return;
-    e.preventDefault();
     e.stopPropagation();
 
-    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const bookingEl =
+      ((e.currentTarget as HTMLElement).closest('[data-booking]') as HTMLElement) ??
+      (e.currentTarget as HTMLElement);
+    const rect = bookingEl.getBoundingClientRect();
     const grabOffsetY = e.clientY - rect.top;
     const startObj = new Date(booking.startAt);
     const endObj = new Date(booking.endAt);
@@ -165,6 +169,11 @@ export function DayView({
       setDragDisplay(null);
       setHoverTop(null);
 
+      justDraggedRef.current = true;
+      setTimeout(() => {
+        justDraggedRef.current = false;
+      }, 0);
+
       if (!drag || !display) return;
       const origTime = formatTime(drag.booking.startAt);
       if (display.time !== origTime) {
@@ -194,6 +203,7 @@ export function DayView({
 
   const iso = toISODate(day);
   const holiday = HOLIDAY_MAP.get(iso);
+  const isDayOff = isSunday || !!holiday;
   const exception = exceptions.find((e) => e.date.slice(0, 10) === iso);
   const workersOnLeave = workers.filter((w) =>
     w.leaves.some((l) => iso >= l.startDate.slice(0, 10) && iso <= l.endDate.slice(0, 10)),
@@ -207,7 +217,7 @@ export function DayView({
         <div className={styles.dayViewHeader}>
           <div className={styles.dayHeaderTz}>CET</div>
           <div
-            className={`${styles.dayViewHeadCol} ${todayDay ? styles.today : ''} ${isSunday ? styles.closed : ''}`}
+            className={`${styles.dayViewHeadCol} ${todayDay ? styles.today : ''} ${isDayOff ? styles.closed : ''}`}
           >
             {todayDay && <span className={styles.todayBadge}>Dziś</span>}
             <span className={styles.dayAbbr}>{DAY_ABBR[day.getDay()]}</span>
@@ -260,32 +270,50 @@ export function DayView({
           </div>
 
           <div
-            className={`${styles.dayViewCol} ${todayDay ? styles.today : ''} ${isSunday ? styles.closed : ''}`}
+            className={`${styles.dayViewCol} ${todayDay ? styles.today : ''} ${isDayOff ? styles.closed : ''}`}
           >
             <div
               data-calday={day.toISOString()}
               className={styles.dayColInner}
               style={{ height: `${GRID_HEIGHT}px` }}
               onMouseMove={
-                !isSunday
+                !isDayOff
                   ? (e) => {
-                      if (dragRef.current) return;
+                      if (dragRef.current || isSlotMenuOpen) return;
                       if ((e.target as Element).closest('[data-booking]')) {
                         setHoverTop(null);
                         return;
                       }
                       const rect = e.currentTarget.getBoundingClientRect();
                       const rawTop = e.clientY - rect.top;
-                      setHoverTop(Math.min(Math.round(rawTop / 15) * 15, GRID_HEIGHT - 60));
+                      const GHOST_H = 60;
+                      const snappedTop = Math.min(
+                        Math.round(rawTop / 15) * 15,
+                        GRID_HEIGHT - GHOST_H,
+                      );
+                      const minToY = (h: number, m: number) =>
+                        (h * 60 + m - HOUR_START * 60) * (PX_PER_HOUR / 60);
+                      const overlaps = allDayBookings.some((b) => {
+                        const s = new Date(b.startAt);
+                        const en = new Date(b.endAt);
+                        const bTop = minToY(s.getHours(), s.getMinutes());
+                        const bBot = minToY(en.getHours(), en.getMinutes());
+                        return snappedTop < bBot && snappedTop + GHOST_H > bTop;
+                      });
+                      if (overlaps) {
+                        setHoverTop(null);
+                        return;
+                      }
+                      setHoverTop(snappedTop);
                       setHoverTime(snapTimeFromOffset(rawTop));
                     }
                   : undefined
               }
               onMouseLeave={() => {
-                if (!dragRef.current) setHoverTop(null);
+                if (!dragRef.current && !isSlotMenuOpen) setHoverTop(null);
               }}
               onClick={(e) => {
-                if (!onSlotClick || isSunday || dragDisplay) return;
+                if (!onSlotClick || isDayOff || dragDisplay || justDraggedRef.current) return;
                 const rect = e.currentTarget.getBoundingClientRect();
                 onSlotClick(day, snapTimeFromOffset(e.clientY - rect.top), e.clientX, e.clientY);
               }}
@@ -293,12 +321,12 @@ export function DayView({
               {gridlines.map((top) => (
                 <div key={top} className={styles.hourGridline} style={{ top: `${top}px` }} />
               ))}
-              {!isSunday && !dragDisplay && hoverTop !== null && (
+              {!isDayOff && !dragDisplay && hoverTop !== null && (
                 <div className={styles.slotGhost} style={{ top: hoverTop }}>
                   <span className={styles.slotGhostLabel}>{hoverTime}</span>
                 </div>
               )}
-              {!isSunday && dragDisplay && (
+              {!isDayOff && dragDisplay && (
                 <div
                   className={styles.bookingDragGhost}
                   style={{ top: `${dragDisplay.top}px`, height: `${dragDisplay.height}px` }}
@@ -308,9 +336,7 @@ export function DayView({
                 </div>
               )}
 
-              {isSunday && <span className={styles.closedMsg}>Niedziela · nieczynne</span>}
-
-              {!isSunday &&
+              {!isDayOff &&
                 tasks
                   .filter((t) => isSameDay(new Date(t.startAt), day))
                   .map((task) => (
@@ -342,7 +368,7 @@ export function DayView({
                     </div>
                   ))}
 
-              {!isSunday &&
+              {!isDayOff &&
                 visibleBookings.map((booking) => {
                   const showPendingBadge = booking.status === 'PENDING';
                   const showProgressBadge = booking.status === 'IN_PROGRESS';
@@ -365,7 +391,6 @@ export function DayView({
                         .join(' ')}
                       style={getBookingStyle(booking.startAt, booking.endAt)}
                       title={`${booking.clientName} — ${formatTime(booking.startAt)} – ${formatTime(booking.endAt)}`}
-                      onMouseDown={(e) => startBookingDrag(e, booking)}
                       onClick={(e) => {
                         e.stopPropagation();
                         onBookingClick?.(booking);
@@ -385,6 +410,18 @@ export function DayView({
                       <span className={styles.bookingClient}>{booking.clientName}</span>
                       {metaParts.length > 0 && (
                         <span className={styles.bookingMeta}>{metaParts.join(' · ')}</span>
+                      )}
+                      {isDraggable(booking.status) && onReschedule && (
+                        <div
+                          className={styles.dragHandle}
+                          onMouseDown={(e) => {
+                            e.stopPropagation();
+                            startBookingDrag(e, booking);
+                          }}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <IconGripVertical width="10" height="10" />
+                        </div>
                       )}
                     </div>
                   );
@@ -500,6 +537,15 @@ export function DayView({
               </Text>
               <Text variant="kicker-sm" as="span" className={styles.legendCount}>
                 {completedCount}
+              </Text>
+            </div>
+            <div className={styles.legendItem}>
+              <span className={`${styles.legendSwatch} ${styles.legendSwatchTask}`} />
+              <Text variant="body-sm" as="span" color="secondary">
+                Zadanie
+              </Text>
+              <Text variant="kicker-sm" as="span" className={styles.legendCount}>
+                {tasks.length}
               </Text>
             </div>
           </div>

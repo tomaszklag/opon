@@ -1,9 +1,8 @@
 'use client';
 
 import { usePathname, useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { Text } from '@opony/design-system-web';
-import { api } from '../../../lib/api';
 import { useAuth } from '../../../lib/auth';
 import { useAuthGuard } from '../../../lib/hooks/use-auth-guard';
 import { usePause, isIndefinitePause } from '../../../lib/hooks/use-pause';
@@ -12,6 +11,7 @@ import {
   IconBookings,
   IconCalendar,
   IconCalendarOff,
+  IconLogOut,
   IconPause,
   IconProfile,
   IconReviews,
@@ -23,39 +23,6 @@ import {
 } from '../../../components/icons';
 import styles from './DashboardNav.module.css';
 
-type ProviderStatus = 'PENDING' | 'APPROVED' | 'SUSPENDED';
-
-interface ProviderMini {
-  name: string;
-  status: ProviderStatus;
-}
-
-const STATUS_LABEL: Record<ProviderStatus, string> = {
-  PENDING: 'Oczekuje na weryfikację',
-  APPROVED: 'Aktywna',
-  SUSPENDED: 'Zawieszona',
-};
-
-const STATUS_CLASS: Record<ProviderStatus, string> = {
-  PENDING: styles.statusPending ?? '',
-  APPROVED: styles.statusApproved ?? '',
-  SUSPENDED: styles.statusSuspended ?? '',
-};
-
-const PAGE_TITLE: Record<string, string> = {
-  '/dashboard': 'Dashboard',
-  '/dashboard/calendar': 'Kalendarz',
-  '/dashboard/services': 'Usługi & Cennik',
-  '/dashboard/stations': 'Stanowiska',
-  '/dashboard/closures': 'Zamknięcia & Wyjątki',
-  '/dashboard/workers': 'Pracownicy',
-  '/dashboard/bookings': 'Rezerwacje',
-  '/dashboard/depot': 'Skład opon',
-  '/dashboard/profile': 'Profil firmy',
-  '/dashboard/reviews': 'Opinie',
-  '/dashboard/settings': 'Ustawienia konta',
-};
-
 // ── Component ──────────────────────────────────────────────────────────────
 
 export default function DashboardNav() {
@@ -64,22 +31,12 @@ export default function DashboardNav() {
   const { logout } = useAuth();
   const { user } = useAuthGuard('/dashboard');
 
-  const [provider, setProvider] = useState<ProviderMini | null>(null);
-
   useEffect(() => {
     document.body.style.overflow = 'hidden';
     return () => {
       document.body.style.overflow = '';
     };
   }, []);
-
-  useEffect(() => {
-    if (!user) return;
-    api
-      .get<ProviderMini>('/v1/providers/me')
-      .then((p) => setProvider(p))
-      .catch(() => {});
-  }, [user]);
 
   async function handleLogout() {
     await logout();
@@ -92,9 +49,6 @@ export default function DashboardNav() {
   }
 
   const { isPaused, pausedUntil } = usePause();
-
-  const pageTitle =
-    PAGE_TITLE[pathname] ?? (pathname.startsWith('/dashboard/bookings/') ? 'Rezerwacje' : 'Panel');
 
   return (
     <>
@@ -199,56 +153,20 @@ export default function DashboardNav() {
         </nav>
 
         <div className={styles.footer}>
-          <div className={styles.userCard}>
-            <div className={styles.avatar}>{user?.phone?.slice(-2) ?? '??'}</div>
-            <div className={styles.userInfo}>
-              <Text variant="kicker" as="span" className={styles.userPhone}>
-                {user?.phone}
-              </Text>
-              <Text variant="nano" as="span" className={styles.userRole}>
-                {user?.role}
-              </Text>
-            </div>
-          </div>
+          {isPaused && pausedUntil && (
+            <a href="/dashboard/settings#sec-pause" className={styles.pauseBadge}>
+              <IconPause width="11" height="11" />
+              {isIndefinitePause(pausedUntil)
+                ? 'PAUZA · bezterminowo'
+                : `PAUZA · do ${new Date(pausedUntil).toLocaleDateString('pl-PL', { day: 'numeric', month: 'short' })}`}
+            </a>
+          )}
           <button className={styles.logoutBtn} onClick={handleLogout}>
+            <IconLogOut width={14} height={14} />
             Wyloguj
           </button>
         </div>
       </aside>
-
-      {/* ── Topbar ── */}
-      <header className={styles.topbar}>
-        <nav className={styles.breadcrumb} aria-label="Nawigacja strony">
-          <span className={styles.breadcrumbItem}>Panel</span>
-          <span className={styles.breadcrumbSep}>/</span>
-          <span className={`${styles.breadcrumbItem} ${styles.breadcrumbCurrent}`}>
-            {pageTitle}
-          </span>
-        </nav>
-        <div className={styles.topbarSpacer} />
-        {isPaused && pausedUntil && (
-          <a href="/dashboard/settings#sec-pause" className={styles.pauseBadge}>
-            <IconPause width="11" height="11" />
-            {isIndefinitePause(pausedUntil)
-              ? 'PAUZA · bezterminowo'
-              : `PAUZA · do ${new Date(pausedUntil).toLocaleDateString('pl-PL', { day: 'numeric', month: 'short' })}`}
-          </a>
-        )}
-        {provider && (
-          <>
-            <Text variant="body-sm" as="span" weight="bold" className={styles.firmName}>
-              {provider.name}
-            </Text>
-            <Text
-              variant="nano"
-              as="span"
-              className={`${styles.statusBadge} ${STATUS_CLASS[provider.status]}`}
-            >
-              {STATUS_LABEL[provider.status]}
-            </Text>
-          </>
-        )}
-      </header>
     </>
   );
 }

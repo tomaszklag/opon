@@ -2,6 +2,7 @@
 
 import { Button } from '@opony/design-system-web';
 import { IconDownload, IconPlus } from '../../../components/icons';
+import styles from './BookingTopbarActions.module.css';
 
 interface BookingTopbarActionsProps {
   exportLabel?: string;
@@ -25,10 +26,12 @@ export function BookingTopbarActions({
         {exportLabel}
       </Button>
       {onAddTask && (
-        <Button variant="secondary" size="sm" onClick={onAddTask}>
-          <IconPlus width="13" height="13" />
-          Dodaj zadanie
-        </Button>
+        <span className={styles.taskBtnWrap}>
+          <Button variant="secondary" size="sm" onClick={onAddTask}>
+            <IconPlus width="13" height="13" />
+            Dodaj zadanie
+          </Button>
+        </span>
       )}
       <Button variant="primary" size="sm" onClick={onAdd}>
         <IconPlus width="13" height="13" />

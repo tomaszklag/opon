@@ -1,12 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { BookingStatus, Prisma, ServiceType } from '@prisma/client';
+import { createHash } from 'crypto';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { AppException, ErrorCode } from '../common/errors';
 import { WorkerTasksService } from '../worker-tasks/worker-tasks.service';
 import { BookingDetailResponseDto } from './dto/booking-detail-response.dto';
 import { BookingResponseDto } from './dto/booking-response.dto';
 import { UpdateBookingStatusDto } from './dto/update-booking-status.dto';
-import { BookingsRepository, BookingWithDetail } from './bookings.repository';
+import { BookingsRepository, BookingWithDetail, ManualBookingData } from './bookings.repository';
 import { BookingAdminListQueryDto } from './dto/booking-admin-list-query.dto';
 import { BookingPageResponseDto } from './dto/booking-page-response.dto';
 import { BookingStatsResponseDto } from './dto/booking-stats-response.dto';
@@ -22,6 +23,14 @@ import {
   BookingBulkStatusChangedEvent,
 } from '../realtime/events/booking.events';
 import { RescheduleBookingDto } from './dto/reschedule-booking.dto';
+
+const INACTIVE_STATUSES = [
+  BookingStatus.CANCELLED_BY_CLIENT,
+  BookingStatus.CANCELLED_BY_PROVIDER,
+  BookingStatus.CANCELLED_BY_SYSTEM,
+  BookingStatus.REJECTED,
+  BookingStatus.NO_SHOW,
+] as const;
 
 interface DaySchedule {
   dayOfWeek: number;
@@ -212,31 +221,67 @@ export class BookingsService {
     }
   }
 
-  async createManual(providerId: string, dto: CreateManualBookingDto): Promise<BookingResponseDto> {
-    if (!dto.skipAvailabilityCheck) {
-      await this.validateManualSlot(
+  // ── version helpers ───────────────────────────────────────────────────────
+
+  private async computeDayVersion(providerId: string, date: Date): Promise<string> {
+    const dayStart = new Date(
+      Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()),
+    );
+    const dayEnd = new Date(
+      Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate() + 1),
+    );
+    const bookings = await this.prisma.booking.findMany({
+      where: {
         providerId,
-        new Date(dto.startAt),
-        new Date(dto.endAt),
-        dto.workerId,
-      );
+        startAt: { gte: dayStart, lt: dayEnd },
+        status: { notIn: [...INACTIVE_STATUSES] },
+      },
+      select: { id: true, startAt: true },
+      orderBy: { startAt: 'asc' },
+    });
+    const input = bookings.map((b) => `${b.id}:${b.startAt.toISOString()}`).join('|');
+    return createHash('sha256').update(input).digest('hex').slice(0, 8);
+  }
+
+  private async getWorkstationCapacity(
+    providerId: string,
+    date: Date,
+    stationId?: string | null,
+  ): Promise<number> {
+    const dayOfWeek = date.getUTCDay();
+    const where = stationId ? { id: stationId, providerId } : { providerId };
+    const stations = await this.prisma.station.findMany({
+      where,
+      select: { schedule: true },
+    });
+    const openEntries = stations
+      .flatMap((s) => (s.schedule as unknown as DaySchedule[]) ?? [])
+      .filter((d) => d.dayOfWeek === dayOfWeek && d.open);
+    return openEntries.length || 1;
+  }
+
+  async createManual(providerId: string, dto: CreateManualBookingDto): Promise<BookingResponseDto> {
+    const startAt = new Date(dto.startAt);
+    const endAt = new Date(dto.endAt);
+
+    if (!dto.skipAvailabilityCheck) {
+      await this.validateManualSlot(providerId, startAt, endAt, dto.workerId);
     }
 
     const status = dto.autoConfirm !== false ? BookingStatus.CONFIRMED : BookingStatus.PENDING;
     const confirmedAt = status === BookingStatus.CONFIRMED ? new Date() : null;
-
     const validServiceTypes = Object.values(ServiceType) as string[];
     const serviceType =
       dto.serviceType && validServiceTypes.includes(dto.serviceType)
         ? (dto.serviceType as ServiceType)
         : null;
 
-    const booking = await this.bookingsRepository.createManual({
+    const data: ManualBookingData = {
       clientPhone: dto.clientPhone,
       clientName: dto.clientName,
       providerId,
-      startAt: new Date(dto.startAt),
-      endAt: new Date(dto.endAt),
+      startAt,
+      endAt,
       tireSize: dto.tireSize ?? null,
       totalPricePln: dto.totalPricePln ?? null,
       serviceType,
@@ -245,7 +290,93 @@ export class BookingsService {
       confirmedAt,
       workerId: dto.workerId ?? null,
       stationId: dto.stationId ?? null,
-    });
+    };
+
+    if (dto.skipAvailabilityCheck) {
+      // Receptionist explicitly overrides — skip all concurrency guards
+      const booking = await this.bookingsRepository.createManual(data);
+      this.eventEmitter.emit(
+        BookingCreatedEvent.EVENT,
+        new BookingCreatedEvent(
+          providerId,
+          booking.id,
+          booking.referenceCode,
+          this.getWeekStart(booking.startAt),
+        ),
+      );
+      return this.toResponseDto(booking);
+    }
+
+    // ── Layer 3: fast version check (before DB transaction) ──────────────────
+    if (dto.availabilityVersion) {
+      const currentVersion = await this.computeDayVersion(providerId, startAt);
+      if (currentVersion !== dto.availabilityVersion) {
+        throw new AppException(
+          ErrorCode.BOOKING_VERSION_MISMATCH,
+          'Dostępność zmieniła się od ostatniego sprawdzenia.',
+          409,
+        );
+      }
+    }
+
+    // ── Layer 1: serializable transaction — atomic capacity check + insert ───
+    const capacity = await this.getWorkstationCapacity(providerId, startAt, dto.stationId);
+
+    let booking: Awaited<ReturnType<typeof this.bookingsRepository.createManualTx>>;
+    try {
+      booking = await this.prisma.$transaction(
+        async (tx) => {
+          // Provider-level capacity: count all overlapping active bookings
+          const overlap = await tx.booking.count({
+            where: {
+              providerId,
+              startAt: { lt: endAt },
+              endAt: { gt: startAt },
+              status: { notIn: [...INACTIVE_STATUSES] },
+            },
+          });
+          if (overlap >= capacity) {
+            throw new AppException(
+              ErrorCode.BOOKING_SLOT_TAKEN,
+              'Termin jest już zajęty — pojemność stanowisk wyczerpana.',
+              409,
+            );
+          }
+
+          // Per-worker uniqueness: if worker specified, must have no overlap
+          if (dto.workerId) {
+            const workerOverlap = await tx.booking.count({
+              where: {
+                workerId: dto.workerId,
+                startAt: { lt: endAt },
+                endAt: { gt: startAt },
+                status: { notIn: [...INACTIVE_STATUSES] },
+              },
+            });
+            if (workerOverlap > 0) {
+              throw new AppException(
+                ErrorCode.BOOKING_SLOT_TAKEN,
+                'Pracownik ma już rezerwację w tym czasie.',
+                409,
+              );
+            }
+          }
+
+          return this.bookingsRepository.createManualTx(tx, data);
+        },
+        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+      );
+    } catch (err) {
+      // P2034 = PostgreSQL serialization failure (40001) — two concurrent txs raced
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2034') {
+        throw new AppException(
+          ErrorCode.BOOKING_SLOT_TAKEN,
+          'Termin właśnie zajęty przez inną rezerwację — spróbuj ponownie.',
+          409,
+        );
+      }
+      throw err;
+    }
 
     this.eventEmitter.emit(
       BookingCreatedEvent.EVENT,
@@ -537,12 +668,12 @@ export class BookingsService {
 
     const pausedUntil = (providerData as unknown as { pausedUntil?: Date | null })?.pausedUntil;
     if (pausedUntil && pausedUntil > new Date()) {
-      return { slots: [], slotMinutes: SLOT_MINUTES, isClosedDay: true };
+      return { slots: [], slotMinutes: SLOT_MINUTES, isClosedDay: true, version: '' };
     }
 
     // If exception exists with no custom open time → closed day
     if (exception && !exception.customOpenTime) {
-      return { slots: [], slotMinutes: 0, isClosedDay: true };
+      return { slots: [], slotMinutes: 0, isClosedDay: true, version: '' };
     }
 
     // Collect schedule entries for this day across all queried stations
@@ -551,7 +682,7 @@ export class BookingsService {
       .filter((d) => d.dayOfWeek === dayOfWeek && d.open);
 
     if (!exception?.customOpenTime && openEntries.length === 0) {
-      return { slots: [], slotMinutes: 0, isClosedDay: true };
+      return { slots: [], slotMinutes: 0, isClosedDay: true, version: '' };
     }
 
     // Determine effective open/close times
@@ -725,6 +856,8 @@ export class BookingsService {
       cursor += slotMs;
     }
 
-    return { slots, slotMinutes, isClosedDay: false };
+    const version = await this.computeDayVersion(providerId, parsedDate);
+
+    return { slots, slotMinutes, isClosedDay: false, version };
   }
 }

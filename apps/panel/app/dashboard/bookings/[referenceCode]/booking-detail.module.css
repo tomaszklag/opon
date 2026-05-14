@@ -27,15 +27,6 @@
   scrollbar-width: thin;
 }
 
-.content::-webkit-scrollbar {
-  width: 6px;
-}
-
-.content::-webkit-scrollbar-thumb {
-  background: var(--border);
-  border-radius: 3px;
-}
-
 /* ── Topbar elements ────────────────────────────────────────────────────────── */
 
 .backBtn {
