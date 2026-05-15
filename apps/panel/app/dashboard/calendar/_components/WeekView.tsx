@@ -6,6 +6,7 @@ import type { Booking, BookingStatus } from '../../../../api-data-access/booking
 import type { WorkerTask } from '../../../../api-data-access/worker-tasks';
 import type { ScheduleException } from '../../../../api-data-access/schedule-exceptions';
 import type { Worker } from '../../../../api-data-access/workers';
+import type { Station } from '../../../../api-data-access/stations';
 import { IconInfo, IconArrowRight, IconGripVertical } from '../../../../components/icons';
 import { HOLIDAY_MAP } from '../../../../lib/holidays';
 import {
@@ -29,6 +30,7 @@ import {
   visitCountLabel,
   toISODate,
   snapTimeFromOffset,
+  stationUnionClosedZones,
 } from '../calendar.utils';
 import styles from '../calendar.module.css';
 
@@ -40,6 +42,7 @@ interface WeekViewProps {
   tasks: WorkerTask[];
   exceptions: ScheduleException[];
   workers: Worker[];
+  stations?: Station[];
   isLoading: boolean;
   nowLineTop: number;
   nowTime: string;
@@ -98,6 +101,7 @@ export function WeekView({
   tasks,
   exceptions,
   workers,
+  stations,
   isLoading,
   nowLineTop,
   nowTime,
@@ -379,6 +383,27 @@ export function WeekView({
                     );
                   }}
                 >
+                  {/* Station schedule shading */}
+                  {!isDayOff &&
+                    stations &&
+                    stations.length > 0 &&
+                    (() => {
+                      const { zones, endTop } = stationUnionClosedZones(stations, day.getDay());
+                      return (
+                        <>
+                          {zones.map((z, i) => (
+                            <div
+                              key={i}
+                              className={styles.stationClosedZone}
+                              style={{ top: z.top, height: z.height }}
+                            />
+                          ))}
+                          {endTop !== null && (
+                            <div className={styles.stationShiftEnd} style={{ top: endTop }} />
+                          )}
+                        </>
+                      );
+                    })()}
                   {gridlines.map((top) => (
                     <div key={top} className={styles.hourGridline} style={{ top: `${top}px` }} />
                   ))}

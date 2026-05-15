@@ -9,6 +9,7 @@ import { useWorkerTasks } from '../../../lib/hooks/use-worker-tasks';
 import { useWorkerTasksMonth } from '../../../lib/hooks/use-worker-tasks-month';
 import { useScheduleExceptions } from '../../../lib/hooks/use-schedule-exceptions';
 import { useWorkersList } from '../../../lib/hooks/use-workers-list';
+import { useStationsList } from '../../../lib/hooks/use-stations-list';
 import { IconChevronLeft, IconChevronRight } from '../../../components/icons';
 import { ManualBookingModal } from '../_components/ManualBookingModal';
 import { WorkerTaskModal } from '../_components/WorkerTaskModal';
@@ -132,6 +133,7 @@ export default function CalendarPage() {
   const { tasks, mutate: mutateTasks } = useWorkerTasks(weekStartStr);
   const { exceptions } = useScheduleExceptions();
   const { workers } = useWorkersList();
+  const { stations } = useStationsList();
 
   // Month data — parallel SWR per week, disabled outside month view
   const monthWeekStarts =
@@ -262,6 +264,7 @@ export default function CalendarPage() {
 
       {/* ── View ── */}
       {view === 'week' && (
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         <WeekView
           weekStart={weekStart}
           weekNum={weekNum}
@@ -277,9 +280,11 @@ export default function CalendarPage() {
           onBookingClick={handleBookingClick}
           onSlotClick={handleSlotClick}
           onReschedule={handleReschedule}
+          stations={stations}
         />
       )}
       {view === 'day' && (
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         <DayView
           day={currentDate}
           bookings={bookings}
@@ -293,6 +298,7 @@ export default function CalendarPage() {
           onBookingClick={handleBookingClick}
           onSlotClick={handleSlotClick}
           onReschedule={handleReschedule}
+          stations={stations}
         />
       )}
       {view === 'month' && (

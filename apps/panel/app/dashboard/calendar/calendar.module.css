@@ -1384,3 +1384,71 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* ── Station swim lanes ── */
+.dayViewColMulti {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  position: relative;
+  border-left: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.stationCol {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  border-left: 1px solid var(--border);
+  position: relative;
+}
+
+.stationCol:first-child {
+  border-left: none;
+}
+
+.stationColHeader {
+  padding: 3px 8px;
+  text-align: center;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex-shrink: 0;
+}
+
+/* Zaciemniona strefa poza godzinami pracy — identyczny styl jak .dayCol.closed */
+.stationClosedZone {
+  position: absolute;
+  left: 0;
+  right: 0;
+  pointer-events: none;
+  z-index: 0;
+  background: repeating-linear-gradient(
+    -45deg,
+    transparent,
+    transparent 8px,
+    var(--cal-closed-stripe-dark) 8px,
+    var(--cal-closed-stripe-dark) 16px
+  );
+}
+
+/* Linia końca zmiany */
+.stationShiftEnd {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--text-muted);
+  opacity: 0.35;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.stationShiftEndLabel {
+  position: absolute;
+  right: 4px;
+  top: 3px;
+}

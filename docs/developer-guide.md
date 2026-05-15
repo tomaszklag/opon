@@ -2907,6 +2907,16 @@ type DaySchedule = {
 
 Pole `schedule` przechowuje pełną tablicę 7 elementów (jeden na każdy dzień tygodnia). Przy `open: false` pola `startTime`/`endTime` są ignorowane przez slot engine, ale powinny być przesyłane jako puste stringi.
 
+### Booking.stationId — FE workaround
+
+Pole `stationId` istnieje w modelu `Booking` (Prisma, backend DTO), ale może nie pojawiać się w wygenerowanym schemacie OpenAPI po regeneracji. Do czasu zsynchronizowania schematu używaj rzutowania:
+
+```ts
+const stationId = (booking as any).stationId as string | null;
+```
+
+Zawsze dodaj fallback dla wartości `null` — np. w swim lanes DayView pokaż wizytę we wszystkich kolumnach, gdy `stationId` jest niedostępny.
+
 ### WorkerLeave — isWorkerOnLeave
 
 `WorkersRepository` udostępnia metodę pomocniczą używaną przez slot engine:
@@ -3543,3 +3553,79 @@ searchClients(providerId: string, q: string) {
 ```
 
 Hook panelowy: `useClientSearch(query)` — 220 ms debounce, wynik: `{ phone, name }[]`.
+
+---
+
+## 26. Moduł kalendarza — architektura FE
+
+### `calendar.utils.ts` — jedyne źródło stałych i helperów
+
+Wszystkie stałe siatki, helpery daty i helpery renderowania kalendarza żyją w jednym miejscu:
+
+```
+apps/panel/app/dashboard/calendar/calendar.utils.ts
+```
+
+**Nigdy** nie definiuj stałych siatki (`HOUR_START`, `PX_PER_HOUR` itp.) inline w `DayView.tsx` / `WeekView.tsx` / `MonthView.tsx` — prowadzi to do desynchronizacji i duplikacji. Gdy dodajesz nową logikę renderowania wspólną dla kilku widoków, dodaj ją tutaj.
+
+Kluczowe eksporty:
+
+| Eksport                                        | Typ                        | Opis                                   |
+| ---------------------------------------------- | -------------------------- | -------------------------------------- |
+| `HOUR_START` / `HOUR_END`                      | `number`                   | Zakres godzin siatki (6–20)            |
+| `PX_PER_HOUR`                                  | `number`                   | Piksele na godzinę (60)                |
+| `GRID_HEIGHT`                                  | `number`                   | Wysokość całej siatki w px             |
+| `getBookingStyle(startAt, endAt)`              | `{top, height}`            | Pozycja bloku rezerwacji na siatce     |
+| `getNowLineTop()`                              | `number`                   | Pozycja linii „teraz"                  |
+| `getStationHours(station, dayOfWeek)`          | `{open, startMin, endMin}` | Godziny stanowiska dla dnia tygodnia   |
+| `stationClosedZones(hours)`                    | `{top, height}[]`          | Strefy zamknięte jednego stanowiska    |
+| `stationUnionClosedZones(stations, dayOfWeek)` | `{zones, endTop}`          | Unia godzin wielu stanowisk (WeekView) |
+
+### Integracja grafiku stanowisk w kalendarzu
+
+DayView i WeekView wizualizują godziny stanowisk jako zaciemnione strefy poza godzinami pracy i linię końca zmiany.
+
+**DayView (swim lanes)**
+
+- 0 stanowisk → siatka bez shadeowania (identyczny widok jak przed integracją)
+- 1 stanowisko → pojedyncza kolumna + `stationClosedZones` nakłada `.stationClosedZone`
+- 2+ stanowisk → osobna kolumna per stanowisko (`.stationCol`) z nagłówkiem i rezerwacjami filtrowanymi po `stationId`
+
+**WeekView**
+
+Każdy dzień używa sumy godzin wszystkich stanowisk: `stationUnionClosedZones(stations, day.getDay())`. Zbyt wąska kolumna żeby pokazać swim lanes — renderuje tylko shading i linię.
+
+**CSS klasy i tokeny**
+
+Klasy `.stationClosedZone`, `.stationShiftEnd`, `.stationShiftEndLabel` są w `calendar.module.css`.
+
+Tokeny kolorów dla stref zamkniętych (`--cal-closed-stripe`, `--cal-closed-stripe-dark`) są **lokalne** — zdefiniowane w bloku `.main {}` wewnątrz `calendar.module.css`, **nie** w `global.css`. Nie szukaj ich w `global.css`.
+
+### DayTimeline — picker slotów w modalach
+
+```
+apps/panel/app/dashboard/_components/DayTimeline.tsx
+apps/panel/app/dashboard/_components/DayTimeline.module.css
+```
+
+Komponent do wizualnego wyboru slotu w modalach (np. ręczna rezerwacja). Cechy:
+
+- Zakres `TL_START_H=7` do `TL_END_H=20`, skala `PX_PER_MIN=2` (2 px/min)
+- Snap co 5 minut
+- Pokazuje istniejące rezerwacje dnia jako kolorowe bloki wg statusu
+- Hover ghost — podgląd nowej rezerwacji przed kliknięciem
+
+```tsx
+import { DayTimeline } from '../../_components/DayTimeline';
+
+<DayTimeline
+  slots={availableSlots} // TlSlot[] — dostępne sloty
+  bookings={dayBookings} // BookingBlock[] — istniejące wizyty (opcjonalne)
+  durationMinutes={60}
+  selectedTime="10:00"
+  date="2026-05-15"
+  onSelect={(time) => setTime(time)}
+/>;
+```
+
+Nie implementuj własnego pickera czasu w nowym modalu — użyj tego komponentu.
