@@ -54,6 +54,28 @@
   color: var(--text-muted);
 }
 
+.compactSpinner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  flex-shrink: 0;
+}
+
+.compactSpinner::after {
+  content: '';
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: phoneSpin 0.7s linear infinite;
+}
+
+@keyframes phoneSpin {
+  to { transform: rotate(360deg); }
+}
+
 /* Prefix box — separate element */
 .prefixBox {
   height: 44px;

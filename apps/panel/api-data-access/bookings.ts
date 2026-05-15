@@ -86,10 +86,8 @@ export const bookingsApi = {
   getStats: () => api.get<BookingStats>('/v1/providers/me/bookings/stats'),
   bulkUpdate: (ids: string[], action: 'confirm' | 'cancel') =>
     api.patch<void>('/v1/providers/me/bookings/bulk-status', { ids, action }),
-  createManual: (payload: ManualBookingPayload, idempotencyKey?: string) =>
-    api.post<Booking>('/v1/providers/me/bookings/manual', payload, {
-      headers: idempotencyKey ? { 'X-Idempotency-Key': idempotencyKey } : undefined,
-    }),
+  createManual: (payload: ManualBookingPayload) =>
+    api.post<Booking>('/v1/providers/me/bookings/manual', payload),
   reschedule: (referenceCode: string, startAt: string, endAt: string, notifyClient: boolean) =>
     api.patch<Booking>(`/v1/providers/me/bookings/${referenceCode}/reschedule`, {
       startAt,

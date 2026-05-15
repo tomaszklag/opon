@@ -2972,14 +2972,13 @@ Dodaj do `apps/api/src/common/errors/error-code.enum.ts`:
 | `SERVICE_CONFIG_NOT_FOUND`      | 404    | Konfiguracja usługi nie istnieje                                                                            |
 | `BOOKING_SLOT_TAKEN`            | 409    | Wybrany slot jest już zajęty — race condition lub pojemność wyczerpana                                      |
 | `BOOKING_VERSION_MISMATCH`      | 409    | `availabilityVersion` nie zgadza się z aktualnym stanem — klient musi odświeżyć dostępność                  |
-| `IDEMPOTENCY_CONFLICT`          | 422    | Ten sam `X-Idempotency-Key` użyty z innym ciałem żądania                                                    |
 | `BOOKING_NOT_FOUND`             | 404    | Rezerwacja nie istnieje lub nie należy do klienta/providera                                                 |
 
 ---
 
-## 23. Booking — mechanizm współbieżności (3 warstwy)
+## 23. Booking — mechanizm współbieżności (2 warstwy)
 
-`POST /v1/providers/me/bookings/manual` jest chroniony trzema warstwami przed double-booking:
+`POST /v1/providers/me/bookings/manual` jest chroniony dwiema warstwami przed double-booking. Ochrona przed podwójnym kliknięciem leży po stronie UI (blokada przycisku przez `isLoading`).
 
 ### Warstwa 1 — Serializable transaction (DB)
 
@@ -2993,24 +2992,9 @@ await prisma.$transaction(async (tx) => {
 
 PostgreSQL SERIALIZABLE wykrywa konflikt odczytu-zapisu między równoległymi transakcjami i zwraca kod `40001` (serialization_failure). Prisma mapuje to na `P2034` — catch blok zamienia to na `BOOKING_SLOT_TAKEN` 409.
 
-`skipAvailabilityCheck: true` omija warstwy 2 i 3 (recepcjonistka jawnie nadpisuje blokadę) — warstwa 1 (DB) jest zawsze aktywna.
+`skipAvailabilityCheck: true` omija warstwę 2 (recepcjonistka jawnie nadpisuje blokadę) — warstwa 1 (DB) jest zawsze aktywna.
 
-### Warstwa 2 — Idempotency keys
-
-Nagłówek: `X-Idempotency-Key: <uuid>` (do 128 znaków)
-
-Model: `IdempotencyKey` w `apps/api/prisma/schema.prisma` — TTL 5 min, czyszczony co godzinę przez `@Cron`.
-
-Zachowanie:
-
-- Brak klucza → bez idempotentności (normalny request)
-- Klucz nowy → wykonaj request, zapisz odpowiedź
-- Klucz znany + identyczny payload → zwróć cached odpowiedź
-- Klucz znany + inny payload → `IDEMPOTENCY_CONFLICT` 422
-
-Panel generuje UUID na otwarcie modalu (`crypto.randomUUID()`), rotuje po błędzie 409.
-
-### Warstwa 3 — Availability version token (fast-check)
+### Warstwa 2 — Availability version token (fast-check)
 
 `GET /v1/providers/me/bookings/availability` zwraca `version: string` — SHA-256 (pierwsze 8 hex) posortowanych ID + czasów aktywnych rezerwacji na dany dzień.
 

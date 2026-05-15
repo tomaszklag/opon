@@ -13,14 +13,11 @@ export function useCreateManualBooking() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function createBooking(
-    payload: ManualBookingPayload,
-    idempotencyKey?: string,
-  ): Promise<CreateBookingResult> {
+  async function createBooking(payload: ManualBookingPayload): Promise<CreateBookingResult> {
     setIsLoading(true);
     setError(null);
     try {
-      await bookingsApi.createManual(payload, idempotencyKey);
+      await bookingsApi.createManual(payload);
       return { success: true };
     } catch (err: unknown) {
       const msg = err instanceof ApiError ? err.message : 'Nie udało się utworzyć rezerwacji';

@@ -15,6 +15,8 @@ export interface PhoneInputProps extends Omit<React.InputHTMLAttributes<HTMLInpu
   countryCode?: string;
   /** Fuses prefix and input into a single control — no gap */
   compact?: boolean;
+  /** Shows a spinner inside the compact input (e.g. while searching clients) */
+  loading?: boolean;
   className?: string;
 }
 
@@ -37,6 +39,7 @@ export function PhoneInput({
   notRegistered = false,
   countryCode = '+48',
   compact = false,
+  loading = false,
   className,
   id,
   required,
@@ -102,6 +105,7 @@ export function PhoneInput({
             className={styles.compactInput}
             {...props}
           />
+          {loading && <span className={styles.compactSpinner} aria-hidden="true" />}
         </div>
       ) : (
         <div className={styles.phoneGrid}>

@@ -1,7 +1,7 @@
-/* 2-column grid: klient+usługa+szczegóły | termin+godzina+summary */
+/* 3-column grid: klient+usługa | termin+godzina | szczegóły+podsumowanie */
 .form {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1.4fr 1fr 0.9fr;
   gap: 0 20px;
   align-items: start;
 }
@@ -9,13 +9,19 @@
 .colLeft {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 20px;
+}
+
+.colMid {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
 
 .colRight {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 20px;
 }
 
 /* Full-width error banner under all three columns */
@@ -226,65 +232,11 @@
   flex: 1;
 }
 
-.slotGrid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 4px;
-  max-height: 200px;
-  overflow-y: auto;
-  padding-right: 2px;
-  scrollbar-width: thin;
-}
 
-.slotBtn {
+.timelineManualInput {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 3px;
-  padding: 7px 4px;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--border);
-  background: var(--bg);
-  cursor: pointer;
-  white-space: nowrap;
-  transition: background 80ms, border-color 80ms;
-}
-
-.slotBtn:hover {
-  border-color: var(--accent-border);
-  background: var(--accent-muted);
-}
-
-.slotBtnSelected {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: var(--text-on-accent);
-}
-
-.slotBtnSelected:hover {
-  background: var(--accent);
-  border-color: var(--accent);
-}
-
-.slotBtnConflict {
-  border-color: var(--warning-border);
-}
-
-.slotBtnConflict.slotBtnSelected {
-  background: var(--warning);
-  border-color: var(--warning);
-}
-
-.conflictDot {
-  width: 4px;
-  height: 4px;
-  border-radius: 50%;
-  background: var(--warning);
-  flex-shrink: 0;
-}
-
-.slotBtnSelected .conflictDot {
-  background: var(--text-on-accent);
+  gap: 6px;
 }
 
 .conflictBanner {
@@ -420,6 +372,45 @@
   white-space: nowrap;
   flex-shrink: 0;
   letter-spacing: 0.5px;
+}
+
+.sumTotalPrice {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.priceInput {
+  width: 72px;
+  background: var(--accent-muted);
+  border: 1px solid var(--accent-border);
+  border-radius: var(--radius-sm);
+  outline: none;
+  text-align: right;
+  padding: 2px 6px;
+  font-size: 20px;
+  font-weight: 800;
+  font-family: var(--font-body);
+  color: var(--accent);
+  letter-spacing: 0.5px;
+  transition: border-color 80ms;
+  /* hide number spin arrows */
+  -moz-appearance: textfield;
+}
+
+.priceInput::-webkit-outer-spin-button,
+.priceInput::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+}
+
+.priceInput::placeholder {
+  color: var(--accent);
+  opacity: 0.45;
+}
+
+.priceInput:focus {
+  border-color: var(--accent);
 }
 
 /* ── Phone autocomplete dropdown ── */

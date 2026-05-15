@@ -8,7 +8,6 @@ import {
   Input,
   PhoneInput,
   Textarea,
-  Toggle,
   Text,
   Spinner,
 } from '@opony/design-system-web';
@@ -17,11 +16,13 @@ import { useWorkersList } from '../../../lib/hooks/use-workers-list';
 import { useAvailability } from '../../../lib/hooks/use-availability';
 import { useServiceGroups } from '../../../lib/hooks/use-service-groups';
 import { useClientSearch } from '../../../lib/hooks/use-client-search';
+import { useBookings } from '../../../lib/hooks/use-bookings';
 import type {
   ServiceGroupResponse,
   ServiceVariantResponse,
 } from '../../../api-data-access/service-groups';
 import { IconCheck } from '../../../components/icons';
+import { DayTimeline } from './DayTimeline';
 import styles from './ManualBookingModal.module.css';
 
 interface ManualBookingModalProps {
@@ -38,6 +39,22 @@ type SubService = ServiceVariantResponse['subServices'][number];
 function getDefaultDate(): string {
   return new Date().toISOString().slice(0, 10);
 }
+
+function getWeekStart(dateStr: string): string {
+  const d = new Date(dateStr);
+  const day = d.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  d.setDate(d.getDate() + diff);
+  return d.toISOString().slice(0, 10);
+}
+
+const CANCELLED_STATUSES = new Set([
+  'CANCELLED_BY_CLIENT',
+  'CANCELLED_BY_PROVIDER',
+  'CANCELLED_BY_SYSTEM',
+  'NO_SHOW',
+  'REJECTED',
+]);
 
 function formatSlotTime(iso: string): string {
   const d = new Date(iso);
@@ -79,12 +96,16 @@ export function ManualBookingModal({
   const { createBooking, isLoading, error } = useCreateManualBooking();
   const { workers } = useWorkersList();
   const { groups: serviceGroups } = useServiceGroups();
-  // Stable UUID per modal session — rotated on each open
-  const idempotencyKeyRef = useRef<string | null>(null);
+  const formRef = useRef<HTMLFormElement>(null);
+  const pendingAutoConfirm = useRef(true);
 
   const [clientName, setClientName] = useState('');
   const [clientPhone, setClientPhone] = useState('');
-  // variant.id — drives rim chips + sub-services cascade
+  // true = client was selected from autocomplete; name is locked
+  const [clientLinked, setClientLinked] = useState(false);
+  // service group id — step 1 of service selection
+  const [selectedGroupId, setSelectedGroupId] = useState('');
+  // variant.id — step 2 (auto-set when group has 1 variant, or picked via chips)
   const [selectedVariantKey, setSelectedVariantKey] = useState('');
   // rimSizes.join(',') for the selected rim tier chip
   const [selectedRimKey, setSelectedRimKey] = useState('');
@@ -96,11 +117,17 @@ export function ManualBookingModal({
   // manual price override; empty = use auto-calculated price
   const [totalPricePln, setTotalPricePln] = useState('');
   const [notes, setNotes] = useState('');
-  const [autoConfirm, setAutoConfirm] = useState(true);
   const [validationError, setValidationError] = useState<string | null>(null);
 
-  const { suggestions } = useClientSearch(clientPhone);
+  const { suggestions, isLoading: clientSearchLoading } = useClientSearch(clientPhone);
   const [showSuggestions, setShowSuggestions] = useState(false);
+
+  const phoneDigits = clientPhone.replace(/\D/g, '');
+  const phoneReady = phoneDigits.length >= 9;
+  // Name field is editable only when phone is ready, search done and no existing client found
+  const nameEditable =
+    phoneReady && !clientSearchLoading && !clientLinked && suggestions.length === 0;
+  const nameDisabled = !nameEditable;
   const phoneWrapperRef = useRef<HTMLDivElement>(null);
 
   const {
@@ -108,6 +135,16 @@ export function ManualBookingModal({
     isLoading: availLoading,
     mutate: mutateAvailability,
   } = useAvailability(date, workerId || undefined);
+
+  const weekStart = useMemo(() => getWeekStart(date), [date]);
+  const { bookings: allBookings } = useBookings(weekStart);
+  const dayBookings = useMemo(
+    () =>
+      allBookings.filter(
+        (b) => b.startAt.slice(0, 10) === date && !CANCELLED_STATUSES.has(b.status),
+      ),
+    [allBookings, date],
+  );
 
   // Resolve selected variant + its group from the loaded catalog
   const selectedVariantRef = useMemo<{
@@ -122,12 +159,22 @@ export function ManualBookingModal({
     return null;
   }, [selectedVariantKey, serviceGroups]);
 
+  // Only true when the variant actually has rim-size tiers (RIM_SIZES pricing type)
+  const hasRimTiers = useMemo(
+    () => (selectedVariantRef?.variant.rimTiers ?? []).some((t) => t.rimSizes.length > 0),
+    [selectedVariantRef],
+  );
+
   const selectedRimTier = useMemo<RimTier | null>(() => {
-    if (!selectedVariantRef || !selectedRimKey) return null;
-    return (
-      selectedVariantRef.variant.rimTiers.find((t) => rimKey(t.rimSizes) === selectedRimKey) ?? null
-    );
-  }, [selectedVariantRef, selectedRimKey]);
+    if (!selectedVariantRef) return null;
+    const tiers = selectedVariantRef.variant.rimTiers;
+    if (!hasRimTiers) {
+      // FLAT / VARIANTS pricing — auto-use the single virtual tier for price+duration
+      return tiers[0] ?? null;
+    }
+    if (!selectedRimKey) return null;
+    return tiers.find((t) => rimKey(t.rimSizes) === selectedRimKey) ?? null;
+  }, [selectedVariantRef, selectedRimKey, hasRimTiers]);
 
   // Sub-services that are enabled for the selected variant
   const subServices = useMemo<SubService[]>(
@@ -159,16 +206,24 @@ export function ManualBookingModal({
     return dur;
   }, [selectedRimTier, subServices, checkedSubNames]);
 
-  const serviceOptions = useMemo(
+  const groupOptions = useMemo(
     () => [
       { value: '', label: 'Wybierz usługę z cennika…' },
-      ...serviceGroups.flatMap((g) =>
-        g.variants
-          .filter((v) => v.enabled)
-          .map((v) => ({ value: v.id, label: `${g.name} — ${v.name}` })),
-      ),
+      ...serviceGroups
+        .filter((g) => g.variants.some((v) => v.enabled))
+        .map((g) => ({ value: g.id, label: g.name })),
     ],
     [serviceGroups],
+  );
+
+  const selectedGroup = useMemo(
+    () => serviceGroups.find((g) => g.id === selectedGroupId) ?? null,
+    [selectedGroupId, serviceGroups],
+  );
+
+  const enabledVariants = useMemo(
+    () => selectedGroup?.variants.filter((v) => v.enabled) ?? [],
+    [selectedGroup],
   );
 
   const workerOptions = [
@@ -198,46 +253,12 @@ export function ManualBookingModal({
 
   const hasConflict = overlapSlots.length > 0;
   const totalConflictCount = overlapSlots.reduce((n, s) => n + s.conflictCount, 0);
+  const overlapMinutes = overlapSlots.length * (availability?.slotMinutes ?? 30);
 
   // Nearest fully-free slot at or after entered time
-  const nearestFreeSlot = useMemo(() => {
-    if (!availability?.slots?.length || !timeInput) return null;
-    const [h, m] = timeInput.split(':');
-    const targetMin = Number(h) * 60 + Number(m ?? 0);
-    return (
-      availability.slots.find((s) => {
-        const d = new Date(s.startAt);
-        return (
-          d.getHours() * 60 + d.getMinutes() >= targetMin && s.isAvailable && s.conflictCount === 0
-        );
-      }) ?? null
-    );
-  }, [availability, timeInput]);
-
-  // Best-fit slot: free slot adjacent to a booked slot → minimises idle gaps
-  const bestFitSlot = useMemo(() => {
-    if (!availability?.slots?.length) return null;
-    const free = availability.slots.filter((s) => s.isAvailable && s.conflictCount === 0);
-    if (!free.length) return null;
-    const busy = availability.slots.filter((s) => !s.isAvailable || s.conflictCount > 0);
-    if (!busy.length) return free[0] ?? null;
-    const scored = free.map((slot) => ({
-      slot,
-      score:
-        (busy.some((b) => b.endAt === slot.startAt) ? 2 : 0) +
-        (busy.some((b) => b.startAt === slot.endAt) ? 1 : 0),
-    }));
-    scored.sort(
-      (a, b) =>
-        b.score - a.score ||
-        new Date(a.slot.startAt).getTime() - new Date(b.slot.startAt).getTime(),
-    );
-    return scored[0]?.slot ?? null;
-  }, [availability]);
 
   useEffect(() => {
     if (!isOpen) return;
-    idempotencyKeyRef.current = crypto.randomUUID();
     if (initialDate) setDate(initialDate);
     if (initialTime) setTimeInput(initialTime);
   }, [isOpen, initialDate, initialTime]);
@@ -255,6 +276,8 @@ export function ManualBookingModal({
   const resetForm = useCallback(() => {
     setClientName('');
     setClientPhone('');
+    setClientLinked(false);
+    setSelectedGroupId('');
     setSelectedVariantKey('');
     setSelectedRimKey('');
     setCheckedSubNames(new Set());
@@ -263,12 +286,26 @@ export function ManualBookingModal({
     setTimeInput('');
     setTotalPricePln('');
     setNotes('');
-    setAutoConfirm(true);
     setValidationError(null);
   }, []);
 
-  function handleVariantChange(variantId: string) {
-    setSelectedVariantKey(variantId);
+  function handleGroupChange(groupId: string) {
+    setSelectedGroupId(groupId);
+    setSelectedVariantKey('');
+    setSelectedRimKey('');
+    setCheckedSubNames(new Set());
+    setTotalPricePln('');
+    if (groupId) {
+      const group = serviceGroups.find((g) => g.id === groupId);
+      const enabled = group?.variants.filter((v) => v.enabled) ?? [];
+      if (enabled.length === 1 && enabled[0]) {
+        setSelectedVariantKey(enabled[0].id);
+      }
+    }
+  }
+
+  function handleVariantSelect(variantId: string) {
+    setSelectedVariantKey(variantId === selectedVariantKey ? '' : variantId);
     setSelectedRimKey('');
     setCheckedSubNames(new Set());
     setTotalPricePln('');
@@ -284,9 +321,10 @@ export function ManualBookingModal({
 
   function selectSuggestion(phone: string, name: string) {
     const digits = phone.replace(/\D/g, '');
-    const phoneDigits = digits.startsWith('48') && digits.length === 11 ? digits.slice(2) : digits;
-    setClientPhone(phoneDigits);
+    const normalized = digits.startsWith('48') && digits.length === 11 ? digits.slice(2) : digits;
+    setClientPhone(normalized);
     setClientName(name);
+    setClientLinked(true);
     setShowSuggestions(false);
   }
 
@@ -302,8 +340,12 @@ export function ManualBookingModal({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
 
-    if (!clientName.trim() || !clientPhone.trim()) {
-      setValidationError('Wypełnij imię i nazwisko oraz telefon.');
+    if (!phoneReady) {
+      setValidationError('Podaj numer telefonu (9 cyfr).');
+      return;
+    }
+    if (nameEditable && !clientName.trim()) {
+      setValidationError('Podaj imię i nazwisko klienta.');
       return;
     }
     if (!startAt || !endAt) {
@@ -321,125 +363,160 @@ export function ManualBookingModal({
 
     const resolvedPrice = totalPricePln ? Number(totalPricePln) : (autoPrice ?? undefined);
 
-    const result = await createBooking(
-      {
-        clientName: clientName.trim(),
-        clientPhone: `+48${clientPhone.trim()}`,
-        startAt,
-        endAt,
-        tireSize: resolvedTireSize,
-        serviceType: resolvedServiceType,
-        workerId: workerId || undefined,
-        totalPricePln: resolvedPrice,
-        notes: notes.trim() || undefined,
-        autoConfirm,
-        availabilityVersion: availability?.version,
-      },
-      idempotencyKeyRef.current ?? undefined,
-    );
+    const result = await createBooking({
+      clientName: clientName.trim(),
+      clientPhone: `+48${clientPhone.trim()}`,
+      startAt,
+      endAt,
+      tireSize: resolvedTireSize,
+      serviceType: resolvedServiceType,
+      workerId: workerId || undefined,
+      totalPricePln: resolvedPrice,
+      notes: notes.trim() || undefined,
+      autoConfirm: pendingAutoConfirm.current,
+      availabilityVersion: availability?.version,
+      skipAvailabilityCheck: true,
+    });
 
     if (result.success) {
       onSuccess?.();
       onClose();
       resetForm();
     } else if (result.code === 'BOOKING_SLOT_TAKEN' || result.code === 'BOOKING_VERSION_MISMATCH') {
-      // Refresh availability so user sees current state; rotate idempotency key for retry
       void mutateAvailability();
-      idempotencyKeyRef.current = crypto.randomUUID();
     }
   }
-
-  const hasRimTiers = (selectedVariantRef?.variant.rimTiers.length ?? 0) > 0;
-  const priceInputValue =
-    totalPricePln !== '' ? totalPricePln : autoPrice !== null ? String(autoPrice) : '';
 
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
       title="Wizyta ręczna"
-      size="xl"
+      size="xxl"
       footer={
         <>
           <Button variant="neutral" size="sm" onClick={onClose} type="button">
             Anuluj
           </Button>
           <Button
+            variant="neutral"
+            size="sm"
+            type="button"
+            loading={isLoading}
+            onClick={() => {
+              pendingAutoConfirm.current = false;
+              formRef.current?.requestSubmit();
+            }}
+          >
+            Utwórz jako oczekującą
+          </Button>
+          <Button
             variant="primary"
             size="sm"
-            type="submit"
-            form="manual-booking-form"
+            type="button"
             loading={isLoading}
+            onClick={() => {
+              pendingAutoConfirm.current = true;
+              formRef.current?.requestSubmit();
+            }}
           >
-            {autoConfirm ? 'Utwórz i potwierdź' : 'Utwórz jako oczekującą'}
+            Utwórz i potwierdź
           </Button>
         </>
       }
     >
-      <form id="manual-booking-form" onSubmit={handleSubmit} className={styles.form}>
+      <form ref={formRef} id="manual-booking-form" onSubmit={handleSubmit} className={styles.form}>
         {/* ── Kolumna lewa: Klient + Usługa + Szczegóły ── */}
         <div className={styles.colLeft}>
           {/* Klient */}
           <div className={styles.section}>
-            <Text variant="kicker-sm" color="muted" className={styles.sectionLabel}>
-              Klient
-            </Text>
-            <div className={styles.row2}>
-              <Input
-                label="Imię i nazwisko"
-                value={clientName}
-                onChange={(e) => setClientName(e.target.value)}
+            <div ref={phoneWrapperRef} className={styles.phoneWrapper}>
+              <PhoneInput
+                label="Telefon"
+                value={clientPhone}
+                onChange={(e) => {
+                  setClientPhone(e.target.value);
+                  setClientLinked(false);
+                  setClientName('');
+                  setShowSuggestions(true);
+                }}
+                onFocus={() => {
+                  if (suggestions.length > 0) setShowSuggestions(true);
+                }}
+                loading={clientSearchLoading}
+                compact
                 required
-                autoComplete="off"
               />
-              <div ref={phoneWrapperRef} className={styles.phoneWrapper}>
-                <PhoneInput
-                  label="Telefon"
-                  value={clientPhone}
-                  onChange={(e) => {
-                    setClientPhone(e.target.value);
-                    setShowSuggestions(true);
-                  }}
-                  required
-                  compact
-                />
-                {showSuggestions && suggestions.length > 0 && (
-                  <div className={styles.phoneDropdown}>
-                    {suggestions.map((s) => (
-                      <button
-                        key={s.phone}
-                        type="button"
-                        className={styles.phoneDropdownItem}
-                        onMouseDown={(e) => {
-                          e.preventDefault();
-                          selectSuggestion(s.phone, s.name);
-                        }}
-                      >
-                        <span className={styles.phoneDropdownName}>{s.name}</span>
-                        <span className={styles.phoneDropdownPhone}>{s.phone}</span>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
+              {showSuggestions && suggestions.length > 0 && (
+                <div className={styles.phoneDropdown}>
+                  {suggestions.map((s) => (
+                    <button
+                      key={s.phone}
+                      type="button"
+                      className={styles.phoneDropdownItem}
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        selectSuggestion(s.phone, s.name);
+                      }}
+                    >
+                      <span className={styles.phoneDropdownName}>{s.name}</span>
+                      <span className={styles.phoneDropdownPhone}>{s.phone}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
+            <Input
+              label="Imię i nazwisko"
+              value={clientName}
+              onChange={(e) => setClientName(e.target.value)}
+              disabled={nameDisabled}
+              placeholder={!phoneReady ? 'Najpierw podaj numer telefonu' : undefined}
+              autoComplete="off"
+            />
           </div>
 
           {/* Usługa */}
           <div className={styles.section}>
-            <Text variant="kicker-sm" color="muted" className={styles.sectionLabel}>
-              Usługa
-              <span className={styles.sectionBadge}>z cennika</span>
-            </Text>
             <Combobox
-              label="Wybierz usługę"
-              value={selectedVariantKey}
-              onChange={handleVariantChange}
-              options={serviceOptions}
+              label="Usługa"
+              value={selectedGroupId}
+              onChange={handleGroupChange}
+              options={groupOptions}
               placeholder="Szukaj usługi…"
             />
 
-            {/* Rim chips — pojawiają się po wyborze wariantu z rim tiers */}
+            {/* Variant chips — shown when group has multiple enabled variants */}
+            {selectedGroupId && enabledVariants.length > 1 && (
+              <div>
+                <Text variant="kicker-sm" color="muted" as="p" className={styles.fieldLabel}>
+                  Wariant
+                </Text>
+                <div className={styles.rimChips}>
+                  {enabledVariants.map((v) => {
+                    const tier = v.rimTiers[0];
+                    return (
+                      <button
+                        key={v.id}
+                        type="button"
+                        className={`${styles.rimChip} ${selectedVariantKey === v.id ? styles.rimChipSelected : ''}`}
+                        onClick={() => handleVariantSelect(v.id)}
+                      >
+                        {v.name}
+                        {tier && (
+                          <>
+                            <span className={styles.rimPrice}>{tier.pricePln} zł</span>
+                            <span className={styles.rimDur}>{tier.durationMinutes} min</span>
+                          </>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Rim chips — shown after variant selected, only for RIM_SIZES pricing type */}
             {selectedVariantKey && hasRimTiers && (
               <div>
                 <Text variant="kicker-sm" color="muted" as="p" className={styles.fieldLabel}>
@@ -480,39 +557,30 @@ export function ManualBookingModal({
                         key={sub.name}
                         role="checkbox"
                         aria-checked={isChecked}
-                        tabIndex={sub.included ? -1 : 0}
-                        className={`${styles.subItem} ${sub.included ? styles.subItemIncl : isChecked ? styles.subItemChecked : ''}`}
-                        onClick={() => {
-                          if (!sub.included) toggleSubService(sub.name);
-                        }}
+                        tabIndex={0}
+                        className={`${styles.subItem} ${isChecked ? styles.subItemChecked : ''}`}
+                        onClick={() => toggleSubService(sub.name)}
                         onKeyDown={(e) => {
-                          if (!sub.included && (e.key === 'Enter' || e.key === ' ')) {
+                          if (e.key === 'Enter' || e.key === ' ') {
                             e.preventDefault();
                             toggleSubService(sub.name);
                           }
                         }}
                       >
                         <span
-                          className={`${styles.subChk} ${sub.included ? styles.subChkLocked : isChecked ? styles.subChkChecked : ''}`}
+                          className={`${styles.subChk} ${isChecked ? styles.subChkChecked : ''}`}
                         >
-                          {(sub.included || isChecked) && <IconCheck width={8} height={8} />}
+                          {isChecked && <IconCheck width={8} height={8} />}
                         </span>
                         <div className={styles.subInfo}>
                           <Text variant="body-sm" as="span">
                             {sub.name}
                           </Text>
-                          <Text variant="nano" color="muted" as="span">
-                            {sub.included ? 'wliczone w cenę' : 'opcjonalne'}
-                          </Text>
                         </div>
                         <span
-                          className={`${styles.subPrice} ${sub.included ? styles.subPriceIncl : isChecked ? styles.subPriceAdded : ''}`}
+                          className={`${styles.subPrice} ${isChecked ? styles.subPriceAdded : ''}`}
                         >
-                          {sub.included
-                            ? 'wliczone'
-                            : typeof sub.pricePln === 'number'
-                              ? `+${sub.pricePln} zł`
-                              : 'jak usł.'}
+                          {typeof sub.pricePln === 'number' ? `+${sub.pricePln} zł` : '—'}
                         </span>
                       </div>
                     );
@@ -521,52 +589,28 @@ export function ManualBookingModal({
               </div>
             )}
 
-            {/* Placeholder gdy usługa nie wybrana */}
-            {!selectedVariantKey && (
+            {/* Placeholder when nothing selected yet */}
+            {!selectedGroupId && (
               <div className={styles.placeholder}>
                 <Text variant="body-sm" color="muted" as="p">
                   Wybierz usługę aby zobaczyć dostępne rozmiary i pod-usługi
                 </Text>
               </div>
             )}
-          </div>
-
-          {/* Szczegóły */}
-          <div className={styles.section}>
-            <Text variant="kicker-sm" color="muted" className={styles.sectionLabel}>
-              Szczegóły
-            </Text>
-            <Input
-              label="Cena końcowa (zł)"
-              type="number"
-              value={priceInputValue}
-              onChange={(e) => setTotalPricePln(e.target.value)}
-              min={0}
-              placeholder={autoPrice !== null ? String(autoPrice) : 'auto'}
-            />
-            <Textarea
-              label="Notatki"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              rows={3}
-            />
-            <div className={styles.toggleRow}>
-              <Toggle
-                label="Potwierdź automatycznie"
-                checked={autoConfirm}
-                onChange={(e) => setAutoConfirm(e.target.checked)}
-              />
-            </div>
+            {selectedGroupId && enabledVariants.length > 1 && !selectedVariantKey && (
+              <div className={styles.placeholder}>
+                <Text variant="body-sm" color="muted" as="p">
+                  Wybierz wariant usługi
+                </Text>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* ── Kolumna prawa: Termin + Godzina + Podsumowanie ── */}
-        <div className={styles.colRight}>
+        {/* ── Kolumna środkowa: Termin + Godzina ── */}
+        <div className={styles.colMid}>
           {/* Termin */}
           <div className={styles.section}>
-            <Text variant="kicker-sm" color="muted" className={styles.sectionLabel}>
-              Termin
-            </Text>
             <div className={styles.row2}>
               <DatePicker label="Data" value={date} onChange={handleDateChange} required />
               <Combobox
@@ -579,70 +623,59 @@ export function ManualBookingModal({
             </div>
           </div>
 
-          {/* Time picker */}
+          {/* Time picker — day timeline */}
           <div className={styles.slotArea}>
-            <Text variant="kicker-sm" color="muted" className={styles.sectionLabel}>
-              Godzina
-            </Text>
-
-            <Input
-              label="Godzina wizyty"
-              type="time"
-              value={timeInput}
-              onChange={(e) => setTimeInput(e.target.value)}
-              required
-            />
-
-            {availLoading && (
+            {availLoading ? (
               <div className={styles.spinnerRow}>
                 <Spinner size="sm" />
               </div>
+            ) : (
+              <DayTimeline
+                slots={availability?.slots ?? []}
+                bookings={dayBookings}
+                durationMinutes={totalDurationMinutes}
+                selectedTime={timeInput}
+                date={date}
+                onSelect={setTimeInput}
+              />
             )}
+
+            {/* Manual time fallback */}
+            <div className={styles.timelineManualInput}>
+              <Input
+                label="Godzina (ręcznie)"
+                type="time"
+                value={timeInput}
+                onChange={(e) => setTimeInput(e.target.value)}
+              />
+            </div>
 
             {!availLoading && availability?.isClosedDay && (
-              <Text variant="body-sm" color="muted" as="p" className={styles.closedMsg}>
-                Warsztat nieczynny tego dnia
+              <Text variant="body-sm" color="warning" as="p" className={styles.closedMsg}>
+                Warsztat nieczynny tego dnia — zapis mimo to możliwy
               </Text>
-            )}
-
-            {/* Best-fit suggestion when no time entered yet */}
-            {!timeInput && !availLoading && bestFitSlot && (
-              <button
-                type="button"
-                className={styles.slotSuggestion}
-                onClick={() => setTimeInput(formatSlotTime(bestFitSlot.startAt))}
-              >
-                <span className={styles.slotSuggestionLabel}>
-                  Sugerujemy {formatSlotTime(bestFitSlot.startAt)}
-                </span>
-                <span className={styles.slotSuggestionHint}>minimalizuje przerwy →</span>
-              </button>
             )}
 
             {/* Conflict warning */}
             {timeInput && hasConflict && (
               <div className={styles.conflictBanner}>
                 <Text variant="body-sm" color="warning" as="p">
-                  Wizyta zachodzi na {totalConflictCount} {pluralConflicts(totalConflictCount)} —
-                  zapis możliwy.
+                  Nakłada się na {totalConflictCount} {pluralConflicts(totalConflictCount)} (~
+                  {overlapMinutes} min) — zapis mimo to możliwy.
                 </Text>
-                {nearestFreeSlot && (
-                  <button
-                    type="button"
-                    className={styles.slotSuggestion}
-                    onClick={() => setTimeInput(formatSlotTime(nearestFreeSlot.startAt))}
-                  >
-                    <span className={styles.slotSuggestionLabel}>
-                      Najbliższy wolny: {formatSlotTime(nearestFreeSlot.startAt)}
-                    </span>
-                    <span className={styles.slotSuggestionHint}>użyj →</span>
-                  </button>
-                )}
               </div>
             )}
           </div>
+        </div>
 
-          {/* Podsumowanie */}
+        {/* ── Kolumna prawa: Szczegóły + Podsumowanie ── */}
+        <div className={styles.colRight}>
+          <Textarea
+            label="Notatki"
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            rows={2}
+          />
           <div className={styles.section}>
             <Text variant="kicker-sm" color="muted" className={styles.sectionLabel}>
               Podsumowanie
@@ -650,9 +683,13 @@ export function ManualBookingModal({
             {!selectedRimTier ? (
               <div className={styles.summaryEmpty}>
                 <Text variant="body-sm" color="muted" as="p">
-                  {selectedVariantKey && !hasRimTiers
-                    ? 'Wybierz godzinę wizyty'
-                    : 'Wybierz usługę i rozmiar'}
+                  {!selectedGroupId
+                    ? 'Wybierz usługę'
+                    : enabledVariants.length > 1 && !selectedVariantKey
+                      ? 'Wybierz wariant'
+                      : hasRimTiers
+                        ? 'Wybierz rozmiar felgi'
+                        : 'Wybierz usługę'}
                 </Text>
               </div>
             ) : (
@@ -671,10 +708,10 @@ export function ManualBookingModal({
                   <span className={styles.sumVal}>{selectedRimTier.pricePln} zł</span>
                 </div>
 
-                {/* Sub-services that are included or checked */}
+                {/* Sub-services that are checked */}
                 {subServices.map((sub) => {
-                  const isChecked = sub.included || checkedSubNames.has(sub.name);
-                  if (!sub.included && !isChecked) return null;
+                  const isChecked = checkedSubNames.has(sub.name);
+                  if (!isChecked) return null;
                   const dur = subDurMinutes(sub);
                   return (
                     <div key={sub.name} className={styles.sumRow}>
@@ -683,16 +720,12 @@ export function ManualBookingModal({
                           {sub.name}
                         </Text>
                         <Text variant="nano" color="muted" as="span" className={styles.sumSub}>
-                          {sub.included ? 'wliczone' : 'opcjonalne'} · +{dur} min
+                          +{dur} min
                         </Text>
                       </div>
-                      {sub.included ? (
-                        <span className={styles.sumValIncl}>wliczone</span>
-                      ) : (
-                        <span className={styles.sumValAdd}>
-                          +{typeof sub.pricePln === 'number' ? sub.pricePln : 0} zł
-                        </span>
-                      )}
+                      <span className={styles.sumValAdd}>
+                        +{typeof sub.pricePln === 'number' ? sub.pricePln : 0} zł
+                      </span>
                     </div>
                   );
                 })}
@@ -703,16 +736,19 @@ export function ManualBookingModal({
                     <Text variant="body-sm" weight="bold" as="span">
                       Do zapłaty
                     </Text>
-                    {totalDurationMinutes !== null && (
-                      <Text variant="nano" color="muted" as="span" className={styles.sumSub}>
-                        {timeInput ? `${timeInput} → ` : ''}
-                        {totalDurationMinutes} min
-                      </Text>
-                    )}
                   </div>
-                  <span className={styles.sumValTotal}>
-                    {totalPricePln !== '' ? totalPricePln : autoPrice} zł
-                  </span>
+                  <div className={styles.sumTotalPrice}>
+                    <input
+                      type="number"
+                      className={styles.priceInput}
+                      value={totalPricePln}
+                      onChange={(e) => setTotalPricePln(e.target.value)}
+                      placeholder={autoPrice !== null ? String(autoPrice) : '—'}
+                      min={0}
+                      aria-label="Cena końcowa (zł)"
+                    />
+                    <span className={styles.sumValTotal}>zł</span>
+                  </div>
                 </div>
               </div>
             )}
