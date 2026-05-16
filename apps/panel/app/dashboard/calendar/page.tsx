@@ -13,7 +13,7 @@ import { useStationsList } from '../../../lib/hooks/use-stations-list';
 import { IconChevronLeft, IconChevronRight } from '../../../components/icons';
 import { ManualBookingModal } from '../_components/ManualBookingModal';
 import { WorkerTaskModal } from '../_components/WorkerTaskModal';
-import { BookingDetailModal } from '../_components/BookingDetailModal';
+import { BookingDetailPanel } from '../_components/BookingDetailPanel';
 import type { Booking } from '../../../api-data-access/bookings';
 import { bookingsApi } from '../../../api-data-access/bookings';
 import { toast } from '@opony/design-system-web';
@@ -316,7 +316,11 @@ export default function CalendarPage() {
         />
       )}
 
-      <BookingDetailModal referenceCode={detailRefCode} onClose={() => setDetailRefCode(null)} />
+      <BookingDetailPanel
+        referenceCode={detailRefCode}
+        onClose={() => setDetailRefCode(null)}
+        onMutate={() => void mutate()}
+      />
 
       <ManualBookingModal
         isOpen={isManualOpen}

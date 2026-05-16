@@ -2428,7 +2428,33 @@ const upload = useCallback(
 );
 ```
 
-### 15.3. Kiedy NIE używać SWR
+### 15.3. Warunkowe pobieranie — klucz `null`
+
+Gdy fetch powinien być pomijany (komponent opcjonalnie aktywny, brak wymaganego parametru), ustaw klucz SWR na `null`. SWR nie wykona żadnego requestu dopóki klucz jest `null`.
+
+```ts
+// ✅ TAK — hook przyjmuje null, fetch pominięty gdy brak kodu
+export function useBookingDetail(referenceCode: string | null) {
+  const { data, isLoading, mutate } = useSWR(
+    referenceCode ? ['booking-detail', referenceCode] : null,
+    () => bookingsApi.getDetail(referenceCode!),
+    { revalidateOnFocus: false },
+  );
+  return { booking: data ?? null, isLoading, mutate };
+}
+
+// ❌ NIE — pusty string '' jako klucz SWR wysyła request z pustym parametrem
+export function useBookingDetail(referenceCode: string) {
+  const { data } = useSWR(
+    ['booking-detail', referenceCode], // gdy referenceCode = '', wysyła GET /bookings/
+    () => bookingsApi.getDetail(referenceCode),
+  );
+}
+```
+
+Analogicznie dla hooków zależnych od widoku (np. `useBookings(weekStart: string | null)` — `null` gdy widok miesięczny jest aktywny i dane tygodniowe nie są potrzebne).
+
+### 15.3b. Kiedy NIE używać SWR
 
 | Przypadek                                | Zamiast SWR użyj                               |
 | ---------------------------------------- | ---------------------------------------------- |
