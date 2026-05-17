@@ -12,7 +12,6 @@ import { RolesGuard } from './auth/guards/roles.guard';
 import { HealthModule } from './health/health.module';
 import { PhotosModule } from './photos/photos.module';
 import { PrismaModule } from './prisma/prisma.module';
-import { PricingTiersModule } from './pricing-tiers/pricing-tiers.module';
 import { ProvidersModule } from './providers/providers.module';
 import { EmailModule } from './email/email.module';
 import { GusModule } from './gus/gus.module';
@@ -43,7 +42,6 @@ import { DepotModule } from './depot/depot.module';
     EmailModule,
     AuthModule,
     ProvidersModule,
-    PricingTiersModule,
     GusModule,
     PhotosModule,
     AdminModule,

@@ -74,18 +74,8 @@ function StatusBadge({ status }: { status: BookingStatus }) {
   );
 }
 
-const SERVICE_TYPE_LABEL: Record<string, string> = {
-  SEASONAL_SWAP: 'Wymiana sezonowa',
-  WHEEL_SWAP: 'Wymiana kół',
-  BALANCING: 'Wyważanie',
-  PUNCTURE_REPAIR: 'Naprawa przebicia',
-};
-
 function resolvedServiceLabel(service: BookingDetail['service']): string {
-  if (service.name) return service.name;
-  if (!service.typeCode) return '';
-  const base = SERVICE_TYPE_LABEL[service.typeCode] ?? service.typeCode;
-  return service.sizeTier ? `${base} • ${service.sizeTier}` : base;
+  return service.name ?? '';
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -151,10 +141,8 @@ interface PanelContentProps {
 function PanelContent({ booking, onClose, onMutate, mutate }: PanelContentProps) {
   const [loading, setLoading] = useState<string | null>(null);
 
-  const isSeasonalSwap = booking.service.typeCode === 'SEASONAL_SWAP';
-  const canAddToDepot =
-    isSeasonalSwap && booking.status === 'COMPLETED' && !booking.hasTireSetsInDepot;
-  const hasDepot = isSeasonalSwap && booking.hasTireSetsInDepot;
+  const canAddToDepot = booking.status === 'COMPLETED' && !booking.hasTireSetsInDepot;
+  const hasDepot = booking.hasTireSetsInDepot;
 
   async function handleAction(action: 'confirm' | 'start' | 'complete' | 'cancel' | 'reject') {
     setLoading(action);
@@ -263,12 +251,9 @@ function PanelContent({ booking, onClose, onMutate, mutate }: PanelContentProps)
             ))}
           </div>
         )}
-        {(booking.service.tpmsRequired || booking.addressLine) && (
+        {booking.addressLine && (
           <div className={styles.serviceExtras}>
-            {booking.service.tpmsRequired && (
-              <span className={styles.serviceTag}>Kontrola TPMS</span>
-            )}
-            {booking.addressLine && <span className={styles.serviceTag}>Usługa mobilna</span>}
+            <span className={styles.serviceTag}>Usługa mobilna</span>
           </div>
         )}
       </div>

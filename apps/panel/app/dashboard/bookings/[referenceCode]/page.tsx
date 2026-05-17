@@ -380,10 +380,7 @@ export default function BookingDetailPage({ params }: PageProps) {
   const statusGlow = getStatusGlow(status);
   const isActiveStatus = status === 'CONFIRMED' || status === 'IN_PROGRESS' || status === 'PENDING';
 
-  const canAddToDepot =
-    booking.status === 'COMPLETED' &&
-    booking.service.typeCode === 'SEASONAL_SWAP' &&
-    !booking.hasTireSetsInDepot;
+  const canAddToDepot = booking.status === 'COMPLETED' && !booking.hasTireSetsInDepot;
 
   async function handleDepotSubmit(body: CreateTireSetBody) {
     await depotApi.create(body);
@@ -622,17 +619,12 @@ export default function BookingDetailPage({ params }: PageProps) {
                       </Text>
                       <div className={styles.vehicleMeta}>
                         <span className={styles.tireTaq}>{booking.vehicle.tireSize}</span>
-                        {booking.service.sizeTier && (
-                          <Text variant="nano" as="span" color="muted">
-                            tier &bdquo;{booking.service.sizeTier}&rdquo;
-                          </Text>
-                        )}
                       </div>
                     </div>
                     {booking.basePricePln !== null && (
                       <div className={styles.pricePreview}>
                         <Text variant="nano" as="span" weight="bold" color="muted">
-                          {booking.service.name ?? booking.service.typeCode ?? 'Usługa'}
+                          {booking.service.name ?? 'Usługa'}
                         </Text>
                         <span className={styles.pricePreviewValue}>
                           {formatPrice(booking.basePricePln ?? 0)}
@@ -736,7 +728,7 @@ export default function BookingDetailPage({ params }: PageProps) {
                   {/* Base service */}
                   <div className={styles.priceRow}>
                     <Text variant="body-sm" as="span" color="secondary">
-                      {booking.service.name ?? booking.service.typeCode ?? 'Usługa'}
+                      {booking.service.name ?? 'Usługa'}
                       {booking.service.tireSize ? ` (${booking.service.tireSize})` : ''}
                     </Text>
                     <span className={styles.priceRowVal}>

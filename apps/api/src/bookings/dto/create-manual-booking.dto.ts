@@ -1,3 +1,4 @@
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsArray,
   IsBoolean,
@@ -13,12 +14,16 @@ import {
 import { Type } from 'class-transformer';
 
 export class ManualSubServiceDto {
-  @ApiProperty() @IsString() @MaxLength(200) name!: string;
-  @ApiPropertyOptional({ type: Number, nullable: true }) @IsOptional() @IsNumber() pricePln?:
-    | number
-    | null;
+  @ApiProperty()
+  @IsString()
+  @MaxLength(200)
+  name!: string;
+
+  @ApiPropertyOptional({ type: Number, nullable: true })
+  @IsOptional()
+  @IsNumber()
+  pricePln?: number | null;
 }
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateManualBookingDto {
   @ApiProperty({ example: 'Jan Kowalski' })
@@ -50,11 +55,6 @@ export class CreateManualBookingDto {
   @IsOptional()
   @IsNumber()
   totalPricePln?: number;
-
-  @ApiPropertyOptional({ example: 'SEASONAL_SWAP' })
-  @IsOptional()
-  @IsString()
-  serviceType?: string;
 
   @ApiPropertyOptional({ example: 'Wymiana sezonowa — Osobowe' })
   @IsOptional()

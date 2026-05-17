@@ -7,10 +7,7 @@ export class BookingSubServiceDto {
 
 export class BookingServiceDto {
   @ApiPropertyOptional({ type: String, nullable: true }) name!: string | null;
-  @ApiPropertyOptional({ type: String, nullable: true }) typeCode!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) tireSize!: string | null;
-  @ApiPropertyOptional({ type: String, nullable: true }) sizeTier!: string | null;
-  @ApiProperty() tpmsRequired!: boolean;
   @ApiProperty({ type: [BookingSubServiceDto] }) subServices!: BookingSubServiceDto[];
 }
 

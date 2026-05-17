@@ -222,13 +222,7 @@ function BookingRow({ booking, selected, onToggle }: RowProps) {
   const badgeStatus = toBadgeStatus(booking.status);
   const isCancelled = badgeStatus === 'CANCELLED' || badgeStatus === 'NO_SHOW';
   const dt = formatDate(booking.startAt);
-  const serviceLabel = [
-    booking.serviceType === 'SWAP' ? 'Wymiana' : booking.serviceType,
-    booking.sizeTier ? `${booking.sizeTier}` : null,
-    booking.tireSize ? `— ${booking.tireSize}` : null,
-  ]
-    .filter(Boolean)
-    .join(' ');
+  const serviceLabel = booking.tireSize ? `— ${booking.tireSize}` : '';
 
   return (
     <tr
@@ -281,13 +275,6 @@ function BookingRow({ booking, selected, onToggle }: RowProps) {
           <Text variant="body-sm" weight="semibold" as="span">
             {serviceLabel || 'Usługa'}
           </Text>
-          <div className={styles.serviceMeta}>
-            {booking.tpmsRequired && (
-              <Text variant="nano" mono color="muted" as="span">
-                TPMS
-              </Text>
-            )}
-          </div>
         </div>
       </td>
       <td className={[styles.td, styles.tdRight].join(' ')}>

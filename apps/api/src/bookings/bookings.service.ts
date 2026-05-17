@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { BookingStatus, Prisma, ServiceType } from '@prisma/client';
+import { BookingStatus, Prisma } from '@prisma/client';
 import { createHash } from 'crypto';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { AppException, ErrorCode } from '../common/errors';
@@ -85,9 +85,6 @@ export class BookingsService {
       clientName,
       clientPhone: client.phone,
       tireSize: booking.tireSize ?? null,
-      serviceType: booking.serviceType ?? null,
-      sizeTier: booking.sizeTier ?? null,
-      tpmsRequired: booking.tpmsRequired,
       basePricePln: booking.basePricePln != null ? Number(booking.basePricePln) : null,
       travelFeePln: booking.travelFeePln != null ? Number(booking.travelFeePln) : null,
       totalPricePln: booking.totalPricePln != null ? Number(booking.totalPricePln) : null,
@@ -135,10 +132,7 @@ export class BookingsService {
       addressLng: booking.addressLng != null ? Number(booking.addressLng) : null,
       service: {
         name: booking.serviceName ?? null,
-        typeCode: booking.serviceType ?? null,
         tireSize: booking.tireSize ?? null,
-        sizeTier: booking.sizeTier ?? null,
-        tpmsRequired: booking.tpmsRequired,
         subServices:
           (
             booking.serviceDetails as {
@@ -279,11 +273,6 @@ export class BookingsService {
 
     const status = dto.autoConfirm !== false ? BookingStatus.CONFIRMED : BookingStatus.PENDING;
     const confirmedAt = status === BookingStatus.CONFIRMED ? new Date() : null;
-    const validServiceTypes = Object.values(ServiceType) as string[];
-    const serviceType =
-      dto.serviceType && validServiceTypes.includes(dto.serviceType)
-        ? (dto.serviceType as ServiceType)
-        : null;
 
     const data: ManualBookingData = {
       clientPhone: dto.clientPhone,
@@ -293,7 +282,6 @@ export class BookingsService {
       endAt,
       tireSize: dto.tireSize ?? null,
       totalPricePln: dto.totalPricePln ?? null,
-      serviceType,
       serviceName: dto.serviceName ?? null,
       serviceDetails:
         dto.subServices && dto.subServices.length > 0

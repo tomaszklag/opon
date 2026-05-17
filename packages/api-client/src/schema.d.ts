@@ -385,76 +385,6 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/v1/providers/me/market-prices': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /** Ceny rynkowe sąsiednich dostawców w zasięgu bazy */
-    get: operations['PricingTiersController_getMarketPrices'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/v1/providers/me/pricing-tiers': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /** Lista moich tierów cenowych */
-    get: operations['PricingTiersController_listMine'];
-    put?: never;
-    /** Dodaj tier cenowy */
-    post: operations['PricingTiersController_create'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/v1/providers/me/pricing-tiers/{id}': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    post?: never;
-    /** Usuń tier cenowy */
-    delete: operations['PricingTiersController_remove'];
-    options?: never;
-    head?: never;
-    /** Zaktualizuj tier cenowy */
-    patch: operations['PricingTiersController_update'];
-    trace?: never;
-  };
-  '/v1/providers/{providerId}/pricing-tiers': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /** Lista tierów cenowych firmy (publiczne) */
-    get: operations['PricingTiersController_listByProvider'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
   '/v1/gus/{nip}': {
     parameters: {
       query?: never;
@@ -1653,49 +1583,6 @@ export interface components {
       /** @description Liczba unikalnych dostawców w próbce */
       providerCount: number;
     };
-    PricingTierResponseDto: {
-      id: string;
-      providerId: string;
-      /** @enum {string} */
-      sizeTier: 'S' | 'M' | 'L' | 'XL';
-      priceSwapPln: number;
-      priceBalancingPerWheelPln?: number | null;
-      travelFeeFirstKmPln: number;
-      travelFeeExtraKmPln: number;
-    };
-    CreatePricingTierDto: {
-      /**
-       * @description Tier rozmiaru felgi: S (≤R15), M (R16–R17), L (≥R18)
-       * @enum {string}
-       */
-      sizeTier: 'S' | 'M' | 'L' | 'XL';
-      /**
-       * @description Cena wymiany kompletu (PLN)
-       * @example 120
-       */
-      priceSwapPln: number;
-      /**
-       * @description Cena wyważania za koło (PLN)
-       * @example 25
-       */
-      priceBalancingPerWheelPln?: number;
-      /**
-       * @description Opłata dojazd — pierwsze km (PLN)
-       * @example 0
-       */
-      travelFeeFirstKmPln?: number;
-      /**
-       * @description Opłata dojazd — każdy kolejny km (PLN)
-       * @example 2.5
-       */
-      travelFeeExtraKmPln?: number;
-    };
-    UpdatePricingTierDto: {
-      priceSwapPln?: number;
-      priceBalancingPerWheelPln?: number;
-      travelFeeFirstKmPln?: number;
-      travelFeeExtraKmPln?: number;
-    };
     UploadPhotoDto: {
       /** @enum {string} */
       type: 'LOGO' | 'VEHICLE' | 'WORKSPACE' | 'ADDITIONAL';
@@ -1903,9 +1790,6 @@ export interface components {
       clientName: string;
       clientPhone: string;
       tireSize?: string | null;
-      serviceType?: string | null;
-      sizeTier?: string | null;
-      tpmsRequired: boolean;
       basePricePln?: number | null;
       travelFeePln?: number | null;
       totalPricePln?: number | null;
@@ -1952,8 +1836,6 @@ export interface components {
       tireSize?: string;
       /** @example 150 */
       totalPricePln?: number;
-      /** @example SEASONAL_SWAP */
-      serviceType?: string;
       /** @example Wymiana sezonowa — Osobowe */
       serviceName?: string;
       subServices?: components['schemas']['ManualSubServiceDto'][];
@@ -2010,10 +1892,7 @@ export interface components {
     };
     BookingServiceDto: {
       name?: string | null;
-      typeCode?: string | null;
       tireSize?: string | null;
-      sizeTier?: string | null;
-      tpmsRequired: boolean;
       subServices: components['schemas']['BookingSubServiceDto'][];
     };
     BookingDetailResponseDto: {
@@ -3068,140 +2947,6 @@ export interface operations {
           [name: string]: unknown;
         };
         content?: never;
-      };
-    };
-  };
-  PricingTiersController_getMarketPrices: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['MarketPriceResponseDto'][];
-        };
-      };
-    };
-  };
-  PricingTiersController_listMine: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['PricingTierResponseDto'][];
-        };
-      };
-    };
-  };
-  PricingTiersController_create: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['CreatePricingTierDto'];
-      };
-    };
-    responses: {
-      201: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['PricingTierResponseDto'];
-        };
-      };
-      /** @description Przedział felg już istnieje */
-      409: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  PricingTiersController_remove: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        id: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Tier usunięty */
-      204: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  PricingTiersController_update: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        id: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['UpdatePricingTierDto'];
-      };
-    };
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['PricingTierResponseDto'];
-        };
-      };
-    };
-  };
-  PricingTiersController_listByProvider: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        providerId: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['PricingTierResponseDto'][];
-        };
       };
     };
   };

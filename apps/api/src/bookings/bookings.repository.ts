@@ -12,7 +12,6 @@ export interface ManualBookingData {
   endAt: Date;
   tireSize: string | null;
   totalPricePln: number | null;
-  serviceType: string | null;
   serviceName: string | null;
   serviceDetails: { subServices?: { name: string; pricePln: number | null }[] } | null;
   notes: string | null;
@@ -61,8 +60,6 @@ export class BookingsRepository {
       endAt: data.endAt,
       tireSize: data.tireSize,
       totalPricePln: data.totalPricePln,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      serviceType: data.serviceType as any,
       serviceName: data.serviceName,
       serviceDetails: data.serviceDetails ?? undefined,
       notes: data.notes,

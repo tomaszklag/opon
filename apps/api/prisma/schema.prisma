@@ -72,13 +72,6 @@ enum ServiceType {
   PUNCTURE_REPAIR
 }
 
-enum SizeTier {
-  S
-  M
-  L
-  XL  // R20+ / dostawcze / ciężarowe
-}
-
 enum ServicePricingType {
   FLAT       // stała cena — jeden wariant bez nazwy
   VARIANTS   // warianty z nazwą (np. Osobowe, SUV)
@@ -125,7 +118,7 @@ enum TireSetStatus {
 // ──────────────────────────────────────────────
 
 model User {
-  id           String    @id @default(uuid())
+  id           String    @id @default(uuid()) @db.Uuid
   phone        String    @unique @db.VarChar(20)
   email        String?   @unique @db.VarChar(254)
   role         UserRole  @default(CLIENT)
@@ -153,12 +146,12 @@ model User {
 
 model Client {
   id         String   @id @default(uuid()) @db.Uuid
-  providerId String
+  providerId String   @db.Uuid
   phone      String   @db.VarChar(20)
   firstName  String?  @db.VarChar(100)
   lastName   String?  @db.VarChar(100)
   notes      String?  @db.Text
-  userId     String?
+  userId     String?  @db.Uuid
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
@@ -169,6 +162,7 @@ model Client {
   tireSets TireSet[]
 
   @@unique([providerId, phone])
+  @@index([providerId])
   @@index([providerId, lastName])
   @@map("clients")
 }
@@ -178,8 +172,8 @@ model Client {
 // ──────────────────────────────────────────────
 
 model Vehicle {
-  id        String   @id @default(uuid())
-  userId    String
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
   nickname  String   @db.VarChar(100)
   tireSize  String   @db.VarChar(20)
   createdAt DateTime @default(now())
@@ -196,7 +190,7 @@ model Vehicle {
 // ──────────────────────────────────────────────
 
 model Provider {
-  id               String         @id @default(uuid())
+  id               String         @id @default(uuid()) @db.Uuid
   name             String         @db.VarChar(200)
   slug             String?        @unique @db.VarChar(100)
   nip              String         @unique @db.VarChar(10)
@@ -206,7 +200,7 @@ model Provider {
   logoUrl          String?        @db.VarChar(500)
   phone            String?        @db.VarChar(20)
   email            String?        @db.VarChar(254)
-  ownerId          String         @unique
+  ownerId          String         @unique @db.Uuid
   cityCenterLat    Decimal?       @db.Decimal(9, 6)
   cityCenterLng    Decimal?       @db.Decimal(9, 6)
   serviceRadiusKm  Int            @default(10)
@@ -235,7 +229,6 @@ model Provider {
 
   owner              User                       @relation("ProviderOwner", fields: [ownerId], references: [id], onDelete: Restrict)
   photos             ProviderPhoto[]
-  pricingTiers       PricingTier[]
   scheduleExceptions ScheduleException[]
   bookings           Booking[]                  @relation("ProviderBookings")
   reviews            Review[]                   @relation("ProviderReviews")
@@ -271,8 +264,8 @@ enum PhotoType {
 }
 
 model ProviderPhoto {
-  id           String    @id @default(uuid())
-  providerId   String
+  id           String    @id @default(uuid()) @db.Uuid
+  providerId   String    @db.Uuid
   provider     Provider  @relation(fields: [providerId], references: [id], onDelete: Cascade)
   url          String    @db.VarChar(500)
   storageKey   String    @db.VarChar(500)
@@ -288,32 +281,12 @@ model ProviderPhoto {
 }
 
 // ──────────────────────────────────────────────
-// PRICING TIER — 3 widelki rozmiaru felgi (S/M/L)
-// ──────────────────────────────────────────────
-
-model PricingTier {
-  id                        String   @id @default(uuid())
-  providerId                String
-  sizeTier                  SizeTier
-  priceSwapPln              Decimal  @db.Decimal(10, 2)
-  priceBalancingPerWheelPln Decimal? @db.Decimal(10, 2)
-  travelFeeFirstKmPln       Decimal  @default(0) @db.Decimal(10, 2)
-  travelFeeExtraKmPln       Decimal  @default(0) @db.Decimal(10, 2)
-
-  provider Provider  @relation(fields: [providerId], references: [id], onDelete: Cascade)
-  bookings  Booking[] @relation("TierBookings")
-
-  @@unique([providerId, sizeTier])
-  @@map("pricing_tiers")
-}
-
-// ──────────────────────────────────────────────
 // SCHEDULE EXCEPTION — urlopy, święta
 // ──────────────────────────────────────────────
 
 model ScheduleException {
-  id              String    @id @default(uuid())
-  providerId      String
+  id              String    @id @default(uuid()) @db.Uuid
+  providerId      String    @db.Uuid
   date            DateTime  @db.Date
   reason          String    @db.VarChar(200)
   customOpenTime  DateTime? @db.Time(6)
@@ -330,12 +303,11 @@ model ScheduleException {
 // ──────────────────────────────────────────────
 
 model Booking {
-  id              String        @id @default(uuid())
+  id              String        @id @default(uuid()) @db.Uuid
   referenceCode   String        @unique @db.VarChar(10)
   clientId        String        @db.Uuid
-  providerId      String
-  vehicleId       String?
-  pricingTierId   String?
+  providerId      String        @db.Uuid
+  vehicleId       String?       @db.Uuid
   status          BookingStatus @default(PENDING)
   startAt         DateTime
   endAt           DateTime
@@ -360,20 +332,16 @@ model Booking {
   completedAt     DateTime?
   cancelledAt     DateTime?
 
-  stationId       String?
-  workerId        String?       @db.VarChar(36)
-  serviceType     ServiceType?
+  stationId       String?       @db.Uuid
+  workerId        String?       @db.Uuid
   serviceName     String?       @db.VarChar(300)
   serviceDetails  Json?
-  sizeTier        SizeTier?
-  tpmsRequired    Boolean      @default(false)
   isManual        Boolean      @default(false)
   reminderSentAt  DateTime?
 
   client      Client       @relation(fields: [clientId], references: [id])
   provider    Provider     @relation("ProviderBookings", fields: [providerId], references: [id])
   vehicle     Vehicle?     @relation("VehicleBookings", fields: [vehicleId], references: [id])
-  pricingTier PricingTier? @relation("TierBookings", fields: [pricingTierId], references: [id])
   station     Station?     @relation(fields: [stationId], references: [id])
   worker      Worker?      @relation(fields: [workerId], references: [id], onDelete: SetNull)
   review      Review?
@@ -382,6 +350,7 @@ model Booking {
 
   @@index([providerId, startAt])
   @@index([clientId])
+  @@index([stationId])
   // UWAGA: partial unique index zapobiegający double-booking dodany w migracji SQL:
   // CREATE UNIQUE INDEX bookings_no_double_booking
   //   ON bookings (provider_id, start_at)
@@ -394,10 +363,10 @@ model Booking {
 // ──────────────────────────────────────────────
 
 model Review {
-  id                String    @id @default(uuid())
-  bookingId         String    @unique
+  id                String    @id @default(uuid()) @db.Uuid
+  bookingId         String    @unique @db.Uuid
   clientId          String    @db.Uuid
-  providerId        String
+  providerId        String    @db.Uuid
   rating            Int       // 1–5; CHECK (rating BETWEEN 1 AND 5) dodany w migracji SQL
   comment           String?   @db.Text
   providerReply     String?   @db.Text
@@ -422,7 +391,7 @@ model Review {
 // ──────────────────────────────────────────────
 
 model OtpToken {
-  id        String    @id @default(uuid())
+  id        String    @id @default(uuid()) @db.Uuid
   phone     String    @db.VarChar(20)
   codeHash  String    @db.VarChar(200)
   createdAt DateTime  @default(now())
@@ -440,9 +409,9 @@ model OtpToken {
 // ──────────────────────────────────────────────
 
 model ConsentLog {
-  id          String      @id @default(uuid())
-  userId      String?
-  providerId  String?
+  id          String      @id @default(uuid()) @db.Uuid
+  userId      String?     @db.Uuid
+  providerId  String?     @db.Uuid
   consentType ConsentType
   version     String      @db.VarChar(20)
   accepted    Boolean
@@ -461,7 +430,7 @@ model ConsentLog {
 // ──────────────────────────────────────────────
 
 model WaitlistSignup {
-  id        String       @id @default(uuid())
+  id        String       @id @default(uuid()) @db.Uuid
   email     String       @db.VarChar(254)
   city      String       @db.VarChar(100)
   role      WaitlistRole
@@ -477,8 +446,8 @@ model WaitlistSignup {
 // ──────────────────────────────────────────────
 
 model AuditLog {
-  id        String   @id @default(uuid())
-  actorId   String?
+  id        String   @id @default(uuid()) @db.Uuid
+  actorId   String?  @db.Uuid
   entity    String   @db.VarChar(50)
   entityId  String   @db.VarChar(36)
   action    String   @db.VarChar(50)
@@ -497,8 +466,8 @@ model AuditLog {
 // ──────────────────────────────────────────────
 
 model EmailVerificationToken {
-  id         String    @id @default(uuid())
-  providerId String
+  id         String    @id @default(uuid()) @db.Uuid
+  providerId String    @db.Uuid
   email      String    @db.VarChar(254)
   tokenHash  String    @unique @db.VarChar(64)
   expiresAt  DateTime
@@ -516,8 +485,8 @@ model EmailVerificationToken {
 // ──────────────────────────────────────────────
 
 model EmailChangeToken {
-  id         String    @id @default(uuid())
-  providerId String
+  id         String    @id @default(uuid()) @db.Uuid
+  providerId String    @db.Uuid
   newEmail   String    @db.VarChar(254)
   codeHash   String    @db.VarChar(200)
   expiresAt  DateTime
@@ -536,8 +505,8 @@ model EmailChangeToken {
 // ──────────────────────────────────────────────
 
 model EmailLog {
-  id         String    @id @default(uuid())
-  providerId String
+  id         String    @id @default(uuid()) @db.Uuid
+  providerId String    @db.Uuid
   type       EmailType
   to         String    @db.VarChar(254)
   sentAt     DateTime  @default(now())
@@ -555,7 +524,7 @@ model EmailLog {
 
 model Session {
   id         String    @id                       // = jti z JWT
-  userId     String
+  userId     String    @db.Uuid
   tokenHash  String    @unique @db.VarChar(64)   // SHA-256(refreshToken) hex
   userAgent  String?   @db.VarChar(500)
   ipAddress  String?   @db.VarChar(45)
@@ -576,8 +545,8 @@ model Session {
 // ──────────────────────────────────────────────
 
 model Station {
-  id         String        @id @default(cuid())
-  providerId String
+  id         String        @id @default(uuid()) @db.Uuid
+  providerId String        @db.Uuid
   name       String        @db.VarChar(100)
   serviceIds String[]      // IDs usług z modelu Service
   schedule   Json          // DaySchedule[] — grafik tygodniowy
@@ -596,8 +565,8 @@ model Station {
 // ──────────────────────────────────────────────
 
 model Worker {
-  id          String          @id @default(cuid())
-  providerId  String
+  id          String          @id @default(uuid()) @db.Uuid
+  providerId  String          @db.Uuid
   name        String          @db.VarChar(100)
   role        String?         @db.VarChar(100)
   createdAt   DateTime        @default(now())
@@ -617,8 +586,8 @@ model Worker {
 // ──────────────────────────────────────────────
 
 model StationWorker {
-  stationId  String
-  workerId   String
+  stationId  String  @db.Uuid
+  workerId   String  @db.Uuid
   shiftStart String? @db.VarChar(5) // "08:00", null = cały grafik stanowiska
   shiftEnd   String? @db.VarChar(5) // "14:00"
 
@@ -635,8 +604,8 @@ model StationWorker {
 // ──────────────────────────────────────────────
 
 model WorkerLeave {
-  id        String    @id @default(cuid())
-  workerId  String
+  id        String    @id @default(uuid()) @db.Uuid
+  workerId  String    @db.Uuid
   type      LeaveType
   startDate DateTime  @db.Date
   endDate   DateTime  @db.Date
@@ -653,20 +622,21 @@ model WorkerLeave {
 // ──────────────────────────────────────────────
 
 model WorkerTask {
-  id              String    @id @default(cuid())
-  providerId      String
-  workerId        String?
+  id              String    @id @default(uuid()) @db.Uuid
+  providerId      String    @db.Uuid
+  workerId        String?   @db.Uuid
   title           String    @db.VarChar(200)
   startAt         DateTime
   endAt           DateTime
   notes           String?   @db.Text
-  linkedBookingId String?   @db.VarChar(36)
+  linkedBookingId String?   @db.Uuid
   createdAt       DateTime  @default(now())
 
   provider      Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
   worker        Worker?  @relation(fields: [workerId], references: [id], onDelete: SetNull)
   linkedBooking Booking? @relation(fields: [linkedBookingId], references: [id], onDelete: SetNull)
 
+  @@index([providerId])
   @@index([providerId, startAt])
   @@map("worker_tasks")
 }
@@ -676,8 +646,8 @@ model WorkerTask {
 // ──────────────────────────────────────────────
 
 model ServiceConfig {
-  id              String      @id @default(uuid())
-  providerId      String
+  id              String      @id @default(uuid()) @db.Uuid
+  providerId      String      @db.Uuid
   serviceType     ServiceType
   durationMinutes Int         @default(45)
   provider        Provider    @relation(fields: [providerId], references: [id], onDelete: Cascade)
@@ -692,8 +662,8 @@ model ServiceConfig {
 // ──────────────────────────────────────────────
 
 model Service {
-  id          String             @id @default(uuid())
-  providerId  String
+  id          String             @id @default(uuid()) @db.Uuid
+  providerId  String             @db.Uuid
   name        String             @db.VarChar(200)
   description String?            @db.VarChar(1000)
   pricingType ServicePricingType @default(FLAT)
@@ -714,8 +684,8 @@ model Service {
 }
 
 model ServiceVariant {
-  id              String   @id @default(uuid())
-  serviceId       String
+  id              String   @id @default(uuid()) @db.Uuid
+  serviceId       String   @db.Uuid
   name            String?  @db.VarChar(200)  // null dla FLAT i RIM_SIZES
   rimSizes        String[]                    // tylko dla RIM_SIZES
   pricePln        Decimal  @db.Decimal(10, 2)
@@ -730,9 +700,9 @@ model ServiceVariant {
 
 // Pod-usługi: cross-referencje między usługami (sugestie przy wizycie)
 model ServiceSubLink {
-  id        String @id @default(uuid())
-  parentId  String
-  subId     String
+  id        String @id @default(uuid()) @db.Uuid
+  parentId  String @db.Uuid
+  subId     String @db.Uuid
   sortOrder Int    @default(0)
 
   parent Service @relation("ParentService", fields: [parentId], references: [id], onDelete: Cascade)
@@ -748,8 +718,8 @@ model ServiceSubLink {
 // ──────────────────────────────────────────────
 
 model Addon {
-  id              String    @id @default(uuid())
-  providerId      String
+  id              String    @id @default(uuid()) @db.Uuid
+  providerId      String    @db.Uuid
   name            String    @db.VarChar(200)
   pricePln        Decimal   @db.Decimal(10, 2)
   durationMinutes Int?
@@ -766,8 +736,8 @@ model Addon {
 }
 
 model ServiceAddonLink {
-  serviceId String
-  addonId   String
+  serviceId String @db.Uuid
+  addonId   String @db.Uuid
   sortOrder Int    @default(0)
 
   service Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
@@ -782,8 +752,8 @@ model ServiceAddonLink {
 // ──────────────────────────────────────────────
 
 model PushSubscription {
-  id         String   @id @default(uuid())
-  providerId String
+  id         String   @id @default(uuid()) @db.Uuid
+  providerId String   @db.Uuid
   endpoint   String   @db.Text
   p256dh     String   @db.VarChar(500)
   auth       String   @db.VarChar(100)
@@ -802,8 +772,8 @@ model PushSubscription {
 // ──────────────────────────────────────────────
 
 model NotificationPreferences {
-  id              String  @id @default(uuid())
-  providerId      String  @unique
+  id              String  @id @default(uuid()) @db.Uuid
+  providerId      String  @unique @db.Uuid
 
   newBookingSms   Boolean @default(true)
   newBookingEmail Boolean @default(false)
@@ -839,8 +809,8 @@ model NotificationPreferences {
 // ──────────────────────────────────────────────
 
 model DataExportRequest {
-  id          String           @id @default(uuid())
-  providerId  String
+  id          String           @id @default(uuid()) @db.Uuid
+  providerId  String           @db.Uuid
   status      DataExportStatus @default(PENDING)
   requestedAt DateTime         @default(now())
   completedAt DateTime?
@@ -857,8 +827,8 @@ model DataExportRequest {
 // ──────────────────────────────────────────────
 
 model DepotSlot {
-  id         String  @id @default(uuid())
-  providerId String
+  id         String  @id @default(uuid()) @db.Uuid
+  providerId String  @db.Uuid
   section    String  @db.VarChar(10)
   row        Int
   position   Int
@@ -873,8 +843,8 @@ model DepotSlot {
 }
 
 model TireSet {
-  id          String @id @default(uuid())
-  providerId  String
+  id          String @id @default(uuid()) @db.Uuid
+  providerId  String @db.Uuid
   clientId    String @db.Uuid
 
   vehicleName  String? @db.VarChar(100)
@@ -889,13 +859,13 @@ model TireSet {
   treadDepthMm Float?
   condition    TireCondition  @default(GOOD)
 
-  slotId String?
+  slotId String? @db.Uuid
 
   status TireSetStatus @default(IN_DEPOT)
 
   storagePricePln Decimal? @db.Decimal(10, 2)
 
-  sourceBookingId String?
+  sourceBookingId String? @db.Uuid
 
   notes     String? @db.Text
   createdAt DateTime @default(now())
@@ -907,14 +877,15 @@ model TireSet {
   sourceBooking Booking?        @relation(fields: [sourceBookingId], references: [id])
   periods       StoragePeriod[]
 
+  @@index([clientId])
   @@index([providerId, status])
   @@index([providerId, clientId])
   @@map("tire_sets")
 }
 
 model StoragePeriod {
-  id         String    @id @default(uuid())
-  tireSetId  String
+  id         String    @id @default(uuid()) @db.Uuid
+  tireSetId  String    @db.Uuid
   storedAt   DateTime
   releaseDue DateTime?
   pickedUpAt DateTime?
