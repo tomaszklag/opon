@@ -234,6 +234,28 @@ listBookings() { ... }
 createBooking() { ... }
 ```
 
+**Reguła: `@ApiProperty` z `nullable: true` wymaga jawnego `type`.**
+
+Brak `type` przy `nullable: true` powoduje że Swagger generuje pusty schemat, a `openapi-typescript` produkuje `Record<string, never>` zamiast `string | null`. Błąd jest **cichy** — TypeScript nie zgłasza nic, ale pole staje się bezużyteczne w FE.
+
+```ts
+// ❌ NIE — brak `type` → schema.d.ts wygeneruje Record<string, never>
+@ApiProperty({ nullable: true })
+notes!: string | null;
+
+// ✅ TAK — jawny `type` przy każdym nullable
+@ApiProperty({ type: String, nullable: true })
+notes!: string | null;
+
+@ApiPropertyOptional({ type: String, nullable: true })
+notes?: string | null;
+
+@ApiProperty({ type: Number, nullable: true })
+pricePln!: number | null;
+```
+
+Dotyczy wszystkich typów skalarnych (`String`, `Number`, `Boolean`). Jedynym wyjątkiem są pola, gdzie `@ApiProperty()` bez opcji inferuje typ poprawnie (np. `@ApiProperty() id!: string` — Swagger widzi typ z TypeScript refleksji, o ile nie ma `nullable`).
+
 **Reguła: pola wymagające weryfikacji nigdy nie trafiają do `Update*Dto`.**
 
 Pola takie jak `email` czy `phone` mają własny endpoint + OTP/token flow (patrz §16). Umieszczenie ich w `UpdateProviderDto` pozwala je zmienić bez weryfikacji, co narusza bezpieczeństwo.
@@ -2481,17 +2503,83 @@ mutate((key: unknown) => Array.isArray(key) && key[0] === 'booking-count');
 
 **Rejestr wszystkich kluczy SWR w `apps/panel`:**
 
-| Hook                    | Klucz                                       |
-| ----------------------- | ------------------------------------------- |
-| `use-bookings.ts`       | `['bookings', weekStart]`                   |
-| `use-bookings-month.ts` | `['bookings-month', ...weekStarts]`         |
-| `use-booking-admin.ts`  | `['booking-admin', JSON.stringify(params)]` |
-| `use-booking-detail.ts` | `['booking-detail', referenceCode]`         |
-| `use-availability.ts`   | `['availability', date, workerId]`          |
-| `useBookingStats()`     | `'booking-stats'`                           |
-| `useBookingTabCounts()` | `['booking-count', status]` (×5 statusów)   |
+| Hook                        | Klucz                                       |
+| --------------------------- | ------------------------------------------- |
+| `use-bookings.ts`           | `['bookings', weekStart]`                   |
+| `use-bookings-month.ts`     | `['bookings-month', ...weekStarts]`         |
+| `use-booking-admin.ts`      | `['booking-admin', JSON.stringify(params)]` |
+| `use-booking-detail.ts`     | `['booking-detail', referenceCode]`         |
+| `use-worker-task-detail.ts` | `['worker-task-detail', id]`                |
+| `use-availability.ts`       | `['availability', date, workerId]`          |
+| `useBookingStats()`         | `'booking-stats'`                           |
+| `useBookingTabCounts()`     | `['booking-count', status]` (×5 statusów)   |
 
 Gdy dodajesz nowy hook SWR — dopisz klucz do tej tabeli. Klucze są wymagane do poprawnego działania real-time invalidacji (§23).
+
+### 15.5. Wzorzec panelu bocznego (side detail panel)
+
+Panel boczny (`BookingDetailPanel`, `WorkerTaskDetailPanel`) to komponent wywoływany ze stanem `selectedId: string | null`. Zamknięty gdy `null`, otwarty gdy ID podane. Hook SWR wewnątrz panelu używa null-key pattern (§15.3) — fetch odpala się tylko gdy ID jest ustawione.
+
+```tsx
+// Strona nadrzędna — jeden stan per panel
+const [detailRefCode, setDetailRefCode] = useState<string | null>(null);
+const [detailTaskId, setDetailTaskId]   = useState<string | null>(null);
+
+// Panele są EKSKLUZYWNE — otwarcie jednego zamyka drugi
+function handleBookingClick(booking: Booking) {
+  setDetailTaskId(null);          // ← zamknij drugi panel
+  setDetailRefCode(booking.referenceCode);
+}
+
+function handleTaskClick(task: WorkerTask) {
+  setDetailRefCode(null);         // ← zamknij drugi panel
+  setDetailTaskId(task.id);
+}
+
+// Renderowanie — panel sam obsługuje null (zwraca null gdy id=null)
+<BookingDetailPanel
+  referenceCode={detailRefCode}
+  onClose={() => setDetailRefCode(null)}
+  onMutate={() => void mutate()}
+/>
+<WorkerTaskDetailPanel
+  taskId={detailTaskId}
+  onClose={() => setDetailTaskId(null)}
+  onMutate={() => void mutateTasks()}
+/>
+```
+
+**Dlaczego ekskluzywność jest ważna:** oba panele renderują `backdrop` (overlay z `onClick={onClose}`). Gdy dwa panele są otwarte jednocześnie, backdrop drugiego zamknie pierwszy — chaos z UX i nakładające się z-indeksy.
+
+**Anatomia panelu (wzorzec do kopiowania):**
+
+```tsx
+export function XxxDetailPanel({ id, onClose, onMutate }: Props) {
+  const { item, isLoading, mutate } = useXxxDetail(id);  // null-key SWR
+
+  // ESC zamyka panel
+  useEffect(() => {
+    if (id === null) return;
+    function onKey(e: KeyboardEvent) { if (e.key === 'Escape') onClose(); }
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [id, onClose]);
+
+  if (id === null) return null;  // nie renderuj nic gdy zamknięty
+
+  return (
+    <>
+      <div className={styles.backdrop} onClick={onClose} aria-hidden="true" />
+      <div role="dialog" aria-modal="true" className={styles.panel}>
+        {isLoading && <Spinner />}
+        {!isLoading && item && <PanelContent item={item} mutate={mutate} ... />}
+      </div>
+    </>
+  );
+}
+```
+
+CSS: panel jest `position: fixed; right: 0; top: 0; height: 100vh` z `z-index: 200`, backdrop `z-index: 199`. Te wartości muszą być spójne między wszystkimi panelami w aplikacji.
 
 ---
 

@@ -48,8 +48,10 @@ interface WeekViewProps {
   nowTime: string;
   isSlotMenuOpen?: boolean;
   onBookingClick?: (booking: Booking) => void;
+  onTaskClick?: (task: WorkerTask) => void;
   onSlotClick?: (date: Date, time: string, x: number, y: number) => void;
   onReschedule?: (booking: Booking, newDate: Date, newTime: string) => void;
+  onTaskReschedule?: (task: WorkerTask, newDate: Date, newTime: string) => void;
 }
 
 interface DragDisplay {
@@ -59,6 +61,15 @@ interface DragDisplay {
   height: number;
   time: string;
   clientName: string;
+}
+
+interface TaskDragDisplay {
+  taskId: string;
+  dayKey: string;
+  top: number;
+  height: number;
+  time: string;
+  title: string;
 }
 
 function isDraggable(status: BookingStatus): boolean {
@@ -107,17 +118,25 @@ export function WeekView({
   nowTime,
   isSlotMenuOpen,
   onBookingClick,
+  onTaskClick,
   onSlotClick,
   onReschedule,
+  onTaskReschedule,
 }: WeekViewProps) {
   const [activeFilter, setActiveFilter] = useState<FilterType>('all');
   const [hoverInfo, setHoverInfo] = useState<{ dayKey: string; top: number; time: string } | null>(
     null,
   );
   const [dragDisplay, setDragDisplay] = useState<DragDisplay | null>(null);
+  const [taskDragDisplay, setTaskDragDisplay] = useState<TaskDragDisplay | null>(null);
   const dragRef = useRef<{ booking: Booking; grabOffsetY: number; heightPx: number } | null>(null);
+  const taskDragRef = useRef<{ task: WorkerTask; grabOffsetY: number; heightPx: number } | null>(
+    null,
+  );
   const dragDisplayRef = useRef<DragDisplay | null>(null);
   dragDisplayRef.current = dragDisplay;
+  const taskDragDisplayRef = useRef<TaskDragDisplay | null>(null);
+  taskDragDisplayRef.current = taskDragDisplay;
   const justDraggedRef = useRef(false);
   const GHOST_H = 60;
 
@@ -130,7 +149,7 @@ export function WeekView({
   }, []);
 
   function handleColumnMouseMove(e: React.MouseEvent<HTMLDivElement>, day: Date) {
-    if (dragRef.current || isSlotMenuOpen) return;
+    if (dragRef.current || taskDragRef.current || isSlotMenuOpen) return;
     if ((e.target as Element).closest('[data-booking]')) {
       setHoverInfo(null);
       return;
@@ -243,6 +262,98 @@ export function WeekView({
       const unchanged = origDayKey === display.dayKey && display.time === origTime;
       if (!unchanged) {
         onReschedule?.(drag.booking, targetDay, display.time);
+      }
+    }
+
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  }
+
+  function startTaskDrag(e: React.MouseEvent, task: WorkerTask, day: Date) {
+    if (!onTaskReschedule) return;
+    e.stopPropagation();
+
+    const taskEl =
+      ((e.currentTarget as HTMLElement).closest('[data-task]') as HTMLElement) ??
+      (e.currentTarget as HTMLElement);
+    const rect = taskEl.getBoundingClientRect();
+    const grabOffsetY = e.clientY - rect.top;
+    const startObj = new Date(task.startAt);
+    const endObj = new Date(task.endAt);
+    const startMins = startObj.getHours() * 60 + startObj.getMinutes();
+    const endMins = endObj.getHours() * 60 + endObj.getMinutes();
+    const heightPx = Math.max(endMins - startMins, 20);
+
+    taskDragRef.current = { task, grabOffsetY, heightPx };
+    const initDisplay: TaskDragDisplay = {
+      taskId: task.id,
+      dayKey: day.toISOString(),
+      top: startMins - HOUR_START * 60,
+      height: heightPx,
+      time: formatTime(task.startAt),
+      title: task.title,
+    };
+    setTaskDragDisplay(initDisplay);
+    taskDragDisplayRef.current = initDisplay;
+
+    document.body.style.userSelect = 'none';
+    document.body.style.cursor = 'grabbing';
+
+    function onMove(me: MouseEvent) {
+      const drag = taskDragRef.current;
+      if (!drag) return;
+      const colEl = (document.elementFromPoint(me.clientX, me.clientY) as Element | null)?.closest(
+        '[data-calday]',
+      ) as HTMLElement | null;
+      if (!colEl) return;
+      const colRect = colEl.getBoundingClientRect();
+      const rawTop = me.clientY - colRect.top - drag.grabOffsetY;
+      const snappedTop = Math.max(
+        0,
+        Math.min(Math.round(rawTop / 15) * 15, GRID_HEIGHT - drag.heightPx),
+      );
+      const dayKey = colEl.getAttribute('data-calday') ?? '';
+      const next: TaskDragDisplay = {
+        taskId: drag.task.id,
+        dayKey,
+        top: snappedTop,
+        height: drag.heightPx,
+        time: snapTimeFromOffset(snappedTop),
+        title: drag.task.title,
+      };
+      taskDragDisplayRef.current = next;
+      setTaskDragDisplay(next);
+    }
+
+    function onUp() {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+      document.body.style.userSelect = '';
+      document.body.style.cursor = '';
+
+      const drag = taskDragRef.current;
+      const display = taskDragDisplayRef.current;
+      taskDragRef.current = null;
+      setTaskDragDisplay(null);
+      setHoverInfo(null);
+
+      justDraggedRef.current = true;
+      setTimeout(() => {
+        justDraggedRef.current = false;
+      }, 0);
+
+      if (!drag || !display) return;
+
+      const targetDay = weekDays.find((d) => d.toISOString() === display.dayKey);
+      if (!targetDay) return;
+
+      const origTime = formatTime(drag.task.startAt);
+      const origDayKey = weekDays
+        .find((d) => isSameDay(new Date(drag.task.startAt), d))
+        ?.toISOString();
+      const unchanged = origDayKey === display.dayKey && display.time === origTime;
+      if (!unchanged) {
+        onTaskReschedule?.(drag.task, targetDay, display.time);
       }
     }
 
@@ -370,10 +481,18 @@ export function WeekView({
                   style={{ height: `${GRID_HEIGHT}px` }}
                   onMouseMove={!isDayOff ? (e) => handleColumnMouseMove(e, day) : undefined}
                   onMouseLeave={() => {
-                    if (!dragRef.current && !isSlotMenuOpen) setHoverInfo(null);
+                    if (!dragRef.current && !taskDragRef.current && !isSlotMenuOpen)
+                      setHoverInfo(null);
                   }}
                   onClick={(e) => {
-                    if (!onSlotClick || isDayOff || dragDisplay || justDraggedRef.current) return;
+                    if (
+                      !onSlotClick ||
+                      isDayOff ||
+                      dragDisplay ||
+                      taskDragDisplay ||
+                      justDraggedRef.current
+                    )
+                      return;
                     const rect = e.currentTarget.getBoundingClientRect();
                     onSlotClick(
                       day,
@@ -421,14 +540,42 @@ export function WeekView({
                       <span className={styles.bookingDragGhostName}>{dragDisplay.clientName}</span>
                     </div>
                   )}
+                  {!isDayOff && taskDragDisplay?.dayKey === day.toISOString() && (
+                    <div
+                      className={styles.taskDragGhost}
+                      style={{
+                        top: `${taskDragDisplay.top}px`,
+                        height: `${taskDragDisplay.height}px`,
+                      }}
+                    >
+                      <span className={styles.taskDragGhostTime}>{taskDragDisplay.time}</span>
+                      <span className={styles.taskDragGhostTitle}>{taskDragDisplay.title}</span>
+                    </div>
+                  )}
                   {!isDayOff &&
                     getDayTasks(day).map((task) => (
                       <div
                         key={task.id}
-                        className={styles.workerTask}
+                        role="button"
+                        tabIndex={0}
+                        data-task="true"
+                        className={[
+                          styles.workerTask,
+                          onTaskClick ? styles.workerTaskClickable : '',
+                          onTaskReschedule ? styles.workerTaskDraggable : '',
+                          taskDragDisplay?.taskId === task.id ? styles.workerTaskDragging : '',
+                        ]
+                          .filter(Boolean)
+                          .join(' ')}
                         style={getBookingStyle(task.startAt, task.endAt)}
                         title={`${task.title}${task.workerName ? ` — ${task.workerName}` : ''} · ${formatTime(task.startAt)}–${formatTime(task.endAt)}`}
-                        onClick={(e) => e.stopPropagation()}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onTaskClick?.(task);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') onTaskClick?.(task);
+                        }}
                       >
                         <Text
                           variant="nano"
@@ -447,6 +594,18 @@ export function WeekView({
                           >
                             {task.workerName}
                           </Text>
+                        )}
+                        {onTaskReschedule && (
+                          <div
+                            className={styles.workerTaskDragHandle}
+                            onMouseDown={(e) => {
+                              e.stopPropagation();
+                              startTaskDrag(e, task, day);
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <IconGripVertical width="10" height="10" />
+                          </div>
                         )}
                       </div>
                     ))}

@@ -16,10 +16,13 @@ export type BookingStatus =
 // isManual is present in BookingResponseDto backend DTO but not yet in generated schema
 export type Booking = Omit<BookingBase, 'status'> & { status: BookingStatus; isManual: boolean };
 
-type BookingDetailBase = components['schemas']['BookingDetailResponseDto'];
 export type BookingClient = components['schemas']['BookingClientDto'];
 export type BookingVehicle = components['schemas']['BookingVehicleDto'];
-export type BookingDetail = Omit<BookingDetailBase, 'status'> & { status: BookingStatus };
+export type BookingService = components['schemas']['BookingServiceDto'];
+export type BookingSubService = components['schemas']['BookingSubServiceDto'];
+export type BookingDetail = Omit<components['schemas']['BookingDetailResponseDto'], 'status'> & {
+  status: BookingStatus;
+};
 
 export type StatusAction = 'confirm' | 'start' | 'complete' | 'cancel' | 'reject' | 'no_show';
 

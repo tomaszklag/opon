@@ -363,6 +363,8 @@ model Booking {
   stationId       String?
   workerId        String?       @db.VarChar(36)
   serviceType     ServiceType?
+  serviceName     String?       @db.VarChar(300)
+  serviceDetails  Json?
   sizeTier        SizeTier?
   tpmsRequired    Boolean      @default(false)
   isManual        Boolean      @default(false)

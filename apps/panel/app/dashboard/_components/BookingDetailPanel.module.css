@@ -15,24 +15,91 @@
   overflow-y: auto;
   background: var(--surface);
   border-left: 1px solid var(--border);
-  box-shadow: var(--shadow-lg);
+  box-shadow: -8px 0 32px rgba(0, 0, 0, 0.18);
   display: flex;
   flex-direction: column;
 }
 
 .header {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-3);
   padding: var(--space-5);
-}
-
-.headerText {
-  flex: 1;
-  min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
+  gap: var(--space-2);
+}
+
+.headerTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.headerMeta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* ── Status badge (zsynchronizowany z booking-detail.module.css) ── */
+
+@keyframes softPulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.4; }
+}
+
+.statusBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 5px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+}
+
+.statusBadge::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+
+.statusBadgeActive::before {
+  animation: softPulse 1800ms ease-in-out infinite;
+}
+
+.badgePending {
+  background: var(--warning-muted);
+  border: 1px solid var(--warning-border);
+  color: var(--warning);
+}
+
+.badgeConfirmed {
+  background: var(--accent-muted);
+  border: 1px solid var(--accent-border);
+  color: var(--accent);
+}
+
+.badgeInProgress {
+  background: var(--info-muted);
+  border: 1px solid var(--info-border);
+  color: var(--info);
+}
+
+.badgeCompleted {
+  background: var(--success-muted);
+  border: 1px solid var(--success-border);
+  color: var(--success);
+}
+
+.badgeCancelled {
+  background: var(--danger-muted);
+  border: 1px solid var(--danger-border);
+  color: var(--danger);
 }
 
 .closeBtn {
@@ -67,6 +134,36 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
+}
+
+.sectionLabel {
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+
+.serviceMain {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.serviceExtras {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-1);
+}
+
+.serviceTag {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-hover);
+  border: 1px solid var(--border);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
 }
 
 .dataRow {

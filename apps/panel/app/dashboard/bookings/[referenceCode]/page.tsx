@@ -382,7 +382,7 @@ export default function BookingDetailPage({ params }: PageProps) {
 
   const canAddToDepot =
     booking.status === 'COMPLETED' &&
-    booking.serviceType === 'SEASONAL_SWAP' &&
+    booking.service.typeCode === 'SEASONAL_SWAP' &&
     !booking.hasTireSetsInDepot;
 
   async function handleDepotSubmit(body: CreateTireSetBody) {
@@ -399,7 +399,7 @@ export default function BookingDetailPage({ params }: PageProps) {
         initial={{
           clientName: booking.client.clientName,
           clientPhone: booking.client.clientPhone,
-          tireSize: booking.tireSize ?? '',
+          tireSize: booking.service.tireSize ?? '',
           sourceBookingId: booking.id,
         }}
       />
@@ -622,9 +622,9 @@ export default function BookingDetailPage({ params }: PageProps) {
                       </Text>
                       <div className={styles.vehicleMeta}>
                         <span className={styles.tireTaq}>{booking.vehicle.tireSize}</span>
-                        {booking.sizeTier && (
+                        {booking.service.sizeTier && (
                           <Text variant="nano" as="span" color="muted">
-                            tier &bdquo;{booking.sizeTier}&rdquo;
+                            tier &bdquo;{booking.service.sizeTier}&rdquo;
                           </Text>
                         )}
                       </div>
@@ -632,7 +632,7 @@ export default function BookingDetailPage({ params }: PageProps) {
                     {booking.basePricePln !== null && (
                       <div className={styles.pricePreview}>
                         <Text variant="nano" as="span" weight="bold" color="muted">
-                          {booking.serviceType ?? 'Usługa'}
+                          {booking.service.name ?? booking.service.typeCode ?? 'Usługa'}
                         </Text>
                         <span className={styles.pricePreviewValue}>
                           {formatPrice(booking.basePricePln ?? 0)}
@@ -736,8 +736,8 @@ export default function BookingDetailPage({ params }: PageProps) {
                   {/* Base service */}
                   <div className={styles.priceRow}>
                     <Text variant="body-sm" as="span" color="secondary">
-                      {booking.serviceType ?? 'Usługa'}
-                      {booking.tireSize ? ` (${booking.tireSize})` : ''}
+                      {booking.service.name ?? booking.service.typeCode ?? 'Usługa'}
+                      {booking.service.tireSize ? ` (${booking.service.tireSize})` : ''}
                     </Text>
                     <span className={styles.priceRowVal}>
                       {booking.basePricePln != null

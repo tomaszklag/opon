@@ -455,41 +455,6 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/v1/providers/me/working-hours': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /** Moje godziny pracy */
-    get: operations['WorkingHoursController_listMine'];
-    /** Ustaw / zaktualizuj godziny pracy (upsert per dzień) */
-    put: operations['WorkingHoursController_upsert'];
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/v1/providers/{providerId}/working-hours': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /** Godziny pracy firmy (publiczne) */
-    get: operations['WorkingHoursController_listByProvider'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
   '/v1/gus/{nip}': {
     parameters: {
       query?: never;
@@ -867,23 +832,6 @@ export interface paths {
     patch: operations['WorkerTasksController_update'];
     trace?: never;
   };
-  '/v1/providers/me/bookings/clients': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /** Search clients by phone/name for autocomplete */
-    get: operations['BookingsController_searchClients'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
   '/v1/providers/me/bookings': {
     parameters: {
       query?: never;
@@ -969,6 +917,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/v1/providers/me/bookings/clients': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Search clients by phone/name for autocomplete */
+    get: operations['BookingsController_searchClients'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/v1/providers/me/bookings/availability': {
     parameters: {
       query?: never;
@@ -1001,6 +966,23 @@ export interface paths {
     options?: never;
     head?: never;
     patch?: never;
+    trace?: never;
+  };
+  '/v1/providers/me/bookings/{referenceCode}/reschedule': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /** Reschedule a booking (move to new date/time) */
+    patch: operations['BookingsController_reschedule'];
     trace?: never;
   };
   '/v1/providers/me/bookings/{referenceCode}/status': {
@@ -1714,66 +1696,6 @@ export interface components {
       travelFeeFirstKmPln?: number;
       travelFeeExtraKmPln?: number;
     };
-    CapacityBlockResponseDto: {
-      /** @example 08:00 */
-      from: string;
-      /** @example 13:00 */
-      to: string;
-      /** @example 2 */
-      workstations: number;
-    };
-    WorkingHoursResponseDto: {
-      id: string;
-      providerId: string;
-      dayOfWeek: number;
-      isClosed: boolean;
-      openTime?: string | null;
-      closeTime?: string | null;
-      slotMinutes: number;
-      /** @default 1 */
-      workstations: number;
-      blocks?: components['schemas']['CapacityBlockResponseDto'][] | null;
-    };
-    CapacityBlockDto: {
-      /** @example 08:00 */
-      from: string;
-      /** @example 13:00 */
-      to: string;
-      /**
-       * @description Liczba równoległych stanowisk w bloku
-       * @example 2
-       */
-      workstations: number;
-    };
-    WorkingHoursDayDto: {
-      /**
-       * @description 0=niedz … 6=sobota
-       * @example 1
-       */
-      dayOfWeek: number;
-      /** @example false */
-      isClosed: boolean;
-      /** @example 08:00 */
-      openTime?: string;
-      /** @example 17:00 */
-      closeTime?: string;
-      /**
-       * @description Długość slotu (minuty)
-       * @default 45
-       */
-      slotMinutes: number;
-      /**
-       * @description Liczba równoległych stanowisk dla całego dnia
-       * @default 1
-       */
-      workstations: number;
-      /** @description Bloki obsady (max 3); null = cały dzień jednorodny */
-      blocks?: components['schemas']['CapacityBlockDto'][] | null;
-    };
-    UpsertWorkingHoursDto: {
-      /** @description 1–7 dni (upsert po dayOfWeek) */
-      days: components['schemas']['WorkingHoursDayDto'][];
-    };
     UploadPhotoDto: {
       /** @enum {string} */
       type: 'LOGO' | 'VEHICLE' | 'WORKSPACE' | 'ADDITIONAL';
@@ -1797,7 +1719,7 @@ export interface components {
       providerId: string;
       name: string;
       serviceIds: string[];
-      schedule: Record<string, never>;
+      schedule: Record<string, unknown>;
       workers: components['schemas']['StationWorkerResponseDto'][];
       /** Format: date-time */
       createdAt: string;
@@ -1948,10 +1870,6 @@ export interface components {
       endAt: string;
       notes?: string;
     };
-    UpdateWorkerTaskDto: {
-      notes?: string | null;
-      linkedBookingId?: string | null;
-    };
     LinkedBookingDto: {
       referenceCode: string;
       clientName: string;
@@ -1970,9 +1888,11 @@ export interface components {
       linkedBooking: components['schemas']['LinkedBookingDto'] | null;
       createdAt: string;
     };
-    ClientSearchResultDto: {
-      phone: string;
-      name: string;
+    UpdateWorkerTaskDto: {
+      notes?: string | null;
+      linkedBookingId?: string | null;
+      startAt?: string;
+      endAt?: string;
     };
     BookingResponseDto: {
       id: string;
@@ -2015,6 +1935,10 @@ export interface components {
       ids: string[];
       action: string;
     };
+    ManualSubServiceDto: {
+      name: string;
+      pricePln?: number | null;
+    };
     CreateManualBookingDto: {
       /** @example Jan Kowalski */
       clientName: string;
@@ -2030,6 +1954,9 @@ export interface components {
       totalPricePln?: number;
       /** @example SEASONAL_SWAP */
       serviceType?: string;
+      /** @example Wymiana sezonowa — Osobowe */
+      serviceName?: string;
+      subServices?: components['schemas']['ManualSubServiceDto'][];
       /** @example Klient prosi o kontakt przed wizytą. */
       notes?: string;
       workerId?: string;
@@ -2050,6 +1977,10 @@ export interface components {
        */
       availabilityVersion?: string;
     };
+    ClientSearchResultDto: {
+      phone: string;
+      name: string;
+    };
     AvailabilitySlotDto: {
       startAt: string;
       endAt: string;
@@ -2060,6 +1991,7 @@ export interface components {
       slots: components['schemas']['AvailabilitySlotDto'][];
       slotMinutes: number;
       isClosedDay: boolean;
+      version: string;
     };
     BookingClientDto: {
       clientId: string;
@@ -2071,6 +2003,18 @@ export interface components {
       vehicleId: string;
       nickname: string;
       tireSize: string;
+    };
+    BookingSubServiceDto: {
+      name: string;
+      pricePln?: number | null;
+    };
+    BookingServiceDto: {
+      name?: string | null;
+      typeCode?: string | null;
+      tireSize?: string | null;
+      sizeTier?: string | null;
+      tpmsRequired: boolean;
+      subServices: components['schemas']['BookingSubServiceDto'][];
     };
     BookingDetailResponseDto: {
       id: string;
@@ -2084,10 +2028,7 @@ export interface components {
       addressCity?: string | null;
       addressLat?: number | null;
       addressLng?: number | null;
-      tireSize?: string | null;
-      serviceType?: string | null;
-      sizeTier?: string | null;
-      tpmsRequired: boolean;
+      service: components['schemas']['BookingServiceDto'];
       basePricePln?: number | null;
       travelFeePln?: number | null;
       totalPricePln?: number | null;
@@ -2102,6 +2043,14 @@ export interface components {
       startedAt?: string | null;
       completedAt?: string | null;
       cancelledAt?: string | null;
+    };
+    RescheduleBookingDto: {
+      /** @example 2025-06-15T09:00:00.000Z */
+      startAt: string;
+      /** @example 2025-06-15T10:30:00.000Z */
+      endAt: string;
+      /** @default false */
+      notifyClient: boolean;
     };
     UpdateBookingStatusDto: {
       /** @enum {string} */
@@ -2266,9 +2215,9 @@ export interface components {
       reason: string;
       isClosed: boolean;
       /** @example 10:00 */
-      customOpenTime?: Record<string, never>;
+      customOpenTime?: string | null;
       /** @example 14:00 */
-      customCloseTime?: Record<string, never>;
+      customCloseTime?: string | null;
     };
     CreateScheduleExceptionDto: {
       /**
@@ -2390,7 +2339,6 @@ export interface components {
       positionsPerRow: number;
     };
     UpdateTireSetDto: {
-      clientName?: string;
       vehicleName?: string;
       licensePlate?: string;
       brand?: string;
@@ -2403,7 +2351,7 @@ export interface components {
       treadDepthMm?: number;
       /** @enum {string} */
       condition?: 'GOOD' | 'WORN' | 'CRITICAL';
-      slotId?: Record<string, never> | null;
+      slotId?: string | null;
       storagePricePln?: number;
       notes?: string;
     };
@@ -3257,69 +3205,6 @@ export interface operations {
       };
     };
   };
-  WorkingHoursController_listMine: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['WorkingHoursResponseDto'][];
-        };
-      };
-    };
-  };
-  WorkingHoursController_upsert: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['UpsertWorkingHoursDto'];
-      };
-    };
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['WorkingHoursResponseDto'][];
-        };
-      };
-    };
-  };
-  WorkingHoursController_listByProvider: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        providerId: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['WorkingHoursResponseDto'][];
-        };
-      };
-    };
-  };
   GusController_getByNip: {
     parameters: {
       query?: never;
@@ -3996,7 +3881,9 @@ export interface operations {
     requestBody?: never;
     responses: {
       200: {
-        headers: { [name: string]: unknown };
+        headers: {
+          [name: string]: unknown;
+        };
         content: {
           'application/json': components['schemas']['WorkerTaskResponseDto'][];
         };
@@ -4017,7 +3904,9 @@ export interface operations {
     };
     responses: {
       201: {
-        headers: { [name: string]: unknown };
+        headers: {
+          [name: string]: unknown;
+        };
         content: {
           'application/json': components['schemas']['WorkerTaskResponseDto'];
         };
@@ -4028,34 +3917,17 @@ export interface operations {
     parameters: {
       query?: never;
       header?: never;
-      path: { id: string };
+      path: {
+        id: string;
+      };
       cookie?: never;
     };
     requestBody?: never;
     responses: {
       200: {
-        headers: { [name: string]: unknown };
-        content: {
-          'application/json': components['schemas']['WorkerTaskResponseDto'];
+        headers: {
+          [name: string]: unknown;
         };
-      };
-    };
-  };
-  WorkerTasksController_update: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: { id: string };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['UpdateWorkerTaskDto'];
-      };
-    };
-    responses: {
-      200: {
-        headers: { [name: string]: unknown };
         content: {
           'application/json': components['schemas']['WorkerTaskResponseDto'];
         };
@@ -4074,24 +3946,34 @@ export interface operations {
     requestBody?: never;
     responses: {
       200: {
-        headers: { [name: string]: unknown };
+        headers: {
+          [name: string]: unknown;
+        };
         content?: never;
       };
     };
   };
-  BookingsController_searchClients: {
+  WorkerTasksController_update: {
     parameters: {
-      query: { q: string };
+      query?: never;
       header?: never;
-      path?: never;
+      path: {
+        id: string;
+      };
       cookie?: never;
     };
-    requestBody?: never;
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['UpdateWorkerTaskDto'];
+      };
+    };
     responses: {
       200: {
-        headers: { [name: string]: unknown };
+        headers: {
+          [name: string]: unknown;
+        };
         content: {
-          'application/json': components['schemas']['ClientSearchResultDto'][];
+          'application/json': components['schemas']['WorkerTaskResponseDto'];
         };
       };
     };
@@ -4206,6 +4088,27 @@ export interface operations {
       };
     };
   };
+  BookingsController_searchClients: {
+    parameters: {
+      query: {
+        q: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ClientSearchResultDto'][];
+        };
+      };
+    };
+  };
   BookingsController_getAvailability: {
     parameters: {
       query: {
@@ -4246,6 +4149,31 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['BookingDetailResponseDto'];
+        };
+      };
+    };
+  };
+  BookingsController_reschedule: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        referenceCode: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['RescheduleBookingDto'];
+      };
+    };
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['BookingResponseDto'];
         };
       };
     };

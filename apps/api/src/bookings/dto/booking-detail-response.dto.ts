@@ -1,5 +1,19 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
+export class BookingSubServiceDto {
+  @ApiProperty() name!: string;
+  @ApiPropertyOptional({ type: Number, nullable: true }) pricePln!: number | null;
+}
+
+export class BookingServiceDto {
+  @ApiPropertyOptional({ type: String, nullable: true }) name!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) typeCode!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) tireSize!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) sizeTier!: string | null;
+  @ApiProperty() tpmsRequired!: boolean;
+  @ApiProperty({ type: [BookingSubServiceDto] }) subServices!: BookingSubServiceDto[];
+}
+
 export class BookingClientDto {
   @ApiProperty() clientId!: string;
   @ApiProperty() clientName!: string;
@@ -26,10 +40,7 @@ export class BookingDetailResponseDto {
   @ApiPropertyOptional({ type: String, nullable: true }) addressCity!: string | null;
   @ApiPropertyOptional({ type: Number, nullable: true }) addressLat!: number | null;
   @ApiPropertyOptional({ type: Number, nullable: true }) addressLng!: number | null;
-  @ApiPropertyOptional({ type: String, nullable: true }) tireSize!: string | null;
-  @ApiPropertyOptional({ type: String, nullable: true }) serviceType!: string | null;
-  @ApiPropertyOptional({ type: String, nullable: true }) sizeTier!: string | null;
-  @ApiProperty() tpmsRequired!: boolean;
+  @ApiProperty({ type: () => BookingServiceDto }) service!: BookingServiceDto;
   @ApiPropertyOptional({ type: Number, nullable: true }) basePricePln!: number | null;
   @ApiPropertyOptional({ type: Number, nullable: true }) travelFeePln!: number | null;
   @ApiPropertyOptional({ type: Number, nullable: true }) totalPricePln!: number | null;

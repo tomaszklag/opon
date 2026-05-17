@@ -104,6 +104,8 @@ export class WorkerTasksService {
     const updated = await this.repo.update(id, providerId, {
       notes: dto.notes,
       linkedBookingId: dto.linkedBookingId,
+      ...(dto.startAt ? { startAt: new Date(dto.startAt) } : {}),
+      ...(dto.endAt ? { endAt: new Date(dto.endAt) } : {}),
     });
     return this.toDto(updated);
   }

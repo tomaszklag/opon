@@ -1,4 +1,5 @@
 import {
+  IsArray,
   IsBoolean,
   IsISO8601,
   IsNumber,
@@ -7,7 +8,16 @@ import {
   Matches,
   MaxLength,
   MinLength,
+  ValidateNested,
 } from 'class-validator';
+import { Type } from 'class-transformer';
+
+export class ManualSubServiceDto {
+  @ApiProperty() @IsString() @MaxLength(200) name!: string;
+  @ApiPropertyOptional({ type: Number, nullable: true }) @IsOptional() @IsNumber() pricePln?:
+    | number
+    | null;
+}
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateManualBookingDto {
@@ -45,6 +55,19 @@ export class CreateManualBookingDto {
   @IsOptional()
   @IsString()
   serviceType?: string;
+
+  @ApiPropertyOptional({ example: 'Wymiana sezonowa — Osobowe' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(300)
+  serviceName?: string;
+
+  @ApiPropertyOptional({ type: [ManualSubServiceDto] })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => ManualSubServiceDto)
+  subServices?: ManualSubServiceDto[];
 
   @ApiPropertyOptional({ example: 'Klient prosi o kontakt przed wizytą.' })
   @IsOptional()

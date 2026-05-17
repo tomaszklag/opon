@@ -133,10 +133,19 @@ export class BookingsService {
       addressCity: booking.addressCity ?? null,
       addressLat: booking.addressLat != null ? Number(booking.addressLat) : null,
       addressLng: booking.addressLng != null ? Number(booking.addressLng) : null,
-      tireSize: booking.tireSize ?? null,
-      serviceType: booking.serviceType ?? null,
-      sizeTier: booking.sizeTier ?? null,
-      tpmsRequired: booking.tpmsRequired,
+      service: {
+        name: booking.serviceName ?? null,
+        typeCode: booking.serviceType ?? null,
+        tireSize: booking.tireSize ?? null,
+        sizeTier: booking.sizeTier ?? null,
+        tpmsRequired: booking.tpmsRequired,
+        subServices:
+          (
+            booking.serviceDetails as {
+              subServices?: { name: string; pricePln: number | null }[];
+            } | null
+          )?.subServices ?? [],
+      },
       basePricePln: booking.basePricePln != null ? Number(booking.basePricePln) : null,
       travelFeePln: booking.travelFeePln != null ? Number(booking.travelFeePln) : null,
       totalPricePln: booking.totalPricePln != null ? Number(booking.totalPricePln) : null,
@@ -285,6 +294,16 @@ export class BookingsService {
       tireSize: dto.tireSize ?? null,
       totalPricePln: dto.totalPricePln ?? null,
       serviceType,
+      serviceName: dto.serviceName ?? null,
+      serviceDetails:
+        dto.subServices && dto.subServices.length > 0
+          ? {
+              subServices: dto.subServices.map((s) => ({
+                name: s.name,
+                pricePln: s.pricePln ?? null,
+              })),
+            }
+          : null,
       notes: dto.notes ?? null,
       status,
       confirmedAt,

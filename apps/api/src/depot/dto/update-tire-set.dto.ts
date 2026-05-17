@@ -24,7 +24,9 @@ export class UpdateTireSetDto {
   @IsOptional()
   @IsEnum(TireCondition)
   condition?: TireCondition;
-  @ApiPropertyOptional({ nullable: true }) @IsOptional() @IsString() slotId?: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) @IsOptional() @IsString() slotId?:
+    | string
+    | null;
   @ApiPropertyOptional() @IsOptional() @IsNumber() @IsPositive() storagePricePln?: number;
   @ApiPropertyOptional() @IsOptional() @IsString() notes?: string;
 }

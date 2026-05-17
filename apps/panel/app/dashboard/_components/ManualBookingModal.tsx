@@ -363,13 +363,18 @@ export function ManualBookingModal({
 
     const resolvedPrice = totalPricePln ? Number(totalPricePln) : (autoPrice ?? undefined);
 
+    const resolvedSubServices = subServices
+      .filter((s) => checkedSubNames.has(s.name))
+      .map((s) => ({ name: s.name, pricePln: s.pricePln ?? null }));
+
     const result = await createBooking({
       clientName: clientName.trim(),
       clientPhone: `+48${clientPhone.trim()}`,
       startAt,
       endAt,
       tireSize: resolvedTireSize,
-      serviceType: resolvedServiceType,
+      serviceName: resolvedServiceType,
+      subServices: resolvedSubServices.length > 0 ? resolvedSubServices : undefined,
       workerId: workerId || undefined,
       totalPricePln: resolvedPrice,
       notes: notes.trim() || undefined,

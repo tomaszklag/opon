@@ -47,13 +47,20 @@ export class WorkerTasksRepository {
   update(
     id: string,
     providerId: string,
-    data: { notes?: string | null; linkedBookingId?: string | null },
+    data: {
+      notes?: string | null;
+      linkedBookingId?: string | null;
+      startAt?: Date;
+      endAt?: Date;
+    },
   ) {
     return this.prisma.workerTask.update({
       where: { id },
       data: {
         ...(data.notes !== undefined ? { notes: data.notes } : {}),
         ...(data.linkedBookingId !== undefined ? { linkedBookingId: data.linkedBookingId } : {}),
+        ...(data.startAt !== undefined ? { startAt: data.startAt } : {}),
+        ...(data.endAt !== undefined ? { endAt: data.endAt } : {}),
       },
       include: taskInclude,
     });

@@ -13,7 +13,7 @@ export class StationResponseDto {
   @ApiProperty() providerId!: string;
   @ApiProperty() name!: string;
   @ApiProperty({ type: [String] }) serviceIds!: string[];
-  @ApiProperty() schedule!: unknown;
+  @ApiProperty({ type: Object }) schedule!: unknown;
   @ApiProperty({ type: [StationWorkerResponseDto] }) workers!: StationWorkerResponseDto[];
   @ApiProperty() createdAt!: Date;
 }

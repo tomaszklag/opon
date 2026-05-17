@@ -29,8 +29,6 @@ interface BookingDetailPanelProps {
   onMutate?: () => void;
 }
 
-type TextColor = 'primary' | 'secondary' | 'muted' | 'accent' | 'warning' | 'danger';
-
 // ── Constants ────────────────────────────────────────────────────────────────
 
 const STATUS_LABEL: Record<BookingStatus, string> = {
@@ -45,25 +43,50 @@ const STATUS_LABEL: Record<BookingStatus, string> = {
   NO_SHOW: 'Nieobecność',
 };
 
-const STATUS_COLOR: Record<BookingStatus, TextColor> = {
-  PENDING: 'warning',
-  CONFIRMED: 'accent',
-  IN_PROGRESS: 'accent',
-  COMPLETED: 'secondary',
-  CANCELLED_BY_CLIENT: 'muted',
-  CANCELLED_BY_PROVIDER: 'muted',
-  CANCELLED_BY_SYSTEM: 'muted',
-  REJECTED: 'danger',
-  NO_SHOW: 'muted',
-};
+function getStatusBadgeClass(status: BookingStatus): string {
+  switch (status) {
+    case 'PENDING':
+      return styles.badgePending ?? '';
+    case 'CONFIRMED':
+      return styles.badgeConfirmed ?? '';
+    case 'IN_PROGRESS':
+      return styles.badgeInProgress ?? '';
+    case 'COMPLETED':
+      return styles.badgeCompleted ?? '';
+    default:
+      return styles.badgeCancelled ?? '';
+  }
+}
+
+function StatusBadge({ status }: { status: BookingStatus }) {
+  const label = STATUS_LABEL[status] ?? status;
+  const isActive = status === 'PENDING' || status === 'IN_PROGRESS';
+  return (
+    <span
+      className={[
+        styles.statusBadge,
+        getStatusBadgeClass(status),
+        isActive ? styles.statusBadgeActive : '',
+      ].join(' ')}
+    >
+      {label}
+    </span>
+  );
+}
 
 const SERVICE_TYPE_LABEL: Record<string, string> = {
   SEASONAL_SWAP: 'Wymiana sezonowa',
-  TIRE_REPAIR: 'Naprawa opony',
-  TIRE_FITTING: 'Montaż opon',
+  WHEEL_SWAP: 'Wymiana kół',
   BALANCING: 'Wyważanie',
-  OTHER: 'Inna usługa',
+  PUNCTURE_REPAIR: 'Naprawa przebicia',
 };
+
+function resolvedServiceLabel(service: BookingDetail['service']): string {
+  if (service.name) return service.name;
+  if (!service.typeCode) return '';
+  const base = SERVICE_TYPE_LABEL[service.typeCode] ?? service.typeCode;
+  return service.sizeTier ? `${base} • ${service.sizeTier}` : base;
+}
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -101,12 +124,6 @@ function fmtTimeRange(startAt: string, endAt: string): string {
   return `${from} – ${to}`;
 }
 
-function serviceLabel(serviceType: string | null, sizeTier: string | null | undefined): string {
-  if (!serviceType) return '';
-  const base = SERVICE_TYPE_LABEL[serviceType] ?? serviceType;
-  return sizeTier ? `${base} • Rozmiar ${sizeTier}` : base;
-}
-
 // ── Sub-components ───────────────────────────────────────────────────────────
 
 function DataRow({ label, value }: { label: string; value: string }) {
@@ -134,10 +151,7 @@ interface PanelContentProps {
 function PanelContent({ booking, onClose, onMutate, mutate }: PanelContentProps) {
   const [loading, setLoading] = useState<string | null>(null);
 
-  const statusLabel = STATUS_LABEL[booking.status] ?? booking.status;
-  const statusColor: TextColor = STATUS_COLOR[booking.status] ?? 'secondary';
-
-  const isSeasonalSwap = booking.serviceType === 'SEASONAL_SWAP';
+  const isSeasonalSwap = booking.service.typeCode === 'SEASONAL_SWAP';
   const canAddToDepot =
     isSeasonalSwap && booking.status === 'COMPLETED' && !booking.hasTireSetsInDepot;
   const hasDepot = isSeasonalSwap && booking.hasTireSetsInDepot;
@@ -171,28 +185,35 @@ function PanelContent({ booking, onClose, onMutate, mutate }: PanelContentProps)
     <>
       {/* ── Header ── */}
       <div className={styles.header}>
-        <div className={styles.headerText}>
-          <Text variant="nano" weight="bold" mono color={statusColor} as="p">
-            {statusLabel}
+        <div className={styles.headerTop}>
+          <StatusBadge status={booking.status} />
+          <button
+            type="button"
+            className={styles.closeBtn}
+            onClick={onClose}
+            aria-label="Zamknij panel"
+          >
+            <IconXClose width={16} height={16} />
+          </button>
+        </div>
+        <Heading variant="subsection" as="h2">
+          {booking.client.clientName}
+        </Heading>
+        <div className={styles.headerMeta}>
+          <Text variant="nano" mono color="muted" as="span">
+            {booking.referenceCode}
           </Text>
-          <Heading variant="subsection" as="h2">
-            {booking.client.clientName}
-          </Heading>
-          {(booking.serviceType || booking.tireSize) && (
-            <Text variant="body-sm" color="secondary" as="p">
-              {serviceLabel(booking.serviceType ?? null, booking.sizeTier)}
-              {booking.serviceType && booking.tireSize ? '' : ''}
-            </Text>
+          {booking.client.bookingCount > 1 && (
+            <>
+              <Text variant="nano" color="muted" as="span">
+                ·
+              </Text>
+              <Text variant="nano" color="secondary" as="span">
+                {booking.client.bookingCount}. wizyta
+              </Text>
+            </>
           )}
         </div>
-        <button
-          type="button"
-          className={styles.closeBtn}
-          onClick={onClose}
-          aria-label="Zamknij panel"
-        >
-          <IconXClose width={16} height={16} />
-        </button>
       </div>
 
       <hr className={styles.divider} />
@@ -211,6 +232,43 @@ function PanelContent({ booking, onClose, onMutate, mutate }: PanelContentProps)
             <Text variant="body-sm" color="secondary" as="span">
               Stanowisko
             </Text>
+          </div>
+        )}
+      </div>
+
+      <hr className={styles.divider} />
+
+      {/* ── Usługa ── */}
+      <div className={styles.section}>
+        <Text variant="nano" weight="bold" color="muted" as="p" className={styles.sectionLabel}>
+          Usługa
+        </Text>
+        <div className={styles.serviceMain}>
+          <Text variant="body-sm" weight="bold" as="span">
+            {resolvedServiceLabel(booking.service) || 'Usługa'}
+          </Text>
+          {booking.service.tireSize && (
+            <Text variant="body-sm" color="secondary" as="span">
+              {booking.service.tireSize}
+            </Text>
+          )}
+        </div>
+        {booking.service.subServices.length > 0 && (
+          <div className={styles.serviceExtras}>
+            {booking.service.subServices.map((s) => (
+              <span key={s.name} className={styles.serviceTag}>
+                {s.name}
+                {s.pricePln != null ? ` +${s.pricePln} zł` : ''}
+              </span>
+            ))}
+          </div>
+        )}
+        {(booking.service.tpmsRequired || booking.addressLine) && (
+          <div className={styles.serviceExtras}>
+            {booking.service.tpmsRequired && (
+              <span className={styles.serviceTag}>Kontrola TPMS</span>
+            )}
+            {booking.addressLine && <span className={styles.serviceTag}>Usługa mobilna</span>}
           </div>
         )}
       </div>
@@ -236,13 +294,23 @@ function PanelContent({ booking, onClose, onMutate, mutate }: PanelContentProps)
             </Text>
           </div>
         )}
-        {!booking.vehicle && booking.tireSize && (
-          <DataRow label="Rozmiar opon" value={booking.tireSize} />
+        {!booking.vehicle && booking.service.tireSize && (
+          <DataRow label="Rozmiar opon" value={booking.service.tireSize} />
         )}
-        {booking.totalPricePln != null && (
-          <DataRow label="Cena" value={`${booking.totalPricePln} zł`} />
+        {booking.totalPricePln != null && booking.travelFeePln ? (
+          <>
+            <DataRow label="Usługa" value={`${booking.basePricePln ?? 0} zł`} />
+            <DataRow label="Dojazd" value={`${booking.travelFeePln} zł`} />
+            <DataRow label="Razem" value={`${booking.totalPricePln} zł`} />
+          </>
+        ) : (
+          booking.totalPricePln != null && (
+            <DataRow label="Cena" value={`${booking.totalPricePln} zł`} />
+          )
         )}
         {booking.notes && <DataRow label="Uwagi" value={booking.notes} />}
+        {booking.rejectReason && <DataRow label="Powód odrzucenia" value={booking.rejectReason} />}
+        {booking.cancelReason && <DataRow label="Powód anulowania" value={booking.cancelReason} />}
       </div>
 
       {/* ── Actions ── */}

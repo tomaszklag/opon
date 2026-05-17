@@ -67,7 +67,6 @@ export default function DepotPage() {
   async function handleModalSubmit(body: CreateTireSetBody) {
     if (editTarget) {
       const updateBody: UpdateTireSetBody = {
-        clientName: body.clientName,
         vehicleName: body.vehicleName,
         licensePlate: body.licensePlate,
         brand: body.brand,

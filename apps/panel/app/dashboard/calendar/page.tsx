@@ -14,8 +14,11 @@ import { IconChevronLeft, IconChevronRight } from '../../../components/icons';
 import { ManualBookingModal } from '../_components/ManualBookingModal';
 import { WorkerTaskModal } from '../_components/WorkerTaskModal';
 import { BookingDetailPanel } from '../_components/BookingDetailPanel';
+import { WorkerTaskDetailPanel } from '../_components/WorkerTaskDetailPanel';
 import type { Booking } from '../../../api-data-access/bookings';
 import { bookingsApi } from '../../../api-data-access/bookings';
+import type { WorkerTask } from '../../../api-data-access/worker-tasks';
+import { workerTasksApi } from '../../../api-data-access/worker-tasks';
 import { toast } from '@opony/design-system-web';
 import {
   CalendarView,
@@ -68,9 +71,34 @@ export default function CalendarPage() {
     newEndAt: string;
   } | null>(null);
   const [rescheduleLoading, setRescheduleLoading] = useState(false);
+  const [detailTaskId, setDetailTaskId] = useState<string | null>(null);
 
   function handleBookingClick(booking: Booking) {
+    setDetailTaskId(null);
     setDetailRefCode(booking.referenceCode);
+  }
+
+  function handleTaskClick(task: WorkerTask) {
+    setDetailRefCode(null);
+    setDetailTaskId(task.id);
+  }
+
+  async function handleTaskReschedule(task: WorkerTask, newDate: Date, newTime: string) {
+    const [h, m] = newTime.split(':').map(Number);
+    const newStart = new Date(newDate);
+    newStart.setHours(h!, m!, 0, 0);
+    const durationMs = new Date(task.endAt).getTime() - new Date(task.startAt).getTime();
+    const newEnd = new Date(newStart.getTime() + durationMs);
+    try {
+      await workerTasksApi.update(task.id, {
+        startAt: newStart.toISOString(),
+        endAt: newEnd.toISOString(),
+      });
+      await mutateTasks();
+      toast.success('Zadanie przeniesione.');
+    } catch {
+      toast.error('Nie udało się przenieść zadania.');
+    }
   }
 
   function handleSlotClick(date: Date, time: string, x: number, y: number) {
@@ -264,7 +292,6 @@ export default function CalendarPage() {
 
       {/* ── View ── */}
       {view === 'week' && (
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         <WeekView
           weekStart={weekStart}
           weekNum={weekNum}
@@ -278,13 +305,14 @@ export default function CalendarPage() {
           nowTime={nowTime}
           isSlotMenuOpen={!!slotMenu}
           onBookingClick={handleBookingClick}
+          onTaskClick={handleTaskClick}
           onSlotClick={handleSlotClick}
           onReschedule={handleReschedule}
+          onTaskReschedule={handleTaskReschedule}
           stations={stations}
         />
       )}
       {view === 'day' && (
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         <DayView
           day={currentDate}
           bookings={bookings}
@@ -296,8 +324,10 @@ export default function CalendarPage() {
           nowTime={nowTime}
           isSlotMenuOpen={!!slotMenu}
           onBookingClick={handleBookingClick}
+          onTaskClick={handleTaskClick}
           onSlotClick={handleSlotClick}
           onReschedule={handleReschedule}
+          onTaskReschedule={handleTaskReschedule}
           stations={stations}
         />
       )}
@@ -320,6 +350,12 @@ export default function CalendarPage() {
         referenceCode={detailRefCode}
         onClose={() => setDetailRefCode(null)}
         onMutate={() => void mutate()}
+      />
+
+      <WorkerTaskDetailPanel
+        taskId={detailTaskId}
+        onClose={() => setDetailTaskId(null)}
+        onMutate={() => void mutateTasks()}
       />
 
       <ManualBookingModal

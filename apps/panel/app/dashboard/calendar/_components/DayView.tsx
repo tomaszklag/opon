@@ -45,8 +45,10 @@ interface DayViewProps {
   isSlotMenuOpen?: boolean;
   stations?: Station[];
   onBookingClick?: (booking: Booking) => void;
+  onTaskClick?: (task: WorkerTask) => void;
   onSlotClick?: (date: Date, time: string, x: number, y: number) => void;
   onReschedule?: (booking: Booking, newDate: Date, newTime: string) => void;
+  onTaskReschedule?: (task: WorkerTask, newDate: Date, newTime: string) => void;
 }
 
 function isDraggable(status: BookingStatus): boolean {
@@ -97,8 +99,10 @@ export function DayView({
   isSlotMenuOpen,
   stations,
   onBookingClick,
+  onTaskClick,
   onSlotClick,
   onReschedule,
+  onTaskReschedule,
 }: DayViewProps) {
   const [activeFilter, setActiveFilter] = useState<FilterType>('all');
   const [hoverTop, setHoverTop] = useState<number | null>(null);
@@ -110,9 +114,21 @@ export function DayView({
     time: string;
     clientName: string;
   } | null>(null);
+  const [taskDragDisplay, setTaskDragDisplay] = useState<{
+    taskId: string;
+    top: number;
+    height: number;
+    time: string;
+    title: string;
+  } | null>(null);
   const dragRef = useRef<{ booking: Booking; grabOffsetY: number; heightPx: number } | null>(null);
+  const taskDragRef = useRef<{ task: WorkerTask; grabOffsetY: number; heightPx: number } | null>(
+    null,
+  );
   const dragDisplayRef = useRef(dragDisplay);
   dragDisplayRef.current = dragDisplay;
+  const taskDragDisplayRef = useRef(taskDragDisplay);
+  taskDragDisplayRef.current = taskDragDisplay;
   const justDraggedRef = useRef(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -210,6 +226,87 @@ export function DayView({
     document.addEventListener('mouseup', onUp);
   }
 
+  function startTaskDrag(e: React.MouseEvent, task: WorkerTask) {
+    if (!onTaskReschedule) return;
+    e.stopPropagation();
+
+    const taskEl =
+      ((e.currentTarget as HTMLElement).closest('[data-task]') as HTMLElement) ??
+      (e.currentTarget as HTMLElement);
+    const rect = taskEl.getBoundingClientRect();
+    const grabOffsetY = e.clientY - rect.top;
+    const startObj = new Date(task.startAt);
+    const endObj = new Date(task.endAt);
+    const startMins = startObj.getHours() * 60 + startObj.getMinutes();
+    const endMins = endObj.getHours() * 60 + endObj.getMinutes();
+    const heightPx = Math.max(endMins - startMins, 20);
+
+    taskDragRef.current = { task, grabOffsetY, heightPx };
+    const initDisplay = {
+      taskId: task.id,
+      top: startMins - HOUR_START * 60,
+      height: heightPx,
+      time: formatTime(task.startAt),
+      title: task.title,
+    };
+    setTaskDragDisplay(initDisplay);
+    taskDragDisplayRef.current = initDisplay;
+
+    document.body.style.userSelect = 'none';
+    document.body.style.cursor = 'grabbing';
+
+    function onMove(me: MouseEvent) {
+      const drag = taskDragRef.current;
+      if (!drag) return;
+      const colEl = (document.elementFromPoint(me.clientX, me.clientY) as Element | null)?.closest(
+        '[data-calday]',
+      ) as HTMLElement | null;
+      if (!colEl) return;
+      const colRect = colEl.getBoundingClientRect();
+      const rawTop = me.clientY - colRect.top - drag.grabOffsetY;
+      const snappedTop = Math.max(
+        0,
+        Math.min(Math.round(rawTop / 15) * 15, GRID_HEIGHT - drag.heightPx),
+      );
+      const next = {
+        taskId: drag.task.id,
+        top: snappedTop,
+        height: drag.heightPx,
+        time: snapTimeFromOffset(snappedTop),
+        title: drag.task.title,
+      };
+      taskDragDisplayRef.current = next;
+      setTaskDragDisplay(next);
+    }
+
+    function onUp() {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+      document.body.style.userSelect = '';
+      document.body.style.cursor = '';
+
+      const drag = taskDragRef.current;
+      const display = taskDragDisplayRef.current;
+      taskDragRef.current = null;
+      setTaskDragDisplay(null);
+      setHoverTop(null);
+
+      justDraggedRef.current = true;
+      setTimeout(() => {
+        justDraggedRef.current = false;
+      }, 0);
+
+      if (!drag || !display) return;
+      const origTime = formatTime(drag.task.startAt);
+      if (display.time !== origTime) {
+        onTaskReschedule?.(drag.task, day, display.time);
+      }
+    }
+
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  }
+
   const todayDay = isToday(day);
   const isSunday = day.getDay() === 0;
   const nowLineVisible = todayDay && nowLineTop >= 0 && nowLineTop <= GRID_HEIGHT;
@@ -238,7 +335,7 @@ export function DayView({
 
   const handleMouseMove =
     (bookingsForOverlapCheck: Booking[]) => (e: React.MouseEvent<HTMLDivElement>) => {
-      if (dragRef.current || isSlotMenuOpen) return;
+      if (dragRef.current || taskDragRef.current || isSlotMenuOpen) return;
       if ((e.target as Element).closest('[data-booking]')) {
         setHoverTop(null);
         return;
@@ -264,11 +361,12 @@ export function DayView({
     };
 
   const handleMouseLeave = () => {
-    if (!dragRef.current && !isSlotMenuOpen) setHoverTop(null);
+    if (!dragRef.current && !taskDragRef.current && !isSlotMenuOpen) setHoverTop(null);
   };
 
   const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!onSlotClick || isDayOff || dragDisplay || justDraggedRef.current) return;
+    if (!onSlotClick || isDayOff || dragDisplay || taskDragDisplay || justDraggedRef.current)
+      return;
     const rect = e.currentTarget.getBoundingClientRect();
     onSlotClick(day, snapTimeFromOffset(e.clientY - rect.top), e.clientX, e.clientY);
   };
@@ -451,6 +549,18 @@ export function DayView({
                     <span className={styles.bookingDragGhostName}>{dragDisplay.clientName}</span>
                   </div>
                 )}
+                {!isDayOff && taskDragDisplay && (
+                  <div
+                    className={styles.taskDragGhost}
+                    style={{
+                      top: `${taskDragDisplay.top}px`,
+                      height: `${taskDragDisplay.height}px`,
+                    }}
+                  >
+                    <span className={styles.taskDragGhostTime}>{taskDragDisplay.time}</span>
+                    <span className={styles.taskDragGhostTitle}>{taskDragDisplay.title}</span>
+                  </div>
+                )}
 
                 {!isDayOff &&
                   tasks
@@ -458,10 +568,26 @@ export function DayView({
                     .map((task) => (
                       <div
                         key={task.id}
-                        className={styles.workerTask}
+                        role="button"
+                        tabIndex={0}
+                        data-task="true"
+                        className={[
+                          styles.workerTask,
+                          onTaskClick ? styles.workerTaskClickable : '',
+                          onTaskReschedule ? styles.workerTaskDraggable : '',
+                          taskDragDisplay?.taskId === task.id ? styles.workerTaskDragging : '',
+                        ]
+                          .filter(Boolean)
+                          .join(' ')}
                         style={getBookingStyle(task.startAt, task.endAt)}
                         title={`${task.title}${task.workerName ? ` — ${task.workerName}` : ''} · ${formatTime(task.startAt)}–${formatTime(task.endAt)}`}
-                        onClick={(e) => e.stopPropagation()}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onTaskClick?.(task);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') onTaskClick?.(task);
+                        }}
                       >
                         <Text
                           variant="nano"
@@ -480,6 +606,18 @@ export function DayView({
                           >
                             {task.workerName}
                           </Text>
+                        )}
+                        {onTaskReschedule && (
+                          <div
+                            className={styles.workerTaskDragHandle}
+                            onMouseDown={(e) => {
+                              e.stopPropagation();
+                              startTaskDrag(e, task);
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <IconGripVertical width="10" height="10" />
+                          </div>
                         )}
                       </div>
                     ))}
@@ -573,6 +711,19 @@ export function DayView({
                           </span>
                         </div>
                       )}
+                      {/* Task drag ghost — only in first column */}
+                      {idx === 0 && !isDayOff && taskDragDisplay && (
+                        <div
+                          className={styles.taskDragGhost}
+                          style={{
+                            top: `${taskDragDisplay.top}px`,
+                            height: `${taskDragDisplay.height}px`,
+                          }}
+                        >
+                          <span className={styles.taskDragGhostTime}>{taskDragDisplay.time}</span>
+                          <span className={styles.taskDragGhostTitle}>{taskDragDisplay.title}</span>
+                        </div>
+                      )}
                       {/* WorkerTasks — only in first column */}
                       {idx === 0 &&
                         !isDayOff &&
@@ -581,10 +732,28 @@ export function DayView({
                           .map((task) => (
                             <div
                               key={task.id}
-                              className={styles.workerTask}
+                              role="button"
+                              tabIndex={0}
+                              data-task="true"
+                              className={[
+                                styles.workerTask,
+                                onTaskClick ? styles.workerTaskClickable : '',
+                                onTaskReschedule ? styles.workerTaskDraggable : '',
+                                taskDragDisplay?.taskId === task.id
+                                  ? styles.workerTaskDragging
+                                  : '',
+                              ]
+                                .filter(Boolean)
+                                .join(' ')}
                               style={getBookingStyle(task.startAt, task.endAt)}
                               title={`${task.title}${task.workerName ? ` — ${task.workerName}` : ''} · ${formatTime(task.startAt)}–${formatTime(task.endAt)}`}
-                              onClick={(e) => e.stopPropagation()}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onTaskClick?.(task);
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' || e.key === ' ') onTaskClick?.(task);
+                              }}
                             >
                               <Text
                                 variant="nano"
@@ -603,6 +772,18 @@ export function DayView({
                                 >
                                   {task.workerName}
                                 </Text>
+                              )}
+                              {onTaskReschedule && (
+                                <div
+                                  className={styles.workerTaskDragHandle}
+                                  onMouseDown={(e) => {
+                                    e.stopPropagation();
+                                    startTaskDrag(e, task);
+                                  }}
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <IconGripVertical width="10" height="10" />
+                                </div>
                               )}
                             </div>
                           ))}
