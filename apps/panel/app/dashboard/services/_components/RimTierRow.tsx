@@ -181,12 +181,14 @@ export function RimTierRow({ tier, onChange, onDelete }: Props) {
         </div>
       ) : (
         <button className={styles.addWheelBtn} onClick={() => setWheelOpen(true)}>
-          + nadpisz cenę za 1 koło
-          {(tier.pricePln || tier.durationMinutes) && (
-            <span className={styles.addWheelHint}>
-              ({derivedPrice(tier.pricePln)} · {derivedDur(tier.durationMinutes)})
-            </span>
-          )}
+          <Text variant="nano" color="muted" as="span">
+            + nadpisz cenę za 1 koło
+            {(tier.pricePln || tier.durationMinutes) && (
+              <span className={styles.addWheelHint}>
+                ({derivedPrice(tier.pricePln)} · {derivedDur(tier.durationMinutes)})
+              </span>
+            )}
+          </Text>
         </button>
       )}
     </div>

@@ -688,10 +688,10 @@ model ServiceVariant {
   serviceId       String   @db.Uuid
   name            String?  @db.VarChar(200)  // null dla FLAT i RIM_SIZES
   rimSizes        String[]                    // tylko dla RIM_SIZES
-  pricePln                Decimal  @db.Decimal(10, 2)  // cena za komplet (4 koła)
-  durationMinutes         Int                           // czas dla kompletu (4 koła)
-  pricePerWheelPln        Decimal? @db.Decimal(10, 2)  // null = pricePln / 4
-  durationPerWheelMinutes Int?                         // null = durationMinutes / 4
+  pricePln                Decimal  @db.Decimal(10, 2) // cena za komplet (4 koła)
+  durationMinutes         Int                         // czas dla kompletu (4 koła)
+  pricePerWheelPln        Decimal? @db.Decimal(10, 2) // null = pricePln / 4
+  durationPerWheelMinutes Int?                        // null = durationMinutes / 4
   sortOrder       Int      @default(0)
 
   service Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)

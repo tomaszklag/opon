@@ -122,12 +122,14 @@ export function ServiceVariantRow({ variant, onChange, onDelete, autoFocusName }
         </div>
       ) : (
         <button className={styles.addWheelBtn} onClick={() => setWheelOpen(true)}>
-          + nadpisz cenę za 1 koło
-          {(variant.pricePln || variant.durationMinutes) && (
-            <span className={styles.addWheelHint}>
-              ({derivedPrice(variant.pricePln)} · {derivedDur(variant.durationMinutes)})
-            </span>
-          )}
+          <Text variant="nano" color="muted" as="span">
+            + nadpisz cenę za 1 koło
+            {(variant.pricePln || variant.durationMinutes) && (
+              <span className={styles.addWheelHint}>
+                ({derivedPrice(variant.pricePln)} · {derivedDur(variant.durationMinutes)})
+              </span>
+            )}
+          </Text>
         </button>
       )}
     </div>

@@ -535,8 +535,12 @@ export function ManualBookingModal({
                         selectSuggestion(s.phone, s.name);
                       }}
                     >
-                      <span className={styles.phoneDropdownName}>{s.name}</span>
-                      <span className={styles.phoneDropdownPhone}>{s.phone}</span>
+                      <Text variant="body-sm" weight="semibold" as="span">
+                        {s.name}
+                      </Text>
+                      <Text variant="nano" color="muted" as="span">
+                        {s.phone}
+                      </Text>
                     </button>
                   ))}
                 </div>
@@ -658,7 +662,9 @@ export function ManualBookingModal({
                         setTotalPricePln('');
                       }}
                     >
-                      wróć do kompletu
+                      <Text as="span" variant="body-sm" className={styles.notFullSetBtnText}>
+                        wróć do kompletu
+                      </Text>
                     </button>
                   </div>
                 ) : (
@@ -671,7 +677,9 @@ export function ManualBookingModal({
                       setTotalPricePln('');
                     }}
                   >
-                    nie cały komplet?
+                    <Text as="span" variant="body-sm" className={styles.notFullSetBtnText}>
+                      nie cały komplet?
+                    </Text>
                   </button>
                 )}
               </div>
@@ -711,11 +719,15 @@ export function ManualBookingModal({
                             {sub.name}
                           </Text>
                         </div>
-                        <span
-                          className={`${styles.subPrice} ${isChecked ? styles.subPriceAdded : ''}`}
+                        <Text
+                          variant="body-sm"
+                          weight="bold"
+                          color={isChecked ? 'accent' : 'muted'}
+                          as="span"
+                          className={styles.subPrice}
                         >
                           {typeof sub.pricePln === 'number' ? `+${sub.pricePln} zł` : '—'}
-                        </span>
+                        </Text>
                       </div>
                     );
                   })}
@@ -821,7 +833,14 @@ export function ManualBookingModal({
                       onClick={() => setManualEndTime('')}
                       aria-label="Resetuj czas do wyliczonego"
                     >
-                      resetuj
+                      <Text
+                        as="span"
+                        variant="nano"
+                        weight="semibold"
+                        className={styles.resetBtnText}
+                      >
+                        resetuj
+                      </Text>
                     </button>
                   </div>
                 )}
@@ -894,9 +913,9 @@ export function ManualBookingModal({
                       {durForCount(selectedRimTier, wheelCount)} min
                     </Text>
                   </div>
-                  <span className={styles.sumVal}>
+                  <Text variant="body-sm" weight="bold" as="span" className={styles.sumVal}>
                     {priceForCount(selectedRimTier, wheelCount)} zł
-                  </span>
+                  </Text>
                 </div>
 
                 {/* Sub-services that are checked */}
@@ -914,9 +933,15 @@ export function ManualBookingModal({
                           +{dur} min
                         </Text>
                       </div>
-                      <span className={styles.sumValAdd}>
+                      <Text
+                        variant="body-sm"
+                        weight="bold"
+                        color="accent"
+                        as="span"
+                        className={styles.sumValAdd}
+                      >
                         +{typeof sub.pricePln === 'number' ? sub.pricePln : 0} zł
-                      </span>
+                      </Text>
                     </div>
                   );
                 })}
@@ -939,7 +964,14 @@ export function ManualBookingModal({
                           onClick={() => setTotalPricePln('')}
                           aria-label="Resetuj cenę do wyliczonej"
                         >
-                          resetuj
+                          <Text
+                            as="span"
+                            variant="nano"
+                            weight="semibold"
+                            className={styles.resetBtnText}
+                          >
+                            resetuj
+                          </Text>
                         </button>
                       </div>
                     )}

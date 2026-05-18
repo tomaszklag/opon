@@ -240,7 +240,9 @@ export function ServiceVariantExpanded({ service, allServices, allAddons, onChan
                   }}
                 >
                   <IconTrash width="10" height="10" />
-                  usuń nadpisanie za koło
+                  <Text variant="nano" color="muted" as="span">
+                    usuń nadpisanie za koło
+                  </Text>
                 </button>
               </div>
             </>
@@ -248,25 +250,28 @@ export function ServiceVariantExpanded({ service, allServices, allAddons, onChan
             <div className={styles.fieldRow}>
               <span className={styles.fieldLabel} />
               <button className={styles.addWheelBtn} onClick={() => setFlatWheelOpen(true)}>
-                + nadpisz cenę za 1 koło
-                {(flatVariant?.pricePln || flatVariant?.durationMinutes) && (
-                  <span className={styles.addWheelHint}>
-                    {(() => {
-                      const price = parseFloat(flatVariant?.pricePln ?? '');
-                      const dur = parseInt(flatVariant?.durationMinutes ?? '', 10);
-                      const parts: string[] = [];
-                      if (price) {
-                        const per = Math.round((price / 4) * 100) / 100;
-                        parts.push(
-                          (Number.isInteger(per) ? String(per) : per.toFixed(2).replace('.', ',')) +
-                            ' zł',
-                        );
-                      }
-                      if (dur) parts.push(Math.round(dur / 4) + ' min');
-                      return '(' + parts.join(' · ') + ')';
-                    })()}
-                  </span>
-                )}
+                <Text variant="nano" color="muted" as="span">
+                  + nadpisz cenę za 1 koło
+                  {(flatVariant?.pricePln || flatVariant?.durationMinutes) && (
+                    <span className={styles.addWheelHint}>
+                      {(() => {
+                        const price = parseFloat(flatVariant?.pricePln ?? '');
+                        const dur = parseInt(flatVariant?.durationMinutes ?? '', 10);
+                        const parts: string[] = [];
+                        if (price) {
+                          const per = Math.round((price / 4) * 100) / 100;
+                          parts.push(
+                            (Number.isInteger(per)
+                              ? String(per)
+                              : per.toFixed(2).replace('.', ',')) + ' zł',
+                          );
+                        }
+                        if (dur) parts.push(Math.round(dur / 4) + ' min');
+                        return '(' + parts.join(' · ') + ')';
+                      })()}
+                    </span>
+                  )}
+                </Text>
               </button>
             </div>
           )}

@@ -52,11 +52,7 @@
 /* "z cennika" badge in service section label */
 .sectionBadge {
   margin-left: auto;
-  font-size: 9px;
-  font-weight: 800;
-  letter-spacing: 1px;
   text-transform: uppercase;
-  color: var(--accent);
 }
 
 .selectedTime {
@@ -90,6 +86,7 @@
   gap: 6px;
 }
 
+/* hover cascade — DS Text.color zablokuje kaskadę */
 .rimChip {
   display: inline-flex;
   align-items: center;
@@ -209,15 +206,12 @@
 }
 
 .subPrice {
-  font-size: 10px;
-  font-weight: 700;
-  color: var(--text-muted);
+  /* font-size/font-weight/color → <Text> props */
   white-space: nowrap;
 }
 
 .subPriceIncl {
   color: var(--success);
-  font-size: 9px;
 }
 
 .subPriceAdded {
@@ -285,18 +279,14 @@
 }
 
 .slotSuggestionLabel {
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--accent);
+  /* font-size/font-weight/color → <Text> props */
 }
 
 .slotSuggestionHint {
   margin-left: auto;
-  font-size: 10px;
-  font-weight: 600;
-  color: var(--accent);
   opacity: 0.6;
   white-space: nowrap;
+  /* font-size/font-weight/color → <Text> props */
 }
 
 .spinnerRow {
@@ -358,26 +348,20 @@
 }
 
 .sumVal {
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--text-primary);
+  /* font-size/font-weight/color → <Text> props */
   white-space: nowrap;
   flex-shrink: 0;
 }
 
 /* "wliczone" — success color via wrapper (no inline style on DS Text) */
 .sumValIncl {
-  font-size: 10px;
-  font-weight: 700;
   color: var(--success);
   white-space: nowrap;
   flex-shrink: 0;
 }
 
 .sumValAdd {
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--accent);
+  /* font-size/font-weight/color → <Text> props */
   white-space: nowrap;
   flex-shrink: 0;
 }
@@ -470,16 +454,6 @@
   background: var(--accent-muted);
 }
 
-.phoneDropdownName {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.phoneDropdownPhone {
-  font-size: 11px;
-  color: var(--text-muted);
-}
 
 .deltaRow {
   display: flex;
@@ -492,8 +466,7 @@
   background: none;
   border: none;
   cursor: pointer;
-  font-size: 10px;
-  font-weight: 600;
+  /* font-size/font-weight → <Text> props */
   color: var(--text-muted);
   text-decoration: underline;
   text-underline-offset: 2px;
@@ -506,13 +479,18 @@
   color: var(--warning);
 }
 
+/* allow button's color (incl. hover) to flow down into the <Text> span */
+.resetBtnText {
+  color: inherit;
+}
+
 .notFullSetBtn {
   padding: 0;
   background: none;
   border: none;
   cursor: pointer;
   color: var(--text-muted);
-  font-size: 11px;
+  /* font-size → <Text> props */
   opacity: 0.55;
   transition: opacity var(--transition-fast), color var(--transition-fast);
 }
@@ -521,6 +499,11 @@
   opacity: 1;
   color: var(--accent);
   text-decoration: underline;
+}
+
+/* allow button's color (incl. hover) to flow down into the <Text> span */
+.notFullSetBtnText {
+  color: inherit;
 }
 
 .notesLabel {

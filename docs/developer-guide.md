@@ -48,6 +48,30 @@ Zasady nazewnictwa:
 - **Tabela** → snake_case (mapowana przez `@@map`): `@@map("providers")`
 - **FK** → `providerId` (camelCase) odwołuje się do `Provider.id`
 
+### 2.1a. Konwencja wyrównania pól w modelu
+
+Pola wewnątrz modelu Prisma wyrównuj pionowo tak, żeby wszystkie typy i modyfikatory zaczynały się w tej samej kolumnie — wyznaczonej przez **najdłuższą nazwę pola + 1 spacja**. Komentarze `//` wyrównuj do tej samej kolumny (najdłuższe wyrażenie typowe + 1 spacja).
+
+```prisma
+// ✅ TAK — typy wyrównane do kolumny 27 (longest: "durationPerWheelMinutes" 23 + indent 2 + 1 = 27)
+model ServiceVariant {
+  id                      String   @id @default(uuid())
+  pricePln                Decimal  @db.Decimal(10, 2) // cena za komplet
+  durationMinutes         Int                         // czas dla kompletu
+  pricePerWheelPln        Decimal? @db.Decimal(10, 2) // null = pricePln / 4
+  durationPerWheelMinutes Int?                        // null = durationMinutes / 4
+}
+
+// ❌ NIE — nieregularne wcięcia, trudno porównać typy wzrokiem
+model ServiceVariant {
+  id String @id @default(uuid())
+  pricePln Decimal @db.Decimal(10, 2)
+  durationPerWheelMinutes Int?
+}
+```
+
+> **Dla reviewerów i agentów:** Wyrównanie zawsze liczy się **od początku linii** (łącznie z 2-spacjowym wcięciem). Pole `pricePln` (8 znaków) + 16 spacji = 24 znaki → typ na kolumnie 25 (1-indexed 27). Nie zmieniaj wyrównania jeśli wszystkie typy zaczynają się w tej samej kolumnie — nawet jeśli wizualnie wygląda na „zbyt dużo spacji".
+
 ### 2.2. Dodawanie nowego modelu — krok po kroku
 
 ```
@@ -1157,6 +1181,58 @@ Pola cena/czas w wierszach siatki (np. `ServiceVariantExpanded`, `RimTierRow`, `
 ```
 
 Pola tekstowe (`type="text"`) do wprowadzania nazw, opisów lub etykiet zawsze używają DS `<Input>`, nawet w zwartych layoutach.
+
+#### Wyjątek: klikalne chipy z kaskadą kolorów hover/selected
+
+Interaktywne `<button>` działające jako chip (np. selektor rozmiaru felgi, wybór wariantu) często mają wszystkie elementy potomne zmieniające kolor jednocześnie przez kaskadę CSS — zarówno przy `:hover`, jak i przy klasie stanu selekcji (np. `.rimChipSelected .rimPrice`). W takim przypadku `font-size`, `font-weight` na kontenerze `<button>` lub `<span>` wewnątrz są dopuszczalne — **pod warunkiem że**:
+
+1. Element jest `<button>` (nie statyczny `<span>` / `<div>`) — kaskada kolorów jest potrzebna do obsługi stanów interakcji.
+2. Kolor potomków zmienia się przez CSS cascade z rodzica (np. `button:hover { color: var(--accent) }` działa na wszystkich `<span>` wewnątrz).
+3. Zastąpienie `<span>` przez `<Text color="muted">` **złamałoby** stan hover — `color` prop DS ustawia `color` inline i blokuje kaskadę.
+4. Plik `.module.css` zawiera komentarz `/* hover cascade — DS Text.color zablokuje kaskadę */` przy klasie kontenera.
+
+```tsx
+// ✅ TAK — chip <button> z kaskadą kolorów; <Text> złamałby hover/selected kaskadę
+<button className={`${styles.rimChip} ${isSelected ? styles.rimChipSelected : ''}`}>
+  {tier.label}
+  <span className={styles.rimPrice}>{tier.pricePln} zł</span> {/* kolor z kaskady */}
+  <span className={styles.rimDur}>{tier.durationMinutes} min</span>
+</button>
+```
+
+```css
+/* ✅ TAK — hover cascade — DS Text.color zablokuje kaskadę */
+.rimChip {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+.rimChip:hover {
+  color: var(--accent);
+} /* kaskaduje na rimPrice i rimDur */
+.rimChipSelected {
+  color: var(--accent);
+}
+.rimPrice {
+  font-size: 10px;
+  font-weight: 400;
+} /* rozmiar dekoracyjny, kolor z kaskady */
+.rimDur {
+  font-size: 9px;
+}
+```
+
+```tsx
+// ❌ NIE — statyczny chip (nie klikalny) — tutaj reguła obowiązuje
+<span className={styles.statusChip}>
+  <Text variant="nano" as="span" weight="bold">
+    W składzie
+  </Text>
+</span>
+```
+
+> **Dla reviewerów:** Flaguj naruszenie tylko na statycznych kontenerach (`<span>`, `<div>`, `<p>`) i na `<button>` bez stanów hover/selected opartych na color cascade. Klikalne chipy z CSS hover cascade + wieloma potomnymi elementami tekstowymi to świadomy wyjątek — sprawdź czy plik CSS ma wymagany komentarz.
 
 #### CSS Modules + noUncheckedIndexedAccess
 
