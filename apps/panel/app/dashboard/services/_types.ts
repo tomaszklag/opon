@@ -21,8 +21,10 @@ export interface ServiceVariantState {
   id: string;
   name: string | null; // variant name for VARIANTS type; null for FLAT/RIM_SIZES
   rimSizes: string[]; // non-empty for RIM_SIZES type
-  pricePln: string;
-  durationMinutes: string;
+  pricePln: string; // cena za komplet (4 koła)
+  durationMinutes: string; // czas dla kompletu (4 koła)
+  pricePerWheelPln: string; // pusty = pricePln / 4
+  durationPerWheelMinutes: string; // pusty = durationMinutes / 4
   sortOrder: number;
 }
 

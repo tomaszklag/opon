@@ -24,7 +24,14 @@ export interface ServiceVariantResponse {
   name: string;
   enabled: boolean;
   sortOrder: number;
-  rimTiers: { rimSizes: string[]; pricePln: number; durationMinutes: number; sortOrder: number }[];
+  rimTiers: {
+    rimSizes: string[];
+    pricePln: number;
+    durationMinutes: number;
+    pricePerWheelPln: number | null;
+    durationPerWheelMinutes: number | null;
+    sortOrder: number;
+  }[];
   subServices: SubServiceResponse[];
 }
 
@@ -111,6 +118,8 @@ function transformToGroup(
           rimSizes: v.rimSizes,
           pricePln: v.pricePln,
           durationMinutes: v.durationMinutes,
+          pricePerWheelPln: v.pricePerWheelPln ?? null,
+          durationPerWheelMinutes: v.durationPerWheelMinutes ?? null,
           sortOrder: i,
         })),
         subServices,
@@ -127,6 +136,8 @@ function transformToGroup(
           rimSizes: [],
           pricePln: v.pricePln,
           durationMinutes: v.durationMinutes,
+          pricePerWheelPln: v.pricePerWheelPln ?? null,
+          durationPerWheelMinutes: v.durationPerWheelMinutes ?? null,
           sortOrder: 0,
         },
       ],
@@ -147,6 +158,8 @@ function transformToGroup(
                 rimSizes: [],
                 pricePln: v.pricePln,
                 durationMinutes: v.durationMinutes,
+                pricePerWheelPln: v.pricePerWheelPln ?? null,
+                durationPerWheelMinutes: v.durationPerWheelMinutes ?? null,
                 sortOrder: 0,
               },
             ],

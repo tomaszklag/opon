@@ -1984,6 +1984,8 @@ export interface components {
       rimSizes: string[];
       pricePln: number;
       durationMinutes: number;
+      pricePerWheelPln?: number | null;
+      durationPerWheelMinutes?: number | null;
       sortOrder: number;
     };
     ServiceResponseDto: {
@@ -2004,6 +2006,8 @@ export interface components {
       rimSizes: string[];
       pricePln: number;
       durationMinutes: number;
+      pricePerWheelPln?: number | null;
+      durationPerWheelMinutes?: number | null;
       sortOrder: number;
     };
     UpsertServiceDto: {

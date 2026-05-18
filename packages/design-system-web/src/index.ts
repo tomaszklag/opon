@@ -45,6 +45,7 @@ export * from './display/Tabs';
 export * from './display/TicketCard';
 export * from './display/Timeline';
 export * from './display/TimeSlotPicker';
+export * from './display/Tooltip';
 export * from './display/VehicleCard';
 export * from './display/VerifiedBadge';
 

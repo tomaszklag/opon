@@ -2,9 +2,9 @@
   display: inline-flex;
   align-items: stretch;
   height: 32px;
-  border: 1px solid var(--border-strong);
+  border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  background: var(--surface-raised);
+  background: var(--bg);
   overflow: hidden;
   transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
 }
@@ -64,7 +64,7 @@
   justify-content: center;
   width: 24px;
   border: none;
-  background: var(--bg);
+  background: var(--surface);
   color: var(--text-muted);
   cursor: pointer;
   font-size: 14px;

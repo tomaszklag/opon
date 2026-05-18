@@ -1,12 +1,74 @@
-.row {
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 6px 9px 8px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+}
+
+.mainRow {
   display: grid;
   grid-template-columns: 1fr auto auto auto;
   align-items: center;
   gap: 7px;
-  padding: 6px 9px;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 7px;
+}
+
+.addWheelBtn {
+  align-self: flex-start;
+  margin-left: 2px;
+  padding: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 10px;
+  line-height: 1.4;
+  opacity: 0.6;
+  transition: opacity var(--transition-fast), color var(--transition-fast);
+}
+
+.addWheelBtn:hover {
+  opacity: 1;
+  color: var(--accent);
+}
+
+.addWheelHint {
+  margin-left: 3px;
+  opacity: 0.7;
+}
+
+.wheelRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 2px;
+}
+
+.wheelLabel {
+  flex-shrink: 0;
+  width: 38px;
+}
+
+.clearWheelBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 3px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: var(--text-muted);
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.clearWheelBtn:hover {
+  background: var(--danger-muted);
+  color: var(--danger);
 }
 
 .chips {
@@ -98,7 +160,6 @@
   color: var(--accent);
 }
 
-/* Delete button */
 .delBtn {
   display: inline-flex;
   align-items: center;

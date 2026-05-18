@@ -12,8 +12,6 @@ Co z flow wysyłki mail do weryfikacji? Jest to już zaimplementowe i zaprojekto
 
 otpToken powinien być jakoś unieważniany. Wygasa po 5 minutach chyba. Powinno to być też w bazie
 
-Operator powinien mieć możliwość ręcznego dodania wizyty wraz z opisem oraz szacowanym zajęciem slotu
-
 zleć wyspecjalizowanym agentom weryfikację tego rozwiazania. Głównie zależy mi na respektowaniu wcześniejszych postanowień oraz
 przyjętej architektury
 zaplanowanego design
@@ -22,4 +20,4 @@ jak przypisuje pracownika do stanowiska to czmu leci od razu zapis?
 
 dodać przypisanie opcjonalnego enuma typu samochodu do usługi. Będzie to przydatne w celu późniejszego filtrowania po stronie klienta.
 
-Dodać opcję w cenniku definiowania per koło oraz per zetaw (4 koła)
+teraz jak mam popup do dodawania zadania dla pracownika, to wybór godziny powinien być tym samym komponentem z linią czasu co w popupie dodawania rezerwacji

@@ -46,6 +46,18 @@ export class UpsertServiceVariantDto {
   @Min(0)
   durationMinutes!: number;
 
+  @ApiPropertyOptional({ type: Number, nullable: true })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  pricePerWheelPln?: number | null;
+
+  @ApiPropertyOptional({ type: Number, nullable: true })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  durationPerWheelMinutes?: number | null;
+
   @ApiProperty({ type: Number })
   @IsInt()
   sortOrder!: number;

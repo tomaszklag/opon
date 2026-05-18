@@ -22,6 +22,9 @@ function variantFromApi(v: ServiceResponse['variants'][number]): ServiceVariantS
     rimSizes: v.rimSizes,
     pricePln: String(v.pricePln),
     durationMinutes: String(v.durationMinutes),
+    pricePerWheelPln: v.pricePerWheelPln != null ? String(v.pricePerWheelPln) : '',
+    durationPerWheelMinutes:
+      v.durationPerWheelMinutes != null ? String(v.durationPerWheelMinutes) : '',
     sortOrder: v.sortOrder,
   };
 }
@@ -60,6 +63,9 @@ function variantToApi(v: ServiceVariantState) {
     rimSizes: v.rimSizes,
     pricePln: parseFloat(v.pricePln) || 0,
     durationMinutes: parseInt(v.durationMinutes, 10) || 0,
+    pricePerWheelPln: v.pricePerWheelPln !== '' ? parseFloat(v.pricePerWheelPln) || null : null,
+    durationPerWheelMinutes:
+      v.durationPerWheelMinutes !== '' ? parseInt(v.durationPerWheelMinutes, 10) || null : null,
     sortOrder: v.sortOrder,
   };
 }

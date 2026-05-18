@@ -102,15 +102,38 @@ export function SimulationCard({ services, addons }: Props) {
                 {service.variants.map((v, i) => {
                   const price = parseFloat(v.pricePln) || 0;
                   const dur = parseInt(v.durationMinutes) || 0;
+                  const wheelPrice = v.pricePerWheelPln
+                    ? parseFloat(v.pricePerWheelPln)
+                    : price
+                      ? Math.round((price / 4) * 100) / 100
+                      : 0;
+                  const wheelDur = v.durationPerWheelMinutes
+                    ? parseInt(v.durationPerWheelMinutes)
+                    : dur
+                      ? Math.round(dur / 4)
+                      : 0;
                   return (
-                    <div key={v.id} className={`${styles.row} ${styles.rowBase}`}>
-                      <div className={styles.rowLabel}>
-                        <Text variant="nano" as="span">
-                          {getVariantLabel(v, i)}
-                        </Text>
-                        {dur > 0 && <DurBadge minutes={dur} />}
+                    <div key={v.id} className={styles.variantGroup}>
+                      <div className={`${styles.row} ${styles.rowBase}`}>
+                        <div className={styles.rowLabel}>
+                          <Text variant="nano" as="span">
+                            {getVariantLabel(v, i)}
+                          </Text>
+                          {dur > 0 && <DurBadge minutes={dur} />}
+                        </div>
+                        {price > 0 && <PriceTag value={price} bold />}
                       </div>
-                      {price > 0 && <PriceTag value={price} bold />}
+                      {price > 0 && (
+                        <div className={`${styles.row} ${styles.rowWheel}`}>
+                          <div className={styles.rowLabel}>
+                            <Text variant="nano" as="span" color="secondary">
+                              1 koło
+                            </Text>
+                            {wheelDur > 0 && <DurBadge minutes={wheelDur} />}
+                          </div>
+                          <PriceTag value={wheelPrice} />
+                        </div>
+                      )}
                     </div>
                   );
                 })}

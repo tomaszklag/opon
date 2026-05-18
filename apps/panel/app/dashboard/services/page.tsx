@@ -100,6 +100,8 @@ export default function ServicesPage() {
       rimSizes: [],
       pricePln: '',
       durationMinutes: '',
+      pricePerWheelPln: '',
+      durationPerWheelMinutes: '',
       sortOrder: 0,
     });
     const newService: ServiceState = {

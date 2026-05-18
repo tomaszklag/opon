@@ -104,3 +104,14 @@
   letter-spacing: 1.5px;
 }
 
+
+.variantGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.rowWheel {
+  padding-left: 8px;
+  opacity: 0.65;
+}

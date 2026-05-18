@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { Input, Text, NumberStepper } from '@opony/design-system-web';
-import { IconPlus, IconXClose } from '../../../../components/icons';
+import { IconPlus, IconXClose, IconTrash } from '../../../../components/icons';
 import { RimTierRow } from './RimTierRow';
 import { ServiceVariantRow } from './ServiceVariantRow';
 import { PriceTag } from './PriceTag';
@@ -20,6 +20,10 @@ export function ServiceVariantExpanded({ service, allServices, allAddons, onChan
   const [lastAddedVariantId, setLastAddedVariantId] = useState<string | null>(null);
   const [subDropdown, setSubDropdown] = useState(false);
   const [addonDropdown, setAddonDropdown] = useState(false);
+  const flatVariantForInit = service.variants[0];
+  const [flatWheelOpen, setFlatWheelOpen] = useState(
+    !!(flatVariantForInit?.pricePerWheelPln || flatVariantForInit?.durationPerWheelMinutes),
+  );
   const subWrapRef = useRef<HTMLDivElement>(null);
   const addonWrapRef = useRef<HTMLDivElement>(null);
 
@@ -56,6 +60,8 @@ export function ServiceVariantExpanded({ service, allServices, allAddons, onChan
       rimSizes: [],
       pricePln: '',
       durationMinutes: '',
+      pricePerWheelPln: '',
+      durationPerWheelMinutes: '',
       sortOrder: service.variants.length,
     };
     onChange({ ...service, variants: [...service.variants, newVariant] });
@@ -123,7 +129,7 @@ export function ServiceVariantExpanded({ service, allServices, allAddons, onChan
               min={0}
               step={5}
               inputWidth={64}
-              aria-label="Cena w złotych"
+              aria-label="Cena kompletu w złotych"
             />
           </div>
           <div className={styles.fieldRow}>
@@ -145,9 +151,125 @@ export function ServiceVariantExpanded({ service, allServices, allAddons, onChan
               min={0}
               step={5}
               inputWidth={52}
-              aria-label="Czas trwania"
+              aria-label="Czas trwania kompletu"
             />
           </div>
+          {flatWheelOpen ? (
+            <>
+              <div className={styles.fieldRow}>
+                <Text
+                  variant="nano"
+                  as="span"
+                  weight="bold"
+                  color="muted"
+                  className={styles.fieldLabel}
+                >
+                  Cena (1 koło)
+                </Text>
+                <div className={styles.wheelFieldWrap}>
+                  <NumberStepper
+                    value={flatVariant?.pricePerWheelPln ?? ''}
+                    onChange={(v) =>
+                      flatVariant &&
+                      updateVariant(flatVariant.id, { ...flatVariant, pricePerWheelPln: v })
+                    }
+                    unit="zł"
+                    min={0}
+                    step={1}
+                    inputWidth={64}
+                    aria-label="Cena za jedno koło"
+                  />
+                  {!flatVariant?.pricePerWheelPln && flatVariant?.pricePln && (
+                    <Text variant="nano" as="span" color="muted">
+                      {(() => {
+                        const v = parseFloat(flatVariant.pricePln);
+                        const per = Math.round((v / 4) * 100) / 100;
+                        return (
+                          '= ' +
+                          (Number.isInteger(per) ? String(per) : per.toFixed(2).replace('.', ',')) +
+                          ' zł'
+                        );
+                      })()}
+                    </Text>
+                  )}
+                </div>
+              </div>
+              <div className={styles.fieldRow}>
+                <Text
+                  variant="nano"
+                  as="span"
+                  weight="bold"
+                  color="muted"
+                  className={styles.fieldLabel}
+                >
+                  Czas (1 koło)
+                </Text>
+                <div className={styles.wheelFieldWrap}>
+                  <NumberStepper
+                    value={flatVariant?.durationPerWheelMinutes ?? ''}
+                    onChange={(v) =>
+                      flatVariant &&
+                      updateVariant(flatVariant.id, { ...flatVariant, durationPerWheelMinutes: v })
+                    }
+                    unit="min"
+                    min={0}
+                    step={1}
+                    inputWidth={52}
+                    aria-label="Czas za jedno koło"
+                  />
+                  {!flatVariant?.durationPerWheelMinutes && flatVariant?.durationMinutes && (
+                    <Text variant="nano" as="span" color="muted">
+                      = {Math.round(parseInt(flatVariant.durationMinutes, 10) / 4)} min
+                    </Text>
+                  )}
+                </div>
+              </div>
+              <div className={styles.fieldRow}>
+                <span className={styles.fieldLabel} />
+                <button
+                  className={styles.removeWheelBtn}
+                  onClick={() => {
+                    if (flatVariant) {
+                      updateVariant(flatVariant.id, {
+                        ...flatVariant,
+                        pricePerWheelPln: '',
+                        durationPerWheelMinutes: '',
+                      });
+                    }
+                    setFlatWheelOpen(false);
+                  }}
+                >
+                  <IconTrash width="10" height="10" />
+                  usuń nadpisanie za koło
+                </button>
+              </div>
+            </>
+          ) : (
+            <div className={styles.fieldRow}>
+              <span className={styles.fieldLabel} />
+              <button className={styles.addWheelBtn} onClick={() => setFlatWheelOpen(true)}>
+                + nadpisz cenę za 1 koło
+                {(flatVariant?.pricePln || flatVariant?.durationMinutes) && (
+                  <span className={styles.addWheelHint}>
+                    {(() => {
+                      const price = parseFloat(flatVariant?.pricePln ?? '');
+                      const dur = parseInt(flatVariant?.durationMinutes ?? '', 10);
+                      const parts: string[] = [];
+                      if (price) {
+                        const per = Math.round((price / 4) * 100) / 100;
+                        parts.push(
+                          (Number.isInteger(per) ? String(per) : per.toFixed(2).replace('.', ',')) +
+                            ' zł',
+                        );
+                      }
+                      if (dur) parts.push(Math.round(dur / 4) + ' min');
+                      return '(' + parts.join(' · ') + ')';
+                    })()}
+                  </span>
+                )}
+              </button>
+            </div>
+          )}
         </>
       )}
 

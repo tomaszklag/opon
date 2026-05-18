@@ -51,6 +51,8 @@ export class ServicesRepository {
                 rimSizes: v.rimSizes,
                 pricePln: v.pricePln,
                 durationMinutes: v.durationMinutes,
+                pricePerWheelPln: v.pricePerWheelPln ?? null,
+                durationPerWheelMinutes: v.durationPerWheelMinutes ?? null,
                 sortOrder: v.sortOrder,
               })),
             },

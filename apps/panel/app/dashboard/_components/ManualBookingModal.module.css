@@ -235,8 +235,25 @@
 
 .timelineManualInput {
   display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.timeField {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.durationBadge {
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 6px;
+  justify-content: center;
+  gap: 2px;
+  margin-top: 22px; /* FieldLabel height (~14px) + gap (4px) + fudge (4px) */
+  height: 40px;     /* matches TimeInput height */
+  flex-shrink: 0;
 }
 
 .conflictBanner {
@@ -463,3 +480,67 @@
   font-size: 11px;
   color: var(--text-muted);
 }
+
+.deltaRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.resetBtn {
+  padding: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  opacity: 0.7;
+  transition: opacity var(--transition-fast), color var(--transition-fast);
+}
+
+.resetBtn:hover {
+  opacity: 1;
+  color: var(--warning);
+}
+
+.notFullSetBtn {
+  padding: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 11px;
+  opacity: 0.55;
+  transition: opacity var(--transition-fast), color var(--transition-fast);
+}
+
+.notFullSetBtn:hover {
+  opacity: 1;
+  color: var(--accent);
+  text-decoration: underline;
+}
+
+.notesLabel {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 6px;
+}
+
+.notesInfoIcon {
+  color: var(--text-muted);
+  opacity: 0.6;
+  cursor: default;
+  flex-shrink: 0;
+}
+
+.wheelCountRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+

@@ -1,11 +1,17 @@
+.root {
+  position: relative;
+  display: inline-block;
+}
+
+/* ── Control wrap ── */
 .wrap {
   display: inline-flex;
   align-items: center;
   gap: 0;
-  height: 32px;
-  padding: 0 8px;
-  background: var(--surface-raised);
-  border: 1px solid var(--border-strong);
+  height: 40px;
+  padding: 0 10px;
+  background: var(--bg);
+  border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   cursor: default;
   user-select: none;
@@ -46,12 +52,12 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 24px;
-  height: 22px;
+  min-width: 26px;
+  height: 26px;
   padding: 0 3px;
   border-radius: 4px;
   font-family: var(--font-mono, monospace);
-  font-size: var(--text-sm);
+  font-size: var(--text-md);
   font-weight: 600;
   color: var(--text-primary);
   outline: none;
@@ -60,7 +66,7 @@
 }
 
 .seg:hover {
-  background: var(--bg);
+  background: var(--surface);
 }
 
 .segFocused {
@@ -70,9 +76,64 @@
 
 .colon {
   font-family: var(--font-mono, monospace);
-  font-size: var(--text-sm);
+  font-size: var(--text-md);
   font-weight: 600;
   color: var(--text-muted);
   padding: 0 1px;
   user-select: none;
+}
+
+/* ── Two-column picker (portal-rendered, position: fixed) ── */
+.picker {
+  position: fixed;
+  z-index: 9999;
+  display: flex;
+  background: var(--surface-raised);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+}
+
+.pickerCol {
+  display: flex;
+  flex-direction: column;
+  width: 54px;
+  max-height: 220px;
+  overflow-y: auto;
+  padding: 3px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+
+.pickerColMin {
+  border-left: 1px solid var(--border);
+}
+
+.pickerItem {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 6px 0;
+  border-radius: var(--radius-sm);
+  border: none;
+  background: transparent;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background var(--transition-fast), color var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.pickerItem:hover {
+  background: var(--surface-hover);
+  color: var(--text-primary);
+}
+
+.pickerItemActive {
+  background: var(--accent-muted);
+  color: var(--accent);
 }

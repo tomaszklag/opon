@@ -6,6 +6,8 @@ export class ServiceVariantResponseDto {
   @ApiProperty({ type: [String] }) rimSizes!: string[];
   @ApiProperty({ type: Number }) pricePln!: number;
   @ApiProperty({ type: Number }) durationMinutes!: number;
+  @ApiPropertyOptional({ type: Number, nullable: true }) pricePerWheelPln!: number | null;
+  @ApiPropertyOptional({ type: Number, nullable: true }) durationPerWheelMinutes!: number | null;
   @ApiProperty({ type: Number }) sortOrder!: number;
 }
 
