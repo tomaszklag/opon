@@ -1909,8 +1909,11 @@ export interface components {
       clientName: string;
       clientPhone: string;
       bookingCount: number;
+      bookingCountThisYear: number;
       lastVisitAt?: string | null;
       upcomingCount: number;
+      avgRating?: number | null;
+      clientSince: number;
     };
     BookingVehicleDto: {
       vehicleId: string;
@@ -1947,6 +1950,7 @@ export interface components {
       workerId?: string | null;
       workerName?: string | null;
       notes?: string | null;
+      clientNote?: string | null;
       rejectReason?: string | null;
       cancelReason?: string | null;
       isManual: boolean;

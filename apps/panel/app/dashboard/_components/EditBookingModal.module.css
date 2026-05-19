@@ -1,0 +1,65 @@
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.priceInputRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 160px;
+}
+
+.subServicesHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.emptyHint {
+  padding: 8px 0 2px;
+}
+
+.subServicesList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.subServiceRow {
+  display: grid;
+  grid-template-columns: 1fr 100px 28px;
+  align-items: center;
+  gap: 6px;
+}
+
+.priceInput {
+  min-width: 0;
+}
+
+.removeBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.removeBtn:hover {
+  background: var(--danger-muted);
+  border-color: var(--danger-border);
+  color: var(--danger);
+}

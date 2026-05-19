@@ -1,6 +1,7 @@
 Zapisz tą regułę w dokumentacji aby była respektowana podczas dalszych prac.
 
 Zweryfikuj czy trzeba coś w oparciu o powyższe dodać do dokumentacji. Czy jest sens coś dopisywać aby takie niścisłości nie pojawiały się w przyszłości.
+Czy trzeba zaktualizować dokumnetację?
 
 sprawdź zatem solucję w poszukiwaniu pozostałości w css po font-family, font-size,letter-spacing, line-height itp. Nie powinny się takie klasy pojawiać. Wszystko powinno być w DS
 
@@ -18,6 +19,6 @@ zaplanowanego design
 
 jak przypisuje pracownika do stanowiska to czmu leci od razu zapis?
 
-dodać przypisanie opcjonalnego enuma typu samochodu do usługi. Będzie to przydatne w celu późniejszego filtrowania po stronie klienta.
+dodać przypisanie enuma typu samochodu do usługi. Będzie to przydatne w celu późniejszego filtrowania po stronie klienta. Wartość default może być typ "Any"
 
 teraz jak mam popup do dodawania zadania dla pracownika, to wybór godziny powinien być tym samym komponentem z linią czasu co w popupie dodawania rezerwacji

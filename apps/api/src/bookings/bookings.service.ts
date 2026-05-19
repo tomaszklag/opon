@@ -24,6 +24,7 @@ import {
   BookingBulkStatusChangedEvent,
 } from '../realtime/events/booking.events';
 import { RescheduleBookingDto } from './dto/reschedule-booking.dto';
+import { EditBookingDto } from './dto/edit-booking.dto';
 
 const INACTIVE_STATUSES = [
   BookingStatus.CANCELLED_BY_CLIENT,
@@ -102,9 +103,11 @@ export class BookingsService {
   private toDetailResponseDto(
     booking: BookingWithDetail,
     bookingCount: number,
+    bookingCountThisYear: number,
     hasTireSetsInDepot: boolean,
     lastVisitAt: Date | null = null,
     upcomingCount = 0,
+    avgRating: number | null = null,
   ): BookingDetailResponseDto {
     const { client, vehicle } = booking;
     const fullName = [client.firstName, client.lastName].filter(Boolean).join(' ').trim();
@@ -121,8 +124,11 @@ export class BookingsService {
         clientName,
         clientPhone: client.phone,
         bookingCount,
+        bookingCountThisYear,
         lastVisitAt: lastVisitAt?.toISOString() ?? null,
         upcomingCount,
+        avgRating,
+        clientSince: client.createdAt.getFullYear(),
       },
       vehicle: vehicle
         ? {
@@ -153,6 +159,7 @@ export class BookingsService {
       workerId: booking.workerId ?? null,
       workerName: booking.worker?.name ?? null,
       notes: booking.notes ?? null,
+      clientNote: booking.clientNote ?? null,
       rejectReason: booking.rejectReason ?? null,
       cancelReason: booking.cancelReason ?? null,
       isManual: booking.isManual,
@@ -481,19 +488,30 @@ export class BookingsService {
       throw new AppException(ErrorCode.BOOKING_NOT_FOUND, 'Rezerwacja nie istnieje.', 404);
     }
 
-    const [bookingCount, tireSetCount, lastVisitAt, upcomingCount] = await Promise.all([
+    const [
+      bookingCount,
+      bookingCountThisYear,
+      tireSetCount,
+      lastVisitAt,
+      upcomingCount,
+      avgRating,
+    ] = await Promise.all([
       this.bookingsRepository.countClientBookings(booking.clientId, providerId),
+      this.bookingsRepository.countClientBookingsThisYear(booking.clientId, providerId),
       this.bookingsRepository.countTireSetsForBooking(booking.id, providerId),
       this.bookingsRepository.getClientLastVisitAt(booking.clientId, providerId),
       this.bookingsRepository.countClientUpcomingBookings(booking.clientId, providerId, booking.id),
+      this.bookingsRepository.getClientAvgRating(booking.clientId, providerId),
     ]);
 
     return this.toDetailResponseDto(
       booking,
       bookingCount,
+      bookingCountThisYear,
       tireSetCount > 0,
       lastVisitAt,
       upcomingCount,
+      avgRating,
     );
   }
 
@@ -512,6 +530,35 @@ export class BookingsService {
       throw new AppException(ErrorCode.BOOKING_NOT_FOUND, 'Rezerwacja nie istnieje.', 404);
     }
     await this.bookingsRepository.updateNotes(booking.id, providerId, notes);
+  }
+
+  // ── edit booking (price / services / clientNote) ─────────────────────────
+
+  async editBooking(providerId: string, referenceCode: string, dto: EditBookingDto): Promise<void> {
+    const booking = await this.bookingsRepository.findDetailByReferenceCode(
+      providerId,
+      referenceCode,
+    );
+    if (!booking) {
+      throw new AppException(ErrorCode.BOOKING_NOT_FOUND, 'Rezerwacja nie istnieje.', 404);
+    }
+    const editableStatuses = [
+      BookingStatus.PENDING,
+      BookingStatus.CONFIRMED,
+      BookingStatus.IN_PROGRESS,
+    ];
+    if (!editableStatuses.includes(booking.status)) {
+      throw new AppException(
+        ErrorCode.BOOKING_INVALID_STATUS,
+        'Nie można edytować zakończonej rezerwacji.',
+        422,
+      );
+    }
+    await this.bookingsRepository.updateBookingEdit(booking.id, providerId, {
+      totalPricePln: dto.totalPricePln,
+      subServices: dto.subServices,
+      clientNote: dto.clientNote,
+    });
   }
 
   // ── update status ─────────────────────────────────────────────────────────

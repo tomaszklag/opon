@@ -305,6 +305,44 @@
   letter-spacing: 0.3px;
 }
 
+.heroCountdownRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.heroElapsedChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: 5px;
+  background: var(--info-muted);
+  border: 1px solid var(--info-border);
+  color: var(--info);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  width: fit-content;
+}
+
+.heroOverrunChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: 5px;
+  background: var(--warning-muted);
+  border: 1px solid var(--warning-border);
+  color: var(--warning);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  width: fit-content;
+}
+
 .heroActions {
   display: inline-flex;
   gap: 8px;
@@ -475,6 +513,14 @@
   font-weight: 700;
   color: var(--text-primary);
   letter-spacing: 0.3px;
+}
+
+/* ── Client inline stats ────────────────────────────────────────────────────── */
+
+/* clientInlineStats — font-weight: 300 intentional DS exception (DS Text ma tylko regular/bold) */
+.clientInlineStats {
+  margin-top: 2px;
+  font-weight: 300;
 }
 
 /* ── Address card ───────────────────────────────────────────────────────────── */
@@ -702,6 +748,78 @@
   outline-color: var(--border-strong);
 }
 
+/* ── Service identity header (inside merged price card) ─────────────────────── */
+
+.svcHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.svcHeadRight {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.clientNoteRow {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.clientNoteLabel {
+  text-transform: uppercase;
+}
+
+.svcMeta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+/* durationChip — font-size intentional DS exception; no DS chip for duration metadata */
+.durationChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+}
+
+.svcAssign {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.svcAssignItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-secondary);
+}
+
+.svcDivider {
+  height: 1px;
+  border: none;
+  background: var(--border);
+  margin: 4px 0;
+}
+
 /* ── Price card ─────────────────────────────────────────────────────────────── */
 
 .priceCard {
@@ -910,7 +1028,8 @@
 }
 
 .actionPrimarySuccess:hover {
-  filter: brightness(1.1);
+  background: var(--success);
+  filter: brightness(1.12);
 }
 
 .actionSecondaryRow {

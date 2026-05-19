@@ -118,6 +118,8 @@ export enum ErrorCode {
   BOOKING_SLOT_TAKEN = 'BOOKING_SLOT_TAKEN',
   /** Dostępność zmieniła się od ostatniego sprawdzenia (wersja nieaktualna) */
   BOOKING_VERSION_MISMATCH = 'BOOKING_VERSION_MISMATCH',
+  /** Operacja niedozwolona dla bieżącego statusu rezerwacji */
+  BOOKING_INVALID_STATUS = 'BOOKING_INVALID_STATUS',
 
   // ── IDEMPOTENCY ───────────────────────────────────────────────────────────
   /** Ten sam klucz idempotentności użyty z innym ciałem żądania */

@@ -323,6 +323,7 @@ model Booking {
   totalPricePln   Decimal?      @db.Decimal(10, 2)
   // notatki i powody
   notes           String?       @db.Text
+  clientNote      String?       @db.Text
   rejectReason    String?       @db.VarChar(500)
   cancelReason    String?       @db.VarChar(500)
   // timestamps

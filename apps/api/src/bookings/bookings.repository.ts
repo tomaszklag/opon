@@ -37,7 +37,7 @@ type BookingWithClient = Prisma.BookingGetPayload<{
 
 export type BookingWithDetail = Prisma.BookingGetPayload<{
   include: {
-    client: { select: { phone: true; firstName: true; lastName: true } };
+    client: { select: { phone: true; firstName: true; lastName: true; createdAt: true } };
     vehicle: { select: { nickname: true; tireSize: true } };
     worker: { select: { name: true } };
     station: { select: { name: true } };
@@ -155,7 +155,7 @@ export class BookingsRepository {
     return this.prisma.booking.findUnique({
       where: { referenceCode, providerId },
       include: {
-        client: { select: { phone: true, firstName: true, lastName: true } },
+        client: { select: { phone: true, firstName: true, lastName: true, createdAt: true } },
         vehicle: { select: { nickname: true, tireSize: true } },
         worker: { select: { name: true } },
         station: { select: { name: true } },
@@ -396,11 +396,45 @@ export class BookingsRepository {
     });
   }
 
+  async updateBookingEdit(
+    id: string,
+    providerId: string,
+    data: {
+      totalPricePln?: number | null;
+      subServices?: { name: string; pricePln?: number | null }[];
+      clientNote?: string | null;
+    },
+  ): Promise<void> {
+    const update: Prisma.BookingUpdateInput = {};
+    if (data.totalPricePln !== undefined) update.totalPricePln = data.totalPricePln;
+    if (data.clientNote !== undefined) update.clientNote = data.clientNote;
+    if (data.subServices !== undefined) {
+      update.serviceDetails = { subServices: data.subServices };
+    }
+    await this.prisma.booking.update({ where: { id, providerId }, data: update });
+  }
+
   findProviderPause(providerId: string) {
     return this.prisma.provider.findUnique({
       where: { id: providerId },
       select: { pausedUntil: true },
     });
+  }
+
+  countClientBookingsThisYear(clientId: string, providerId: string): Promise<number> {
+    const yearStart = new Date(new Date().getFullYear(), 0, 1);
+    return this.prisma.booking.count({
+      where: { clientId, providerId, startAt: { gte: yearStart } },
+    });
+  }
+
+  async getClientAvgRating(clientId: string, providerId: string): Promise<number | null> {
+    const result = await this.prisma.review.aggregate({
+      where: { clientId, providerId, isHidden: false },
+      _avg: { rating: true },
+    });
+    if (result._avg.rating == null) return null;
+    return Math.round(result._avg.rating * 10) / 10;
   }
 
   countTireSetsForBooking(bookingId: string, providerId: string): Promise<number> {

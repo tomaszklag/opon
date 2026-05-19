@@ -280,6 +280,41 @@ pricePln!: number | null;
 
 Dotyczy wszystkich typów skalarnych (`String`, `Number`, `Boolean`). Jedynym wyjątkiem są pola, gdzie `@ApiProperty()` bez opcji inferuje typ poprawnie (np. `@ApiProperty() id!: string` — Swagger widzi typ z TypeScript refleksji, o ile nie ma `nullable`).
 
+**Reguła: `@ApiPropertyOptional` ≠ „wartość może być null" — znaczy „pole można pominąć w body".**
+
+W zagnieżdżonych DTO (nested objects w tablicach) pola wymagane wewnątrz obiektu muszą używać `@ApiProperty()`, nawet jeśli cały array jest opcjonalny. Pomyłka nie powoduje błędu TS — Swagger jedynie błędnie oznaczy pole jako niewymagane.
+
+```ts
+export class EditSubServiceDto {
+  // ❌ NIE — name jest wymagane wewnątrz obiektu, nie "opcjonalne"
+  @ApiPropertyOptional() @IsString() name!: string;
+
+  // ✅ TAK — @ApiProperty bo name jest obowiązkowe w każdym elemencie tablicy
+  @ApiProperty() @IsString() name!: string;
+
+  // ✅ OK — pricePln rzeczywiście można pominąć (null = "w cenie")
+  @ApiPropertyOptional({ type: Number, nullable: true }) @IsOptional() @IsNumber() pricePln?:
+    | number
+    | null;
+}
+```
+
+**Reguła: nowy semantyczny błąd = nowy kod w `ErrorCode` enum przed użyciem.**
+
+`apps/api/src/common/errors/error-code.enum.ts` jest jedynym źródłem prawdy dla kodów błędów. Użycie nieistniejącego kodu (`ErrorCode.BOOKING_INVALID_STATUS`) nie powoduje błędu kompilacji — TypeScript nie sprawdza wartości enum w runtime. Skutkuje to `undefined` przekazanym do klienta jako kod błędu.
+
+```ts
+// ❌ NIE — użycie kodu którego nie ma w enum (cichy bug)
+throw new AppException(ErrorCode.BOOKING_INVALID_STATUS, 'Niedozwolony status.', 422);
+
+// ✅ TAK — najpierw dodaj do enum, potem użyj
+// error-code.enum.ts:
+//   BOOKING_INVALID_STATUS = 'BOOKING_INVALID_STATUS',
+throw new AppException(ErrorCode.BOOKING_INVALID_STATUS, 'Niedozwolony status.', 422);
+```
+
+Przy każdym `throw new AppException(ErrorCode.XYZ, ...)` sprawdź czy `XYZ` istnieje w enumie. Enum jest w `apps/api/src/common/errors/error-code.enum.ts`.
+
 **Reguła: pola wymagające weryfikacji nigdy nie trafiają do `Update*Dto`.**
 
 Pola takie jak `email` czy `phone` mają własny endpoint + OTP/token flow (patrz §16). Umieszczenie ich w `UpdateProviderDto` pozwala je zmienić bez weryfikacji, co narusza bezpieczeństwo.

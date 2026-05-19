@@ -2,9 +2,10 @@
 
 import React, { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Button, Heading, Spinner, Text, toast } from '@opony/design-system-web';
+import { Button, Heading, Modal, Spinner, Text, toast } from '@opony/design-system-web';
 import { useAuthGuard } from '../../../../lib/hooks/use-auth-guard';
 import { RescheduleModal } from '../../_components/RescheduleModal';
+import { EditBookingModal } from '../../_components/EditBookingModal';
 import { useBookingDetail } from '../../../../lib/hooks/use-booking-detail';
 import { bookingsApi } from '../../../../api-data-access/bookings';
 import type { BookingStatus, StatusAction } from '../../../../api-data-access/bookings';
@@ -139,21 +140,6 @@ function getInitials(name: string): string {
 
 function formatPrice(value: number): string {
   return value.toFixed(2).replace('.', ',');
-}
-
-function formatRelativeTime(isoString: string): string {
-  const diffMs = Date.now() - new Date(isoString).getTime();
-  const diffDays = Math.floor(diffMs / 86_400_000);
-  if (diffDays === 0) return 'dzisiaj';
-  if (diffDays === 1) return 'wczoraj';
-  if (diffDays < 7) return `${diffDays} dni temu`;
-  const diffWeeks = Math.floor(diffDays / 7);
-  if (diffWeeks < 5) return `${diffWeeks} ${diffWeeks === 1 ? 'tydzień' : 'tygodnie'} temu`;
-  const diffMonths = Math.floor(diffDays / 30);
-  if (diffMonths < 12)
-    return `${diffMonths} ${diffMonths === 1 ? 'miesiąc' : diffMonths < 5 ? 'miesiące' : 'miesięcy'} temu`;
-  const diffYears = Math.floor(diffDays / 365);
-  return `${diffYears} ${diffYears === 1 ? 'rok' : diffYears < 5 ? 'lata' : 'lat'} temu`;
 }
 
 function isTerminalStatus(status: BookingStatus): boolean {
@@ -353,6 +339,8 @@ export default function BookingDetailPage({ params }: PageProps) {
   const [actionError, setActionError] = useState<string | null>(null);
   const [showDepotModal, setShowDepotModal] = useState(false);
   const [showReschedule, setShowReschedule] = useState(false);
+  const [showEdit, setShowEdit] = useState(false);
+  const [showStartConfirm, setShowStartConfirm] = useState(false);
   const [editingNotes, setEditingNotes] = useState(false);
   const [notesValue, setNotesValue] = useState('');
   const [notesSaving, setNotesSaving] = useState(false);
@@ -410,6 +398,12 @@ export default function BookingDetailPage({ params }: PageProps) {
   const { status } = booking;
   const countdown = getCountdown(booking.startAt, status);
   const durationMin = getDurationMin(booking.startAt, booking.endAt);
+  const minutesRunning =
+    status === 'IN_PROGRESS'
+      ? Math.floor((Date.now() - new Date(booking.startedAt ?? booking.startAt).getTime()) / 60000)
+      : null;
+  const isOverrun = minutesRunning != null && minutesRunning > durationMin;
+  const overrunMin = isOverrun ? minutesRunning - durationMin : 0;
   const initials = getInitials(booking.client.clientName);
   const timeline = buildTimeline(booking);
 
@@ -423,6 +417,7 @@ export default function BookingDetailPage({ params }: PageProps) {
   const statusGlow = getStatusGlow(status);
 
   const canAddToDepot = booking.status === 'COMPLETED' && !booking.hasTireSetsInDepot;
+  const canEdit = status === 'PENDING' || status === 'CONFIRMED' || status === 'IN_PROGRESS';
   const startAtDate = new Date(booking.startAt);
   const showNoShow =
     (status === 'CONFIRMED' || status === 'IN_PROGRESS') && startAtDate < new Date();
@@ -432,6 +427,15 @@ export default function BookingDetailPage({ params }: PageProps) {
   const { displayName: serviceDisplayName, wheelCount: parsedWheelCount } = parseWheelInfo(
     booking.service.name ?? null,
   );
+  // basePricePln is null for manual bookings — derive it from totalPricePln
+  const derivedBasePricePln: number | null = (() => {
+    if (booking.isCustomService) return booking.customPricePln ?? null;
+    if (booking.basePricePln != null) return booking.basePricePln;
+    if (booking.totalPricePln == null) return null;
+    const paidSubsSum = paidSubServices.reduce((sum, s) => sum + (s.pricePln ?? 0), 0);
+    const travel = (booking.travelFeePln ?? 0) > 0 ? (booking.travelFeePln ?? 0) : 0;
+    return booking.totalPricePln - paidSubsSum - travel;
+  })();
 
   async function handleDepotSubmit(body: CreateTireSetBody) {
     await depotApi.create(body);
@@ -440,6 +444,44 @@ export default function BookingDetailPage({ params }: PageProps) {
 
   return (
     <>
+      <Modal
+        isOpen={showStartConfirm}
+        onClose={() => setShowStartConfirm(false)}
+        title="Rozpocząć wizytę przed czasem?"
+        size="sm"
+        footer={
+          <>
+            <Button
+              variant="neutral"
+              size="md"
+              onClick={() => setShowStartConfirm(false)}
+              disabled={actionLoading}
+            >
+              Anuluj
+            </Button>
+            <Button
+              variant="primary"
+              size="md"
+              loading={actionLoading}
+              onClick={() => {
+                setShowStartConfirm(false);
+                void handleAction('start');
+              }}
+            >
+              Tak, rozpocznij
+            </Button>
+          </>
+        }
+      >
+        <Text variant="body-sm" as="p" color="secondary">
+          Wizyta zaplanowana jest na{' '}
+          <Text variant="body-sm" as="span" weight="bold" color="primary">
+            {formatTime(booking.startAt)}
+          </Text>
+          . Czy na pewno chcesz ją teraz rozpocząć?
+        </Text>
+      </Modal>
+
       <RescheduleModal
         isOpen={showReschedule}
         onClose={() => setShowReschedule(false)}
@@ -449,6 +491,16 @@ export default function BookingDetailPage({ params }: PageProps) {
         initialStartAt={booking.startAt}
         initialEndAt={booking.endAt}
         workerId={booking.workerId}
+      />
+
+      <EditBookingModal
+        isOpen={showEdit}
+        onClose={() => setShowEdit(false)}
+        onSuccess={() => void mutate()}
+        referenceCode={referenceCode}
+        initialTotalPricePln={booking.totalPricePln ?? null}
+        initialSubServices={booking.service.subServices}
+        initialClientNote={booking.clientNote ?? null}
       />
 
       <TireSetModal
@@ -509,7 +561,16 @@ export default function BookingDetailPage({ params }: PageProps) {
             </div>
 
             <div className={styles.heroWhenCol}>
-              <span className={styles.heroCountdown}>{countdown}</span>
+              <div className={styles.heroCountdownRow}>
+                <span className={styles.heroCountdown}>{countdown}</span>
+                {minutesRunning != null && (
+                  <span className={isOverrun ? styles.heroOverrunChip : styles.heroElapsedChip}>
+                    {isOverrun
+                      ? `+${overrunMin} min ponad plan`
+                      : `${minutesRunning} min w trakcie`}
+                  </span>
+                )}
+              </div>
               <span className={styles.heroWhen}>
                 <Text variant="body-sm" as="span" weight="bold">
                   {formatDayDate(booking.startAt)}
@@ -543,26 +604,25 @@ export default function BookingDetailPage({ params }: PageProps) {
                         {booking.client.clientName}
                       </Text>
                     </div>
-                    <div className={styles.clientMeta}>
-                      <Text variant="nano" as="span" color="muted">
-                        <strong>{booking.client.bookingCount}</strong>{' '}
-                        {booking.client.bookingCount === 1
-                          ? 'wizyta'
-                          : booking.client.bookingCount < 5
-                            ? 'wizyty'
-                            : 'wizyt'}
-                      </Text>
-                      {booking.client.lastVisitAt && (
-                        <Text variant="nano" as="span" color="muted">
-                          · ostatnia {formatRelativeTime(booking.client.lastVisitAt)}
-                        </Text>
+                    <Text
+                      variant="nano"
+                      as="span"
+                      color="muted"
+                      className={styles.clientInlineStats}
+                    >
+                      {booking.client.bookingCount}{' '}
+                      {booking.client.bookingCount === 1
+                        ? 'rezerwacja'
+                        : booking.client.bookingCount < 5
+                          ? 'rezerwacje'
+                          : 'rezerwacji'}
+                      {' · '}
+                      {booking.client.bookingCountThisYear} w tym roku
+                      {booking.client.avgRating != null && (
+                        <> · ocena {booking.client.avgRating.toFixed(1)}</>
                       )}
-                      {booking.client.upcomingCount > 0 && (
-                        <span className={styles.upcomingChip}>
-                          +{booking.client.upcomingCount} nadchodzące
-                        </span>
-                      )}
-                    </div>
+                      {' · '}klient od {booking.client.clientSince}
+                    </Text>
                   </div>
                   <div className={styles.clientPhone}>
                     <span className={styles.clientPhoneIco}>
@@ -572,115 +632,6 @@ export default function BookingDetailPage({ params }: PageProps) {
                   </div>
                 </div>
               </section>
-
-              {/* Service card */}
-              <section className={styles.secCard} aria-label="Usługa">
-                <div className={styles.secHead}>
-                  <Heading variant="section" as="h2">
-                    Usługa
-                  </Heading>
-                  <span
-                    className={booking.isCustomService ? styles.customBadge : styles.catalogBadge}
-                  >
-                    {booking.isCustomService ? 'Poza cennikiem' : 'Z cennika'}
-                  </span>
-                </div>
-                <div className={styles.serviceNameRow}>
-                  <Text variant="body-md" as="span" weight="bold">
-                    {serviceDisplayName || '—'}
-                  </Text>
-                  {booking.service.tireSize && (
-                    <span className={styles.tireTaq}>{booking.service.tireSize}</span>
-                  )}
-                  {!booking.isCustomService && (
-                    <span className={styles.wheelChip}>
-                      {parsedWheelCount !== null
-                        ? `${parsedWheelCount} ${parsedWheelCount === 1 ? 'koło' : 'koła'}`
-                        : 'komplet'}
-                    </span>
-                  )}
-                </div>
-                {subServices.length > 0 && (
-                  <div className={styles.subServiceList}>
-                    {includedSubServices.map((s, i) => (
-                      <div key={i} className={styles.subServiceRow}>
-                        <Text variant="body-sm" as="span" color="secondary">
-                          {s.name}
-                        </Text>
-                        <Text variant="nano" as="span" color="muted">
-                          w cenie
-                        </Text>
-                      </div>
-                    ))}
-                    {paidSubServices.map((s, i) => (
-                      <div
-                        key={i}
-                        className={`${styles.subServiceRow} ${styles.subServiceRowPaid}`}
-                      >
-                        <Text variant="body-sm" as="span" color="secondary">
-                          {s.name}
-                        </Text>
-                        <Text variant="body-sm" as="span" mono weight="bold">
-                          +{s.pricePln} zł
-                        </Text>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                {booking.isCustomService && booking.customDurationMinutes != null && (
-                  <div className={styles.customDetailRow}>
-                    <span className={styles.customDetailIco}>
-                      <IconClock width="13" height="13" />
-                    </span>
-                    <Text variant="nano" as="span" color="muted">
-                      Czas: <strong>{booking.customDurationMinutes} min</strong>
-                    </Text>
-                  </div>
-                )}
-              </section>
-
-              {/* Assignment card — worker + station */}
-              {(booking.workerName ?? booking.stationName) && (
-                <section className={styles.secCard} aria-label="Przypisanie">
-                  <div className={styles.secHead}>
-                    <Heading variant="section" as="h2">
-                      Przypisanie
-                    </Heading>
-                  </div>
-                  <div className={styles.assignmentRow}>
-                    {booking.workerName && (
-                      <div className={styles.assignmentItem}>
-                        <span className={styles.assignmentIco}>
-                          <IconWorkers width="15" height="15" />
-                        </span>
-                        <div className={styles.assignmentCol}>
-                          <Text variant="nano" as="span" weight="bold" color="muted">
-                            Pracownik
-                          </Text>
-                          <Text variant="body-sm" as="span" weight="bold">
-                            {booking.workerName}
-                          </Text>
-                        </div>
-                      </div>
-                    )}
-                    {booking.stationName && (
-                      <div className={styles.assignmentItem}>
-                        <span className={styles.assignmentIco}>
-                          <IconStations width="15" height="15" />
-                        </span>
-                        <div className={styles.assignmentCol}>
-                          <Text variant="nano" as="span" weight="bold" color="muted">
-                            Stanowisko
-                          </Text>
-                          <Text variant="body-sm" as="span" weight="bold">
-                            {booking.stationName}
-                          </Text>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </section>
-              )}
 
               {/* Address card — only if address present */}
               {(booking.addressLine ?? booking.addressCity) && (
@@ -932,34 +883,96 @@ export default function BookingDetailPage({ params }: PageProps) {
 
             {/* ── Right column (sticky) ── */}
             <aside className={styles.colRight} aria-label="Płatność i akcje">
-              {/* Price card */}
-              <section className={styles.priceCard}>
-                <div className={styles.priceHead}>
-                  <Heading variant="section" as="h3">
-                    Do zapłaty
-                  </Heading>
-                  <span className={styles.offlineBadge}>Po wizycie · offline</span>
+              {/* Merged service + price card */}
+              <section className={styles.priceCard} aria-label="Usługa i płatność">
+                {/* ── Service identity ── */}
+                <div className={styles.svcHead}>
+                  <Text variant="body-md" as="span" weight="bold">
+                    {serviceDisplayName || '—'}
+                  </Text>
+                  <div className={styles.svcHeadRight}>
+                    <span
+                      className={booking.isCustomService ? styles.customBadge : styles.catalogBadge}
+                    >
+                      {booking.isCustomService ? 'Poza cennikiem' : 'Z cennika'}
+                    </span>
+                    {canEdit && (
+                      <Button variant="ghost" size="sm" onClick={() => setShowEdit(true)}>
+                        <IconPencil width="11" height="11" />
+                        Edytuj
+                      </Button>
+                    )}
+                  </div>
                 </div>
 
+                {(booking.service.tireSize ||
+                  !booking.isCustomService ||
+                  booking.customDurationMinutes != null) && (
+                  <div className={styles.svcMeta}>
+                    {booking.service.tireSize && (
+                      <span className={styles.tireTaq}>{booking.service.tireSize}</span>
+                    )}
+                    {!booking.isCustomService && (
+                      <span className={styles.wheelChip}>
+                        {parsedWheelCount !== null
+                          ? `${parsedWheelCount} ${parsedWheelCount === 1 ? 'koło' : 'koła'}`
+                          : 'komplet'}
+                      </span>
+                    )}
+                    {booking.isCustomService && booking.customDurationMinutes != null && (
+                      <span className={styles.durationChip}>
+                        <IconClock width="11" height="11" />
+                        {booking.customDurationMinutes} min
+                      </span>
+                    )}
+                  </div>
+                )}
+
+                {(booking.workerName ?? booking.stationName) && (
+                  <div className={styles.svcAssign}>
+                    {booking.workerName && (
+                      <span className={styles.svcAssignItem}>
+                        <IconWorkers width="12" height="12" />
+                        <Text variant="nano" as="span" color="secondary">
+                          {booking.workerName}
+                        </Text>
+                      </span>
+                    )}
+                    {booking.stationName && (
+                      <span className={styles.svcAssignItem}>
+                        <IconStations width="12" height="12" />
+                        <Text variant="nano" as="span" color="secondary">
+                          {booking.stationName}
+                        </Text>
+                      </span>
+                    )}
+                  </div>
+                )}
+
+                <hr className={styles.svcDivider} />
+
+                {/* ── Price breakdown ── */}
                 <div className={styles.priceRows}>
-                  {/* Base service */}
                   <div className={styles.priceRow}>
                     <Text variant="body-sm" as="span" color="secondary">
-                      {booking.service.name ?? 'Usługa'}
-                      {booking.service.tireSize ? ` (${booking.service.tireSize})` : ''}
+                      Usługa
                     </Text>
                     <span className={styles.priceRowVal}>
-                      {booking.isCustomService
-                        ? booking.customPricePln != null
-                          ? `${formatPrice(booking.customPricePln)} zł`
-                          : '—'
-                        : booking.basePricePln != null
-                          ? `${formatPrice(booking.basePricePln)} zł`
-                          : '—'}
+                      {derivedBasePricePln != null ? `${formatPrice(derivedBasePricePln)} zł` : '—'}
                     </span>
                   </div>
 
-                  {/* Paid sub-services */}
+                  {includedSubServices.map((s, i) => (
+                    <div key={i} className={styles.priceRow}>
+                      <Text variant="body-sm" as="span" color="secondary">
+                        {s.name}
+                      </Text>
+                      <span className={`${styles.priceRowVal} ${styles.priceRowValSuccess}`}>
+                        w cenie
+                      </span>
+                    </div>
+                  ))}
+
                   {paidSubServices.map((s, i) => (
                     <div key={i} className={styles.priceRow}>
                       <Text variant="body-sm" as="span" color="secondary">
@@ -969,7 +982,6 @@ export default function BookingDetailPage({ params }: PageProps) {
                     </div>
                   ))}
 
-                  {/* Travel fee */}
                   {booking.travelFeePln != null && (
                     <div className={styles.priceRow}>
                       <Text variant="body-sm" as="span" color="secondary">
@@ -1006,17 +1018,16 @@ export default function BookingDetailPage({ params }: PageProps) {
                   </span>
                 </div>
 
-                <div className={styles.adrNote}>
-                  <span className={styles.adrNoteIcon}>
-                    <IconInfo width="13" height="13" />
-                  </span>
-                  <Text variant="nano" as="div" color="muted">
-                    <strong className={styles.adrNoteStrong}>Aplikacja darmowa w pilocie.</strong>{' '}
-                    Klient płaci Tobie bezpośrednio — gotówka lub przelew. Platforma pobiera{' '}
-                    <strong className={styles.adrNoteStrong}>0% prowizji</strong> (zgodnie z
-                    regulaminem).
-                  </Text>
-                </div>
+                {booking.clientNote && (
+                  <div className={styles.clientNoteRow}>
+                    <Text variant="nano" as="span" color="muted" className={styles.clientNoteLabel}>
+                      Notatka dla klienta
+                    </Text>
+                    <Text variant="body-sm" as="p" color="secondary">
+                      {booking.clientNote}
+                    </Text>
+                  </div>
+                )}
               </section>
 
               {/* Actions card */}
@@ -1050,7 +1061,13 @@ export default function BookingDetailPage({ params }: PageProps) {
                       type="button"
                       className={styles.actionPrimary}
                       disabled={actionLoading}
-                      onClick={() => handleAction('start')}
+                      onClick={() => {
+                        if (new Date() < startAtDate) {
+                          setShowStartConfirm(true);
+                        } else {
+                          void handleAction('start');
+                        }
+                      }}
                     >
                       <IconPlay width="16" height="16" />
                       Rozpocznij wizytę
@@ -1109,26 +1126,15 @@ export default function BookingDetailPage({ params }: PageProps) {
                 )}
 
                 {status === 'IN_PROGRESS' && (
-                  <>
-                    <button
-                      type="button"
-                      className={`${styles.actionPrimary} ${styles.actionPrimarySuccess}`}
-                      disabled={actionLoading}
-                      onClick={() => handleAction('complete')}
-                    >
-                      <IconCheck width="16" height="16" />
-                      Zakończ wizytę
-                    </button>
-                    <button
-                      type="button"
-                      className={styles.actionDanger}
-                      disabled={actionLoading}
-                      onClick={() => handleAction('cancel')}
-                    >
-                      <IconXClose width="12" height="12" />
-                      Anuluj rezerwację
-                    </button>
-                  </>
+                  <button
+                    type="button"
+                    className={`${styles.actionPrimary} ${styles.actionPrimarySuccess}`}
+                    disabled={actionLoading}
+                    onClick={() => handleAction('complete')}
+                  >
+                    <IconCheck width="16" height="16" />
+                    Zakończ wizytę
+                  </button>
                 )}
 
                 {isTerminalStatus(status) && (

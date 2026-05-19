@@ -99,6 +99,14 @@ export const bookingsApi = {
     }),
   updateNotes: (referenceCode: string, notes: string | null) =>
     api.patch<void>(`/v1/providers/me/bookings/${referenceCode}/notes`, { notes }),
+  editBooking: (
+    referenceCode: string,
+    payload: {
+      totalPricePln?: number | null;
+      subServices?: { name: string; pricePln?: number | null }[];
+      clientNote?: string | null;
+    },
+  ) => api.patch<void>(`/v1/providers/me/bookings/${referenceCode}/edit`, payload),
   searchClients: (q: string) =>
     api.get<components['schemas']['ClientSearchResultDto'][]>(
       `/v1/providers/me/bookings/clients?q=${encodeURIComponent(q)}`,

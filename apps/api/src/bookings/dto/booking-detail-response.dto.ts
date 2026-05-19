@@ -16,8 +16,11 @@ export class BookingClientDto {
   @ApiProperty() clientName!: string;
   @ApiProperty() clientPhone!: string;
   @ApiProperty() bookingCount!: number;
+  @ApiProperty() bookingCountThisYear!: number;
   @ApiPropertyOptional({ type: String, nullable: true }) lastVisitAt!: string | null;
   @ApiProperty() upcomingCount!: number;
+  @ApiPropertyOptional({ type: Number, nullable: true }) avgRating!: number | null;
+  @ApiProperty() clientSince!: number;
 }
 
 export class BookingVehicleDto {
@@ -48,6 +51,7 @@ export class BookingDetailResponseDto {
   @ApiPropertyOptional({ type: String, nullable: true }) workerId!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) workerName!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) notes!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) clientNote!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) rejectReason!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) cancelReason!: string | null;
   @ApiProperty() isManual!: boolean;
