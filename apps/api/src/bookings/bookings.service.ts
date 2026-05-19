@@ -6,6 +6,7 @@ import { AppException, ErrorCode } from '../common/errors';
 import { WorkerTasksService } from '../worker-tasks/worker-tasks.service';
 import { BookingDetailResponseDto } from './dto/booking-detail-response.dto';
 import { BookingResponseDto } from './dto/booking-response.dto';
+import { CustomServiceSuggestionDto } from './dto/custom-service-suggestion.dto';
 import { UpdateBookingStatusDto } from './dto/update-booking-status.dto';
 import { BookingsRepository, BookingWithDetail, ManualBookingData } from './bookings.repository';
 import { BookingAdminListQueryDto } from './dto/booking-admin-list-query.dto';
@@ -148,6 +149,9 @@ export class BookingsService {
       rejectReason: booking.rejectReason ?? null,
       cancelReason: booking.cancelReason ?? null,
       isManual: booking.isManual,
+      isCustomService: booking.isCustomService,
+      customPricePln: booking.customPricePln != null ? Number(booking.customPricePln) : null,
+      customDurationMinutes: booking.customDurationMinutes ?? null,
       hasTireSetsInDepot,
       createdAt: booking.createdAt.toISOString(),
       confirmedAt: booking.confirmedAt?.toISOString() ?? null,
@@ -297,6 +301,9 @@ export class BookingsService {
       confirmedAt,
       workerId: dto.workerId ?? null,
       stationId: dto.stationId ?? null,
+      isCustomService: dto.isCustomService ?? false,
+      customPricePln: dto.customPricePln ?? null,
+      customDurationMinutes: dto.customDurationMinutes ?? null,
     };
 
     if (dto.skipAvailabilityCheck) {
@@ -876,5 +883,15 @@ export class BookingsService {
     const version = await this.computeDayVersion(providerId, parsedDate);
 
     return { slots, slotMinutes, isClosedDay: false, version };
+  }
+
+  // ── custom service autocomplete ───────────────────────────────────────────
+
+  async getCustomServiceSuggestions(
+    providerId: string,
+    q: string,
+  ): Promise<CustomServiceSuggestionDto[]> {
+    const clean = q.trim();
+    return this.bookingsRepository.getCustomServiceSuggestions(providerId, clean);
   }
 }

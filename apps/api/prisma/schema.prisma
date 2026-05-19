@@ -332,12 +332,15 @@ model Booking {
   completedAt     DateTime?
   cancelledAt     DateTime?
 
-  stationId       String?       @db.Uuid
-  workerId        String?       @db.Uuid
-  serviceName     String?       @db.VarChar(300)
-  serviceDetails  Json?
-  isManual        Boolean      @default(false)
-  reminderSentAt  DateTime?
+  stationId             String?       @db.Uuid
+  workerId              String?       @db.Uuid
+  serviceName           String?       @db.VarChar(300)
+  serviceDetails        Json?
+  isManual              Boolean       @default(false)
+  isCustomService       Boolean       @default(false)
+  customPricePln        Decimal?      @db.Decimal(10, 2)
+  customDurationMinutes Int?
+  reminderSentAt        DateTime?
 
   client      Client       @relation(fields: [clientId], references: [id])
   provider    Provider     @relation("ProviderBookings", fields: [providerId], references: [id])
@@ -351,6 +354,7 @@ model Booking {
   @@index([providerId, startAt])
   @@index([clientId])
   @@index([stationId])
+  @@index([providerId, isCustomService, serviceName])
   // UWAGA: partial unique index zapobiegający double-booking dodany w migracji SQL:
   // CREATE UNIQUE INDEX bookings_no_double_booking
   //   ON bookings (provider_id, start_at)

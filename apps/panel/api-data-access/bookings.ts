@@ -101,6 +101,10 @@ export const bookingsApi = {
     api.get<components['schemas']['ClientSearchResultDto'][]>(
       `/v1/providers/me/bookings/clients?q=${encodeURIComponent(q)}`,
     ),
+  getCustomServiceSuggestions: (q: string) =>
+    api.get<components['schemas']['CustomServiceSuggestionDto'][]>(
+      `/v1/providers/me/bookings/custom-services?q=${encodeURIComponent(q)}`,
+    ),
   getAvailability: (date: string, workerId?: string) => {
     const qs = workerId ? `?date=${date}&workerId=${workerId}` : `?date=${date}`;
     return api.get<AvailabilityResponse>(`/v1/providers/me/bookings/availability${qs}`);
@@ -108,6 +112,7 @@ export const bookingsApi = {
 };
 
 export type ManualBookingPayload = components['schemas']['CreateManualBookingDto'];
+export type CustomServiceSuggestion = components['schemas']['CustomServiceSuggestionDto'];
 
 export interface AvailabilitySlot {
   startAt: string;

@@ -19,6 +19,9 @@ export interface ManualBookingData {
   confirmedAt: Date | null;
   workerId: string | null;
   stationId: string | null;
+  isCustomService: boolean;
+  customPricePln: number | null;
+  customDurationMinutes: number | null;
 }
 
 type BookingWithClient = Prisma.BookingGetPayload<{
@@ -64,6 +67,9 @@ export class BookingsRepository {
       serviceDetails: data.serviceDetails ?? undefined,
       notes: data.notes,
       isManual: true,
+      isCustomService: data.isCustomService,
+      customPricePln: data.customPricePln,
+      customDurationMinutes: data.customDurationMinutes,
       status: data.status,
       confirmedAt: data.confirmedAt,
       workerId: data.workerId,
@@ -363,5 +369,36 @@ export class BookingsRepository {
 
   countTireSetsForBooking(bookingId: string): Promise<number> {
     return this.prisma.tireSet.count({ where: { sourceBookingId: bookingId } });
+  }
+
+  async getCustomServiceSuggestions(
+    providerId: string,
+    q: string,
+    limit = 8,
+  ): Promise<
+    { name: string; avgPricePln: number | null; avgDurationMinutes: number | null; count: number }[]
+  > {
+    const rows = await this.prisma.booking.groupBy({
+      by: ['serviceName'],
+      where: {
+        providerId,
+        isCustomService: true,
+        serviceName: q ? { contains: q, mode: 'insensitive' } : { not: null },
+      },
+      _count: { serviceName: true },
+      _avg: { customPricePln: true, customDurationMinutes: true },
+      orderBy: { _count: { serviceName: 'desc' } },
+      take: limit,
+    });
+
+    return rows
+      .filter((r) => r.serviceName != null)
+      .map((r) => ({
+        name: r.serviceName as string,
+        avgPricePln: r._avg?.customPricePln != null ? Number(r._avg.customPricePln) : null,
+        avgDurationMinutes:
+          r._avg?.customDurationMinutes != null ? Math.round(r._avg.customDurationMinutes) : null,
+        count: r._count?.serviceName ?? 0,
+      }));
   }
 }

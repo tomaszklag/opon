@@ -864,6 +864,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/v1/providers/me/bookings/custom-services': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Autocomplete for custom (off-pricelist) service names */
+    get: operations['BookingsController_getCustomServiceSuggestions'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/v1/providers/me/bookings/availability': {
     parameters: {
       query?: never;
@@ -1858,6 +1875,18 @@ export interface components {
        * @example a1b2c3d4
        */
       availabilityVersion?: string;
+      /** @description Usługa zdefiniowana poza cennikiem */
+      isCustomService?: boolean;
+      /** @description Cena usługi custom (opcjonalna) */
+      customPricePln?: number;
+      /** @description Czas trwania usługi custom w minutach */
+      customDurationMinutes?: number;
+    };
+    CustomServiceSuggestionDto: {
+      name: string;
+      avgPricePln?: number | null;
+      avgDurationMinutes?: number | null;
+      count: number;
     };
     ClientSearchResultDto: {
       phone: string;
@@ -1916,6 +1945,9 @@ export interface components {
       rejectReason?: string | null;
       cancelReason?: string | null;
       isManual: boolean;
+      isCustomService: boolean;
+      customPricePln?: number | null;
+      customDurationMinutes?: number | null;
       hasTireSetsInDepot: boolean;
       createdAt: string;
       confirmedAt?: string | null;
@@ -3854,6 +3886,27 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['ClientSearchResultDto'][];
+        };
+      };
+    };
+  };
+  BookingsController_getCustomServiceSuggestions: {
+    parameters: {
+      query: {
+        q: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['CustomServiceSuggestionDto'][];
         };
       };
     };

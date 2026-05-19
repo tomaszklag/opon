@@ -227,27 +227,64 @@
 }
 
 
-.timelineManualInput {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-}
+/* ── Od · Czas trwania · Do — trzy powiązane pola w jednej karcie ── */
 
-.timeField {
+.timeRangeGroup {
   display: flex;
   flex-direction: column;
+  gap: 10px;
+  border: 1px solid var(--accent-border);
+  border-radius: var(--radius-md);
+  background: var(--accent-muted);
+  padding: 10px 12px;
+}
+
+.timeRangeHeader {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.timeRangeInfo {
+  display: flex;
+  align-items: center;
+  color: var(--text-muted);
+  opacity: 0.6;
+  cursor: default;
+  flex-shrink: 0;
+}
+
+/* row with the three inputs */
+.timeRangeFields {
+  display: flex;
+  align-items: flex-end;
   gap: 4px;
 }
 
-.durationBadge {
+.timeRangeField {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 2px;
-  margin-top: 22px; /* FieldLabel height (~14px) + gap (4px) + fudge (4px) */
-  height: 40px;     /* matches TimeInput height */
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+
+.timeRangeDuration {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
   flex-shrink: 0;
+}
+
+/* arrow connector between fields — aligned to input centre */
+.timeRangeArrow {
+  flex-shrink: 0;
+  padding-bottom: 10px; /* visually centre on a 40px-tall input */
+  color: var(--accent);
+  opacity: 0.55;
+  font-size: 16px;
+  line-height: 1;
+  user-select: none;
 }
 
 .conflictBanner {
@@ -366,13 +403,12 @@
   flex-shrink: 0;
 }
 
-.sumValTotal {
+/* currency "zł" suffix — color+weight via <Text> DS props; font-size matches adjacent .priceInput (no DS variant at 20px) */
+.sumZlSuffix {
   font-size: 20px;
-  font-weight: 800;
-  color: var(--accent);
+  letter-spacing: 0.5px;
   white-space: nowrap;
   flex-shrink: 0;
-  letter-spacing: 0.5px;
 }
 
 .sumTotalPrice {
@@ -382,6 +418,7 @@
   flex-shrink: 0;
 }
 
+/* natywny <input type="number"> — wyjątek DS; typografia inline bo input nie jest elementem tekstowym DS */
 .priceInput {
   width: 72px;
   background: var(--accent-muted);
@@ -526,4 +563,5 @@
   gap: 8px;
   flex-wrap: wrap;
 }
+
 

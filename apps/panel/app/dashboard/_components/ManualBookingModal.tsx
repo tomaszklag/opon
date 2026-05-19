@@ -9,6 +9,7 @@ import {
   Input,
   NumberStepper,
   PhoneInput,
+  SegmentedControl,
   Textarea,
   Text,
   TimeInput,
@@ -20,6 +21,7 @@ import { useWorkersList } from '../../../lib/hooks/use-workers-list';
 import { useAvailability } from '../../../lib/hooks/use-availability';
 import { useServiceGroups } from '../../../lib/hooks/use-service-groups';
 import { useClientSearch } from '../../../lib/hooks/use-client-search';
+import { useCustomServiceSearch } from '../../../lib/hooks/use-custom-service-search';
 import { useBookings } from '../../../lib/hooks/use-bookings';
 import type {
   ServiceGroupResponse,
@@ -110,8 +112,14 @@ function wheelCountLabel(count: number): string {
 
 function addMinutes(timeHHMM: string, minutes: number): string {
   const [hh, mm] = timeHHMM.split(':').map(Number);
-  const total = (hh ?? 0) * 60 + (mm ?? 0) + minutes;
-  return `${String(Math.floor(total / 60) % 24).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
+  const total = ((hh ?? 0) * 60 + (mm ?? 0) + minutes + 1440) % 1440;
+  return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
+}
+
+function diffMinutes(startHHMM: string, endHHMM: string): number {
+  const [sh, sm] = startHHMM.split(':').map(Number);
+  const [eh, em] = endHHMM.split(':').map(Number);
+  return (eh ?? 0) * 60 + (em ?? 0) - (sh ?? 0) * 60 - (sm ?? 0);
 }
 
 export function ManualBookingModal({
@@ -127,6 +135,9 @@ export function ManualBookingModal({
   const formRef = useRef<HTMLFormElement>(null);
   const pendingAutoConfirm = useRef(true);
 
+  // 'catalog' | 'custom' — which service mode is active
+  const [serviceMode, setServiceMode] = useState<'catalog' | 'custom'>('catalog');
+
   const [clientName, setClientName] = useState('');
   const [clientPhone, setClientPhone] = useState('');
   // true = client was selected from autocomplete; name is locked
@@ -141,17 +152,25 @@ export function ManualBookingModal({
   const [checkedSubNames, setCheckedSubNames] = useState<Set<string>>(new Set());
   const [wheelCount, setWheelCount] = useState(4);
   const [wheelExpanded, setWheelExpanded] = useState(false);
+  // custom service state
+  const [customServiceName, setCustomServiceName] = useState('');
+  const [customServiceQuery, setCustomServiceQuery] = useState('');
+  const [showCustomSuggestions, setShowCustomSuggestions] = useState(false);
+
+  const [customPricePln, setCustomPricePln] = useState('');
+  const customServiceWrapperRef = useRef<HTMLDivElement>(null);
+
   const [workerId, setWorkerId] = useState('');
   const [date, setDate] = useState(getDefaultDate);
   const [timeInput, setTimeInput] = useState('');
-  // manual end time override (HH:MM); empty = auto-calculated from start + duration
-  const [manualEndTime, setManualEndTime] = useState('');
+  const [durationMinutes, setDurationMinutes] = useState(60);
   // manual price override; empty = use auto-calculated price
   const [totalPricePln, setTotalPricePln] = useState('');
   const [notes, setNotes] = useState('');
   const [validationError, setValidationError] = useState<string | null>(null);
 
   const { suggestions, isLoading: clientSearchLoading } = useClientSearch(clientPhone);
+  const { suggestions: customSuggestions } = useCustomServiceSearch(customServiceQuery);
   const [showSuggestions, setShowSuggestions] = useState(false);
 
   const phoneDigits = clientPhone.replace(/\D/g, '');
@@ -269,28 +288,16 @@ export function ManualBookingModal({
     return new Date(`${date}T${timeInput}:00`).toISOString();
   }, [date, timeInput]);
 
-  const calculatedEndTime = useMemo(() => {
-    if (!timeInput || !/^\d{2}:\d{2}$/.test(timeInput)) return null;
-    return addMinutes(timeInput, totalDurationMinutes ?? 60);
-  }, [timeInput, totalDurationMinutes]);
+  // Derived end time: start + duration (both editable; changing end recalculates duration)
+  const endTimeStr = useMemo(() => {
+    if (!timeInput || !/^\d{2}:\d{2}$/.test(timeInput)) return '';
+    return addMinutes(timeInput, durationMinutes);
+  }, [timeInput, durationMinutes]);
 
   const endAt = useMemo(() => {
-    if (!startAt) return null;
-    const resolved = manualEndTime || calculatedEndTime;
-    if (resolved && /^\d{2}:\d{2}$/.test(resolved)) {
-      return new Date(`${date}T${resolved}:00`).toISOString();
-    }
-    const dur = totalDurationMinutes ?? 60;
-    return new Date(new Date(startAt).getTime() + dur * 60_000).toISOString();
-  }, [startAt, manualEndTime, calculatedEndTime, totalDurationMinutes, date]);
-
-  // Effective duration — from manual end time if set, otherwise service-derived
-  const effectiveDurationMinutes = useMemo(() => {
-    if (startAt && endAt) {
-      return Math.round((new Date(endAt).getTime() - new Date(startAt).getTime()) / 60_000);
-    }
-    return totalDurationMinutes;
-  }, [startAt, endAt, totalDurationMinutes]);
+    if (!startAt || !endTimeStr) return null;
+    return new Date(`${date}T${endTimeStr}:00`).toISOString();
+  }, [startAt, endTimeStr, date]);
 
   const priceDelta = useMemo(() => {
     if (!totalPricePln || autoPrice === null) return null;
@@ -300,37 +307,50 @@ export function ManualBookingModal({
     return delta === 0 ? null : delta;
   }, [totalPricePln, autoPrice]);
 
-  const durationDelta = useMemo(() => {
-    if (!manualEndTime || totalDurationMinutes === null || effectiveDurationMinutes === null)
-      return null;
-    const delta = effectiveDurationMinutes - totalDurationMinutes;
-    return delta === 0 ? null : delta;
-  }, [manualEndTime, totalDurationMinutes, effectiveDurationMinutes]);
+  // Direct booking overlap — strict inequalities so edge-to-edge bookings don't conflict
+  const conflictBookings = useMemo(() => {
+    if (!startAt || !endAt) return [];
+    return dayBookings.filter((b) => b.startAt < endAt && b.endAt > startAt);
+  }, [startAt, endAt, dayBookings]);
 
-  // Slots that overlap [startAt, endAt] and have conflicts
-  const overlapSlots = useMemo(() => {
-    if (!startAt || !endAt || !availability?.slots) return [];
-    return availability.slots.filter(
-      (s) => s.startAt < endAt && s.endAt > startAt && (!s.isAvailable || s.conflictCount > 0),
-    );
-  }, [startAt, endAt, availability]);
+  const hasConflict = conflictBookings.length > 0;
 
-  const hasConflict = overlapSlots.length > 0;
-  const totalConflictCount = overlapSlots.reduce((n, s) => n + s.conflictCount, 0);
-  const overlapMinutes = overlapSlots.length * (availability?.slotMinutes ?? 30);
+  const overlapMinutes = useMemo(() => {
+    if (!startAt || !endAt) return 0;
+    return conflictBookings.reduce((sum, b) => {
+      const overlapStart = Math.max(new Date(startAt).getTime(), new Date(b.startAt).getTime());
+      const overlapEnd = Math.min(new Date(endAt).getTime(), new Date(b.endAt).getTime());
+      return sum + Math.round((overlapEnd - overlapStart) / 60_000);
+    }, 0);
+  }, [conflictBookings, startAt, endAt]);
 
   // Nearest fully-free slot at or after entered time
 
   useEffect(() => {
     if (!isOpen) return;
+    resetForm();
     if (initialDate) setDate(initialDate);
     if (initialTime) setTimeInput(initialTime);
-  }, [isOpen, initialDate, initialTime]);
+  }, [isOpen, initialDate, initialTime]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Auto-sync duration when service variant or rim changes in catalog mode
+  useEffect(() => {
+    if (serviceMode === 'catalog' && totalDurationMinutes !== null) {
+      setDurationMinutes(totalDurationMinutes);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedVariantKey, selectedRimKey]);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       if (phoneWrapperRef.current && !phoneWrapperRef.current.contains(e.target as Node)) {
         setShowSuggestions(false);
+      }
+      if (
+        customServiceWrapperRef.current &&
+        !customServiceWrapperRef.current.contains(e.target as Node)
+      ) {
+        setShowCustomSuggestions(false);
       }
     }
     document.addEventListener('mousedown', handleClickOutside);
@@ -338,6 +358,7 @@ export function ManualBookingModal({
   }, []);
 
   const resetForm = useCallback(() => {
+    setServiceMode('catalog');
     setClientName('');
     setClientPhone('');
     setClientLinked(false);
@@ -347,14 +368,33 @@ export function ManualBookingModal({
     setCheckedSubNames(new Set());
     setWheelCount(4);
     setWheelExpanded(false);
+    setCustomServiceName('');
+    setCustomServiceQuery('');
+    setCustomPricePln('');
+    setShowCustomSuggestions(false);
     setWorkerId('');
     setDate(getDefaultDate());
     setTimeInput('');
-    setManualEndTime('');
+    setDurationMinutes(60);
     setTotalPricePln('');
     setNotes('');
     setValidationError(null);
   }, []);
+
+  function handleModeChange(mode: string) {
+    setServiceMode(mode as 'catalog' | 'custom');
+    setSelectedGroupId('');
+    setSelectedVariantKey('');
+    setSelectedRimKey('');
+    setCheckedSubNames(new Set());
+    setWheelCount(4);
+    setWheelExpanded(false);
+    setTotalPricePln('');
+    setCustomServiceName('');
+    setCustomServiceQuery('');
+    setCustomPricePln('');
+    setDurationMinutes(60);
+  }
 
   function handleGroupChange(groupId: string) {
     setSelectedGroupId(groupId);
@@ -424,35 +464,61 @@ export function ManualBookingModal({
       return;
     }
 
+    if (serviceMode === 'custom' && !customServiceName.trim()) {
+      setValidationError('Podaj nazwę usługi.');
+      return;
+    }
+
     setValidationError(null);
 
-    const resolvedServiceType = selectedVariantRef
-      ? `${selectedVariantRef.group.name}${enabledVariants.length > 1 ? ` — ${selectedVariantRef.variant.name}` : ''}${wheelCount < 4 ? ` (${wheelCountLabel(wheelCount)})` : ''}`
-      : undefined;
+    let result;
+    if (serviceMode === 'custom') {
+      result = await createBooking({
+        clientName: clientName.trim(),
+        clientPhone: `+48${clientPhone.trim()}`,
+        startAt,
+        endAt,
+        serviceName: customServiceName.trim(),
+        isCustomService: true,
+        customDurationMinutes: durationMinutes,
+        customPricePln: customPricePln ? Number(customPricePln) : undefined,
+        workerId: workerId || undefined,
+        notes: notes.trim() || undefined,
+        autoConfirm: pendingAutoConfirm.current,
+        availabilityVersion: availability?.version,
+        skipAvailabilityCheck: true,
+      });
+    } else {
+      const resolvedServiceType = selectedVariantRef
+        ? `${selectedVariantRef.group.name}${enabledVariants.length > 1 ? ` — ${selectedVariantRef.variant.name}` : ''}${wheelCount < 4 ? ` (${wheelCountLabel(wheelCount)})` : ''}`
+        : undefined;
 
-    const resolvedTireSize = selectedRimTier ? formatRimLabel(selectedRimTier.rimSizes) : undefined;
+      const resolvedTireSize = selectedRimTier
+        ? formatRimLabel(selectedRimTier.rimSizes)
+        : undefined;
 
-    const resolvedPrice = totalPricePln ? Number(totalPricePln) : (autoPrice ?? undefined);
+      const resolvedPrice = totalPricePln ? Number(totalPricePln) : (autoPrice ?? undefined);
 
-    const resolvedSubServices = subServices
-      .filter((s) => checkedSubNames.has(s.name))
-      .map((s) => ({ name: s.name, pricePln: s.pricePln ?? null }));
+      const resolvedSubServices = subServices
+        .filter((s) => checkedSubNames.has(s.name))
+        .map((s) => ({ name: s.name, pricePln: s.pricePln ?? null }));
 
-    const result = await createBooking({
-      clientName: clientName.trim(),
-      clientPhone: `+48${clientPhone.trim()}`,
-      startAt,
-      endAt,
-      tireSize: resolvedTireSize,
-      serviceName: resolvedServiceType,
-      subServices: resolvedSubServices.length > 0 ? resolvedSubServices : undefined,
-      workerId: workerId || undefined,
-      totalPricePln: resolvedPrice,
-      notes: notes.trim() || undefined,
-      autoConfirm: pendingAutoConfirm.current,
-      availabilityVersion: availability?.version,
-      skipAvailabilityCheck: true,
-    });
+      result = await createBooking({
+        clientName: clientName.trim(),
+        clientPhone: `+48${clientPhone.trim()}`,
+        startAt,
+        endAt,
+        tireSize: resolvedTireSize,
+        serviceName: resolvedServiceType,
+        subServices: resolvedSubServices.length > 0 ? resolvedSubServices : undefined,
+        workerId: workerId || undefined,
+        totalPricePln: resolvedPrice,
+        notes: notes.trim() || undefined,
+        autoConfirm: pendingAutoConfirm.current,
+        availabilityVersion: availability?.version,
+        skipAvailabilityCheck: true,
+      });
+    }
 
     if (result.success) {
       onSuccess?.();
@@ -558,197 +624,268 @@ export function ManualBookingModal({
 
           {/* Usługa */}
           <div className={styles.section}>
-            <Combobox
-              label="Usługa"
-              value={selectedGroupId}
-              onChange={handleGroupChange}
-              options={groupOptions}
-              placeholder="Szukaj usługi…"
+            <SegmentedControl
+              name="service-mode"
+              value={serviceMode}
+              onChange={handleModeChange}
+              options={[
+                { value: 'catalog', label: 'Z cennika' },
+                { value: 'custom', label: 'Poza cennikiem' },
+              ]}
+              fullWidth
             />
 
-            {/* Variant chips — shown when group has multiple enabled variants */}
-            {selectedGroupId && enabledVariants.length > 1 && (
-              <div>
-                <Text variant="kicker-sm" color="muted" as="p" className={styles.fieldLabel}>
-                  Wariant
-                </Text>
-                <div className={styles.rimChips}>
-                  {enabledVariants.map((v) => {
-                    const tier = v.rimTiers[0];
-                    return (
-                      <button
-                        key={v.id}
-                        type="button"
-                        className={`${styles.rimChip} ${selectedVariantKey === v.id ? styles.rimChipSelected : ''}`}
-                        onClick={() => handleVariantSelect(v.id)}
-                      >
-                        {v.name}
-                        {tier && (
-                          <>
-                            <span className={styles.rimPrice}>{tier.pricePln} zł</span>
-                            <span className={styles.rimDur}>{tier.durationMinutes} min</span>
-                          </>
-                        )}
-                      </button>
-                    );
-                  })}
+            {/* ── Custom service mode ── */}
+            {serviceMode === 'custom' && (
+              <>
+                <div ref={customServiceWrapperRef} className={styles.phoneWrapper}>
+                  <Input
+                    label="Nazwa usługi"
+                    value={customServiceName}
+                    onChange={(e) => {
+                      setCustomServiceName(e.target.value);
+                      setCustomServiceQuery(e.target.value);
+                      setShowCustomSuggestions(true);
+                    }}
+                    onFocus={() => {
+                      setCustomServiceQuery(customServiceName);
+                      setShowCustomSuggestions(true);
+                    }}
+                    placeholder="np. Mycie silnika, Geometria…"
+                    autoComplete="off"
+                    required
+                  />
+                  {showCustomSuggestions && customSuggestions.length > 0 && (
+                    <div className={styles.phoneDropdown}>
+                      {customSuggestions.map((s) => (
+                        <button
+                          key={s.name}
+                          type="button"
+                          className={styles.phoneDropdownItem}
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            setCustomServiceName(s.name);
+                            setCustomServiceQuery(s.name);
+                            if (s.avgPricePln != null) setCustomPricePln(String(s.avgPricePln));
+                            setShowCustomSuggestions(false);
+                          }}
+                        >
+                          <Text variant="body-sm" weight="semibold" as="span">
+                            {s.name}
+                          </Text>
+                          <Text variant="nano" color="muted" as="span">
+                            {[
+                              s.avgDurationMinutes != null ? `${s.avgDurationMinutes} min` : null,
+                              s.avgPricePln != null ? `~${s.avgPricePln} zł` : null,
+                              `${s.count}×`,
+                            ]
+                              .filter(Boolean)
+                              .join(' · ')}
+                          </Text>
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
-              </div>
+              </>
             )}
 
-            {/* Rim chips — shown after variant selected, only for RIM_SIZES pricing type */}
-            {selectedVariantKey && hasRimTiers && (
-              <div>
-                <Text variant="kicker-sm" color="muted" as="p" className={styles.fieldLabel}>
-                  Rozmiar felgi
-                </Text>
-                <div className={styles.rimChips}>
-                  {selectedVariantRef!.variant.rimTiers.map((tier) => {
-                    const key = rimKey(tier.rimSizes);
-                    const isSelected = selectedRimKey === key;
-                    return (
+            {/* ── Catalog mode ── */}
+            {serviceMode === 'catalog' && (
+              <>
+                <Combobox
+                  label="Usługa"
+                  value={selectedGroupId}
+                  onChange={handleGroupChange}
+                  options={groupOptions}
+                  placeholder="Szukaj usługi…"
+                />
+
+                {/* Variant chips — shown when group has multiple enabled variants */}
+                {selectedGroupId && enabledVariants.length > 1 && (
+                  <div>
+                    <Text variant="kicker-sm" color="muted" as="p" className={styles.fieldLabel}>
+                      Wariant
+                    </Text>
+                    <div className={styles.rimChips}>
+                      {enabledVariants.map((v) => {
+                        const tier = v.rimTiers[0];
+                        return (
+                          <button
+                            key={v.id}
+                            type="button"
+                            className={`${styles.rimChip} ${selectedVariantKey === v.id ? styles.rimChipSelected : ''}`}
+                            onClick={() => handleVariantSelect(v.id)}
+                          >
+                            {v.name}
+                            {tier && (
+                              <>
+                                <span className={styles.rimPrice}>{tier.pricePln} zł</span>
+                                <span className={styles.rimDur}>{tier.durationMinutes} min</span>
+                              </>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Rim chips — shown after variant selected, only for RIM_SIZES pricing type */}
+                {selectedVariantKey && hasRimTiers && (
+                  <div>
+                    <Text variant="kicker-sm" color="muted" as="p" className={styles.fieldLabel}>
+                      Rozmiar felgi
+                    </Text>
+                    <div className={styles.rimChips}>
+                      {selectedVariantRef!.variant.rimTiers.map((tier) => {
+                        const key = rimKey(tier.rimSizes);
+                        const isSelected = selectedRimKey === key;
+                        return (
+                          <button
+                            key={key}
+                            type="button"
+                            className={`${styles.rimChip} ${isSelected ? styles.rimChipSelected : ''}`}
+                            onClick={() => {
+                              setSelectedRimKey(isSelected ? '' : key);
+                              setWheelCount(4);
+                              setWheelExpanded(false);
+                              setTotalPricePln('');
+                            }}
+                          >
+                            {formatRimLabel(tier.rimSizes)}
+                            <span className={styles.rimPrice}>{tier.pricePln} zł</span>
+                            <span className={styles.rimDur}>{tier.durationMinutes} min</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Ilość kół — domyślnie komplet, rzadki przypadek */}
+                {selectedRimTier && (
+                  <div>
+                    {wheelExpanded ? (
+                      <div className={styles.wheelCountRow}>
+                        <Text variant="kicker-sm" color="muted" as="span">
+                          Ilość kół:
+                        </Text>
+                        <NumberStepper
+                          value={String(wheelCount)}
+                          onChange={(v) => {
+                            const n = Math.max(1, Math.min(4, parseInt(v, 10) || 1));
+                            setWheelCount(n);
+                            setTotalPricePln('');
+                          }}
+                          min={1}
+                          max={4}
+                          step={1}
+                          inputWidth={44}
+                          aria-label="Ilość kół"
+                        />
+                        <Text variant="body-sm" color="muted" as="span">
+                          = {priceForCount(selectedRimTier, wheelCount)} zł ·{' '}
+                          {durForCount(selectedRimTier, wheelCount)} min
+                        </Text>
+                        <button
+                          type="button"
+                          className={styles.notFullSetBtn}
+                          onClick={() => {
+                            setWheelCount(4);
+                            setWheelExpanded(false);
+                            setTotalPricePln('');
+                          }}
+                        >
+                          <Text as="span" variant="body-sm" className={styles.notFullSetBtnText}>
+                            wróć do kompletu
+                          </Text>
+                        </button>
+                      </div>
+                    ) : (
                       <button
-                        key={key}
                         type="button"
-                        className={`${styles.rimChip} ${isSelected ? styles.rimChipSelected : ''}`}
+                        className={styles.notFullSetBtn}
                         onClick={() => {
-                          setSelectedRimKey(isSelected ? '' : key);
-                          setWheelCount(4);
-                          setWheelExpanded(false);
+                          setWheelCount(1);
+                          setWheelExpanded(true);
                           setTotalPricePln('');
                         }}
                       >
-                        {formatRimLabel(tier.rimSizes)}
-                        <span className={styles.rimPrice}>{tier.pricePln} zł</span>
-                        <span className={styles.rimDur}>{tier.durationMinutes} min</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* Ilość kół — domyślnie komplet, rzadki przypadek */}
-            {selectedRimTier && (
-              <div>
-                {wheelExpanded ? (
-                  <div className={styles.wheelCountRow}>
-                    <Text variant="kicker-sm" color="muted" as="span">
-                      Ilość kół:
-                    </Text>
-                    <NumberStepper
-                      value={String(wheelCount)}
-                      onChange={(v) => {
-                        const n = Math.max(1, Math.min(4, parseInt(v, 10) || 1));
-                        setWheelCount(n);
-                        setTotalPricePln('');
-                      }}
-                      min={1}
-                      max={4}
-                      step={1}
-                      inputWidth={44}
-                      aria-label="Ilość kół"
-                    />
-                    <Text variant="body-sm" color="muted" as="span">
-                      = {priceForCount(selectedRimTier, wheelCount)} zł ·{' '}
-                      {durForCount(selectedRimTier, wheelCount)} min
-                    </Text>
-                    <button
-                      type="button"
-                      className={styles.notFullSetBtn}
-                      onClick={() => {
-                        setWheelCount(4);
-                        setWheelExpanded(false);
-                        setTotalPricePln('');
-                      }}
-                    >
-                      <Text as="span" variant="body-sm" className={styles.notFullSetBtnText}>
-                        wróć do kompletu
-                      </Text>
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    type="button"
-                    className={styles.notFullSetBtn}
-                    onClick={() => {
-                      setWheelCount(1);
-                      setWheelExpanded(true);
-                      setTotalPricePln('');
-                    }}
-                  >
-                    <Text as="span" variant="body-sm" className={styles.notFullSetBtnText}>
-                      nie cały komplet?
-                    </Text>
-                  </button>
-                )}
-              </div>
-            )}
-
-            {/* Pod-usługi — pojawiają się po wyborze wariantu */}
-            {selectedVariantKey && subServices.length > 0 && (
-              <div>
-                <Text variant="kicker-sm" color="muted" as="p" className={styles.fieldLabel}>
-                  Pod-usługi
-                </Text>
-                <div className={styles.subList}>
-                  {subServices.map((sub) => {
-                    const isChecked = sub.included || checkedSubNames.has(sub.name);
-                    return (
-                      <div
-                        key={sub.name}
-                        role="checkbox"
-                        aria-checked={isChecked}
-                        tabIndex={0}
-                        className={`${styles.subItem} ${isChecked ? styles.subItemChecked : ''}`}
-                        onClick={() => toggleSubService(sub.name)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' || e.key === ' ') {
-                            e.preventDefault();
-                            toggleSubService(sub.name);
-                          }
-                        }}
-                      >
-                        <span
-                          className={`${styles.subChk} ${isChecked ? styles.subChkChecked : ''}`}
-                        >
-                          {isChecked && <IconCheck width={8} height={8} />}
-                        </span>
-                        <div className={styles.subInfo}>
-                          <Text variant="body-sm" as="span">
-                            {sub.name}
-                          </Text>
-                        </div>
-                        <Text
-                          variant="body-sm"
-                          weight="bold"
-                          color={isChecked ? 'accent' : 'muted'}
-                          as="span"
-                          className={styles.subPrice}
-                        >
-                          {typeof sub.pricePln === 'number' ? `+${sub.pricePln} zł` : '—'}
+                        <Text as="span" variant="body-sm" className={styles.notFullSetBtnText}>
+                          nie cały komplet?
                         </Text>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
+                      </button>
+                    )}
+                  </div>
+                )}
 
-            {/* Placeholder when nothing selected yet */}
-            {!selectedGroupId && (
-              <div className={styles.placeholder}>
-                <Text variant="body-sm" color="muted" as="p">
-                  Wybierz usługę aby zobaczyć dostępne rozmiary i pod-usługi
-                </Text>
-              </div>
-            )}
-            {selectedGroupId && enabledVariants.length > 1 && !selectedVariantKey && (
-              <div className={styles.placeholder}>
-                <Text variant="body-sm" color="muted" as="p">
-                  Wybierz wariant usługi
-                </Text>
-              </div>
+                {/* Pod-usługi — pojawiają się po wyborze wariantu */}
+                {selectedVariantKey && subServices.length > 0 && (
+                  <div>
+                    <Text variant="kicker-sm" color="muted" as="p" className={styles.fieldLabel}>
+                      Pod-usługi
+                    </Text>
+                    <div className={styles.subList}>
+                      {subServices.map((sub) => {
+                        const isChecked = sub.included || checkedSubNames.has(sub.name);
+                        return (
+                          <div
+                            key={sub.name}
+                            role="checkbox"
+                            aria-checked={isChecked}
+                            tabIndex={0}
+                            className={`${styles.subItem} ${isChecked ? styles.subItemChecked : ''}`}
+                            onClick={() => toggleSubService(sub.name)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                toggleSubService(sub.name);
+                              }
+                            }}
+                          >
+                            <span
+                              className={`${styles.subChk} ${isChecked ? styles.subChkChecked : ''}`}
+                            >
+                              {isChecked && <IconCheck width={8} height={8} />}
+                            </span>
+                            <div className={styles.subInfo}>
+                              <Text variant="body-sm" as="span">
+                                {sub.name}
+                              </Text>
+                            </div>
+                            <Text
+                              variant="body-sm"
+                              weight="bold"
+                              color={isChecked ? 'accent' : 'muted'}
+                              as="span"
+                              className={styles.subPrice}
+                            >
+                              {typeof sub.pricePln === 'number' ? `+${sub.pricePln} zł` : '—'}
+                            </Text>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Placeholder when nothing selected yet */}
+                {!selectedGroupId && (
+                  <div className={styles.placeholder}>
+                    <Text variant="body-sm" color="muted" as="p">
+                      Wybierz usługę aby zobaczyć dostępne rozmiary i pod-usługi
+                    </Text>
+                  </div>
+                )}
+                {selectedGroupId && enabledVariants.length > 1 && !selectedVariantKey && (
+                  <div className={styles.placeholder}>
+                    <Text variant="body-sm" color="muted" as="p">
+                      Wybierz wariant usługi
+                    </Text>
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>
@@ -779,71 +916,69 @@ export function ManualBookingModal({
               <DayTimeline
                 slots={availability?.slots ?? []}
                 bookings={dayBookings}
-                durationMinutes={effectiveDurationMinutes}
+                durationMinutes={durationMinutes}
                 selectedTime={timeInput}
                 date={date}
                 onSelect={setTimeInput}
               />
             )}
 
-            {/* Manual time fallback */}
-            <div className={styles.timelineManualInput}>
-              <div className={styles.timeField}>
-                <FieldLabel>Start</FieldLabel>
-                <TimeInput
-                  value={timeInput}
-                  onChange={(v) => {
-                    setTimeInput(v);
-                    setManualEndTime('');
-                  }}
-                  dropdownStep={5}
-                  aria-label="Godzina wizyty"
-                />
+            {/* Od · Czas trwania · Do — trzy powiązane pola w jednej karcie */}
+            <div className={styles.timeRangeGroup}>
+              <div className={styles.timeRangeHeader}>
+                <Text variant="label" color="muted" as="span">
+                  Godziny wizyty
+                </Text>
+                <Tooltip content="Pola są ze sobą powiązane — zmiana dowolnego przelicza pozostałe. Start + czas trwania wyznaczają koniec; zmiana końca aktualizuje czas trwania.">
+                  <span className={styles.timeRangeInfo}>
+                    <IconInfo width={12} height={12} />
+                  </span>
+                </Tooltip>
               </div>
-              {effectiveDurationMinutes !== null && (
-                <div className={styles.durationBadge}>
-                  <Text variant="nano" color="muted" as="span">
-                    czas
-                  </Text>
-                  <Text variant="body-sm" weight="bold" as="span">
-                    {effectiveDurationMinutes >= 60
-                      ? `${Math.floor(effectiveDurationMinutes / 60)}h${effectiveDurationMinutes % 60 ? ` ${effectiveDurationMinutes % 60}min` : ''}`
-                      : `${effectiveDurationMinutes} min`}
-                  </Text>
+              <div className={styles.timeRangeFields}>
+                <div className={styles.timeRangeField}>
+                  <FieldLabel>Od</FieldLabel>
+                  <TimeInput
+                    value={timeInput}
+                    onChange={setTimeInput}
+                    dropdownStep={5}
+                    aria-label="Godzina wizyty"
+                  />
                 </div>
-              )}
-              <div className={styles.timeField}>
-                <FieldLabel>{manualEndTime ? 'Koniec' : 'Koniec (auto)'}</FieldLabel>
-                <TimeInput
-                  value={manualEndTime || calculatedEndTime || ''}
-                  onChange={(v) => setManualEndTime(v)}
-                  dropdownStep={5}
-                  disabled={!startAt}
-                  aria-label="Godzina zakończenia"
-                />
-                {durationDelta !== null && (
-                  <div className={styles.deltaRow}>
-                    <Text variant="nano" color="warning" as="span">
-                      {durationDelta > 0 ? '+' : ''}
-                      {durationDelta} min
-                    </Text>
-                    <button
-                      type="button"
-                      className={styles.resetBtn}
-                      onClick={() => setManualEndTime('')}
-                      aria-label="Resetuj czas do wyliczonego"
-                    >
-                      <Text
-                        as="span"
-                        variant="nano"
-                        weight="semibold"
-                        className={styles.resetBtnText}
-                      >
-                        resetuj
-                      </Text>
-                    </button>
-                  </div>
-                )}
+                <div className={styles.timeRangeArrow} aria-hidden="true">
+                  →
+                </div>
+                <div className={styles.timeRangeDuration}>
+                  <FieldLabel>Czas (min)</FieldLabel>
+                  <NumberStepper
+                    value={String(durationMinutes)}
+                    onChange={(v) =>
+                      setDurationMinutes(Math.max(5, Math.min(600, parseInt(v, 10) || 60)))
+                    }
+                    min={5}
+                    max={600}
+                    step={5}
+                    inputWidth={52}
+                    aria-label="Czas trwania wizyty w minutach"
+                  />
+                </div>
+                <div className={styles.timeRangeArrow} aria-hidden="true">
+                  →
+                </div>
+                <div className={styles.timeRangeField}>
+                  <FieldLabel>Do</FieldLabel>
+                  <TimeInput
+                    value={endTimeStr}
+                    onChange={(v) => {
+                      if (/^\d{2}:\d{2}$/.test(v)) {
+                        setTimeInput(addMinutes(v, -durationMinutes));
+                      }
+                    }}
+                    dropdownStep={5}
+                    disabled={!timeInput || !/^\d{2}:\d{2}$/.test(timeInput)}
+                    aria-label="Godzina zakończenia"
+                  />
+                </div>
               </div>
             </div>
 
@@ -857,8 +992,8 @@ export function ManualBookingModal({
             {timeInput && hasConflict && (
               <div className={styles.conflictBanner}>
                 <Text variant="body-sm" color="warning" as="p">
-                  Nakłada się na {totalConflictCount} {pluralConflicts(totalConflictCount)} (~
-                  {overlapMinutes} min) — zapis mimo to możliwy.
+                  Nakłada się na {conflictBookings.length}{' '}
+                  {pluralConflicts(conflictBookings.length)} (~{overlapMinutes} min wspólne).
                 </Text>
               </div>
             )}
@@ -885,112 +1020,162 @@ export function ManualBookingModal({
             <div className={styles.sectionLabel}>
               <FieldLabel>Podsumowanie</FieldLabel>
             </div>
-            {!selectedRimTier ? (
-              <div className={styles.summaryEmpty}>
-                <Text variant="body-sm" color="muted" as="p">
-                  {!selectedGroupId
-                    ? 'Wybierz usługę'
-                    : enabledVariants.length > 1 && !selectedVariantKey
-                      ? 'Wybierz wariant'
-                      : hasRimTiers
-                        ? 'Wybierz rozmiar felgi'
-                        : 'Wybierz usługę'}
-                </Text>
-              </div>
-            ) : (
-              <div className={styles.summaryBox}>
-                {/* Base service + rim */}
-                <div className={styles.sumRow}>
-                  <div className={styles.sumName}>
-                    <Text variant="body-sm" as="span">
-                      {selectedVariantRef!.group.name}
-                      {enabledVariants.length > 1 && ` — ${selectedVariantRef!.variant.name}`}
-                    </Text>
-                    <Text variant="nano" color="muted" as="span" className={styles.sumSub}>
-                      {formatRimLabel(selectedRimTier.rimSizes)}
-                      {wheelCount < 4 && ` · ${wheelCountLabel(wheelCount)}`}
-                      {' · '}
-                      {durForCount(selectedRimTier, wheelCount)} min
-                    </Text>
-                  </div>
-                  <Text variant="body-sm" weight="bold" as="span" className={styles.sumVal}>
-                    {priceForCount(selectedRimTier, wheelCount)} zł
-                  </Text>
-                </div>
 
-                {/* Sub-services that are checked */}
-                {subServices.map((sub) => {
-                  const isChecked = checkedSubNames.has(sub.name);
-                  if (!isChecked) return null;
-                  const dur = subDurMinutes(sub);
-                  return (
-                    <div key={sub.name} className={styles.sumRow}>
-                      <div className={styles.sumName}>
-                        <Text variant="body-sm" as="span">
-                          {sub.name}
-                        </Text>
-                        <Text variant="nano" color="muted" as="span" className={styles.sumSub}>
-                          +{dur} min
-                        </Text>
-                      </div>
-                      <Text
-                        variant="body-sm"
-                        weight="bold"
-                        color="accent"
-                        as="span"
-                        className={styles.sumValAdd}
-                      >
-                        +{typeof sub.pricePln === 'number' ? sub.pricePln : 0} zł
+            {/* Custom service summary */}
+            {serviceMode === 'custom' &&
+              (customServiceName.trim() ? (
+                <div className={styles.summaryBox}>
+                  <div className={styles.sumRow}>
+                    <div className={styles.sumName}>
+                      <Text variant="body-sm" as="span">
+                        {customServiceName}
+                      </Text>
+                      <Text variant="nano" color="muted" as="span" className={styles.sumSub}>
+                        {durationMinutes} min
                       </Text>
                     </div>
-                  );
-                })}
-
-                {/* Total */}
-                <div className={`${styles.sumRow} ${styles.sumRowTotal}`}>
-                  <div className={styles.sumName}>
+                  </div>
+                  <div className={`${styles.sumRow} ${styles.sumRowTotal}`}>
                     <Text variant="body-sm" weight="bold" as="span">
                       Do zapłaty
                     </Text>
-                    {priceDelta !== null && (
-                      <div className={styles.deltaRow}>
-                        <Text variant="nano" color="warning" as="span">
-                          nadpisano {priceDelta > 0 ? '+' : ''}
-                          {priceDelta} zł
-                        </Text>
-                        <button
-                          type="button"
-                          className={styles.resetBtn}
-                          onClick={() => setTotalPricePln('')}
-                          aria-label="Resetuj cenę do wyliczonej"
-                        >
-                          <Text
-                            as="span"
-                            variant="nano"
-                            weight="semibold"
-                            className={styles.resetBtnText}
-                          >
-                            resetuj
-                          </Text>
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                  <div className={styles.sumTotalPrice}>
-                    <input
-                      type="number"
-                      className={styles.priceInput}
-                      value={totalPricePln}
-                      onChange={(e) => setTotalPricePln(e.target.value)}
-                      placeholder={autoPrice !== null ? String(autoPrice) : '—'}
-                      min={0}
-                      aria-label="Cena końcowa (zł)"
-                    />
-                    <span className={styles.sumValTotal}>zł</span>
+                    <div className={styles.sumTotalPrice}>
+                      <input
+                        type="number"
+                        className={styles.priceInput}
+                        value={customPricePln}
+                        onChange={(e) => setCustomPricePln(e.target.value)}
+                        placeholder="—"
+                        min={0}
+                        aria-label="Cena usługi custom (zł)"
+                      />
+                      <Text
+                        as="span"
+                        color="accent"
+                        weight="extrabold"
+                        className={styles.sumZlSuffix}
+                      >
+                        zł
+                      </Text>
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
+              ) : (
+                <div className={styles.summaryEmpty}>
+                  <Text variant="body-sm" color="muted" as="p">
+                    Podaj nazwę usługi
+                  </Text>
+                </div>
+              ))}
+
+            {/* Catalog service summary */}
+            {serviceMode === 'catalog' &&
+              (!selectedRimTier ? (
+                <div className={styles.summaryEmpty}>
+                  <Text variant="body-sm" color="muted" as="p">
+                    {!selectedGroupId
+                      ? 'Wybierz usługę'
+                      : enabledVariants.length > 1 && !selectedVariantKey
+                        ? 'Wybierz wariant'
+                        : hasRimTiers
+                          ? 'Wybierz rozmiar felgi'
+                          : 'Wybierz usługę'}
+                  </Text>
+                </div>
+              ) : (
+                <div className={styles.summaryBox}>
+                  {/* Base service + rim */}
+                  <div className={styles.sumRow}>
+                    <div className={styles.sumName}>
+                      <Text variant="body-sm" as="span">
+                        {selectedVariantRef!.group.name}
+                        {enabledVariants.length > 1 && ` — ${selectedVariantRef!.variant.name}`}
+                      </Text>
+                      <Text variant="nano" color="muted" as="span" className={styles.sumSub}>
+                        {formatRimLabel(selectedRimTier.rimSizes)}
+                        {wheelCount < 4 && ` · ${wheelCountLabel(wheelCount)}`}
+                        {' · '}
+                        {durForCount(selectedRimTier, wheelCount)} min
+                      </Text>
+                    </div>
+                    <Text variant="body-sm" weight="bold" as="span" className={styles.sumVal}>
+                      {priceForCount(selectedRimTier, wheelCount)} zł
+                    </Text>
+                  </div>
+
+                  {/* Sub-services that are checked */}
+                  {subServices.map((sub) => {
+                    const isChecked = checkedSubNames.has(sub.name);
+                    if (!isChecked) return null;
+                    const dur = subDurMinutes(sub);
+                    return (
+                      <div key={sub.name} className={styles.sumRow}>
+                        <div className={styles.sumName}>
+                          <Text variant="body-sm" as="span">
+                            {sub.name}
+                          </Text>
+                          <Text variant="nano" color="muted" as="span" className={styles.sumSub}>
+                            +{dur} min
+                          </Text>
+                        </div>
+                        <Text
+                          variant="body-sm"
+                          weight="bold"
+                          color="accent"
+                          as="span"
+                          className={styles.sumValAdd}
+                        >
+                          +{typeof sub.pricePln === 'number' ? sub.pricePln : 0} zł
+                        </Text>
+                      </div>
+                    );
+                  })}
+
+                  {/* Total */}
+                  <div className={`${styles.sumRow} ${styles.sumRowTotal}`}>
+                    <div className={styles.sumName}>
+                      <Text variant="body-sm" weight="bold" as="span">
+                        Do zapłaty
+                      </Text>
+                      {priceDelta !== null && (
+                        <div className={styles.deltaRow}>
+                          <Text variant="nano" color="warning" as="span">
+                            nadpisano {priceDelta > 0 ? '+' : ''}
+                            {priceDelta} zł
+                          </Text>
+                          <button
+                            type="button"
+                            className={styles.resetBtn}
+                            onClick={() => setTotalPricePln('')}
+                            aria-label="Resetuj cenę do wyliczonej"
+                          >
+                            <Text
+                              as="span"
+                              variant="nano"
+                              weight="semibold"
+                              className={styles.resetBtnText}
+                            >
+                              resetuj
+                            </Text>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                    <div className={styles.sumTotalPrice}>
+                      <input
+                        type="number"
+                        className={styles.priceInput}
+                        value={totalPricePln}
+                        onChange={(e) => setTotalPricePln(e.target.value)}
+                        placeholder={autoPrice !== null ? String(autoPrice) : '—'}
+                        min={0}
+                        aria-label="Cena końcowa (zł)"
+                      />
+                      <span className={styles.sumValTotal}>zł</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
           </div>
         </div>
 

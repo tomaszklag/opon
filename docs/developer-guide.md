@@ -2872,16 +2872,18 @@ Katalog `apps/api/uploads/` jest w `.gitignore`. Na produkcji zastąp S3/CDN —
 
 ---
 
-## 20. Model usług — zamknięta lista
+## 20. Model usług — cennik providera
 
-Platforma definiuje dokładnie **4 usługi**. Provider nie może dodawać własnych — tylko włączać/wyłączać togglem i ustawiać ceny.
+> ⚠️ **Uwaga:** Sekcja zawiera fragmenty z wczesnego sprintu 1 (modele `PricingTier`, `ServiceConfig`, `SizeTier`), które zostały usunięte z schematu. Aktualna architektura usług używa modeli `Service`, `ServiceVariant`, `RimTier`, `ServiceSubLink`, `Addon` — patrz kod w `apps/api/src/services/`. Poniższa treść zostanie zaktualizowana w kolejnym sprincie.
 
-| ID usługi         | Nazwa                 | Opis                                                                                   |
-| ----------------- | --------------------- | -------------------------------------------------------------------------------------- |
-| `SEASONAL_SWAP`   | Sezonowa wymiana opon | Pakiet all-in: demontaż + montaż + wyważanie + wentyle. Klient nie wybiera składowych. |
-| `WHEEL_SWAP`      | Wymiana kół           | Zdjęcie/założenie kompletnych kół (bez wyważania).                                     |
-| `BALANCING`       | Wyważanie kół         | Samo wyważanie (bez demontażu).                                                        |
-| `PUNCTURE_REPAIR` | Naprawa opony         | Wulkanizacja uszkodzonej opony.                                                        |
+Usługi oferowane przez warsztat konfiguruje się w panelu `/dashboard/services`. Provider zarządza:
+
+- grupami usług (`Service`) z wariantami (`ServiceVariant`)
+- tiery cenowe per rozmiar felgi (`RimTier`)
+- pod-usługi (wliczone i opcjonalne)
+- addony
+
+Provider może też tworzyć **rezerwacje ręczne z usługą poza cennikiem** — patrz §27.
 
 ### SizeTier — warianty rozmiaru
 
@@ -3210,57 +3212,72 @@ Panel po otrzymaniu 409 (`BOOKING_SLOT_TAKEN` lub `BOOKING_VERSION_MISMATCH`) au
 
 ```prisma
 model Booking {
-  id              String        @id @default(uuid())
+  id              String        @id @default(uuid()) @db.Uuid
   referenceCode   String        @unique @db.VarChar(10)
-  clientId        String
-  providerId      String
-  vehicleId       String?
-  pricingTierId   String?
-  stationId       String?       // stanowisko obsługujące rezerwację
+  clientId        String        @db.Uuid
+  providerId      String        @db.Uuid
+  vehicleId       String?       @db.Uuid
   status          BookingStatus @default(PENDING)
   startAt         DateTime
   endAt           DateTime
   // adres klienta (mobile provider)
-  addressLine     String?
-  addressCity     String?
-  addressLat      Decimal?
-  addressLng      Decimal?
-  // snapshot wymagań klienta — immutable po stworzeniu rezerwacji
-  serviceType     ServiceType?  // typ usługi: SEASONAL_SWAP | WHEEL_SWAP | BALANCING | PUNCTURE_REPAIR
-  sizeTier        SizeTier?     // rozmiar: S | M | L
-  tpmsRequired    Boolean       @default(false)  // czy klient wybrał obsługę TPMS
+  addressLine     String?       @db.VarChar(300)
+  addressCity     String?       @db.VarChar(100)
+  addressLat      Decimal?      @db.Decimal(9, 6)
+  addressLng      Decimal?      @db.Decimal(9, 6)
   // snapshot cen z momentu rezerwacji (immutable po created)
-  tireSize        String?
-  basePricePln    Decimal?
-  travelFeePln    Decimal?
-  totalPricePln   Decimal?
+  tireSize        String?       @db.VarChar(20)
+  basePricePln    Decimal?      @db.Decimal(10, 2)
+  travelFeePln    Decimal?      @db.Decimal(10, 2)
+  totalPricePln   Decimal?      @db.Decimal(10, 2)
   // notatki i powody
-  notes           String?
-  rejectReason    String?
-  cancelReason    String?
+  notes           String?       @db.Text
+  rejectReason    String?       @db.VarChar(500)
+  cancelReason    String?       @db.VarChar(500)
   // timestamps
   createdAt       DateTime      @default(now())
   confirmedAt     DateTime?
   startedAt       DateTime?
   completedAt     DateTime?
   cancelledAt     DateTime?
+  // rezerwacja ręczna (ManualBookingModal)
+  stationId             String?       @db.Uuid
+  workerId              String?       @db.Uuid
+  serviceName           String?       @db.VarChar(300)  // nazwa usługi (z cennika lub custom)
+  serviceDetails        Json?                            // { subServices: [{name, pricePln}] }
+  isManual              Boolean       @default(false)   // true = stworzona przez warsztat
+  isCustomService       Boolean       @default(false)   // true = poza cennikiem
+  customPricePln        Decimal?      @db.Decimal(10, 2)
+  customDurationMinutes Int?
+  reminderSentAt        DateTime?
 
-  client      User         @relation("ClientBookings", fields: [clientId], references: [id])
+  client      Client       @relation(fields: [clientId], references: [id])
   provider    Provider     @relation("ProviderBookings", fields: [providerId], references: [id])
   vehicle     Vehicle?     @relation("VehicleBookings", fields: [vehicleId], references: [id])
-  pricingTier PricingTier? @relation("TierBookings", fields: [pricingTierId], references: [id])
   station     Station?     @relation(fields: [stationId], references: [id])
+  worker      Worker?      @relation(fields: [workerId], references: [id], onDelete: SetNull)
   review      Review?
+  tireSets    TireSet[]
+  workerTasks WorkerTask[]
 
   @@index([providerId, startAt])
-  @@index([clientId, startAt(sort: Desc)])
+  @@index([clientId])
+  @@index([stationId])
+  @@index([providerId, isCustomService, serviceName])  // autocomplete usług custom
+  // UWAGA: partial unique index dodany w migracji SQL (nie w Prisma schema):
+  // CREATE UNIQUE INDEX bookings_no_double_booking
+  //   ON bookings (provider_id, start_at)
+  //   WHERE status IN ('PENDING','CONFIRMED','IN_PROGRESS');
   @@map("bookings")
 }
 ```
 
-**Pola `serviceType`, `sizeTier`, `tpmsRequired`** są immutable po stworzeniu rezerwacji — stanowią snapshot wymagań klienta w momencie bookingu. TPMS jest dostępne tylko dla `SEASONAL_SWAP` i `WHEEL_SWAP`; backend wymusza `tpmsRequired: false` dla `BALANCING` i `PUNCTURE_REPAIR`.
+**Kluczowe decyzje architektoniczne:**
 
-`totalPricePln` jest wyliczana i blokowana przy tworzeniu rezerwacji na podstawie `ServiceConfig` / `PricingTier` providera. Nie jest przeliczana po zmianach cennika.
+- `totalPricePln` — snapshot ceny z momentu tworzenia rezerwacji; nie jest przeliczana po zmianach cennika.
+- `serviceDetails` — JSON z tablicą `subServices`; patrz §27 po szczegóły struktury.
+- `isCustomService` — gdy `true`, usługa nie pochodzi z cennika (`Service`/`ServiceVariant`). `customPricePln` i `customDurationMinutes` są miarodajne tylko gdy `isCustomService = true`.
+- `isManual` — rezerwacja stworzona przez warsztat (nie przez klienta). Wszystkie custom są jednocześnie manual, ale nie odwrotnie.
 
 ### State machine — BookingStatus
 
@@ -3819,3 +3836,244 @@ import { DayTimeline } from '../../_components/DayTimeline';
 ```
 
 Nie implementuj własnego pickera czasu w nowym modalu — użyj tego komponentu.
+
+---
+
+## 27. Wizyta ręczna — usługa poza cennikiem (custom service)
+
+### Kontekst i motywacja
+
+Warsztaty często wykonują usługi ad-hoc, których nie ma w cenniku — np. jednorazowa naprawa, mycie auta, dopełnienie powietrza. Funkcja „poza cennikiem" pozwala dodać taką usługę do ręcznej rezerwacji bez konieczności wcześniejszego konfigurowania jej w panelu usług.
+
+### Pola w modelu `Booking`
+
+```prisma
+isCustomService       Boolean       @default(false)
+customPricePln        Decimal?      @db.Decimal(10, 2)
+customDurationMinutes Int?
+```
+
+- `isCustomService = true` oznacza, że pole `serviceName` (String?) zawiera dowolną nazwę wpisaną przez warsztat — **nie jest to foreign key do `Service`/`ServiceVariant`**.
+- `customPricePln` i `customDurationMinutes` są miarodajne **tylko gdy `isCustomService = true`**. Gdy `false`, cena i czas wynikają z cennika (pole `totalPricePln`, `serviceDetails`).
+- `customDurationMinutes` jest wymagany przy tworzeniu custom service (walidacja: `@IsInt @IsPositive @Max(600)`). W UI pochodzi ze wspólnego stanu `durationMinutes` (patrz niżej) — domyślna wartość to 60 minut.
+- `customPricePln` jest opcjonalny — warsztat może nie wpisać ceny.
+
+### `serviceDetails` — struktura JSON
+
+Dla wizyt z cennika `serviceDetails` zawiera tablicę podusług:
+
+```json
+{
+  "subServices": [
+    {
+      "id": "uuid",
+      "name": "Wyważanie",
+      "pricePln": 20,
+      "durationMinutes": 15,
+      "isIncluded": true
+    }
+  ]
+}
+```
+
+Dla `isCustomService = true` pole `serviceDetails` jest `null` — nie ma podusług z cennika.
+
+### Indeks DB
+
+```sql
+CREATE INDEX "bookings_providerId_isCustomService_serviceName_idx"
+  ON "bookings" ("providerId", "isCustomService", "serviceName");
+```
+
+Używany przez endpoint autocomplete do szybkiego `groupBy` po `serviceName`.
+
+### API — endpoint autocomplete
+
+```
+GET /v1/providers/me/bookings/custom-services?q=mycie
+```
+
+Zwraca listę `CustomServiceSuggestionDto[]` — nazwy usług poza cennikiem, które już były używane przez ten warsztat, posortowane malejąco po liczbie użyć.
+
+```typescript
+class CustomServiceSuggestionDto {
+  name: string;
+  avgPricePln: number | null; // średnia cena z historii
+  avgDurationMinutes: number | null; // średni czas (zaokrąglony)
+  count: number; // ile razy użyta
+}
+```
+
+**Minimalna długość query**: 1 znak — egzekwowane przez hook frontendowy (`useCustomServiceSearch`). Backend akceptuje pusty string i zwraca wtedy do 8 najczęstszych usług custom warsztatu (`serviceName: { not: null }`).
+
+**Historia nie wygasa** — wszystkie zrealizowane wizyty poza cennikiem zasilają autocomplete.
+
+#### Izolacja między warsztatami (SECURITY)
+
+`providerId` pochodzi **wyłącznie z JWT** (`@CurrentUser()`) — nigdy z query parametrów. Implementacja w kontrolerze:
+
+```typescript
+@Get('custom-services')
+async getCustomServiceSuggestions(
+  @CurrentUser() user: JwtPayload,
+  @Query('q') q: string,
+): Promise<CustomServiceSuggestionDto[]> {
+  const provider = await this.providersService.getMyProvider(user.sub);
+  return this.service.getCustomServiceSuggestions(provider.id, q ?? '');
+}
+```
+
+Zapytanie w repozytorium zawsze filtruje po `providerId`:
+
+```typescript
+// q niepusty → filtruje po fragmencie nazwy; q pusty → zwraca wszystkie custom tego warsztatu
+where: {
+  providerId,
+  isCustomService: true,
+  serviceName: q ? { contains: q, mode: 'insensitive' } : { not: null },
+}
+```
+
+Nie dodawaj `providerId` jako parametru query — to by umożliwiało odczyt danych innego warsztatu.
+
+### Panel — `ManualBookingModal`
+
+#### Toggle z cennika / poza cennikiem
+
+```tsx
+<SegmentedControl
+  value={serviceMode}
+  onChange={handleModeChange}
+  options={[
+    { value: 'catalog', label: 'z cennika' },
+    { value: 'custom', label: 'poza cennikiem' },
+  ]}
+/>
+```
+
+`handleModeChange` resetuje stan obu trybów, żeby nie przenosić częściowych danych między nimi.
+
+#### Hook `useCustomServiceSearch`
+
+```
+apps/panel/lib/hooks/use-custom-service-search.ts
+```
+
+- Debounce: 220 ms
+- Minimalna długość: 1 znak (w przeciwnym razie czyści sugestie bez zapytania)
+- Czyści sugestie przy zmianie trybu (stan zewnętrzny `customServiceQuery` jest resetowany)
+
+```typescript
+const { suggestions, isLoading } = useCustomServiceSearch(customServiceQuery);
+```
+
+#### Zachowanie UI w trybie custom
+
+1. Input do wpisania nazwy usługi (dowolny tekst) — ten sam input steruje `customServiceName` i `customServiceQuery`.
+2. Pod inputem dropdown z sugestiami (klasy `.phoneDropdown` / `.phoneDropdownItem` — te same co dla autocomplete telefonu).
+3. Po wyborze sugestii: `customServiceName` ustawiany na `suggestion.name`, `customPricePln` na `suggestion.avgPricePln ?? undefined`. Czas trwania z sugestii jest **ignorowany** — użytkownik ustawia go przez kontrolki Od/Czas/Do (patrz niżej).
+4. Cena (opcjonalna) — natywny `<input type="number">` w sekcji podsumowania (klasa `.priceInput`), wyjątek od zasady DS.
+5. **Brak osobnego stanu `customDurationMinutes`** — czas trwania pochodzi ze wspólnego stanu `durationMinutes` (patrz „Wzorzec Od · Czas · Do" poniżej).
+
+#### Czas trwania i obliczanie `endAt`
+
+Oba tryby (catalog i custom) używają **jednego wspólnego stanu** `durationMinutes: number` (default 60). `endAt` jest zawsze pochodną:
+
+```typescript
+const endTimeStr = addMinutes(timeInput, durationMinutes); // HH:MM
+const endAt = new Date(`${date}T${endTimeStr}:00`).toISOString();
+```
+
+`DayTimeline` (ghost blok) i `endAt` w payload korzystają z tej samej wartości — czas jest więc widoczny w podglądzie kalendarza.
+
+W trybie catalog `durationMinutes` jest auto-syncowany z `totalDurationMinutes` (z cennika) przez `useEffect` gdy zmieni się `selectedVariantKey` lub `selectedRimKey`. Użytkownik może ręcznie zmienić `durationMinutes` po wyborze serwisu.
+
+#### Payload `createManual` w trybie custom
+
+```typescript
+{
+  serviceName: customServiceName,
+  isCustomService: true,
+  customDurationMinutes: durationMinutes, // wspólny stan — nie istnieje osobny state "customDurationMinutes"
+  customPricePln: customPricePln ?? undefined, // opcjonalne
+  // brak serviceVariantId, rimSize, subServiceIds
+}
+```
+
+#### Payload `createManual` w trybie catalog (bez zmian)
+
+```typescript
+{
+  serviceName: resolvedServiceType,  // np. "Wymiana opon — V2 (2 koła)" — sformatowany string
+  tireSize: resolvedTireSize,        // np. "17\"" — z wybranego RimTier
+  subServices: [{ name: string, pricePln: number | null }],  // tylko zaznaczone
+  totalPricePln: resolvedPrice,
+  isCustomService: false,
+  // brak serviceVariantId — wariant jest zakodowany w serviceName (string)
+}
+```
+
+### Wzorzec Od · Czas · Do — powiązane kontrolki czasu
+
+`ManualBookingModal` zawiera trójkę zsynchronizowanych kontrolek czasu w jednej karcie (`.timeRangeGroup`):
+
+```
+┌─────────────────────────────────────────────────────┐
+│  Godziny wizyty  ℹ                                  │
+│  [Od: 10:00]  →  [Czas (min): ◀ 60 ▶]  →  [Do: 11:00] │
+└─────────────────────────────────────────────────────┘
+```
+
+**Reguły synchronizacji:**
+
+| Zmienione pole | Co się przelicza                                 |
+| -------------- | ------------------------------------------------ |
+| **Od**         | Do przesuwa się (duration stays)                 |
+| **Czas (min)** | Do przesuwa się (Od stays)                       |
+| **Do**         | Od cofa się o `durationMinutes` (duration stays) |
+
+Implementacja opiera się na dwóch helperach:
+
+```typescript
+// obsługuje ujemne minuty przez modulo 1440 (wrap przez północ)
+function addMinutes(timeHHMM: string, minutes: number): string {
+  const total = ((hh * 60 + mm) + minutes + 1440) % 1440;
+  ...
+}
+
+// używane gdy user zmienia pole "Do" → liczy nową wartość "Od"
+function diffMinutes(startHHMM: string, endHHMM: string): number { ... }
+```
+
+**Reset modalu:** `resetForm()` jest wywoływany w `useEffect` przy `isOpen → true` żeby zawsze czyścić stan (w tym `durationMinutes`) po poprzedniej wizycie. Nie polegaj na `onClose` — modal może być zamknięty przez kliknięcie poza obszar.
+
+**Reużycie wzorca:** jeśli dodajesz nowy modal z wyborem czasu wizyty, nie implementuj własnych kontrolek — wyciągnij ten wzorzec jako osobny komponent.
+
+### Detekcja konfliktów w UI
+
+Konflikty czasowe są wykrywane **bezpośrednio z `dayBookings`**, nie z `availability.slots`:
+
+```typescript
+const conflictBookings = dayBookings.filter(
+  (b) => b.startAt < endAt && b.endAt > startAt, // strict inequalities
+);
+```
+
+**Dlaczego nie `availability.slots`?** Backend generuje sloty z inkluzywną granicą końcową — slot `09:45–10:00` jest oznaczany jako zajęty nawet gdy booking kończy się dokładnie o 10:00. To powodowało fałszywe alarmy przy stykających się rezerwacjach (A kończy się o 10:00, nowa zaczyna o 10:00). Strict inequalities na rzeczywistych ISO timestampach eliminują ten problem.
+
+`overlapMinutes` (czas zakładki) liczony jest z rzeczywistych timestampów:
+
+```typescript
+const overlapMinutes = conflictBookings.reduce((sum, b) => {
+  const start = Math.max(new Date(startAt).getTime(), new Date(b.startAt).getTime());
+  const end = Math.min(new Date(endAt).getTime(), new Date(b.endAt).getTime());
+  return sum + Math.round((end - start) / 60_000);
+}, 0);
+```
+
+### Reguły przy rozszerzaniu
+
+- Nie dodawaj pola `customServiceId` — custom service to wolny tekst, nie encja.
+- Nie reużywaj `serviceDetails` JSON do przechowywania custom service — to pole jest zarezerwowane dla podusług z cennika.
+- Nowe pola na custom service (np. `customNotes`) dodaj do `Booking` z prefiksem `custom*` i guard `isCustomService = true`.
+- Autocomplete jest read-only — historia powstaje jako efekt uboczny zapisanych rezerwacji, nie przez osobny endpoint `POST`.

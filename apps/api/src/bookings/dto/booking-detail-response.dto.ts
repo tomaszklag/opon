@@ -46,6 +46,9 @@ export class BookingDetailResponseDto {
   @ApiPropertyOptional({ type: String, nullable: true }) rejectReason!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) cancelReason!: string | null;
   @ApiProperty() isManual!: boolean;
+  @ApiProperty() isCustomService!: boolean;
+  @ApiPropertyOptional({ type: Number, nullable: true }) customPricePln!: number | null;
+  @ApiPropertyOptional({ type: Number, nullable: true }) customDurationMinutes!: number | null;
   @ApiProperty() hasTireSetsInDepot!: boolean;
   @ApiProperty() createdAt!: string;
   @ApiPropertyOptional({ type: String, nullable: true }) confirmedAt!: string | null;

@@ -27,6 +27,7 @@ import { BulkUpdateStatusDto } from './dto/bulk-update-status.dto';
 import { CreateManualBookingDto } from './dto/create-manual-booking.dto';
 import { AvailabilityQueryDto } from './dto/availability-query.dto';
 import { AvailabilityResponseDto } from './dto/availability-response.dto';
+import { CustomServiceSuggestionDto } from './dto/custom-service-suggestion.dto';
 
 @ApiTags('bookings')
 @ApiCookieAuth('access_token')
@@ -111,6 +112,19 @@ export class BookingsController {
   ): Promise<ClientSearchResultDto[]> {
     const provider = await this.providersService.getMyProvider(user.sub);
     return this.service.searchClients(provider.id, q ?? '');
+  }
+
+  // ── GET /v1/providers/me/bookings/custom-services?q= ─────────────────────
+
+  @Get('custom-services')
+  @ApiOperation({ summary: 'Autocomplete for custom (off-pricelist) service names' })
+  @ApiOkResponse({ type: CustomServiceSuggestionDto, isArray: true })
+  async getCustomServiceSuggestions(
+    @CurrentUser() user: JwtPayload,
+    @Query('q') q: string,
+  ): Promise<CustomServiceSuggestionDto[]> {
+    const provider = await this.providersService.getMyProvider(user.sub);
+    return this.service.getCustomServiceSuggestions(provider.id, q ?? '');
   }
 
   // ── GET /v1/providers/me/bookings/availability ────────────────────────────

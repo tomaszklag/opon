@@ -3,11 +3,15 @@ import {
   IsArray,
   IsBoolean,
   IsISO8601,
+  IsInt,
   IsNumber,
   IsOptional,
+  IsPositive,
   IsString,
   Matches,
+  Max,
   MaxLength,
+  Min,
   MinLength,
   ValidateNested,
 } from 'class-validator';
@@ -97,6 +101,24 @@ export class CreateManualBookingDto {
   @IsOptional()
   @IsBoolean()
   skipAvailabilityCheck?: boolean;
+
+  @ApiPropertyOptional({ example: true, description: 'Usługa zdefiniowana poza cennikiem' })
+  @IsOptional()
+  @IsBoolean()
+  isCustomService?: boolean;
+
+  @ApiPropertyOptional({ example: 150, description: 'Cena usługi custom (opcjonalna)' })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  customPricePln?: number;
+
+  @ApiPropertyOptional({ example: 60, description: 'Czas trwania usługi custom w minutach' })
+  @IsOptional()
+  @IsInt()
+  @IsPositive()
+  @Max(600)
+  customDurationMinutes?: number;
 
   @ApiPropertyOptional({
     example: 'a1b2c3d4',
