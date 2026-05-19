@@ -39,6 +39,8 @@ export type BookingWithDetail = Prisma.BookingGetPayload<{
   include: {
     client: { select: { phone: true; firstName: true; lastName: true } };
     vehicle: { select: { nickname: true; tireSize: true } };
+    worker: { select: { name: true } };
+    station: { select: { name: true } };
   };
 }>;
 
@@ -155,6 +157,8 @@ export class BookingsRepository {
       include: {
         client: { select: { phone: true, firstName: true, lastName: true } },
         vehicle: { select: { nickname: true, tireSize: true } },
+        worker: { select: { name: true } },
+        station: { select: { name: true } },
       },
     });
   }
@@ -177,6 +181,31 @@ export class BookingsRepository {
 
   countClientBookings(clientId: string, providerId: string): Promise<number> {
     return this.prisma.booking.count({ where: { clientId, providerId } });
+  }
+
+  async getClientLastVisitAt(clientId: string, providerId: string): Promise<Date | null> {
+    const row = await this.prisma.booking.findFirst({
+      where: { clientId, providerId, status: 'COMPLETED' },
+      orderBy: { completedAt: 'desc' },
+      select: { completedAt: true },
+    });
+    return row?.completedAt ?? null;
+  }
+
+  countClientUpcomingBookings(
+    clientId: string,
+    providerId: string,
+    currentId: string,
+  ): Promise<number> {
+    return this.prisma.booking.count({
+      where: {
+        clientId,
+        providerId,
+        id: { not: currentId },
+        startAt: { gt: new Date() },
+        status: { in: ['PENDING', 'CONFIRMED'] },
+      },
+    });
   }
 
   async searchClients(
@@ -360,6 +389,13 @@ export class BookingsRepository {
     });
   }
 
+  async updateNotes(id: string, providerId: string, notes: string | null): Promise<void> {
+    await this.prisma.booking.update({
+      where: { id, providerId },
+      data: { notes },
+    });
+  }
+
   findProviderPause(providerId: string) {
     return this.prisma.provider.findUnique({
       where: { id: providerId },
@@ -367,8 +403,8 @@ export class BookingsRepository {
     });
   }
 
-  countTireSetsForBooking(bookingId: string): Promise<number> {
-    return this.prisma.tireSet.count({ where: { sourceBookingId: bookingId } });
+  countTireSetsForBooking(bookingId: string, providerId: string): Promise<number> {
+    return this.prisma.tireSet.count({ where: { sourceBookingId: bookingId, providerId } });
   }
 
   async getCustomServiceSuggestions(

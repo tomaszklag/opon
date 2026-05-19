@@ -97,6 +97,8 @@ export const bookingsApi = {
       endAt,
       notifyClient,
     }),
+  updateNotes: (referenceCode: string, notes: string | null) =>
+    api.patch<void>(`/v1/providers/me/bookings/${referenceCode}/notes`, { notes }),
   searchClients: (q: string) =>
     api.get<components['schemas']['ClientSearchResultDto'][]>(
       `/v1/providers/me/bookings/clients?q=${encodeURIComponent(q)}`,

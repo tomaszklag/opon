@@ -103,6 +103,8 @@ export class BookingsService {
     booking: BookingWithDetail,
     bookingCount: number,
     hasTireSetsInDepot: boolean,
+    lastVisitAt: Date | null = null,
+    upcomingCount = 0,
   ): BookingDetailResponseDto {
     const { client, vehicle } = booking;
     const fullName = [client.firstName, client.lastName].filter(Boolean).join(' ').trim();
@@ -119,6 +121,8 @@ export class BookingsService {
         clientName,
         clientPhone: client.phone,
         bookingCount,
+        lastVisitAt: lastVisitAt?.toISOString() ?? null,
+        upcomingCount,
       },
       vehicle: vehicle
         ? {
@@ -145,6 +149,9 @@ export class BookingsService {
       travelFeePln: booking.travelFeePln != null ? Number(booking.travelFeePln) : null,
       totalPricePln: booking.totalPricePln != null ? Number(booking.totalPricePln) : null,
       stationId: booking.stationId ?? null,
+      stationName: booking.station?.name ?? null,
+      workerId: booking.workerId ?? null,
+      workerName: booking.worker?.name ?? null,
       notes: booking.notes ?? null,
       rejectReason: booking.rejectReason ?? null,
       cancelReason: booking.cancelReason ?? null,
@@ -474,12 +481,37 @@ export class BookingsService {
       throw new AppException(ErrorCode.BOOKING_NOT_FOUND, 'Rezerwacja nie istnieje.', 404);
     }
 
-    const [bookingCount, tireSetCount] = await Promise.all([
+    const [bookingCount, tireSetCount, lastVisitAt, upcomingCount] = await Promise.all([
       this.bookingsRepository.countClientBookings(booking.clientId, providerId),
-      this.bookingsRepository.countTireSetsForBooking(booking.id),
+      this.bookingsRepository.countTireSetsForBooking(booking.id, providerId),
+      this.bookingsRepository.getClientLastVisitAt(booking.clientId, providerId),
+      this.bookingsRepository.countClientUpcomingBookings(booking.clientId, providerId, booking.id),
     ]);
 
-    return this.toDetailResponseDto(booking, bookingCount, tireSetCount > 0);
+    return this.toDetailResponseDto(
+      booking,
+      bookingCount,
+      tireSetCount > 0,
+      lastVisitAt,
+      upcomingCount,
+    );
+  }
+
+  // ── update notes ─────────────────────────────────────────────────────────
+
+  async updateNotes(
+    providerId: string,
+    referenceCode: string,
+    notes: string | null,
+  ): Promise<void> {
+    const booking = await this.bookingsRepository.findDetailByReferenceCode(
+      providerId,
+      referenceCode,
+    );
+    if (!booking) {
+      throw new AppException(ErrorCode.BOOKING_NOT_FOUND, 'Rezerwacja nie istnieje.', 404);
+    }
+    await this.bookingsRepository.updateNotes(booking.id, providerId, notes);
   }
 
   // ── update status ─────────────────────────────────────────────────────────

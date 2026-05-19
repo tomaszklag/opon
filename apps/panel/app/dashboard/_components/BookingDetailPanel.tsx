@@ -27,6 +27,7 @@ interface BookingDetailPanelProps {
   referenceCode: string | null;
   onClose: () => void;
   onMutate?: () => void;
+  calendarDate?: string;
 }
 
 // ── Constants ────────────────────────────────────────────────────────────────
@@ -136,9 +137,10 @@ interface PanelContentProps {
   onClose: () => void;
   onMutate?: () => void;
   mutate: () => void;
+  calendarDate?: string;
 }
 
-function PanelContent({ booking, onClose, onMutate, mutate }: PanelContentProps) {
+function PanelContent({ booking, onClose, onMutate, mutate, calendarDate }: PanelContentProps) {
   const [loading, setLoading] = useState<string | null>(null);
 
   const canAddToDepot = booking.status === 'COMPLETED' && !booking.hasTireSetsInDepot;
@@ -415,7 +417,10 @@ function PanelContent({ booking, onClose, onMutate, mutate }: PanelContentProps)
 
       {/* ── Footer ── */}
       <div className={styles.footer}>
-        <Link href={`/dashboard/bookings/${booking.referenceCode}`} className={styles.footerLink}>
+        <Link
+          href={`/dashboard/bookings/${booking.referenceCode}${calendarDate ? `?from=calendar&date=${calendarDate}` : ''}`}
+          className={styles.footerLink}
+        >
           <Text variant="body-sm" as="span">
             Pełne szczegóły wizyty
           </Text>
@@ -428,7 +433,12 @@ function PanelContent({ booking, onClose, onMutate, mutate }: PanelContentProps)
 
 // ── Main export ──────────────────────────────────────────────────────────────
 
-export function BookingDetailPanel({ referenceCode, onClose, onMutate }: BookingDetailPanelProps) {
+export function BookingDetailPanel({
+  referenceCode,
+  onClose,
+  onMutate,
+  calendarDate,
+}: BookingDetailPanelProps) {
   const { booking, isLoading, mutate } = useBookingDetail(referenceCode);
 
   // ESC key handler
@@ -465,7 +475,13 @@ export function BookingDetailPanel({ referenceCode, onClose, onMutate }: Booking
           </div>
         )}
         {!isLoading && booking && (
-          <PanelContent booking={booking} onClose={onClose} onMutate={onMutate} mutate={mutate} />
+          <PanelContent
+            booking={booking}
+            onClose={onClose}
+            onMutate={onMutate}
+            mutate={mutate}
+            calendarDate={calendarDate}
+          />
         )}
         {!isLoading && !booking && referenceCode && (
           <div className={styles.loading}>

@@ -158,22 +158,16 @@
   grid-template-columns: auto 1fr auto;
   align-items: center;
   gap: 24px;
-  padding: 18px 22px;
+  padding: 18px 22px 18px 26px;
   background: linear-gradient(135deg, var(--accent-muted) 0%, transparent 60%);
   border: 1px solid var(--accent-border);
+  border-left: 4px solid var(--accent);
   border-radius: 14px;
   position: relative;
-  overflow: hidden;
 }
 
 .statusHero::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 4px;
-  background: var(--accent);
+  display: none;
 }
 
 .heroStatusCol {
@@ -213,33 +207,25 @@
 .statusHeroPending {
   background: linear-gradient(135deg, var(--warning-muted) 0%, transparent 60%);
   border-color: var(--warning-border);
-}
-.statusHeroPending::before {
-  background: var(--warning);
+  border-left-color: var(--warning);
 }
 
 .statusHeroInProgress {
   background: linear-gradient(135deg, var(--info-muted) 0%, transparent 60%);
   border-color: var(--info-border);
-}
-.statusHeroInProgress::before {
-  background: var(--info);
+  border-left-color: var(--info);
 }
 
 .statusHeroCompleted {
   background: linear-gradient(135deg, var(--success-muted) 0%, transparent 60%);
   border-color: var(--success-border);
-}
-.statusHeroCompleted::before {
-  background: var(--success);
+  border-left-color: var(--success);
 }
 
 .statusHeroCancelled {
   background: linear-gradient(135deg, var(--danger-muted) 0%, transparent 60%);
   border-color: var(--danger-border);
-}
-.statusHeroCancelled::before {
-  background: var(--danger);
+  border-left-color: var(--danger);
 }
 
 .heroPillBigPending {
@@ -418,6 +404,20 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  flex-wrap: wrap;
+}
+
+.upcomingChip {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--accent-muted);
+  border: 1px solid var(--accent-border);
+  color: var(--accent);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
 }
 
 .verifiedBadge {
@@ -431,35 +431,20 @@
   color: var(--success);
 }
 
-.callBtn {
-  padding: 10px 16px;
-  background: var(--accent);
-  color: var(--text-on-accent);
-  border: none;
-  border-radius: 10px;
-  font-family: var(--font-body);
-  font-size: 13px;
-  font-weight: 800;
-  letter-spacing: 0.3px;
-  cursor: pointer;
+.clientPhone {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  box-shadow: 0 6px 16px var(--accent-glow);
+  gap: 7px;
+  padding: 8px 12px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
   flex-shrink: 0;
 }
 
-.callBtn:hover {
-  background: var(--accent-hover);
-}
-
-/* phoneMono — font-family: var(--font-mono) intentional DS exception (phone number) */
-.phoneMono {
-  font-family: var(--font-mono);
-  font-weight: 700;
-  letter-spacing: 0.3px;
-  padding-left: 8px;
-  border-left: 1px solid color-mix(in srgb, var(--bg) 25%, transparent);
+.clientPhoneIco {
+  color: var(--text-muted);
+  flex-shrink: 0;
 }
 
 .smsBtn {
@@ -481,6 +466,15 @@
 .smsBtn:hover {
   background: var(--surface-hover);
   border-color: var(--border-strong);
+}
+
+/* phoneMono — font-family: var(--font-mono) intentional DS exception (phone number) */
+.phoneMono {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: 0.3px;
 }
 
 /* ── Address card ───────────────────────────────────────────────────────────── */
@@ -615,6 +609,17 @@
   background: var(--accent-muted);
   border: 1px solid var(--accent-border);
   color: var(--accent);
+}
+
+.wheelChip {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  white-space: nowrap;
 }
 
 .pricePreview {
@@ -1015,6 +1020,425 @@
 .miniMapIco {
   color: var(--text-muted);
   opacity: 0.5;
+}
+
+/* ── Service card ───────────────────────────────────────────────────────────── */
+
+.serviceNameRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.catalogBadge,
+.customBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.catalogBadge {
+  background: var(--accent-muted);
+  border: 1px solid var(--accent-border);
+  color: var(--accent);
+}
+
+.customBadge {
+  background: var(--warning-muted);
+  border: 1px solid var(--warning-border);
+  color: var(--warning);
+}
+
+.subServiceList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 4px;
+  border-top: 1px solid var(--border);
+}
+
+.subServiceRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 5px 8px;
+  border-radius: 6px;
+  background: var(--bg);
+}
+
+.subServiceRowPaid {
+  background: var(--accent-muted);
+  border: 1px solid var(--accent-border);
+}
+
+.customDetailRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.customDetailIco {
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+/* ── Assignment card ────────────────────────────────────────────────────────── */
+
+.assignmentRow {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.assignmentItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 140px;
+  padding: 10px 12px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.assignmentIco {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: var(--accent-muted);
+  border: 1px solid var(--accent-border);
+  color: var(--accent);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.assignmentCol {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* ── Notes card ─────────────────────────────────────────────────────────────── */
+
+.notesBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.notesHeadRight {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.notesEditBtn {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color var(--transition-fast), color var(--transition-fast);
+}
+
+.notesEditBtn:hover {
+  border-color: var(--accent-border);
+  color: var(--accent);
+}
+
+.notesEmptyBtn {
+  width: 100%;
+  padding: 10px 12px;
+  background: var(--bg);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-md);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color var(--transition-fast);
+}
+
+.notesEmptyBtn:hover {
+  border-color: var(--accent-border);
+}
+
+.notesEditWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* natywny <textarea> — DS Textarea nie istnieje; typografia w CSS dopuszczalna jak przy .tireTaq */
+.notesTextarea {
+  width: 100%;
+  resize: vertical;
+  min-height: 80px;
+  padding: 8px 10px;
+  background: var(--bg);
+  border: 1px solid var(--accent-border);
+  border-radius: var(--radius-md);
+  outline: none;
+  font-size: 13px;
+  font-family: var(--font-body);
+  color: var(--text-primary);
+  line-height: 1.5;
+  transition: border-color var(--transition-fast);
+  box-sizing: border-box;
+}
+
+.notesTextarea:focus {
+  border-color: var(--accent);
+}
+
+.notesEditActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+/* ── Depot link ─────────────────────────────────────────────────────────────── */
+
+.depotBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: var(--success-muted);
+  border: 1px solid var(--success-border);
+  color: var(--success);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.depotLinkRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.depotLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 12px;
+  background: var(--success-muted);
+  border: 1px solid var(--success-border);
+  border-radius: 8px;
+  color: var(--success);
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 800;
+  text-decoration: none;
+  flex-shrink: 0;
+  transition: opacity var(--transition-fast);
+}
+
+.depotLink:hover {
+  opacity: 0.8;
+}
+
+/* ── No-show action button ──────────────────────────────────────────────────── */
+
+.actionNoShow {
+  padding: 9px;
+  background: var(--warning-muted);
+  color: var(--warning);
+  border: 1px solid var(--warning-border);
+  border-radius: 10px;
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  margin-top: 2px;
+  width: 100%;
+}
+
+.actionNoShow:hover {
+  background: var(--warning);
+  border-color: var(--warning);
+  color: var(--bg);
+}
+
+.actionNoShow:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ── Full-width secondary action ────────────────────────────────────────────── */
+
+.actionSecondaryFull {
+  padding: 10px;
+  background: transparent;
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  width: 100%;
+}
+
+.actionSecondaryFull:hover {
+  background: var(--surface-hover);
+  border-color: var(--border-strong);
+}
+
+/* ── Reschedule modal ───────────────────────────────────────────────────────── */
+
+.rsBackdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  z-index: 900;
+}
+
+.rsModal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 360px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  z-index: 901;
+  box-shadow: var(--shadow-xl);
+  overflow: hidden;
+}
+
+.rsHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--border);
+}
+
+.rsClose {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.rsClose:hover {
+  background: var(--surface-hover);
+}
+
+.rsBody {
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.rsField {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  flex: 1;
+}
+
+.rsLabel {
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.rsTimeRow {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.rsArrow {
+  flex-shrink: 0;
+  padding-bottom: 10px;
+  opacity: 0.5;
+}
+
+/* rsDateInput — native <input type="date"> — DS exception; typografia inline bo input nie jest elementem DS */
+.rsDateInput {
+  width: 100%;
+  height: 40px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg);
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  outline: none;
+}
+
+.rsDateInput:focus {
+  border-color: var(--accent);
+}
+
+.rsError {
+  color: var(--danger);
+  background: var(--danger-muted);
+  border: 1px solid var(--danger-border);
+  border-radius: 6px;
+  padding: 6px 10px;
+}
+
+.rsFoot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 14px 18px;
+  border-top: 1px solid var(--border);
 }
 
 /* ── Loading wrap ───────────────────────────────────────────────────────────── */

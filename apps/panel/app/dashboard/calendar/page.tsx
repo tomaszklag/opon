@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Button, Heading, SegmentedControl, Spinner, Text } from '@opony/design-system-web';
 import { useAuthGuard } from '../../../lib/hooks/use-auth-guard';
 import { useBookings } from '../../../lib/hooks/use-bookings';
@@ -45,9 +46,18 @@ import styles from './calendar.module.css';
 
 export default function CalendarPage() {
   const { isLoading: authLoading } = useAuthGuard('/dashboard');
+  const searchParams = useSearchParams();
 
   const [view, setView] = useState<CalendarView>('week');
   const [currentDate, setCurrentDate] = useState<Date>(() => {
+    const dateParam = searchParams.get('date');
+    if (dateParam) {
+      const parsed = new Date(dateParam);
+      if (!isNaN(parsed.getTime())) {
+        parsed.setHours(0, 0, 0, 0);
+        return parsed;
+      }
+    }
     const d = new Date();
     d.setHours(0, 0, 0, 0);
     return d;
@@ -350,6 +360,7 @@ export default function CalendarPage() {
         referenceCode={detailRefCode}
         onClose={() => setDetailRefCode(null)}
         onMutate={() => void mutate()}
+        calendarDate={currentDate.toISOString().slice(0, 10)}
       />
 
       <WorkerTaskDetailPanel

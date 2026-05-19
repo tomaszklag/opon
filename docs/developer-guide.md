@@ -4077,3 +4077,200 @@ const overlapMinutes = conflictBookings.reduce((sum, b) => {
 - Nie reużywaj `serviceDetails` JSON do przechowywania custom service — to pole jest zarezerwowane dla podusług z cennika.
 - Nowe pola na custom service (np. `customNotes`) dodaj do `Booking` z prefiksem `custom*` i guard `isCustomService = true`.
 - Autocomplete jest read-only — historia powstaje jako efekt uboczny zapisanych rezerwacji, nie przez osobny endpoint `POST`.
+
+---
+
+## 28. Strona szczegółów wizyty — architektura i zasady
+
+### Plik
+
+`apps/panel/app/dashboard/bookings/[referenceCode]/page.tsx`
+
+### Struktura UI
+
+```
+Topbar (breadcrumb + status pill)
+StatusHero (status, kod, kiedy, czas trwania)
+TwoCol:
+  ColLeft (scrolluje):
+    Usługa        — nazwa, badge z/poza cennikiem, podusługi
+    Przypisanie   — pracownik + stanowisko (tylko jeśli ustawione)
+    Klient        — avatar, liczba wizyt, numer telefonu
+    Miejsce       — adres (tylko mobile provider)
+    Pojazd        — nickname + rozmiar opon
+    Notatki       — notatki wewnętrzne warsztatu (badge "Wewnętrzne")
+    Skład opon    — link do składu (tylko jeśli hasTireSetsInDepot)
+    Historia      — timeline zdarzeń statusowych
+  ColRight (sticky):
+    Karta cen     — base/custom + podusługi + dojazd + total
+    Karta akcji   — przyciski zależne od statusu
+```
+
+### `BookingDetailResponseDto` — pola kluczowe
+
+| Pole                  | Źródło                        | Uwagi                              |
+| --------------------- | ----------------------------- | ---------------------------------- |
+| `service.name`        | `Booking.serviceName`         | null dla rezerwacji bez nazwy      |
+| `service.subServices` | `Booking.serviceDetails` JSON | tablica `{name, pricePln}`         |
+| `isCustomService`     | `Booking.isCustomService`     | guard dla pól `custom*`            |
+| `customPricePln`      | `Booking.customPricePln`      | cena custom (nie `basePricePln`)   |
+| `workerName`          | `Booking.worker.name`         | null jeśli brak przypisania        |
+| `stationName`         | `Booking.station.name`        | null jeśli brak przypisania        |
+| `hasTireSetsInDepot`  | licznik `TireSet[]`           | wyliczany w serwisie, nie w Prisma |
+
+`findDetailByReferenceCode` w repozytorium musi includować `worker` i `station`:
+
+```typescript
+include: {
+  client: { select: { phone: true, firstName: true, lastName: true } },
+  vehicle: { select: { nickname: true, tireSize: true } },
+  worker: { select: { name: true } },
+  station: { select: { name: true } },
+}
+```
+
+### Logika akcji
+
+No-show pojawia się warunkowo — tylko gdy czas wizyty już minął:
+
+```typescript
+const showNoShow =
+  (status === 'CONFIRMED' || status === 'IN_PROGRESS') && new Date(booking.startAt) < new Date();
+```
+
+Rescue modal (zmień termin) pre-filluje pola z aktualnych `startAt`/`endAt` i wywołuje `bookingsApi.reschedule`.
+
+### Zasady UI panelu operacyjnego
+
+**Nie dodawaj przycisków których nie można obsłużyć z przeglądarki.**
+
+Odrzucone jako bezużyteczne w panelu webowym:
+
+- „Zadzwoń" — numer telefonu pokazuj jako tekst, nie CTA
+- „Udostępnij" — nie ma odbiorcy ani formatu
+- „Drukuj zlecenie" — brak szablonu wydruku
+- „Dodaj do kalendarza" — panel jest kalendarzem; import do Google Cal nie jest funkcją panelu
+
+Ogólna zasada: każdy przycisk musi mieć działający handler lub nie istnieje.
+
+**Nie duplikuj tej samej informacji w dwóch miejscach tego samego widoku.**
+
+StatusHero zajmuje całą szerokość ekranu i pokazuje status wizualnie — dodatkowy badge statusu w topbarze jest redundantny. Podobnie: subtitle nagłówka sekcji nie powinien powtarzać danych widocznych w treści tej samej sekcji (np. liczba rezerwacji klienta w nagłówku karty klienta i w treści karty).
+
+### Znane hardcoded wartości — nie szukaj ich w API
+
+| Element                                | Stan                       | Uwaga                                                                                                                        |
+| -------------------------------------- | -------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| Badge „Zweryfikowany" w karcie klienta | hardcoded, zawsze widoczny | `BookingClientDto` nie ma pola `isVerified`; weryfikacja telefonem jest implicit przez sam fakt istnienia klienta w systemie |
+
+---
+
+## 29. Nawigacja powrotna z kontekstem (back navigation)
+
+Gdy użytkownik trafia na stronę szczegółową z konkretnego kontekstu (np. kalendarza), przycisk Wstecz powinien wrócić do tego kontekstu — nie zawsze do listy.
+
+### Wzorzec: `?from=X&date=Y`
+
+Strona źródłowa (np. `BookingDetailPanel` w kalendarzu) dokłada query params do linka:
+
+```tsx
+// BookingDetailPanel.tsx — link "Pełne szczegóły"
+href={`/dashboard/bookings/${booking.referenceCode}?from=calendar&date=${calendarDate}`}
+// calendarDate = currentDate.toISOString().slice(0, 10)  // "YYYY-MM-DD"
+```
+
+Strona docelowa czyta params i dostosowuje przycisk Wstecz oraz breadcrumb:
+
+```typescript
+// [referenceCode]/page.tsx
+const searchParams = useSearchParams();
+const fromCalendar = searchParams.get('from') === 'calendar';
+const calendarDate = searchParams.get('date');
+const backHref = fromCalendar
+  ? `/dashboard/calendar${calendarDate ? `?date=${calendarDate}` : ''}`
+  : '/dashboard/bookings';
+```
+
+Strona docelowa (kalendarz) na mount czyta `?date=` i odtwarza pozycję:
+
+```typescript
+// calendar/page.tsx
+const [currentDate, setCurrentDate] = useState<Date>(() => {
+  const dateParam = searchParams.get('date');
+  if (dateParam) {
+    const parsed = new Date(dateParam);
+    if (!isNaN(parsed.getTime())) {
+      parsed.setHours(0, 0, 0, 0);
+      return parsed;
+    }
+  }
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  return d;
+});
+```
+
+### Rozszerzanie wzorca
+
+Przy dodawaniu nowego kontekstu (np. `?from=depot`):
+
+1. Dodaj param w komponencie źródłowym
+2. Dodaj case w `backHref` na stronie docelowej
+3. Dodaj breadcrumb label dla nowego kontekstu
+
+---
+
+## 30. CSS — pułapka `overflow: hidden` na kartach z kolorowym paskiem
+
+### Problem
+
+Częsty wzorzec: karta z zaokrąglonymi rogami ma pionowy pasek koloru po lewej stronie, zrealizowany przez `::before` z `position: absolute`:
+
+```css
+/* ❌ NIE RÓB TAK */
+.card {
+  border-radius: 14px;
+  position: relative;
+  overflow: hidden; /* potrzebne żeby przyciąć ::before do rogów */
+}
+.card::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: var(--accent);
+}
+```
+
+`overflow: hidden` tworzy nowy BFC i **przycina cienie dzieci** (`box-shadow`), może powodować wizualne ucięcie zawartości karty oraz utrudnia obliczanie wysokości przez grid/flex.
+
+### Rozwiązanie
+
+Użyj `border-left` — przeglądarka respektuje `border-radius` na narożnikach, więc nie potrzeba `overflow: hidden`:
+
+```css
+/* ✅ TAK */
+.card {
+  border-radius: 14px;
+  border: 1px solid var(--accent-border);
+  border-left: 4px solid var(--accent);
+  padding-left: 26px; /* kompensata szerszego border-left */
+  /* brak overflow: hidden */
+}
+```
+
+Dla wariantów statusowych zmień tylko kolor lewego bordera:
+
+```css
+.cardPending {
+  border-left-color: var(--warning);
+}
+.cardSuccess {
+  border-left-color: var(--success);
+}
+.cardDanger {
+  border-left-color: var(--danger);
+}
+```

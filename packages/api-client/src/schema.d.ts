@@ -1909,6 +1909,8 @@ export interface components {
       clientName: string;
       clientPhone: string;
       bookingCount: number;
+      lastVisitAt?: string | null;
+      upcomingCount: number;
     };
     BookingVehicleDto: {
       vehicleId: string;
@@ -1941,6 +1943,9 @@ export interface components {
       travelFeePln?: number | null;
       totalPricePln?: number | null;
       stationId?: string | null;
+      stationName?: string | null;
+      workerId?: string | null;
+      workerName?: string | null;
       notes?: string | null;
       rejectReason?: string | null;
       cancelReason?: string | null;

@@ -28,6 +28,7 @@ import { CreateManualBookingDto } from './dto/create-manual-booking.dto';
 import { AvailabilityQueryDto } from './dto/availability-query.dto';
 import { AvailabilityResponseDto } from './dto/availability-response.dto';
 import { CustomServiceSuggestionDto } from './dto/custom-service-suggestion.dto';
+import { UpdateBookingNotesDto } from './dto/update-booking-notes.dto';
 
 @ApiTags('bookings')
 @ApiCookieAuth('access_token')
@@ -166,6 +167,21 @@ export class BookingsController {
   ): Promise<BookingResponseDto> {
     const provider = await this.providersService.getMyProvider(user.sub);
     return this.service.reschedule(provider.id, referenceCode, dto);
+  }
+
+  // ── PATCH /v1/providers/me/bookings/:referenceCode/notes ──────────────────
+
+  @Patch(':referenceCode/notes')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Update internal notes for a booking (provider only)' })
+  @ApiResponse({ status: 204 })
+  async updateNotes(
+    @CurrentUser() user: JwtPayload,
+    @Param('referenceCode') referenceCode: string,
+    @Body() dto: UpdateBookingNotesDto,
+  ): Promise<void> {
+    const provider = await this.providersService.getMyProvider(user.sub);
+    return this.service.updateNotes(provider.id, referenceCode, dto.notes ?? null);
   }
 
   // ── PATCH /v1/providers/me/bookings/:referenceCode/status ─────────────────
