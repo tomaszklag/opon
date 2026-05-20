@@ -41,7 +41,7 @@
     },
     "web": {
       "bundler": "metro",
-      "output": "static",
+      "output": "single",
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
@@ -54,12 +54,8 @@
         }
       ],
       "@sentry/react-native/expo",
-      [
-        "react-native-maps",
-        {
-          "googleMapsApiKey": "$(GOOGLE_MAPS_API_KEY)"
-        }
-      ]
+      "@sentry/react-native",
+      "expo-secure-store"
     ],
     "experiments": {
       "typedRoutes": true

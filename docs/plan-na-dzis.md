@@ -15,10 +15,12 @@ otpToken powinien być jakoś unieważniany. Wygasa po 5 minutach chyba. Powinno
 
 zleć wyspecjalizowanym agentom weryfikację tego rozwiazania. Głównie zależy mi na respektowaniu wcześniejszych postanowień oraz
 przyjętej architektury
-zaplanowanego design
+oraz zaplanowanego design
 
 jak przypisuje pracownika do stanowiska to czmu leci od razu zapis?
 
 dodać przypisanie enuma typu samochodu do usługi. Będzie to przydatne w celu późniejszego filtrowania po stronie klienta. Wartość default może być typ "Any"
 
 teraz jak mam popup do dodawania zadania dla pracownika, to wybór godziny powinien być tym samym komponentem z linią czasu co w popupie dodawania rezerwacji
+
+3. PR — kiedy zdecydujesz, robimy jeden zbiorczy PR z całego sprint_2_mobile.

@@ -5,7 +5,7 @@ import { useFonts } from 'expo-font';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { StatusBar } from 'expo-status-bar';
 import { ToastProvider } from '@opony/design-system-native';
-import { queryClient } from '@/lib/query-client';
+import { queryClient, setupOnlineManager } from '@/lib/query-client';
 import { useAuthStore } from '@/stores/auth.store';
 import { initMsw } from '../mocks';
 
@@ -30,6 +30,10 @@ function AuthGuard({ isAuthenticated }: { isAuthenticated: boolean }) {
 
 export default function RootLayout() {
   const { rehydrated, isAuthenticated } = useAuthStore();
+
+  useEffect(() => {
+    return setupOnlineManager();
+  }, []);
 
   const [fontsLoaded, fontError] = useFonts({
     BebasNeue: require('../assets/fonts/BebasNeue-Regular.ttf'),

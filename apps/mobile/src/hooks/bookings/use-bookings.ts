@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import NetInfo from '@react-native-community/netinfo';
 import {
   listBookings,
   getBooking,
@@ -7,6 +8,11 @@ import {
   type CreateBookingDto,
 } from '@/api/bookings';
 import { QUERY_KEYS } from '@/constants/query-keys';
+
+async function assertOnline() {
+  const state = await NetInfo.fetch();
+  if (!state.isConnected) throw new Error('Brak połączenia z internetem');
+}
 
 export function useBookings(status?: string) {
   return useQuery({
@@ -27,7 +33,10 @@ export function useBooking(id: string) {
 export function useCreateBooking() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (dto: CreateBookingDto) => createBooking(dto),
+    mutationFn: async (dto: CreateBookingDto) => {
+      await assertOnline();
+      return createBooking(dto);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['bookings'] });
     },
@@ -37,7 +46,10 @@ export function useCreateBooking() {
 export function useCancelBooking() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => cancelBooking(id),
+    mutationFn: async (id: string) => {
+      await assertOnline();
+      return cancelBooking(id);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['bookings'] });
     },

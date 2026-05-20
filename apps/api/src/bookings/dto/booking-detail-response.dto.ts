@@ -25,7 +25,7 @@ export class BookingClientDto {
 
 export class BookingVehicleDto {
   @ApiProperty() vehicleId!: string;
-  @ApiProperty() nickname!: string;
+  @ApiPropertyOptional({ nullable: true }) nickname!: string | null;
   @ApiProperty() tireSize!: string;
 }
 

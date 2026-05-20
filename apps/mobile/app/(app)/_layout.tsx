@@ -59,6 +59,8 @@ export default function AppLayout() {
         />
         {/* Ukryte ekrany (stack ponad tabs) */}
         <Tabs.Screen name="providers/[id]" options={{ href: null }} />
+        <Tabs.Screen name="providers/[id]/slots" options={{ href: null }} />
+        <Tabs.Screen name="providers/[id]/confirmed" options={{ href: null }} />
         <Tabs.Screen name="providers/[id]/rate" options={{ href: null }} />
         <Tabs.Screen name="providers/[id]/reviews" options={{ href: null }} />
         <Tabs.Screen name="providers/[id]/waitlist" options={{ href: null }} />

@@ -37,6 +37,6 @@ const styles = StyleSheet.create({
     borderRadius: t.radius.full,
     alignSelf: 'flex-start',
   },
-  sm: { paddingHorizontal: t.spacing[2], paddingVertical: 2 },
+  sm: { paddingHorizontal: t.spacing[2], paddingVertical: t.spacing[1] },
   md: { paddingHorizontal: t.spacing[3], paddingVertical: t.spacing[1] },
 });

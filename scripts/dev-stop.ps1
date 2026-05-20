@@ -13,3 +13,14 @@ foreach ($port in $ports) {
 }
 
 Write-Host "All dev services stopped."
+
+# Clear Metro/Expo cache so the next start is clean
+$mobileCacheDir = Join-Path $PSScriptRoot "..\apps\mobile\.expo"
+if (Test-Path $mobileCacheDir) {
+    Remove-Item $mobileCacheDir -Recurse -Force -Confirm:$false
+    Write-Host "Cleared Metro cache (.expo/)"
+}
+
+$metroCachePattern = Join-Path $env:TEMP "metro-*"
+Get-Item $metroCachePattern -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force -Confirm:$false
+Write-Host "Cleared Metro bundler temp cache."

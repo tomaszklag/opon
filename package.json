@@ -9,10 +9,14 @@
   },
   "scripts": {
     "dev": "turbo dev",
+    "dev:api": "turbo dev --filter=@opony/api",
     "dev:panel-all": "turbo dev --filter=@opony/api --filter=@opony/panel",
     "dev:panel-front": "turbo dev --filter=@opony/panel",
+    "dev:mobile-front": "turbo dev --filter=@opony/mobile",
+    "dev:mobile-all": "turbo dev --filter=@opony/api --filter=@opony/mobile",
+    "dev:mobile": "cd apps/mobile && npx expo start",
     "dev:all": "turbo dev --filter=@opony/api --filter=@opony/panel --filter=@opony/landing --filter=@opony/mobile",
-    "dev-stop": "powershell -ExecutionPolicy Bypass -NoProfile -File scripts/dev-stop.ps1",
+    "dev:stop": "powershell -ExecutionPolicy Bypass -NoProfile -File scripts/dev-stop.ps1",
     "build": "turbo build",
     "lint": "turbo lint",
     "type-check": "turbo type-check",
@@ -45,7 +49,8 @@
       "sharp"
     ],
     "overrides": {
-      "@types/react": "18.3.28"
+      "@types/react": "18.3.28",
+      "@opony/mobile>@types/react": "~19.1.10"
     }
   },
   "lint-staged": {

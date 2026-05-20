@@ -2,7 +2,8 @@ import { secureStorage } from '../lib/secure-storage';
 import { ApiError } from '../lib/error';
 import { useAuthStore } from '../stores/auth.store';
 
-const BASE_URL: string = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:4000';
+const BASE_URL = process.env.EXPO_PUBLIC_API_URL;
+if (!BASE_URL) throw new Error('EXPO_PUBLIC_API_URL is not set');
 
 let isRefreshing = false;
 let refreshQueue: Array<(token: string | null) => void> = [];
