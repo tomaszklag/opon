@@ -67,7 +67,7 @@ export default function SlotsScreen() {
   const [selectedSlotId, setSelectedSlotId] = useState<string | null>(null);
   const [address, setAddress] = useState('');
 
-  const { data: provider, isLoading: providerLoading } = useProvider(id);
+  const { data: provider, isLoading: providerLoading, isError: providerError } = useProvider(id);
   const {
     data: slots,
     isLoading: slotsLoading,
@@ -110,6 +110,19 @@ export default function SlotsScreen() {
       }
     }
   };
+
+  if (providerError) {
+    return (
+      <View style={styles.center}>
+        <EmptyState
+          title="Błąd"
+          description="Nie udało się załadować danych warsztatu."
+          ctaLabel="Wróć"
+          onCtaPress={() => router.back()}
+        />
+      </View>
+    );
+  }
 
   if (providerLoading) {
     return (
@@ -185,9 +198,12 @@ export default function SlotsScreen() {
               onCtaPress={() => refetchSlots()}
             />
           ) : !slots || slots.length === 0 ? (
-            <Text variant="bodySmall" color="textMuted">
-              Brak dostępnych terminów na ten dzień.
-            </Text>
+            <EmptyState
+              title="Brak terminów"
+              description="Na ten dzień nie ma wolnych terminów. Sprawdź inny dzień lub dołącz do listy oczekujących."
+              ctaLabel="Lista oczekujących"
+              onCtaPress={() => router.push(`/(app)/providers/${id}/waitlist` as never)}
+            />
           ) : (
             <View style={styles.slotsGrid}>
               {slots.map((slot) => (

@@ -55,3 +55,6 @@ export const getProvider = (id: string) => api.get<AppProvider>(`/v1/app/provide
 
 export const getSlots = (providerId: string, date: string) =>
   api.get<AppSlot[]>(`/v1/app/providers/${providerId}/slots`, { date });
+
+export const joinWaitlist = (providerId: string): Promise<void> =>
+  api.post(`/v1/app/providers/${providerId}/waitlist`);

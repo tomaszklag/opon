@@ -125,4 +125,11 @@ export const providersHandlers = [
   }),
 
   http.get(`${BASE}/v1/app/providers/:id/slots`, () => HttpResponse.json(mockSlots)),
+
+  http.post(`${BASE}/v1/app/providers/:id/waitlist`, ({ params }) => {
+    return HttpResponse.json(
+      { providerId: params.id, createdAt: new Date().toISOString() },
+      { status: 201 },
+    );
+  }),
 ];

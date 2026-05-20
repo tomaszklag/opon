@@ -61,6 +61,7 @@ export default function AppLayout() {
         <Tabs.Screen name="providers/[id]" options={{ href: null }} />
         <Tabs.Screen name="providers/[id]/rate" options={{ href: null }} />
         <Tabs.Screen name="providers/[id]/reviews" options={{ href: null }} />
+        <Tabs.Screen name="providers/[id]/waitlist" options={{ href: null }} />
         <Tabs.Screen name="bookings/[id]" options={{ href: null }} />
         <Tabs.Screen name="onboarding/profile" options={{ href: null }} />
         <Tabs.Screen name="onboarding/vehicle" options={{ href: null }} />
