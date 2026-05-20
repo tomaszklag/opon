@@ -4298,6 +4298,165 @@ Użyj `border-left` — przeglądarka respektuje `border-radius` na narożnikach
 
 Dla wariantów statusowych zmień tylko kolor lewego bordera:
 
+---
+
+## 31. Mobile app (`apps/mobile`) — konwencje i wzorce
+
+### 31.1. Design System Native — zasady
+
+Komponenty React Native żyją w `packages/design-system-native`. Zasady analogiczne do panelu:
+
+**Tekst zawsze przez DS komponent:**
+
+```tsx
+// ✅ TAK
+import { Text, Heading } from '@opony/design-system-native';
+<Text variant="body" color="textSecondary" weight="semibold">
+  ...
+</Text>;
+
+// ❌ NIE — nawet wewnątrz innych komponentów DS
+import { Text } from 'react-native';
+<Text style={{ color: t.colors.textPrimary, fontFamily: t.fontFamily.body }}>...</Text>;
+```
+
+**Spacing zawsze przez tokeny:**
+
+```tsx
+// ✅ TAK — t.spacing[N] z tokens.native.ts
+const styles = StyleSheet.create({
+  container: { gap: t.spacing[3] },
+  label: { marginBottom: t.spacing[1] },
+});
+
+// ❌ NIE — hardcoded piksele
+const styles = StyleSheet.create({
+  container: { gap: 12 },
+  label: { marginBottom: 2 },
+});
+```
+
+Skala tokenów: `t.spacing[1]`=4px, `[2]`=8px, `[3]`=12px, `[4]`=16px, `[5]`=20px, `[6]`=24px, `[8]`=32px. Minimalna jednostka = 4px. Wartości 1–3px bez tokenu są akceptowalne tylko jako borderWidth lub absolutne offsety px (np. translacja animacji).
+
+**Kolory zawsze przez tokeny:**
+
+```tsx
+// ✅ TAK
+{ backgroundColor: t.colors.surface, borderColor: t.colors.accent }
+
+// ❌ NIE — inline rgba/hex
+{ backgroundColor: 'rgba(46, 224, 160, 0.14)' }
+```
+
+Jeśli potrzebujesz koloru z przezroczystością (muted variant), zgłoś potrzebę dodania tokenu do `packages/design-tokens/src/index.ts`. Nie wstawiaj rgba bezpośrednio w StyleSheet komponentu DS.
+
+---
+
+### 31.2. React Query — hierarchia kluczy (`QUERY_KEYS`)
+
+Wszystkie klucze React Query definiuj w `src/constants/query-keys.ts`. Każdy klucz musi być hierarchiczną tablicą — nigdy pojedynczym elementem:
+
+```ts
+// ✅ TAK — hierarchiczne: invalidateQueries(['vehicles']) unieważni też ['vehicles','all']
+vehicles: {
+  all: ['vehicles', 'all'] as const,
+},
+
+// ❌ NIE — ['vehicles'] jako leaf key uniemożliwia selektywną invalidację
+vehicles: {
+  all: ['vehicles'] as const,
+},
+```
+
+Konwencja kluczy:
+
+| Wzorzec            | Przykład                       |
+| ------------------ | ------------------------------ |
+| Lista wszystkich   | `['zasób', 'all']`             |
+| Lista z filtrami   | `['zasób', 'list', paramsObj]` |
+| Pojedynczy rekord  | `['zasób', 'detail', id]`      |
+| Zagnieżdżony zasób | `['zasób', 'sub', id]`         |
+
+Dzięki hierarchii `queryClient.invalidateQueries({ queryKey: ['vehicles'] })` unieważnia zarówno `vehicles.all` jak i każdy `vehicles.detail`.
+
+---
+
+### 31.3. Auth w mobile — SecureStore i token rotation
+
+Panel B2B używa httpOnly cookie (token niewidoczny dla JS). Mobile używa `expo-secure-store` (iOS Keychain / Android Keystore).
+
+**Wrapper:** `src/lib/secure-storage.ts` — jedyne miejsce do odczytu/zapisu tokenów. Nie importuj `expo-secure-store` bezpośrednio w innych plikach.
+
+**Token rotation przy refresh:** Backend `/v1/auth/refresh` może zwrócić nowy `refreshToken` (rotacja). Klient mobilny **musi** zapisywać nowy refresh token jeśli jest zwrócony:
+
+```ts
+// ✅ src/api/client.ts — obsługa rotacji
+const data = (await res.json()) as { accessToken: string; refreshToken?: string };
+await secureStorage.setAccessToken(data.accessToken);
+if (data.refreshToken) await secureStorage.setRefreshToken(data.refreshToken);
+```
+
+**Kolejka równoległych requestów:** Gdy kilka requestów dostanie 401 jednocześnie, tylko jeden wykonuje refresh — pozostałe czekają w kolejce (`refreshQueue`). Kolejka musi być czyszczona (`refreshQueue = []`) **przed** zresetowaniem flagi (`isRefreshing = false`), żeby nowe requesty wchodzące w mikrotask po resolve nie trafiły do pustej kolejki z fałszywą flagą.
+
+**Zustand auth store:** Flaga `rehydrated` nie jest persystowana — ustaw ją tylko przez `onRehydrateStorage`. `login()` zawsze resetuje `pendingOnboarding: false`, bo nowe logowanie anuluje niedokończony onboarding z poprzedniej sesji.
+
+---
+
+### 31.4. Typy API dla endpointów mobilnych
+
+`@opony/api-client` generowany jest ze Swaggera backendu. Kontrolery `/v1/app/...` (mobilne) są implementowane stopniowo — ich DTO mogą jeszcze nie istnieć w `schema.d.ts`.
+
+**Jeśli DTO istnieje w schemacie:** używaj go bezpośrednio:
+
+```ts
+import type { components } from '@opony/api-client';
+type Provider = components['schemas']['AppProviderResponseDto'];
+```
+
+**Jeśli DTO jeszcze nie istnieje** (endpoint nie zaimplementowany w BE): stwórz tymczasowy interface z komentarzem:
+
+```ts
+// TODO: replace with components['schemas']['AppBookingResponseDto'] after BE implementation
+export interface AppBookingResponse {
+  id: string;
+  referenceCode: string;
+  status: 'PENDING' | 'CONFIRMED' | 'CANCELLED';
+}
+```
+
+Nie zostawiaj ręcznych typów bez tego komentarza — bez niego nie wiadomo czy to celowy stub czy zapomniane czyszczenie.
+
+Po dodaniu kontrolera w BE: `pnpm generate:api-client` → usuń stub, zastąp typem ze schematu.
+
+---
+
+### 31.5. Auth guard — expo-router v3
+
+`Stack.Protected` **nie istnieje w expo-router v3** (dostępne dopiero w v4). Używaj wzorca `AuthGuard` komponentu z `useSegments + useEffect`:
+
+```tsx
+// ✅ app/_layout.tsx — jedyny poprawny wzorzec dla v3
+function AuthGuard({ isAuthenticated }: { isAuthenticated: boolean }) {
+  const segments = useSegments();
+  const router = useRouter();
+
+  useEffect(() => {
+    const inAuthGroup = (segments as string[])[0] === '(auth)';
+    if (!isAuthenticated && !inAuthGroup) {
+      router.replace('/(auth)/login' as never);
+    } else if (isAuthenticated && inAuthGroup) {
+      router.replace('/' as never);
+    }
+  }, [isAuthenticated, segments, router]);
+
+  return null;
+}
+```
+
+Kastowanie `segments as string[]` jest konieczne — TypeScript inferuje typ jako union z `""`, nie jako `string[]`.
+
+Castowanie routów `as never` jest tymczasowe — typy generuje `expo start` do `.expo/types/router.d.ts`. Po uruchomieniu projektu casty stają się zbędne.
+
 ```css
 .cardPending {
   border-left-color: var(--warning);
