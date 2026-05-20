@@ -21,6 +21,8 @@ export { Badge } from './display/Badge';
 export { Card } from './display/Card';
 export { EmptyState } from './display/EmptyState';
 export { ProviderCard } from './display/ProviderCard';
+export { SlotPill } from './display/SlotPill';
+export { BookingCard } from './display/BookingCard';
 
 // Forms (filters)
 export { ChipFilter } from './forms/ChipFilter';

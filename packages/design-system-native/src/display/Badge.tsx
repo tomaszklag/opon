@@ -14,10 +14,10 @@ interface BadgeProps {
 
 const variantColors: Record<BadgeVariant, { bg: string; text: ColorKey }> = {
   accent: { bg: t.colors.accentMuted, text: 'accent' },
-  success: { bg: 'rgba(46, 224, 160, 0.14)', text: 'success' },
-  warning: { bg: 'rgba(255, 176, 32, 0.14)', text: 'warning' },
-  danger: { bg: 'rgba(255, 87, 87, 0.14)', text: 'danger' },
-  info: { bg: 'rgba(59, 142, 234, 0.14)', text: 'info' },
+  success: { bg: t.colors.successMuted, text: 'success' },
+  warning: { bg: t.colors.warningMuted, text: 'warning' },
+  danger: { bg: t.colors.dangerMuted, text: 'danger' },
+  info: { bg: t.colors.infoMuted, text: 'info' },
   neutral: { bg: t.colors.surfaceRaised, text: 'textSecondary' },
 };
 

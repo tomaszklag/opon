@@ -4348,7 +4348,24 @@ Skala tokenów: `t.spacing[1]`=4px, `[2]`=8px, `[3]`=12px, `[4]`=16px, `[5]`=20p
 { backgroundColor: 'rgba(46, 224, 160, 0.14)' }
 ```
 
-Jeśli potrzebujesz koloru z przezroczystością (muted variant), zgłoś potrzebę dodania tokenu do `packages/design-tokens/src/index.ts`. Nie wstawiaj rgba bezpośrednio w StyleSheet komponentu DS.
+Jeśli potrzebujesz koloru z przezroczystością (muted variant), dodaj go do **obu** plików:
+
+```
+packages/design-tokens/tokens.json   ← runtime (Metro bundler importuje ten plik przez package.json "main")
+packages/design-tokens/src/index.ts  ← typy TypeScript (ColorKey = keyof typeof colors)
+```
+
+Samo dodanie do `src/index.ts` powoduje błąd w runtime (`t.colors.successMuted === undefined`) — Metro idzie przez `exports["."]` → `tokens.json`, nie przez TypeScript source. Nie wstawiaj rgba bezpośrednio w StyleSheet komponentu DS.
+
+Dostępne muted variants (dodaj analogicznie jeśli brakuje):
+
+| Token          | Wartość                    | Użycie                      |
+| -------------- | -------------------------- | --------------------------- |
+| `accentMuted`  | `rgba(255, 107, 26, 0.14)` | tła akcentowe (badge, chip) |
+| `successMuted` | `rgba(46, 224, 160, 0.14)` | tła statusów OK / confirmed |
+| `warningMuted` | `rgba(255, 176, 32, 0.14)` | tła ostrzeżeń / PENDING     |
+| `dangerMuted`  | `rgba(255, 87, 87, 0.14)`  | tła błędów / cancelled      |
+| `infoMuted`    | `rgba(59, 142, 234, 0.14)` | tła informacji              |
 
 ---
 
@@ -4528,6 +4545,22 @@ if (isError) {
 // render normalny
 ```
 
+**Kolejność guardów — `isError` musi być przed `!data`:**
+
+```tsx
+// ✅ TAK — isError sprawdzony zanim sprawdzimy czy data istnieje
+const { data: booking, isLoading, isError } = useBooking(id);
+
+if (isError) return <EmptyState ... />;          // ← najpierw error
+if (isLoading || !booking) return <Spinner />;  // ← potem loading/brak danych
+
+// ❌ NIE — jeśli isError=true, data=undefined, więc !booking=true → wieczny spinner
+if (isLoading || !booking) return <Spinner />;
+// isError nigdy nie zostaje obsłużony
+```
+
+Pułapka pojawia się szczególnie na ekranach potwierdzenia (np. `confirmed.tsx`) gdzie ekran wchodzi z nowym ID i robi fetch — przy błędzie sieci `data` jest `undefined`, a `isLoading` spada do `false`, więc warunek `!booking` trzyma spinner zamiast pokazać błąd.
+
 **React Query invalidation — dwa różne wzorce:**
 
 ```ts
@@ -4542,14 +4575,52 @@ queryClient.invalidateQueries({ queryKey: ['vehicles'] });
 queryClient.invalidateQueries({ queryKey: QUERY_KEYS.vehicles.all });
 ```
 
-```css
-.cardPending {
-  border-left-color: var(--warning);
+---
+
+### 31.8. `refetchInterval` — polling dla statusów przejściowych
+
+Rezerwacje o statusie `PENDING` czekają na potwierdzenie warsztatu. Ekran szczegółów powinien pollować co 30 sekund i zatrzymać polling gdy status się zmieni.
+
+**React Query v5 — poprawna składnia `refetchInterval`:**
+
+```ts
+// ✅ TAK — funkcja przyjmuje query (v5), nie data (v4)
+export function useBooking(id: string) {
+  return useQuery({
+    queryKey: QUERY_KEYS.bookings.detail(id),
+    queryFn: () => getBooking(id),
+    enabled: !!id,
+    refetchInterval: (query) =>
+      query.state.data?.status === 'PENDING' ? 30_000 : false,
+  });
 }
-.cardSuccess {
-  border-left-color: var(--success);
-}
-.cardDanger {
-  border-left-color: var(--danger);
-}
+
+// ❌ NIE — składnia React Query v4 (data jako argument — nie działa w v5)
+refetchInterval: (data) => data?.status === 'PENDING' ? 30_000 : false,
 ```
+
+Polling zatrzymuje się automatycznie gdy `refetchInterval` zwróci `false` — nie trzeba sprzątać ręcznie.
+
+**MSW — symulacja stanów przejściowych i błędów 409:**
+
+Aby testować edge-case'y lokalnie bez modyfikacji całego stanu MSW, użyj wartości-strażników w mock handlerze:
+
+```ts
+http.post(`${BASE}/v1/app/bookings`, async ({ request }) => {
+  const body = (await request.json()) as CreateBookingRequest;
+
+  // Sentinel: slotId 'slot-conflict' → 409 SlotAlreadyBooked
+  if (body.slotId === 'slot-conflict') {
+    return HttpResponse.json(
+      { message: 'Termin zajęty', code: 'SLOT_ALREADY_BOOKED' },
+      { status: 409 },
+    );
+  }
+
+  // ... normalny flow
+}),
+```
+
+Dzięki temu możesz testować obsługę 409 w `handleBook` nie dotykając pozostałych handlers i bez flagi feature.
+
+---

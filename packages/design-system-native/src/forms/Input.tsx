@@ -138,5 +138,5 @@ const styles = StyleSheet.create({
   inputMultiline: { paddingTop: t.spacing[3], textAlignVertical: 'top' },
   leftIcon: { paddingLeft: t.spacing[3] },
   rightIcon: { paddingRight: t.spacing[3] },
-  message: { marginTop: 2 },
+  message: { marginTop: t.spacing[1] },
 });

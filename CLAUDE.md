@@ -17,7 +17,7 @@ Pełna dokumentacja developerska: **`docs/developer-guide.md`**. Przeczytaj go p
 
 - **Tekst = DS komponent.** `<Text>` lub `<Heading>` z `@opony/design-system-native`. Nigdy `Text` z `react-native` bezpośrednio — nawet wewnątrz komponentów DS wyższego poziomu.
 - **Spacing = tokeny.** Zawsze `t.spacing[N]` z `tokens.native.ts`. Nigdy hardcoded wartości pikselowe w StyleSheet (np. `gap: 4`, `marginTop: 2`). Minimalna jednostka w tokenach to `t.spacing[1]` = 4px; dla mniejszych odstępów użyj 0 lub zaakceptuj 4px.
-- **Kolory = tokeny.** `t.colors.xxx` — nigdy inline `rgba(...)` ani hex. Jeśli kolor z przezroczystością nie istnieje w tokenach, zgłoś potrzebę dodania go do `@opony/design-tokens`.
+- **Kolory = tokeny.** `t.colors.xxx` — nigdy inline `rgba(...)` ani hex. Jeśli kolor z przezroczystością nie istnieje w tokenach, dodaj go do **obu plików**: `packages/design-tokens/tokens.json` (Metro/runtime) i `packages/design-tokens/src/index.ts` (typy TS). Samo `src/index.ts` = kolor `undefined` w runtime.
 - **Typy API = `components['schemas']['XxxDto']`.** Gdy endpoint `/v1/app/...` jeszcze nie istnieje w `schema.d.ts` (bo kontroler mobilny nie jest zaimplementowany), stwórz tymczasowy `interface` z komentarzem `// TODO: replace with components['schemas']['AppXxxResponseDto'] after BE implementation`. Nie zostawiaj ręcznych typów bez tego komentarza.
 - **Toast = `useToast()`.** `import { useToast } from '@opony/design-system-native'` — nigdy z innej biblioteki.
 - **Auth guard (expo-router v3) = `useSegments + useEffect`.** `Stack.Protected` nie istnieje w expo-router v3 — używaj wzorca `AuthGuard` komponentu jak w `app/_layout.tsx`.
