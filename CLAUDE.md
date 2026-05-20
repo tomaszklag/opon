@@ -23,7 +23,9 @@ Pełna dokumentacja developerska: **`docs/developer-guide.md`**. Przeczytaj go p
 - **Auth guard (expo-router v3) = `useSegments + useEffect`.** `Stack.Protected` nie istnieje w expo-router v3 — używaj wzorca `AuthGuard` komponentu jak w `app/_layout.tsx`.
 - **Klucze React Query — dwa różne zastosowania.** W `useQuery` używaj pełnego klucza leaf: `QUERY_KEYS.vehicles.all` = `['vehicles', 'all']`. W `invalidateQueries` używaj prefiksu: `{ queryKey: ['vehicles'] }` — to unieważni WSZYSTKIE zapytania zaczynające się od `'vehicles'` (bulk invalidation). Nigdy nie używaj `QUERY_KEYS.vehicles.all` w `invalidateQueries` jeśli chcesz invalidować też przyszłe sub-zasoby.
 - **MSW init = synchroniczny `require()`.** W `mocks/index.ts` używaj `require('./native')` zamiast `await import('./native')`. Metro bundler rozwiązuje `require()` synchronicznie — gwarantuje to, że MSW jest gotowy przed pierwszym requestem. Async dynamic import powoduje race condition na cold start.
-- **isError w hookach danych.** Każdy ekran który używa `useQuery` musi obsługiwać trzy stany: `isLoading` (spinner), `isError` (EmptyState z CTA "Spróbuj ponownie"), dane (render). Brak obsługi `isError` powoduje wyświetlenie fałszywego empty state (np. "brak pojazdów") gdy backend jest niedostępny.
+- **isError w hookach danych.** Każdy ekran który używa `useQuery` musi obsługiwać trzy stany w kolejności: `isError` PIERWSZE (EmptyState), `isLoading || !data` (Spinner), dane (render). Odwrócona kolejność (`isLoading` przed `isError`) powoduje wieczny spinner gdy `data=undefined` po błędzie.
+- **Error boundary = `+error.tsx`, nie `_error.tsx`.** expo-router v3 rejestruje globalne error boundary jako `app/+error.tsx`. Plik `_error.tsx` (z podkreślnikiem) jest traktowany jako prywatny i ignorowany przez router.
+- **Nowe sub-trasy pod Tabs = wpis w `_layout.tsx`.** Każdy nowy ekran zagnieżdżony pod `providers/[id]/...` lub `bookings/[id]/...` wymaga jawnego `<Tabs.Screen name="providers/[id]/nowy-ekran" options={{ href: null }} />` w `app/(app)/_layout.tsx`. Brak wpisu = trasa może nie działać w runtime.
 
 ## Commit workflow
 

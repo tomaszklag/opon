@@ -103,30 +103,6 @@ const mockSlots = [
   },
 ];
 
-const mockReviews = [
-  {
-    id: 'review-1',
-    rating: 5,
-    comment: 'Szybko, sprawnie i w dobrej cenie. Polecam!',
-    clientName: 'Marek K.',
-    createdAt: '2026-04-15T10:00:00.000Z',
-  },
-  {
-    id: 'review-2',
-    rating: 5,
-    comment: 'Miła obsługa, wszystko zrobione na czas.',
-    clientName: 'Anna W.',
-    createdAt: '2026-03-22T14:00:00.000Z',
-  },
-  {
-    id: 'review-3',
-    rating: 4,
-    comment: null,
-    clientName: 'Piotr S.',
-    createdAt: '2026-02-10T09:00:00.000Z',
-  },
-];
-
 export const providersHandlers = [
   http.get(`${BASE}/v1/app/providers`, ({ request }) => {
     const url = new URL(request.url);
@@ -149,6 +125,4 @@ export const providersHandlers = [
   }),
 
   http.get(`${BASE}/v1/app/providers/:id/slots`, () => HttpResponse.json(mockSlots)),
-
-  http.get(`${BASE}/v1/app/providers/:id/reviews`, () => HttpResponse.json(mockReviews)),
 ];

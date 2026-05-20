@@ -15,6 +15,7 @@ export { Checkbox } from './forms/Checkbox';
 // Feedback
 export { Spinner } from './feedback/Spinner';
 export { ToastProvider, useToast } from './feedback/Toast';
+export { Modal } from './feedback/Modal';
 
 // Display
 export { Badge } from './display/Badge';
@@ -26,3 +27,4 @@ export { BookingCard } from './display/BookingCard';
 
 // Forms (filters)
 export { ChipFilter } from './forms/ChipFilter';
+export { StarRating } from './forms/StarRating';

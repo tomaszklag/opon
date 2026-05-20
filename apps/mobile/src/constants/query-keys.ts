@@ -10,11 +10,13 @@ export const QUERY_KEYS = {
     list: (params: object) => ['providers', 'list', params] as const,
     detail: (id: string) => ['providers', 'detail', id] as const,
     slots: (id: string, date: string) => ['providers', 'slots', id, date] as const,
-    reviews: (id: string) => ['providers', 'reviews', id] as const,
   },
   bookings: {
     all: ['bookings'] as const,
     list: (status?: string) => ['bookings', 'list', status] as const,
     detail: (id: string) => ['bookings', 'detail', id] as const,
+  },
+  reviews: {
+    byProvider: (providerId: string) => ['reviews', 'provider', providerId] as const,
   },
 } as const;

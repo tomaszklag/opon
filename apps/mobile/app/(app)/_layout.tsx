@@ -3,6 +3,7 @@ import { View, StyleSheet } from 'react-native';
 import { t } from '@opony/design-system-native';
 import { useAuthStore } from '@/stores/auth.store';
 import { HomeIcon, CalendarIcon, MapIcon, UserIcon } from '@/components/icons';
+import { OfflineBanner } from '@/components/OfflineBanner';
 
 export default function AppLayout() {
   const { isAuthenticated } = useAuthStore();
@@ -12,64 +13,73 @@ export default function AppLayout() {
   }
 
   return (
-    <Tabs
-      screenOptions={{
-        headerShown: false,
-        tabBarStyle: styles.tabBar,
-        tabBarActiveTintColor: t.colors.accent,
-        tabBarInactiveTintColor: t.colors.textMuted,
-        tabBarLabelStyle: styles.tabLabel,
-        tabBarBackground: () => <View style={styles.tabBarBg} />,
-      }}
-    >
-      <Tabs.Screen
-        name="(tabs)/index"
-        options={{
-          title: 'Strona główna',
-          tabBarLabel: 'Główna',
-          tabBarIcon: ({ color }) => <HomeIcon color={color} size={24} />,
+    <View style={styles.shell}>
+      <OfflineBanner />
+      <Tabs
+        screenOptions={{
+          headerShown: false,
+          tabBarStyle: styles.tabBar,
+          tabBarActiveTintColor: t.colors.accent,
+          tabBarInactiveTintColor: t.colors.textMuted,
+          tabBarLabelStyle: styles.tabLabel,
+          tabBarBackground: () => <View style={styles.tabBarBg} />,
         }}
-      />
-      <Tabs.Screen
-        name="(tabs)/bookings"
-        options={{
-          title: 'Moje rezerwacje',
-          tabBarLabel: 'Rezerwacje',
-          tabBarIcon: ({ color }) => <CalendarIcon color={color} size={24} />,
-        }}
-      />
-      <Tabs.Screen
-        name="(tabs)/map"
-        options={{
-          title: 'Mapa',
-          tabBarLabel: 'Mapa',
-          tabBarIcon: ({ color }) => <MapIcon color={color} size={24} />,
-        }}
-      />
-      <Tabs.Screen
-        name="(tabs)/profile"
-        options={{
-          title: 'Profil',
-          tabBarLabel: 'Profil',
-          tabBarIcon: ({ color }) => <UserIcon color={color} size={24} />,
-        }}
-      />
-      {/* Ukryte ekrany (stack ponad tabs) */}
-      <Tabs.Screen name="providers/[id]" options={{ href: null }} />
-      <Tabs.Screen name="bookings/[id]" options={{ href: null }} />
-      <Tabs.Screen name="onboarding/profile" options={{ href: null }} />
-      <Tabs.Screen name="onboarding/vehicle" options={{ href: null }} />
-    </Tabs>
+      >
+        <Tabs.Screen
+          name="(tabs)/index"
+          options={{
+            title: 'Strona główna',
+            tabBarLabel: 'Główna',
+            tabBarIcon: ({ color }) => <HomeIcon color={color} size={24} />,
+          }}
+        />
+        <Tabs.Screen
+          name="(tabs)/bookings"
+          options={{
+            title: 'Moje rezerwacje',
+            tabBarLabel: 'Rezerwacje',
+            tabBarIcon: ({ color }) => <CalendarIcon color={color} size={24} />,
+          }}
+        />
+        <Tabs.Screen
+          name="(tabs)/map"
+          options={{
+            title: 'Mapa',
+            tabBarLabel: 'Mapa',
+            tabBarIcon: ({ color }) => <MapIcon color={color} size={24} />,
+          }}
+        />
+        <Tabs.Screen
+          name="(tabs)/profile"
+          options={{
+            title: 'Profil',
+            tabBarLabel: 'Profil',
+            tabBarIcon: ({ color }) => <UserIcon color={color} size={24} />,
+          }}
+        />
+        {/* Ukryte ekrany (stack ponad tabs) */}
+        <Tabs.Screen name="providers/[id]" options={{ href: null }} />
+        <Tabs.Screen name="providers/[id]/rate" options={{ href: null }} />
+        <Tabs.Screen name="providers/[id]/reviews" options={{ href: null }} />
+        <Tabs.Screen name="bookings/[id]" options={{ href: null }} />
+        <Tabs.Screen name="onboarding/profile" options={{ href: null }} />
+        <Tabs.Screen name="onboarding/vehicle" options={{ href: null }} />
+      </Tabs>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  shell: {
+    flex: 1,
+    position: 'relative',
+  },
   tabBar: {
     backgroundColor: t.colors.surface,
     borderTopColor: t.colors.border,
     borderTopWidth: 1,
-    height: 60,
-    paddingBottom: 8,
+    height: 60, // React Navigation tabBar height — no matching design token
+    paddingBottom: t.spacing[2],
   },
   tabBarBg: {
     flex: 1,
@@ -77,7 +87,7 @@ const styles = StyleSheet.create({
   },
   tabLabel: {
     fontFamily: t.fontFamily.body,
-    fontSize: 11,
+    fontSize: 11, // tabBarLabelStyle requires raw value — no DS Text component alternative
     fontWeight: '500',
   },
 });

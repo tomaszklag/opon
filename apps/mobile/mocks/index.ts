@@ -1,4 +1,5 @@
-import { server } from './native';
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const { server } = require('./native') as typeof import('./native');
 
 // Wywołaj initMsw() na poziomie modułu w app/_layout.tsx (przed renderem):
 // import { initMsw } from '../mocks';

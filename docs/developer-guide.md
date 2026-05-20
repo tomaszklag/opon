@@ -4494,9 +4494,9 @@ W React Native Metro bundler rozwiązuje `require()` **synchronicznie**, natomia
 
 ```ts
 // ✅ TAK — mocks/index.ts
-// Static import: Metro bundler rozwiązuje go synchronicznie (jak require),
-// więc server jest gotowy zanim poleci pierwszy request.
-import { server } from './native';
+// require() jest synchroniczny — Metro rozwiązuje go przed render tree.
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const { server } = require('./native') as typeof import('./native');
 
 export function initMsw(): void {
   if (process.env.EXPO_PUBLIC_API_MOCK !== 'true') return;
@@ -4526,10 +4526,8 @@ initMsw(); // synchroniczny — bezpieczne bez await
 Każdy ekran używający `useQuery` musi obsługiwać **trzy stany**: ładowanie, błąd i dane. Brak obsługi `isError` powoduje wyświetlenie fałszywego empty state gdy backend jest niedostępny.
 
 ```tsx
-// ✅ Wymagany wzorzec
-const { data, isLoading, isError } = useVehicles();
-
-if (isLoading) return <ActivityIndicator color={t.colors.accent} />;
+// ✅ Wymagany wzorzec — isError ZAWSZE przed isLoading/!data
+const { data, isLoading, isError, refetch } = useVehicles();
 
 if (isError) {
   return (
@@ -4541,6 +4539,8 @@ if (isError) {
     />
   );
 }
+
+if (isLoading || !data) return <Spinner />;
 
 // render normalny
 ```
@@ -4560,6 +4560,24 @@ if (isLoading || !booking) return <Spinner />;
 ```
 
 Pułapka pojawia się szczególnie na ekranach potwierdzenia (np. `confirmed.tsx`) gdzie ekran wchodzi z nowym ID i robi fetch — przy błędzie sieci `data` jest `undefined`, a `isLoading` spada do `false`, więc warunek `!booking` trzyma spinner zamiast pokazać błąd.
+
+**CTA label w EmptyState — spójność z akcją:**
+
+Label `ctaLabel` musi opisywać faktyczną akcję przycisku:
+
+```tsx
+// ✅ TAK — label pasuje do akcji
+// Gdy można ponowić request:
+<EmptyState ctaLabel="Spróbuj ponownie" onCtaPress={refetch} />
+
+// Gdy nie ma sensu retryować (np. błąd ładowania danych wymaganych do formularza):
+<EmptyState ctaLabel="Wróć" onCtaPress={() => router.back()} />
+
+// ❌ NIE — label sugeruje retry, ale akcja cofa użytkownika
+<EmptyState ctaLabel="Spróbuj ponownie" onCtaPress={() => router.back()} />
+```
+
+Destrukturyzuj `refetch` z `useQuery` gdy planujesz użyć go jako `onCtaPress`.
 
 **React Query invalidation — dwa różne wzorce:**
 
@@ -4622,5 +4640,49 @@ http.post(`${BASE}/v1/app/bookings`, async ({ request }) => {
 ```
 
 Dzięki temu możesz testować obsługę 409 w `handleBook` nie dotykając pozostałych handlers i bez flagi feature.
+
+---
+
+### 31.9. expo-router — pliki specjalne i rejestracja tras
+
+**Prefiksy plików specjalnych:**
+
+expo-router v3 używa prefiksu `+` dla plików specjalnych (nie `_`). Plik z `_` jest prywatny — router go ignoruje.
+
+| Plik                      | Przeznaczenie                                                          |
+| ------------------------- | ---------------------------------------------------------------------- |
+| `app/+error.tsx`          | Globalny error boundary (props: `{ error: Error; retry: () => void }`) |
+| `app/+not-found.tsx`      | Ekran 404 dla nieznanych tras                                          |
+| `app/(group)/_layout.tsx` | Layout grupy — `_` tutaj to konwencja layoutu, nie prefix specjalny    |
+
+```tsx
+// ✅ TAK — globalny error handler
+// app/+error.tsx
+export default function ErrorBoundary({ error, retry }: { error: Error; retry: () => void }) { ... }
+
+// ❌ NIE — plik prywatny, expo-router go ignoruje
+// app/_error.tsx  ← router nie zarejestruje tego jako error boundary
+```
+
+**Rejestracja sub-tras w `<Tabs>`:**
+
+Gdy dodajesz nowe ekrany zagnieżdżone pod segmentem dynamicznym (np. `providers/[id]/rate.tsx`), musisz je jawnie zarejestrować w `app/(app)/_layout.tsx` z `options={{ href: null }}`. Bez rejestracji expo-router może nie rozpoznać trasy w kontekście Tabs.
+
+```tsx
+// app/(app)/_layout.tsx
+<Tabs>
+  {/* ... zakładki ... */}
+
+  {/* Ukryte ekrany — każdy nowy ekran pod providers/[id]/ wymaga wpisu */}
+  <Tabs.Screen name="providers/[id]" options={{ href: null }} />
+  <Tabs.Screen name="providers/[id]/slots" options={{ href: null }} />
+  <Tabs.Screen name="providers/[id]/confirmed" options={{ href: null }} />
+  <Tabs.Screen name="providers/[id]/rate" options={{ href: null }} />
+  <Tabs.Screen name="providers/[id]/reviews" options={{ href: null }} />
+  <Tabs.Screen name="bookings/[id]" options={{ href: null }} />
+</Tabs>
+```
+
+Brak wpisu dla `providers/[id]/rate` nie zawsze powoduje błąd kompilacji — trasa może nie być rozpoznana w runtime lub prowadzić do niepoprawnego layoutu.
 
 ---

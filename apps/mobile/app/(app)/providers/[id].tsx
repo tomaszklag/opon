@@ -1,7 +1,8 @@
 import { ScrollView, View, StyleSheet, Pressable, Linking } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { t, Heading, Text, Button, Badge, Spinner } from '@opony/design-system-native';
-import { useProvider, useProviderReviews } from '@/hooks/providers/use-provider';
+import { useProvider } from '@/hooks/providers/use-provider';
+import { useReviews } from '@/hooks/reviews/use-reviews';
 
 function BackButton() {
   const router = useRouter();
@@ -46,7 +47,7 @@ export default function ProviderDetailScreen() {
   const router = useRouter();
 
   const { data: provider, isLoading, isError } = useProvider(id);
-  const { data: reviews } = useProviderReviews(id);
+  const { data: reviews } = useReviews(id);
 
   if (isLoading) {
     return (
@@ -174,7 +175,7 @@ export default function ProviderDetailScreen() {
               <View key={review.id} style={styles.reviewCard}>
                 <View style={styles.reviewHeader}>
                   <Text variant="bodySmall" weight="semibold" color="textPrimary">
-                    {review.clientName}
+                    {review.author.firstName ?? 'Anonim'}
                   </Text>
                   <Text variant="caption" color="warning">
                     {'★'.repeat(review.rating)}

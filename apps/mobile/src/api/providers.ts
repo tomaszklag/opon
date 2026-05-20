@@ -1,5 +1,7 @@
 import { api } from './client';
 
+// NOTE: Reviews are handled in api/reviews.ts
+
 // TODO: replace with components['schemas']['AppProviderResponseDto'] after BE /v1/app/providers implementation
 export interface AppProvider {
   id: string;
@@ -43,15 +45,6 @@ export interface AppSlot {
   available: boolean;
 }
 
-// TODO: replace with components['schemas']['AppReviewResponseDto'] after BE implementation
-export interface AppReview {
-  id: string;
-  rating: number;
-  comment: string | null;
-  clientName: string;
-  createdAt: string;
-}
-
 export const listProviders = (params?: ListProvidersParams) =>
   api.get<AppProviderListResponse>(
     '/v1/app/providers',
@@ -62,6 +55,3 @@ export const getProvider = (id: string) => api.get<AppProvider>(`/v1/app/provide
 
 export const getSlots = (providerId: string, date: string) =>
   api.get<AppSlot[]>(`/v1/app/providers/${providerId}/slots`, { date });
-
-export const getReviews = (providerId: string) =>
-  api.get<AppReview[]>(`/v1/app/providers/${providerId}/reviews`);
