@@ -20,3 +20,7 @@ export { ToastProvider, useToast } from './feedback/Toast';
 export { Badge } from './display/Badge';
 export { Card } from './display/Card';
 export { EmptyState } from './display/EmptyState';
+export { ProviderCard } from './display/ProviderCard';
+
+// Forms (filters)
+export { ChipFilter } from './forms/ChipFilter';

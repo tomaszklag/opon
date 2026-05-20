@@ -7,8 +7,10 @@ import { StatusBar } from 'expo-status-bar';
 import { ToastProvider } from '@opony/design-system-native';
 import { queryClient } from '@/lib/query-client';
 import { useAuthStore } from '@/stores/auth.store';
+import { initMsw } from '../mocks';
 
 SplashScreen.preventAutoHideAsync();
+initMsw();
 
 function AuthGuard({ isAuthenticated }: { isAuthenticated: boolean }) {
   const segments = useSegments();

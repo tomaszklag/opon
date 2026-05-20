@@ -21,7 +21,9 @@ Pełna dokumentacja developerska: **`docs/developer-guide.md`**. Przeczytaj go p
 - **Typy API = `components['schemas']['XxxDto']`.** Gdy endpoint `/v1/app/...` jeszcze nie istnieje w `schema.d.ts` (bo kontroler mobilny nie jest zaimplementowany), stwórz tymczasowy `interface` z komentarzem `// TODO: replace with components['schemas']['AppXxxResponseDto'] after BE implementation`. Nie zostawiaj ręcznych typów bez tego komentarza.
 - **Toast = `useToast()`.** `import { useToast } from '@opony/design-system-native'` — nigdy z innej biblioteki.
 - **Auth guard (expo-router v3) = `useSegments + useEffect`.** `Stack.Protected` nie istnieje w expo-router v3 — używaj wzorca `AuthGuard` komponentu jak w `app/_layout.tsx`.
-- **Klucze React Query = hierarchiczne tablice.** Każdy klucz musi być tablicą z co najmniej dwoma elementami: `['zasób', 'all']`, `['zasób', 'detail', id]`. Nigdy `['zasób']` jako klucz leaf — uniemożliwia to selektywną invalidację.
+- **Klucze React Query — dwa różne zastosowania.** W `useQuery` używaj pełnego klucza leaf: `QUERY_KEYS.vehicles.all` = `['vehicles', 'all']`. W `invalidateQueries` używaj prefiksu: `{ queryKey: ['vehicles'] }` — to unieważni WSZYSTKIE zapytania zaczynające się od `'vehicles'` (bulk invalidation). Nigdy nie używaj `QUERY_KEYS.vehicles.all` w `invalidateQueries` jeśli chcesz invalidować też przyszłe sub-zasoby.
+- **MSW init = synchroniczny `require()`.** W `mocks/index.ts` używaj `require('./native')` zamiast `await import('./native')`. Metro bundler rozwiązuje `require()` synchronicznie — gwarantuje to, że MSW jest gotowy przed pierwszym requestem. Async dynamic import powoduje race condition na cold start.
+- **isError w hookach danych.** Każdy ekran który używa `useQuery` musi obsługiwać trzy stany: `isLoading` (spinner), `isError` (EmptyState z CTA "Spróbuj ponownie"), dane (render). Brak obsługi `isError` powoduje wyświetlenie fałszywego empty state (np. "brak pojazdów") gdy backend jest niedostępny.
 
 ## Commit workflow
 

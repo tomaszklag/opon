@@ -4457,6 +4457,91 @@ Kastowanie `segments as string[]` jest konieczne — TypeScript inferuje typ jak
 
 Castowanie routów `as never` jest tymczasowe — typy generuje `expo start` do `.expo/types/router.d.ts`. Po uruchomieniu projektu casty stają się zbędne.
 
+**Dynamiczny segment: plik + folder mogą współistnieć.** W expo-router v3 możesz mieć jednocześnie `[id].tsx` (strona detalu) i `[id]/` (katalog z zagnieżdżonymi ekranami):
+
+```
+app/(app)/providers/
+├── [id].tsx          ← /providers/123
+└── [id]/
+    ├── slots.tsx     ← /providers/123/slots
+    └── confirmed.tsx ← /providers/123/confirmed
+```
+
+Nie musisz zamieniać `[id].tsx` na `[id]/index.tsx` — oba podejścia działają. Metro bundler i expo-router traktują plik jako obsługę dokładnego dopasowania, a katalog jako zagnieżdżone trasy.
+
+---
+
+### 31.6. MSW — inicjalizacja synchroniczna w React Native
+
+W React Native Metro bundler rozwiązuje `require()` **synchronicznie**, natomiast `import()` jest asynchroniczne. MSW musi być gotowy zanim poleci pierwszy request — dlatego inicjalizacja musi być synchroniczna:
+
+```ts
+// ✅ TAK — mocks/index.ts
+// Static import: Metro bundler rozwiązuje go synchronicznie (jak require),
+// więc server jest gotowy zanim poleci pierwszy request.
+import { server } from './native';
+
+export function initMsw(): void {
+  if (process.env.EXPO_PUBLIC_API_MOCK !== 'true') return;
+  server.listen({ onUnhandledRequest: 'warn' });
+}
+
+// ❌ NIE — async + dynamic import = race condition na cold start
+export async function initMsw(): Promise<void> {
+  if (process.env.EXPO_PUBLIC_API_MOCK !== 'true') return;
+  const { server } = await import('./native'); // MSW może nie być gotowy przed requestami
+  server.listen({ onUnhandledRequest: 'warn' });
+}
+```
+
+Wywołanie w `app/_layout.tsx` na poziomie modułu (przed renderem):
+
+```ts
+import { initMsw } from '../mocks';
+SplashScreen.preventAutoHideAsync();
+initMsw(); // synchroniczny — bezpieczne bez await
+```
+
+---
+
+### 31.7. Obsługa stanów React Query — trójka stanów
+
+Każdy ekran używający `useQuery` musi obsługiwać **trzy stany**: ładowanie, błąd i dane. Brak obsługi `isError` powoduje wyświetlenie fałszywego empty state gdy backend jest niedostępny.
+
+```tsx
+// ✅ Wymagany wzorzec
+const { data, isLoading, isError } = useVehicles();
+
+if (isLoading) return <ActivityIndicator color={t.colors.accent} />;
+
+if (isError) {
+  return (
+    <EmptyState
+      title="Błąd ładowania"
+      description="Sprawdź połączenie i spróbuj ponownie."
+      ctaLabel="Spróbuj ponownie"
+      onCtaPress={refetch}
+    />
+  );
+}
+
+// render normalny
+```
+
+**React Query invalidation — dwa różne wzorce:**
+
+```ts
+// useQuery — używaj pełnego klucza leaf z QUERY_KEYS
+useQuery({ queryKey: QUERY_KEYS.vehicles.all }); // ['vehicles', 'all']
+
+// invalidateQueries — używaj krótkiego prefiksu (invaliduje WSZYSTKIE vehicle queries)
+queryClient.invalidateQueries({ queryKey: ['vehicles'] });
+
+// ❌ NIE — QUERY_KEYS.vehicles.all w invalidateQueries unieważnia TYLKO tę jedną query,
+//           pomijając przyszłe sub-zasoby jak ['vehicles', 'detail', id]
+queryClient.invalidateQueries({ queryKey: QUERY_KEYS.vehicles.all });
+```
+
 ```css
 .cardPending {
   border-left-color: var(--warning);
