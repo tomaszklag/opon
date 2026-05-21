@@ -13,22 +13,32 @@ import {
   Req,
   Res,
 } from '@nestjs/common';
-import { ApiCookieAuth, ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiCookieAuth,
+  ApiOperation,
+  ApiQuery,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { ConfigService } from '@nestjs/config';
+import { ConsentType } from '@prisma/client';
 import { randomUUID } from 'crypto';
 import type { Request, Response } from 'express';
 import { AppException, ErrorCode } from '../common/errors';
 import { EmailVerificationService } from '../email/email-verification.service';
+import { PrismaService } from '../prisma/prisma.service';
 import { AuthService } from './auth.service';
 import { CurrentUser } from './decorators/current-user.decorator';
 import { Public } from './decorators/public.decorator';
 import { AuthMeResponseDto } from './dto/auth-me-response.dto';
 import { ChangePhoneDto } from './dto/change-phone.dto';
 import { ChangePhoneResponseDto } from './dto/change-phone-response.dto';
-import { SessionResponseDto } from './dto/session-response.dto';
 import { MessageResponseDto } from './dto/message-response.dto';
+import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { RequestOtpDto } from './dto/request-otp.dto';
 import { RequestOtpResponseDto } from './dto/request-otp-response.dto';
+import { SessionResponseDto } from './dto/session-response.dto';
 import { VerifyOtpDto } from './dto/verify-otp.dto';
 import { VerifyOtpResponseDto } from './dto/verify-otp-response.dto';
 import { OtpService } from './otp.service';
@@ -42,6 +52,7 @@ export class AuthController {
     private readonly otpService: OtpService,
     private readonly emailVerificationService: EmailVerificationService,
     private readonly config: ConfigService,
+    private readonly prisma: PrismaService,
   ) {}
 
   // ── POST /v1/auth/request-otp ──────────────────────────────────────────────
@@ -73,7 +84,7 @@ export class AuthController {
     @Body() dto: VerifyOtpDto,
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
-  ): Promise<{ message: string; role: string; providerId?: string }> {
+  ): Promise<VerifyOtpResponseDto> {
     const valid = await this.otpService.verifyOtp(dto.phone, dto.code);
     if (!valid)
       throw new AppException(
@@ -82,7 +93,7 @@ export class AuthController {
         401,
       );
 
-    const user = await this.authService.findOrCreateUser(dto.phone);
+    const { isNewUser, ...user } = await this.authService.findOrCreateUser(dto.phone);
 
     const jti = randomUUID();
     const payload: JwtPayload = {
@@ -101,10 +112,36 @@ export class AuthController {
 
     this.authService.setAuthCookies(res, accessToken, refreshToken);
 
+    // Fetch full user record for mobile response
+    const fullUser = await this.prisma.user.findUnique({
+      where: { id: user.id },
+      select: { id: true, phone: true, firstName: true, lastName: true, email: true, role: true },
+    });
+
+    // Check consent: requiresConsent = true if user has no accepted TERMS consent
+    const termsConsent = await this.prisma.consentLog.findFirst({
+      where: { userId: user.id, consentType: ConsentType.TERMS, accepted: true },
+    });
+    const requiresConsent = termsConsent === null;
+
     return {
       message: 'Zalogowano',
       role: user.role,
       ...(user.providerId ? { providerId: user.providerId } : {}),
+      accessToken,
+      refreshToken,
+      user: fullUser
+        ? {
+            id: fullUser.id,
+            phone: fullUser.phone,
+            firstName: fullUser.firstName,
+            lastName: fullUser.lastName,
+            email: fullUser.email,
+            role: fullUser.role,
+          }
+        : undefined,
+      requiresConsent,
+      isNewUser,
     };
   }
 
@@ -114,14 +151,17 @@ export class AuthController {
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
   @ApiCookieAuth('refresh_token')
-  @ApiOperation({ summary: 'Odśwież access token używając refresh cookie' })
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Odśwież access token używając refresh cookie lub body (mobile)' })
   @ApiResponse({ status: 200, type: MessageResponseDto })
   @ApiResponse({ status: 401, description: 'Brak, nieprawidłowy lub skradziony refresh token' })
   async refresh(
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
-  ): Promise<MessageResponseDto> {
-    const oldRefreshToken = req.cookies?.['refresh_token'] as string | undefined;
+    @Body() body?: RefreshTokenDto,
+  ): Promise<MessageResponseDto & { accessToken?: string; refreshToken?: string }> {
+    const oldRefreshToken =
+      (req.cookies?.['refresh_token'] as string | undefined) ?? body?.refreshToken;
     if (!oldRefreshToken)
       throw new AppException(ErrorCode.AUTH_UNAUTHORIZED, 'Brak refresh token.', 401);
 
@@ -160,7 +200,7 @@ export class AuthController {
     );
 
     this.authService.setAuthCookies(res, accessToken, newRefreshToken);
-    return { message: 'Token odświeżony' };
+    return { message: 'Token odświeżony', accessToken, refreshToken: newRefreshToken };
   }
 
   // ── POST /v1/auth/logout ───────────────────────────────────────────────────

@@ -9,10 +9,14 @@
   },
   "scripts": {
     "dev": "turbo dev",
+    "dev:api": "turbo dev --filter=@opony/api",
     "dev:panel-all": "turbo dev --filter=@opony/api --filter=@opony/panel",
     "dev:panel-front": "turbo dev --filter=@opony/panel",
+    "dev:mobile-front": "turbo dev --filter=@opony/mobile",
+    "dev:mobile-all": "turbo dev --filter=@opony/api --filter=@opony/mobile",
+    "dev:mobile": "expo start apps/mobile",
     "dev:all": "turbo dev --filter=@opony/api --filter=@opony/panel --filter=@opony/landing --filter=@opony/mobile",
-    "dev-stop": "powershell -ExecutionPolicy Bypass -NoProfile -File scripts/dev-stop.ps1",
+    "dev:stop": "powershell -ExecutionPolicy Bypass -NoProfile -File scripts/dev-stop.ps1",
     "build": "turbo build",
     "lint": "turbo lint",
     "type-check": "turbo type-check",
@@ -21,8 +25,8 @@
     "db:seed": "cd apps/api && pnpm prisma db seed",
     "db:studio": "cd apps/api && pnpm prisma studio",
     "storybook": "turbo storybook --filter=@opony/design-system-web",
-    "docker:up": "docker compose up -d",
-    "docker:down": "docker compose down",
+    "docker:up": "docker compose -f deploy/docker-compose.yml up -d",
+    "docker:down": "docker compose -f deploy/docker-compose.yml down",
     "prepare": "husky"
   },
   "devDependencies": {
@@ -45,7 +49,9 @@
       "sharp"
     ],
     "overrides": {
-      "@types/react": "18.3.28"
+      "@types/react": "18.3.28",
+      "@opony/mobile>@types/react": "~19.1.10",
+      "react-native-screens": "~4.16.0"
     }
   },
   "lint-staged": {

@@ -38,15 +38,18 @@ export class AuthService {
   // ── Użytkownicy ────────────────────────────────────────────────────────────
 
   /** Szuka lub tworzy użytkownika po numerze telefonu. Używane przy verify-otp. */
-  async findOrCreateUser(phone: string): Promise<UserWithProvider> {
+  async findOrCreateUser(phone: string): Promise<UserWithProvider & { isNewUser: boolean }> {
+    let isNewUser = false;
     let user = await this.authRepository.findUserByPhone(phone);
     if (!user) {
       user = await this.authRepository.createUser(phone);
+      isNewUser = true;
     }
     this.assertUserActive(user);
     // Lazy-link: ghost Client records with this phone get linked to the User account
     void this.authRepository.linkClientsByPhone(phone, user.id);
-    return this.buildUserWithProvider(user);
+    const userWithProvider = await this.buildUserWithProvider(user);
+    return { ...userWithProvider, isNewUser };
   }
 
   /** Szuka istniejącego użytkownika — nigdy nie tworzy. Używane przy refresh. */

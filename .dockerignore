@@ -1,0 +1,11 @@
+node_modules
+apps/*/node_modules
+packages/*/node_modules
+apps/api/dist
+apps/landing/.next
+apps/landing/out
+apps/panel/.next
+apps/mobile
+.turbo
+.git
+*.log

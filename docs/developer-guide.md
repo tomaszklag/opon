@@ -611,7 +611,57 @@ Nowe serwisy admin dodawaj do `apps/api/src/admin/` i rejestruj je w `AdminModul
    └─ cd apps/api && npx tsc --noEmit
 ```
 
-### 5.3. Wzorzec: kolejka asynchronicznych wniosków (admin queue)
+### 5.3. Wzorzec: dual kontrolery (B2B + Mobile)
+
+Każda domena z endpointami mobilnymi używa **dwóch osobnych kontrolerów** — jeden B2B, jeden mobile. Serwis i repozytorium są wspólne.
+
+```
+bookings/
+  bookings.controller.ts       ← B2B: /v1/providers/me/bookings  @Roles(PROVIDER)
+  bookings-app.controller.ts   ← Mobile: /v1/app/bookings         @Roles(CLIENT)
+  bookings.service.ts          ← wspólna logika biznesowa
+  bookings.repository.ts       ← wspólne zapytania Prisma
+```
+
+**Checklist dla każdego mobilnego kontrolera — bez wyjątków:**
+
+```ts
+@ApiTags('app-<domena>')
+@ApiBearerAuth()
+@Roles(UserRole.CLIENT)          // ← OBOWIĄZKOWE na klasie
+@Controller('v1/app/<domena>')
+export class DomenaAppController {
+  @Get(':id')
+  async getOne(
+    @Param('id', ParseUUIDPipe) id: string,  // ← ParseUUIDPipe na każdym :id
+  ) { ... }
+}
+```
+
+**Własność endpointu = własność domeny.** `POST /v1/app/users/me/consent` należy do `UsersAppController` w `UsersAppModule` — nie do `AuthController` w `AuthModule`. Umieszczenie endpointu w obcym module grozi brakiem `@Roles` i konfliktem ścieżek gdy oba moduły zarejestrują kontroler na tej samej trasie.
+
+**`forwardRef()` dla circular dependencies.** Mobilne kontrolery często importują wiele serwisów z różnych modułów, co tworzy okrągłe zależności. Gdy moduł A importuje B i B importuje A, użyj `forwardRef` po obu stronach:
+
+```ts
+// providers.module.ts
+imports: [
+  forwardRef(() => BookingsModule),  // ← forwardRef, nie BookingsModule bezpośrednio
+  forwardRef(() => ReviewsModule),
+],
+
+// bookings.module.ts
+imports: [
+  forwardRef(() => ProvidersModule),
+],
+```
+
+Brak `forwardRef` przy circular dependency: crash przy starcie serwera z `Cannot access 'BookingsModule' before initialization` — bez wskazania której zmiany to spowodowała.
+
+**Trójki wymagające `forwardRef` w tym projekcie:** `ProvidersModule ↔ BookingsModule ↔ ReviewsModule ↔ WorkerTasksModule`.
+
+---
+
+### 5.4. Wzorzec: kolejka asynchronicznych wniosków (admin queue)
 
 Używany gdy użytkownik składa wniosek wymagający ręcznej akcji admina — i nie ma potrzeby natychmiastowej zmiany głównego statusu encji. Przykłady: zamówienie kopii danych RODO (`DataExportRequest`), odwołanie od opinii, wniosek o refund.
 
@@ -4328,14 +4378,619 @@ Użyj `border-left` — przeglądarka respektuje `border-radius` na narożnikach
 
 Dla wariantów statusowych zmień tylko kolor lewego bordera:
 
-```css
-.cardPending {
-  border-left-color: var(--warning);
-}
-.cardSuccess {
-  border-left-color: var(--success);
-}
-.cardDanger {
-  border-left-color: var(--danger);
+---
+
+## 31. Mobile app (`apps/mobile`) — konwencje i wzorce
+
+### 31.1. Design System Native — zasady
+
+Komponenty React Native żyją w `packages/design-system-native`. Zasady analogiczne do panelu:
+
+**Tekst zawsze przez DS komponent:**
+
+```tsx
+// ✅ TAK
+import { Text, Heading } from '@opony/design-system-native';
+<Text variant="body" color="textSecondary" weight="semibold">
+  ...
+</Text>;
+
+// ❌ NIE — nawet wewnątrz innych komponentów DS
+import { Text } from 'react-native';
+<Text style={{ color: t.colors.textPrimary, fontFamily: t.fontFamily.body }}>...</Text>;
+```
+
+**Spacing zawsze przez tokeny:**
+
+```tsx
+// ✅ TAK — t.spacing[N] z tokens.native.ts
+const styles = StyleSheet.create({
+  container: { gap: t.spacing[3] },
+  label: { marginBottom: t.spacing[1] },
+});
+
+// ❌ NIE — hardcoded piksele
+const styles = StyleSheet.create({
+  container: { gap: 12 },
+  label: { marginBottom: 2 },
+});
+```
+
+Skala tokenów: `t.spacing[1]`=4px, `[2]`=8px, `[3]`=12px, `[4]`=16px, `[5]`=20px, `[6]`=24px, `[8]`=32px. Minimalna jednostka = 4px. Wartości 1–3px bez tokenu są akceptowalne tylko jako borderWidth lub absolutne offsety px (np. translacja animacji).
+
+**Kolory zawsze przez tokeny:**
+
+```tsx
+// ✅ TAK
+{ backgroundColor: t.colors.surface, borderColor: t.colors.accent }
+
+// ❌ NIE — inline rgba/hex
+{ backgroundColor: 'rgba(46, 224, 160, 0.14)' }
+```
+
+Jeśli potrzebujesz koloru z przezroczystością (muted variant), dodaj go do **obu** plików:
+
+```
+packages/design-tokens/tokens.json   ← runtime (Metro bundler importuje ten plik przez package.json "main")
+packages/design-tokens/src/index.ts  ← typy TypeScript (ColorKey = keyof typeof colors)
+```
+
+Samo dodanie do `src/index.ts` powoduje błąd w runtime (`t.colors.successMuted === undefined`) — Metro idzie przez `exports["."]` → `tokens.json`, nie przez TypeScript source. Nie wstawiaj rgba bezpośrednio w StyleSheet komponentu DS.
+
+Dostępne muted variants (dodaj analogicznie jeśli brakuje):
+
+| Token          | Wartość                    | Użycie                      |
+| -------------- | -------------------------- | --------------------------- |
+| `accentMuted`  | `rgba(255, 107, 26, 0.14)` | tła akcentowe (badge, chip) |
+| `successMuted` | `rgba(46, 224, 160, 0.14)` | tła statusów OK / confirmed |
+| `warningMuted` | `rgba(255, 176, 32, 0.14)` | tła ostrzeżeń / PENDING     |
+| `dangerMuted`  | `rgba(255, 87, 87, 0.14)`  | tła błędów / cancelled      |
+| `infoMuted`    | `rgba(59, 142, 234, 0.14)` | tła informacji              |
+
+---
+
+### 31.2. React Query — hierarchia kluczy (`QUERY_KEYS`)
+
+Wszystkie klucze React Query definiuj w `src/constants/query-keys.ts`. Każdy klucz musi być hierarchiczną tablicą — nigdy pojedynczym elementem:
+
+```ts
+// ✅ TAK — hierarchiczne: invalidateQueries(['vehicles']) unieważni też ['vehicles','all']
+vehicles: {
+  all: ['vehicles', 'all'] as const,
+},
+
+// ❌ NIE — ['vehicles'] jako leaf key uniemożliwia selektywną invalidację
+vehicles: {
+  all: ['vehicles'] as const,
+},
+```
+
+Konwencja kluczy:
+
+| Wzorzec            | Przykład                       |
+| ------------------ | ------------------------------ |
+| Lista wszystkich   | `['zasób', 'all']`             |
+| Lista z filtrami   | `['zasób', 'list', paramsObj]` |
+| Pojedynczy rekord  | `['zasób', 'detail', id]`      |
+| Zagnieżdżony zasób | `['zasób', 'sub', id]`         |
+
+Dzięki hierarchii `queryClient.invalidateQueries({ queryKey: ['vehicles'] })` unieważnia zarówno `vehicles.all` jak i każdy `vehicles.detail`.
+
+---
+
+### 31.3. Auth w mobile — SecureStore i token rotation
+
+Panel B2B używa httpOnly cookie (token niewidoczny dla JS). Mobile używa `expo-secure-store` (iOS Keychain / Android Keystore).
+
+**Wrapper:** `src/lib/secure-storage.ts` — jedyne miejsce do odczytu/zapisu tokenów. Nie importuj `expo-secure-store` bezpośrednio w innych plikach.
+
+**Token rotation przy refresh:** Backend `/v1/auth/refresh` może zwrócić nowy `refreshToken` (rotacja). Klient mobilny **musi** zapisywać nowy refresh token jeśli jest zwrócony:
+
+```ts
+// ✅ src/api/client.ts — obsługa rotacji
+const data = (await res.json()) as { accessToken: string; refreshToken?: string };
+await secureStorage.setAccessToken(data.accessToken);
+if (data.refreshToken) await secureStorage.setRefreshToken(data.refreshToken);
+```
+
+**Kolejka równoległych requestów:** Gdy kilka requestów dostanie 401 jednocześnie, tylko jeden wykonuje refresh — pozostałe czekają w kolejce (`refreshQueue`). Kolejka musi być czyszczona (`refreshQueue = []`) **przed** zresetowaniem flagi (`isRefreshing = false`), żeby nowe requesty wchodzące w mikrotask po resolve nie trafiły do pustej kolejki z fałszywą flagą.
+
+**Zustand auth store:** Flaga `rehydrated` nie jest persystowana — ustaw ją tylko przez `onRehydrateStorage`. `login()` zawsze resetuje `pendingOnboarding: false`, bo nowe logowanie anuluje niedokończony onboarding z poprzedniej sesji.
+
+---
+
+### 31.4. Typy API dla endpointów mobilnych
+
+`@opony/api-client` generowany jest ze Swaggera backendu. Kontrolery `/v1/app/...` (mobilne) są implementowane stopniowo — ich DTO mogą jeszcze nie istnieć w `schema.d.ts`.
+
+**Jeśli DTO istnieje w schemacie:** używaj go bezpośrednio:
+
+```ts
+import type { components } from '@opony/api-client';
+type Provider = components['schemas']['AppProviderResponseDto'];
+```
+
+**Jeśli DTO jeszcze nie istnieje** (endpoint nie zaimplementowany w BE): stwórz tymczasowy interface z komentarzem:
+
+```ts
+// TODO: replace with components['schemas']['AppBookingResponseDto'] after BE implementation
+export interface AppBookingResponse {
+  id: string;
+  referenceCode: string;
+  status: 'PENDING' | 'CONFIRMED' | 'CANCELLED';
 }
 ```
+
+Nie zostawiaj ręcznych typów bez tego komentarza — bez niego nie wiadomo czy to celowy stub czy zapomniane czyszczenie.
+
+Po dodaniu kontrolera w BE: `pnpm generate:api-client` → usuń stub, zastąp typem ze schematu.
+
+---
+
+### 31.5. Auth guard — expo-router v6
+
+`Stack.Protected` istnieje w expo-router v4+, ale projekt używa wzorca `AuthGuard` z `useSegments + useEffect` — działa w każdej wersji i daje pełną kontrolę nad redirect logiką:
+
+```tsx
+// ✅ app/_layout.tsx — wzorzec AuthGuard (expo-router v6)
+function AuthGuard({ isAuthenticated }: { isAuthenticated: boolean }) {
+  const segments = useSegments();
+  const router = useRouter();
+
+  useEffect(() => {
+    const inAuthGroup = (segments as string[])[0] === '(auth)';
+    if (!isAuthenticated && !inAuthGroup) {
+      router.replace('/(auth)/login' as never);
+    } else if (isAuthenticated && inAuthGroup) {
+      router.replace('/' as never);
+    }
+  }, [isAuthenticated, segments, router]);
+
+  return null;
+}
+```
+
+Kastowanie `segments as string[]` jest konieczne — TypeScript inferuje typ jako union z `""`, nie jako `string[]`.
+
+Castowanie routów `as never` jest tymczasowe — typy generuje `expo start` do `.expo/types/router.d.ts`. Po uruchomieniu projektu casty stają się zbędne.
+
+**Dynamiczny segment: plik + folder mogą współistnieć.** W expo-router możesz mieć jednocześnie `[id].tsx` (strona detalu) i `[id]/` (katalog z zagnieżdżonymi ekranami):
+
+```
+app/(app)/providers/
+├── [id].tsx          ← /providers/123
+└── [id]/
+    ├── slots.tsx     ← /providers/123/slots
+    └── confirmed.tsx ← /providers/123/confirmed
+```
+
+Nie musisz zamieniać `[id].tsx` na `[id]/index.tsx` — oba podejścia działają. expo-router traktuje plik jako obsługę dokładnego dopasowania, a katalog jako zagnieżdżone trasy.
+
+---
+
+### 31.6. MSW — inicjalizacja synchroniczna w React Native
+
+W React Native Metro bundler rozwiązuje `require()` **synchronicznie**, natomiast `import()` jest asynchroniczne. MSW musi być gotowy zanim poleci pierwszy request — dlatego inicjalizacja musi być synchroniczna.
+
+**Krytyczny wzorzec: `require('./native')` WEWNĄTRZ `initMsw()`, za guardem:**
+
+```ts
+// ✅ TAK — mocks/index.ts
+export function initMsw(): void {
+  if (process.env.EXPO_PUBLIC_API_MOCK !== 'true') return;
+  // require() WEWNĄTRZ warunku — msw/native nie jest ładowany gdy MSW wyłączony
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { server } = require('./native') as typeof import('./native');
+  server.listen({ onUnhandledRequest: 'warn' });
+}
+```
+
+```ts
+// ❌ NIE — require() na poziomie modułu (poza initMsw)
+const { server } = require('./native'); // ← ładuje msw/native przy każdym imporcie!
+
+export function initMsw(): void {
+  if (process.env.EXPO_PUBLIC_API_MOCK !== 'true') return;
+  server.listen({ onUnhandledRequest: 'warn' });
+}
+```
+
+**Dlaczego to ważne:** MSW 2.x zależy od `rettime`, który przy ładowaniu modułu wykonuje statyczny kod klasy odwołujący się do globalnego `MessageEvent`. Ten global nie istnieje w Hermes gdy MSW jest wyłączony (`EXPO_PUBLIC_API_MOCK=false`). Efekt: crash `ReferenceError: Property 'MessageEvent' doesn't exist` przy każdym starcie aplikacji, niezależnie od ustawień MSW.
+
+```ts
+// ❌ NIE — async + dynamic import = race condition na cold start
+export async function initMsw(): Promise<void> {
+  if (process.env.EXPO_PUBLIC_API_MOCK !== 'true') return;
+  const { server } = await import('./native'); // MSW może nie być gotowy przed requestami
+  server.listen({ onUnhandledRequest: 'warn' });
+}
+```
+
+Wywołanie w `app/_layout.tsx` na poziomie modułu (przed renderem):
+
+```ts
+import { initMsw } from '../mocks';
+SplashScreen.preventAutoHideAsync();
+initMsw(); // synchroniczny — bezpieczne bez await
+```
+
+---
+
+### 31.7. Obsługa stanów React Query — trójka stanów
+
+Każdy ekran używający `useQuery` musi obsługiwać **trzy stany**: ładowanie, błąd i dane. Brak obsługi `isError` powoduje wyświetlenie fałszywego empty state gdy backend jest niedostępny.
+
+```tsx
+// ✅ Wymagany wzorzec — isError ZAWSZE przed isLoading/!data
+const { data, isLoading, isError, refetch } = useVehicles();
+
+if (isError) {
+  return (
+    <EmptyState
+      title="Błąd ładowania"
+      description="Sprawdź połączenie i spróbuj ponownie."
+      ctaLabel="Spróbuj ponownie"
+      onCtaPress={refetch}
+    />
+  );
+}
+
+if (isLoading || !data) return <Spinner />;
+
+// render normalny
+```
+
+**Kolejność guardów — `isError` musi być przed `!data`:**
+
+```tsx
+// ✅ TAK — isError sprawdzony zanim sprawdzimy czy data istnieje
+const { data: booking, isLoading, isError } = useBooking(id);
+
+if (isError) return <EmptyState ... />;          // ← najpierw error
+if (isLoading || !booking) return <Spinner />;  // ← potem loading/brak danych
+
+// ❌ NIE — jeśli isError=true, data=undefined, więc !booking=true → wieczny spinner
+if (isLoading || !booking) return <Spinner />;
+// isError nigdy nie zostaje obsłużony
+```
+
+Pułapka pojawia się szczególnie na ekranach potwierdzenia (np. `confirmed.tsx`) gdzie ekran wchodzi z nowym ID i robi fetch — przy błędzie sieci `data` jest `undefined`, a `isLoading` spada do `false`, więc warunek `!booking` trzyma spinner zamiast pokazać błąd.
+
+**CTA label w EmptyState — spójność z akcją:**
+
+Label `ctaLabel` musi opisywać faktyczną akcję przycisku:
+
+```tsx
+// ✅ TAK — label pasuje do akcji
+// Gdy można ponowić request:
+<EmptyState ctaLabel="Spróbuj ponownie" onCtaPress={refetch} />
+
+// Gdy nie ma sensu retryować (np. błąd ładowania danych wymaganych do formularza):
+<EmptyState ctaLabel="Wróć" onCtaPress={() => router.back()} />
+
+// ❌ NIE — label sugeruje retry, ale akcja cofa użytkownika
+<EmptyState ctaLabel="Spróbuj ponownie" onCtaPress={() => router.back()} />
+```
+
+Destrukturyzuj `refetch` z `useQuery` gdy planujesz użyć go jako `onCtaPress`.
+
+**React Query invalidation — dwa różne wzorce:**
+
+```ts
+// useQuery — używaj pełnego klucza leaf z QUERY_KEYS
+useQuery({ queryKey: QUERY_KEYS.vehicles.all }); // ['vehicles', 'all']
+
+// invalidateQueries — używaj krótkiego prefiksu (invaliduje WSZYSTKIE vehicle queries)
+queryClient.invalidateQueries({ queryKey: ['vehicles'] });
+
+// ❌ NIE — QUERY_KEYS.vehicles.all w invalidateQueries unieważnia TYLKO tę jedną query,
+//           pomijając przyszłe sub-zasoby jak ['vehicles', 'detail', id]
+queryClient.invalidateQueries({ queryKey: QUERY_KEYS.vehicles.all });
+```
+
+---
+
+### 31.8. `refetchInterval` — polling dla statusów przejściowych
+
+Rezerwacje o statusie `PENDING` czekają na potwierdzenie warsztatu. Ekran szczegółów powinien pollować co 30 sekund i zatrzymać polling gdy status się zmieni.
+
+**React Query v5 — poprawna składnia `refetchInterval`:**
+
+```ts
+// ✅ TAK — funkcja przyjmuje query (v5), nie data (v4)
+export function useBooking(id: string) {
+  return useQuery({
+    queryKey: QUERY_KEYS.bookings.detail(id),
+    queryFn: () => getBooking(id),
+    enabled: !!id,
+    refetchInterval: (query) =>
+      query.state.data?.status === 'PENDING' ? 30_000 : false,
+  });
+}
+
+// ❌ NIE — składnia React Query v4 (data jako argument — nie działa w v5)
+refetchInterval: (data) => data?.status === 'PENDING' ? 30_000 : false,
+```
+
+Polling zatrzymuje się automatycznie gdy `refetchInterval` zwróci `false` — nie trzeba sprzątać ręcznie.
+
+**MSW — symulacja stanów przejściowych i błędów 409:**
+
+Aby testować edge-case'y lokalnie bez modyfikacji całego stanu MSW, użyj wartości-strażników w mock handlerze:
+
+```ts
+http.post(`${BASE}/v1/app/bookings`, async ({ request }) => {
+  const body = (await request.json()) as CreateBookingRequest;
+
+  // Sentinel: slotId 'slot-conflict' → 409 SlotAlreadyBooked
+  if (body.slotId === 'slot-conflict') {
+    return HttpResponse.json(
+      { message: 'Termin zajęty', code: 'SLOT_ALREADY_BOOKED' },
+      { status: 409 },
+    );
+  }
+
+  // ... normalny flow
+}),
+```
+
+Dzięki temu możesz testować obsługę 409 w `handleBook` nie dotykając pozostałych handlers i bez flagi feature.
+
+---
+
+### 31.9. expo-router — pliki specjalne i rejestracja tras
+
+**Prefiksy plików specjalnych:**
+
+expo-router v3 używa prefiksu `+` wyłącznie dla wybranych plików specjalnych (`+not-found.tsx`, `+html.tsx`). Plik z `_` jest prywatny — router go ignoruje. **Error boundary jest wyjątkiem** — nazwa to `error.tsx` (bez prefiksu).
+
+| Plik                      | Przeznaczenie                                                          |
+| ------------------------- | ---------------------------------------------------------------------- |
+| `app/error.tsx`           | Globalny error boundary (props: `{ error: Error; retry: () => void }`) |
+| `app/+not-found.tsx`      | Ekran 404 dla nieznanych tras                                          |
+| `app/(group)/_layout.tsx` | Layout grupy — `_` tutaj to konwencja layoutu, nie prefix specjalny    |
+
+> **⚠️ Pułapka:** `app/+error.tsx` jest odrzucany przez expo-router@3.5+ z błędem _"Route nodes cannot start with the '+' character. Please rename to error.tsx"_. `app/_error.tsx` jest traktowany jako prywatny i ignorowany.
+
+```tsx
+// ✅ TAK — globalny error handler
+// app/error.tsx
+export default function ErrorBoundary({ error, retry }: { error: Error; retry: () => void }) { ... }
+
+// ❌ NIE — odrzucone przez router z błędem startu
+// app/+error.tsx  ← "Route nodes cannot start with the '+' character"
+
+// ❌ NIE — plik prywatny, expo-router go ignoruje
+// app/_error.tsx  ← router nie zarejestruje tego jako error boundary
+```
+
+**Rejestracja sub-tras w `<Tabs>`:**
+
+Gdy dodajesz nowe ekrany zagnieżdżone pod segmentem dynamicznym (np. `providers/[id]/rate.tsx`), musisz je jawnie zarejestrować w `app/(app)/_layout.tsx` z `options={{ href: null }}`. Bez rejestracji expo-router może nie rozpoznać trasy w kontekście Tabs.
+
+```tsx
+// app/(app)/_layout.tsx
+<Tabs>
+  {/* ... zakładki ... */}
+
+  {/* Ukryte ekrany — każdy nowy ekran pod providers/[id]/ wymaga wpisu */}
+  <Tabs.Screen name="providers/[id]" options={{ href: null }} />
+  <Tabs.Screen name="providers/[id]/slots" options={{ href: null }} />
+  <Tabs.Screen name="providers/[id]/confirmed" options={{ href: null }} />
+  <Tabs.Screen name="providers/[id]/rate" options={{ href: null }} />
+  <Tabs.Screen name="providers/[id]/reviews" options={{ href: null }} />
+  <Tabs.Screen name="bookings/[id]" options={{ href: null }} />
+</Tabs>
+```
+
+Brak wpisu dla `providers/[id]/rate` nie zawsze powoduje błąd kompilacji — trasa może nie być rozpoznana w runtime lub prowadzić do niepoprawnego layoutu.
+
+---
+
+### 31.10. TypeScript — konfiguracja `tsconfig.json` dla mobile
+
+`expo/tsconfig.base` ustawia `"moduleResolution": "node10"`, które jest deprecated od TypeScript 6.0. Nadpisuj je jawnie w `apps/mobile/tsconfig.json`:
+
+```json
+{
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "strict": true,
+    "moduleResolution": "bundler",
+    "paths": { ... }
+  }
+}
+```
+
+`"bundler"` to właściwe ustawienie dla projektów z Metro — TypeScript rozwiązuje moduły tak jak bundler, nie jak Node.js. Expo SDK 49+ oficjalnie rekomenduje `"bundler"` dla projektów z expo-router.
+
+**`paths` bez `baseUrl`** — od TypeScript 5.0 `baseUrl` nie jest wymagane przy `paths`. W TS 6.0 `baseUrl` jest deprecated — nie dodawaj go.
+
+**Zmienna `EXPO_PUBLIC_API_URL`** — brak tego pliku dla mobile to celowy brak w repo (`.gitignore`). Utwórz `apps/mobile/.env` ręcznie na podstawie `apps/mobile/.env.example`. Brak zmiennej = crash przy starcie (`EXPO_PUBLIC_API_URL is not set`) — jest to zachowanie celowe.
+
+---
+
+### 31.11. Offline — blokowanie mutacji w `mutationFn`
+
+`OfflineBanner` informuje użytkownika o braku sieci, ale sam nie blokuje requestów. Każda mutacja zmieniająca stan serwera musi sprawdzić połączenie **wewnątrz `mutationFn`** — nie przez `disabled` na przycisku (bo stan może się zmienić po kliknięciu):
+
+```ts
+import NetInfo from '@react-native-community/netinfo';
+
+// src/hooks/bookings/use-bookings.ts — wzorzec dla WSZYSTKICH mutacji
+async function assertOnline() {
+  const state = await NetInfo.fetch();
+  if (!state.isConnected) throw new Error('Brak połączenia z internetem');
+}
+
+export function useCreateBooking() {
+  return useMutation({
+    mutationFn: async (dto: CreateBookingDto) => {
+      await assertOnline(); // ← przed każdym requestem do serwera
+      return createBooking(dto);
+    },
+  });
+}
+```
+
+React Query traktuje rzucony błąd jako stan `isError` w `useMutation` — ekran może wyświetlić Toast z komunikatem przez `onError` callback.
+
+Mutacje wymagające `assertOnline()`: `createBooking`, `cancelBooking`, `addVehicle`, `deleteVehicle`, `createReview`, `joinWaitlist`.
+
+---
+
+### 31.12. Uruchamianie aplikacji mobilnej na urządzeniu
+
+Aplikacja mobilna działa przez **Expo Go** (fizyczne urządzenie) lub **Android emulator** — nie przez przeglądarkę.
+
+**Krok 1 — uruchom API w tle:**
+
+```
+pnpm dev:mobile-all   # Turbo: API + Metro bundler (logi w konsoli, brak QR kodu)
+```
+
+**Krok 2 — uruchom Expo w osobnym terminalu (tu pojawi się QR kod):**
+
+```
+pnpm dev:mobile       # = cd apps/mobile && npx expo start
+```
+
+W terminalu Expo zobaczysz QR kod i skróty klawiszowe:
+
+- `a` → Android emulator (Android Studio AVD musi być uruchomiony)
+- `i` → iOS simulator (tylko macOS)
+- `r` → reload bundle
+- `s` → tunnel mode (gdy Wi-Fi blokuje LAN)
+
+**Dlaczego nie `dev:mobile-all` do QR kodu:**  
+Turbo agreguje logi z prefixami (`@opony/mobile:dev:`) i QR kod wychodzi zniekształcony — nie da się go zeskanować.
+
+**Wymaganie:** telefon i komputer muszą być w **tej samej sieci Wi-Fi**. Jeśli sieć blokuje komunikację (VPN, sieć firmowa), naciśnij `s` → tunnel mode.
+
+**Expo Go vs wersja SDK:**  
+Expo Go na telefonie jest przywiązane do konkretnego SDK. Przy upgradezie SDK w projekcie zaktualizuj też Expo Go. Aktualne wersje:
+
+- Expo SDK: `54.x`
+- React Native: `0.81.x`
+- React: `19.x`
+
+---
+
+### 31.13. pnpm + Metro — konfiguracja monorepo
+
+Metro (bundler Expo) ma problemy z pnpm virtual store (`.pnpm/`) — nie potrafi śledzić symlinków do transitive dependencies. Trzy elementy konfiguracyjne rozwiązują ten problem:
+
+**`.npmrc` w root monorepo — wymagane:**
+
+```
+shamefully-hoist=true
+```
+
+Bez tego Metro traci ścieżki do transitive deps (np. `@react-native/assets-registry`, `Platform.js`) i bundlowanie kończy się błędami `Unable to resolve`.
+
+**`@expo/metro-runtime` jako explicit dep w `apps/mobile/package.json` — wymagane:**
+
+```json
+"@expo/metro-runtime": "~6.1.2"
+```
+
+pnpm's virtual store może hoist'ować starszą wersję `@expo/metro-runtime` (z `@expo/cli`) zamiast wersji wymaganej przez `expo-router`. Efekt: crash `PlatformConstants could not be found. TurboModules: []` przy starcie — cały runtime Expo nie inicjalizuje się. Jawna zależność w `package.json` wymusza użycie właściwej wersji. Sprawdź wymaganą wersję w `node_modules/expo/bundledNativeModules.json`.
+
+**`apps/mobile/metro.config.js` — pełna aktualna konfiguracja:**
+
+```js
+const { getDefaultConfig } = require('expo/metro-config');
+const path = require('path');
+
+const projectRoot = __dirname;
+const monorepoRoot = path.resolve(projectRoot, '../..');
+
+const config = getDefaultConfig(projectRoot);
+config.watchFolders = [monorepoRoot];
+config.resolver.nodeModulesPaths = [
+  path.resolve(projectRoot, 'node_modules'),
+  path.resolve(monorepoRoot, 'node_modules'),
+];
+
+// Deduplikacja react/react-native — wymagana w pnpm monorepo.
+// pnpm tworzy osobny wpis virtual store dla @opony/design-system-native
+// z react-native rozwiązanym do minimalnej wersji (np. 0.74.5 przy peer dep ">=0.74").
+// Metro podąża za tym symlinkiem i ładuje starą wersję zamiast 0.81.5.
+// Efekt bez tej konfiguracji: "PlatformConstants could not be found" + "React Element
+// from older version of React" przy każdym imporcie z packages/design-system-native.
+// Tylko exact nazwy pakietów — subpaths (react-native/Libraries/…) celowo wyłączone,
+// żeby Metro mógł rozwiązywać platform-specific extensions (.android.js, .ios.js).
+const DEDUPE = new Set([
+  'react',
+  'react-dom',
+  'react/jsx-runtime',
+  'react/jsx-dev-runtime',
+  'react-native',
+]);
+config.resolver.resolveRequest = (context, moduleName, platform) => {
+  if (
+    DEDUPE.has(moduleName) ||
+    moduleName.startsWith('react/') ||
+    moduleName.startsWith('react-dom/')
+  ) {
+    const filePath = require.resolve(moduleName, { paths: [projectRoot] });
+    return { filePath, type: 'sourceFile' };
+  }
+  return context.resolveRequest(context, moduleName, platform);
+};
+
+module.exports = config;
+```
+
+`watchFolders` pozwala Metro obserwować pliki z `packages/` i root `node_modules`. `nodeModulesPaths` mówi resolverowi gdzie szukać pakietów. `resolveRequest` wymusza single instance react/react-native z mobile workspace (eliminuje konflikty wersji między pakietami w monorepo).
+
+**Dlaczego `react-native` w DEDUPE, a nie `react-native/`:** `require.resolve` używa Node.js resolution (nie Metro), który nie obsługuje platform-specific extensions (`.android.js`, `.ios.js`). Interceptowanie sub-path importów przez Node.js zwróciłoby zły plik dla `react-native/Libraries/Utilities/Platform`. Wewnętrzne requirey react-native są relatywne (`./Libraries/…`) — Metro je obsługuje poprawnie gdy `require('react-native')` wskazuje na właściwą wersję.
+
+**Błędy web bundlingu są irrelewantne dla aplikacji mobilnej.** Metro bundluje osobno dla każdej platformy: `android`, `ios`, `web`. Błędy w stylu `Unable to resolve "../Utilities/Platform"` pojawiają się tylko przy próbie bundlowania dla `web` (np. otwarcie `localhost:19006` w przeglądarce). Bundlowanie dla `android`/`ios` (Expo Go, emulator) działa poprawnie.
+
+---
+
+### 31.14. MSW — web stub dla platformy web
+
+MSW native server (`msw/native`) używa XMLHttpRequest interceptors, które nie działają w przeglądarce. Gdy Metro bundluje dla platformy `web`, próbuje przetworzyć `@mswjs/interceptors` — plik `.mjs` z static class blocks, który Babel odrzuca.
+
+Metro automatycznie preferuje pliki z sufiksem `.web.ts` dla platformy web. Dlatego istnieją dwa pliki:
+
+```
+mocks/
+├── index.ts       ← native: inicjalizuje MSW server (wymaga EXPO_PUBLIC_API_MOCK=true)
+└── index.web.ts   ← web: no-op, MSW w ogóle nie jest bundlowany dla web
+```
+
+```ts
+// mocks/index.web.ts — nie usuwaj, Metro tego potrzebuje
+export function initMsw(): void {}
+```
+
+Jeśli `index.web.ts` nie istnieje, web bundling failuje z błędem `Static class blocks are not enabled`.
+
+---
+
+### 31.15. Upgrade Expo SDK
+
+Użyj oficjalnego narzędzia — nie aktualizuj wersji ręcznie:
+
+```bash
+cd apps/mobile
+
+# 1. Zaktualizuj expo do docelowego SDK
+npx expo install expo@~54.0.0
+
+# 2. Wyrównaj WSZYSTKIE zależne paczki do nowego SDK
+npx expo install --fix
+```
+
+`expo install --fix` automatycznie dobiera kompatybilne wersje `react`, `react-native`, `expo-router`, `expo-*` i `@types/react`.
+
+**Uwagi po upgrade:**
+
+- `expo install --fix` może zmodyfikować root `package.json` (scripts). Sprawdź czy skrypty `dev:mobile-all`, `dev:mobile-front`, `dev:panel-all` itp. nadal istnieją — jeśli nie, przywróć je ręcznie.
+- Po każdym `pnpm install` który reorganizuje `node_modules` uruchom `prisma generate` (lub poczekaj — `postinstall` w `apps/api/package.json` robi to automatycznie).
+- Zaktualizuj pnpm overrides w root `package.json` dla `@types/react` jeśli nowe SDK zmienia wersję React (`"@opony/mobile>@types/react": "~19.1.10"` dla React 19).
+
+---

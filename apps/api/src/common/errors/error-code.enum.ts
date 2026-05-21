@@ -125,6 +125,10 @@ export enum ErrorCode {
   /** Ten sam klucz idempotentności użyty z innym ciałem żądania */
   IDEMPOTENCY_CONFLICT = 'IDEMPOTENCY_CONFLICT',
 
+  // ── WAITLIST ──────────────────────────────────────────────────────────────
+  /** Użytkownik jest już na liście oczekujących tego warsztatu */
+  WAITLIST_ALREADY_JOINED = 'WAITLIST_ALREADY_JOINED',
+
   // ── REVIEW ────────────────────────────────────────────────────────────────
   /** Opinia nie istnieje lub brak dostępu */
   REVIEW_NOT_FOUND = 'REVIEW_NOT_FOUND',

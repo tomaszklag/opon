@@ -130,12 +130,13 @@ model User {
   updatedAt    DateTime  @updatedAt
   deletedAt    DateTime?
 
-  vehicles     Vehicle[]
-  provider     Provider?    @relation("ProviderOwner")
-  consentLogs  ConsentLog[]
-  auditLogs    AuditLog[]
-  sessions     Session[]
-  clients      Client[]
+  vehicles          Vehicle[]
+  provider          Provider?              @relation("ProviderOwner")
+  consentLogs       ConsentLog[]
+  auditLogs         AuditLog[]
+  sessions          Session[]
+  clients           Client[]
+  waitlistEntries   ProviderWaitlistEntry[]
 
   @@map("users")
 }
@@ -174,7 +175,10 @@ model Client {
 model Vehicle {
   id        String   @id @default(uuid()) @db.Uuid
   userId    String   @db.Uuid
-  nickname  String   @db.VarChar(100)
+  nickname  String?  @db.VarChar(100)
+  make      String?  @db.VarChar(100)
+  model     String?  @db.VarChar(100)
+  year      Int?
   tireSize  String   @db.VarChar(20)
   createdAt DateTime @default(now())
 
@@ -248,6 +252,7 @@ model Provider {
   depotSlots                 DepotSlot[]
   tireSets                   TireSet[]
   clients                    Client[]
+  waitlistEntries            ProviderWaitlistEntry[]
 
   @@map("providers")
 }
@@ -444,6 +449,24 @@ model WaitlistSignup {
   @@unique([email, city, role])
   @@index([city, role])
   @@map("waitlist_signups")
+}
+
+// ──────────────────────────────────────────────
+// PROVIDER WAITLIST — mobilni klienci oczekujący
+// ──────────────────────────────────────────────
+
+model ProviderWaitlistEntry {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String   @db.Uuid
+  providerId String   @db.Uuid
+  createdAt  DateTime @default(now())
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, providerId])
+  @@index([userId])
+  @@map("provider_waitlist_entries")
 }
 
 // ──────────────────────────────────────────────

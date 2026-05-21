@@ -26,6 +26,7 @@ import { ServicesModule } from './services/services.module';
 import { NotificationPreferencesModule } from './notification-preferences/notification-preferences.module';
 import { ScheduleExceptionsModule } from './schedule-exceptions/schedule-exceptions.module';
 import { DepotModule } from './depot/depot.module';
+import { UsersAppModule } from './users/users-app.module';
 
 @Module({
   imports: [
@@ -56,6 +57,7 @@ import { DepotModule } from './depot/depot.module';
     NotificationPreferencesModule,
     ScheduleExceptionsModule,
     DepotModule,
+    UsersAppModule,
   ],
   providers: [
     // Globalny guard — wszystkie endpointy wymagają JWT, chyba że @Public()

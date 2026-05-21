@@ -9,12 +9,10 @@ import { JwtPayload } from './types/jwt-payload.interface';
 export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor(config: ConfigService) {
     super({
-      // Wyciąga token z ciasteczka HttpOnly
+      // Wyciąga token z ciasteczka HttpOnly lub Authorization Bearer header (mobile)
       jwtFromRequest: ExtractJwt.fromExtractors([
-        (req: Request) => {
-          const token = req?.cookies?.['access_token'] as string | undefined;
-          return token ?? null;
-        },
+        (req: Request) => req?.cookies?.['access_token'] ?? null,
+        ExtractJwt.fromAuthHeaderAsBearerToken(),
       ]),
       ignoreExpiration: false,
       secretOrKey: config.getOrThrow<string>('JWT_SECRET'),

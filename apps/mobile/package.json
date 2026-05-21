@@ -2,7 +2,7 @@
   "name": "@opony/mobile",
   "version": "0.1.0",
   "private": true,
-  "main": "expo-router/entry",
+  "main": "./index.js",
   "scripts": {
     "build": "echo \"mobile: build via EAS — run 'eas build'\"",
     "dev": "expo start --port 19006",
@@ -10,23 +10,60 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "lint": "eslint . --ext .ts,.tsx",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "test": "jest"
   },
   "dependencies": {
-    "@sentry/react": "^8.0.0",
-    "expo": "~51.0.28",
-    "expo-router": "~3.5.23",
-    "expo-status-bar": "~1.12.1",
-    "react": "18.2.0",
-    "react-dom": "18.2.0",
-    "react-native": "0.74.5",
-    "react-native-web": "~0.19.10"
+    "@babel/runtime": "^7.25.0",
+    "@expo/metro-runtime": "~6.1.2",
+    "@hookform/resolvers": "^3.9.1",
+    "@opony/api-client": "workspace:*",
+    "@opony/design-system-native": "workspace:*",
+    "@opony/design-tokens": "workspace:*",
+    "@opony/shared-types": "workspace:*",
+    "@react-native-community/netinfo": "11.4.1",
+    "@sentry/react-native": "~7.2.0",
+    "@tanstack/react-query": "^5.56.2",
+    "expo": "~54.0.34",
+    "expo-font": "~14.0.11",
+    "expo-location": "~19.0.8",
+    "expo-router": "~6.0.23",
+    "expo-secure-store": "~15.0.8",
+    "expo-splash-screen": "~31.0.13",
+    "expo-status-bar": "~3.0.9",
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
+    "react-hook-form": "^7.53.0",
+    "react-native": "0.81.5",
+    "react-native-maps": "1.20.1",
+    "react-native-screens": "~4.16.0",
+    "react-native-web": "~0.21.2",
+    "zod": "^3.23.8",
+    "zustand": "^4.5.5"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
     "@opony/eslint-config": "workspace:*",
-    "@types/react": "~18.2.79",
-    "@types/react-native": "~0.73.0",
-    "typescript": "^5.3.3"
+    "@testing-library/react-native": "^12.6.0",
+    "@types/react": "19.1.17",
+    "jest-expo": "~54.0.17",
+    "msw": "^2.4.9",
+    "typescript": "~5.9.3"
+  },
+  "jest": {
+    "preset": "jest-expo",
+    "setupFilesAfterFramework": [
+      "./src/__tests__/setup.ts"
+    ],
+    "transformIgnorePatterns": [
+      "node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@unimodules/.*|unimodules|sentry-expo|native-base|react-native-svg|msw)"
+    ],
+    "moduleNameMapper": {
+      "^@opony/design-system-native$": "<rootDir>/../../packages/design-system-native/src/index.ts",
+      "^@opony/design-tokens$": "<rootDir>/../../packages/design-tokens/src/index.ts",
+      "^@opony/api-client$": "<rootDir>/../../packages/api-client/src/index.ts",
+      "^@opony/shared-types$": "<rootDir>/../../packages/shared-types/src/index.ts",
+      "^@/(.*)$": "<rootDir>/src/$1"
+    }
   }
 }
