@@ -1,0 +1,193 @@
+/* ── Page shell ── */
+.page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* ── Action bar ── */
+.actionBar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 18px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  flex-shrink: 0;
+}
+
+.actionBarSpacer {
+  flex: 1;
+}
+
+.helpHint {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.dirtyChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 9px;
+  border-radius: 5px;
+  background: var(--warning-muted);
+  border: 1px solid var(--warning-border);
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+}
+
+.savedChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 9px;
+  border-radius: 5px;
+  background: var(--success-muted);
+  border: 1px solid var(--success-border);
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+}
+
+.savedChip::before {
+  content: '';
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--success);
+}
+
+/* ── Scrollable content (2-column grid) ── */
+.content {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: 1fr 280px;
+  gap: 14px;
+  padding: 14px 18px 20px;
+  align-items: start;
+  scrollbar-width: thin;
+  background: var(--bg);
+}
+
+/* Left column */
+.colForm {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+/* Right column */
+.colRight {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  position: sticky;
+  top: 0;
+}
+
+/* ── Page hero ── */
+.pageHero {
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.liveChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: var(--success-muted);
+  border: 1px solid var(--success-border);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.liveChip::before {
+  content: '';
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--success);
+}
+
+.heroSub {
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+/* ── Section labels ── */
+.sectionLabel {
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+.sectionLabelPurple {
+  color: var(--purple);
+}
+
+/* ── Section divider ── */
+.sectionDivider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 0 2px;
+}
+
+.sectionDividerLine {
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+.sectionDividerLinePurple {
+  flex: 1;
+  height: 1px;
+  background: var(--purple-border);
+}
+
+/* ── Add service button ── */
+.addServiceBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 12px;
+  border-radius: 9px;
+  border: 1px dashed var(--accent-border);
+  background: transparent;
+  color: var(--accent);
+  cursor: pointer;
+  align-self: flex-start;
+}
+
+.addServiceBtn:hover {
+  background: var(--accent-muted);
+}
+
+
+/* ── Help modal content ── */
+.helpModalBody {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.helpModalDivider {
+  height: 1px;
+  background: var(--border);
+  margin: 4px 0;
+}
+
+/* ── Loading ── */
+.loadingWrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}

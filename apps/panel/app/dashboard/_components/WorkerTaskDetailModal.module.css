@@ -1,0 +1,178 @@
+.loading {
+  padding: 32px 0;
+  text-align: center;
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* ── Meta block ── */
+.metaBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.metaRow {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.metaRow > span:first-child {
+  width: 72px;
+  flex-shrink: 0;
+}
+
+/* ── Section ── */
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sectionLabel {
+  margin-bottom: 2px;
+}
+
+/* ── Notes textarea ── */
+.notesArea {
+  width: 100%;
+  resize: vertical;
+  padding: 10px 12px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-size: 13px;
+  line-height: 1.5;
+  outline: none;
+  font-family: inherit;
+  transition: border-color 120ms;
+  box-sizing: border-box;
+}
+
+.notesArea:focus {
+  border-color: var(--accent-border);
+}
+
+.saveRow {
+  display: flex;
+  gap: 8px;
+}
+
+/* ── Linked booking ── */
+.linkedCard {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: rgba(99, 102, 241, 0.06);
+  border: 1px solid rgba(99, 102, 241, 0.25);
+  border-radius: 8px;
+}
+
+.linkedInfo {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.unlinkBtn {
+  width: 24px;
+  height: 24px;
+  border-radius: 5px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 100ms;
+}
+
+.unlinkBtn:hover {
+  background: var(--surface-hover);
+  border-color: var(--border);
+  color: var(--text-primary);
+}
+
+.cancelPickerBtn {
+  align-self: flex-start;
+}
+
+/* ── Booking picker ── */
+.picker {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--bg);
+}
+
+.pickerInput {
+  padding: 9px 12px;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-primary);
+  font-size: 13px;
+  outline: none;
+  font-family: inherit;
+}
+
+.pickerInput::placeholder {
+  color: var(--text-muted);
+}
+
+.pickerEmpty {
+  padding: 12px;
+  text-align: center;
+}
+
+.pickerList {
+  display: flex;
+  flex-direction: column;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.pickerItem {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 9px 12px;
+  text-align: left;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: background 100ms;
+}
+
+.pickerItem:last-child {
+  border-bottom: none;
+}
+
+.pickerItem:hover {
+  background: var(--surface-hover);
+}
+
+/* ── Danger zone ── */
+.dangerSection {
+  padding-top: 4px;
+  border-top: 1px solid var(--border);
+}

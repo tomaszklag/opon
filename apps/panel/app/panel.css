@@ -1,5 +1,14 @@
 /* panel.css — panel-specific overrides. Tokens from @opony/design-system-web/global.css. */
 
+:root {
+  --avatar-blue-light: #3b82f6;
+  --avatar-blue-dark: #1d4ed8;
+  --avatar-green-light: #2ee0a0;
+  --avatar-green-dark: #059669;
+  --avatar-purple-light: #a855f7;
+  --avatar-purple-dark: #7c3aed;
+}
+
 /* Base */
 html,
 body {
@@ -45,4 +54,32 @@ textarea {
 
 .font-mono {
   font-family: var(--font-mono, 'JetBrains Mono'), monospace;
+}
+
+/* ── Scrollbar ── */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 100px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
 }

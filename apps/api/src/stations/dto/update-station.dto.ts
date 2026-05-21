@@ -1,7 +1,6 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { ServiceType } from '@prisma/client';
 import { Type } from 'class-transformer';
-import { IsArray, IsEnum, IsOptional, IsString, MaxLength, ValidateNested } from 'class-validator';
+import { IsArray, IsOptional, IsString, MaxLength, ValidateNested } from 'class-validator';
 import { DayScheduleDto } from './create-station.dto';
 
 export class UpdateStationDto {
@@ -11,11 +10,11 @@ export class UpdateStationDto {
   @MaxLength(100)
   name?: string;
 
-  @ApiPropertyOptional({ enum: ServiceType, isArray: true })
+  @ApiPropertyOptional({ type: [String] })
   @IsOptional()
   @IsArray()
-  @IsEnum(ServiceType, { each: true })
-  services?: ServiceType[];
+  @IsString({ each: true })
+  serviceIds?: string[];
 
   @ApiPropertyOptional({
     description: 'DaySchedule[] — grafik tygodniowy (JSON)',

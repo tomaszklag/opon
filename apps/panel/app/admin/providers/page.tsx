@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import useSWR from 'swr';
 import Link from 'next/link';
 import { Heading, Text, Button, EmptyState } from '@opony/design-system-web';
@@ -9,16 +10,29 @@ import {
   listPendingProviders,
   approveProvider,
   rejectProvider,
+  listDeletionRequests,
+  confirmDeletion,
+  cancelDeletion,
   getGusHealth,
 } from '../../../api-data-access/admin';
 import type { Provider, GusHealthStatus, GusHealthResponse } from '../../../api-data-access/admin';
+import {
+  listDataExportRequests,
+  completeDataExportRequest,
+  cancelDataExportRequest,
+} from '../../../api-data-access/data-exports';
+import type { DataExportRequestDto } from '../../../api-data-access/data-exports';
 import type { ProviderStatus } from '../../../lib/auth';
+import { logout } from '../../../api-data-access/auth';
 import {
   IconBriefcase,
   IconCheck,
   IconBan,
+  IconDownload,
   IconMobilePhone,
   IconMail,
+  IconTrash,
+  IconLogOut,
 } from '../../../components/icons';
 import styles from './providers.module.css';
 
@@ -29,6 +43,7 @@ const STATUS_LABELS: Record<ProviderStatus, string> = {
   APPROVED: 'Zatwierdzona',
   SUSPENDED: 'Zawieszona',
   REJECTED: 'Odrzucona',
+  PENDING_DELETION: 'Oczekuje na usunięcie',
 };
 
 const CEIDG_STATUS_LABELS: Record<GusHealthStatus, string> = {
@@ -171,17 +186,201 @@ function ProviderRow({
   );
 }
 
+function DeletionRow({
+  provider,
+  onConfirm,
+  onCancel,
+  busy,
+}: {
+  provider: Provider;
+  onConfirm: (id: string) => Promise<void>;
+  onCancel: (id: string) => Promise<void>;
+  busy: boolean;
+}) {
+  const typeLabel = provider.type === 'MOBILE' ? 'Mobilny' : 'Stacjonarny';
+  const requestedDate = formatDate(provider.deletionRequestedAt ?? undefined);
+
+  return (
+    <div className={styles.row}>
+      <div className={styles.rowLeft}>
+        <div className={styles.rowIcon} aria-hidden="true">
+          <IconBriefcase width={16} height={16} />
+        </div>
+        <div className={styles.rowInfo}>
+          <div className={styles.rowNameLine}>
+            <Text variant="body-sm" as="span" weight="bold" color="primary">
+              {provider.name}
+            </Text>
+            <span className={styles.typeBadge}>
+              <Text variant="nano" as="span" color="muted">
+                {typeLabel}
+              </Text>
+            </span>
+            <span className={styles.statusBadge} data-status={provider.status}>
+              <Text variant="nano" as="span" color="muted">
+                {STATUS_LABELS[provider.status as ProviderStatus] ?? provider.status}
+              </Text>
+            </span>
+          </div>
+          <div className={styles.rowMeta}>
+            <Text variant="nano" as="span" color="muted" mono>
+              NIP {provider.nip}
+            </Text>
+            {provider.phone && (
+              <>
+                <span className={styles.metaSep} aria-hidden="true" />
+                <span className={styles.metaItem}>
+                  <IconMobilePhone width={11} height={11} />
+                  <Text variant="nano" as="span" color="muted">
+                    {provider.phone}
+                  </Text>
+                </span>
+              </>
+            )}
+            {provider.email && (
+              <>
+                <span className={styles.metaSep} aria-hidden="true" />
+                <span className={styles.metaItem}>
+                  <IconMail width={11} height={11} />
+                  <Text variant="nano" as="span" color="muted">
+                    {provider.email}
+                  </Text>
+                </span>
+              </>
+            )}
+          </div>
+          <Text variant="nano" as="span" color="muted">
+            Wniosek złożony: {requestedDate}
+          </Text>
+        </div>
+      </div>
+      <div className={styles.rowActions}>
+        <Button
+          variant="danger"
+          size="sm"
+          loading={busy}
+          disabled={busy}
+          onClick={() => onConfirm(provider.id)}
+        >
+          <IconTrash width={13} height={13} />
+          Potwierdź usunięcie
+        </Button>
+        <Button
+          variant="neutral"
+          size="sm"
+          loading={busy}
+          disabled={busy}
+          onClick={() => onCancel(provider.id)}
+        >
+          <IconBan width={13} height={13} />
+          Anuluj wniosek
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function DataExportRow({
+  request,
+  onComplete,
+  onCancel,
+  busy,
+}: {
+  request: DataExportRequestDto;
+  onComplete: (id: string) => Promise<void>;
+  onCancel: (id: string) => Promise<void>;
+  busy: boolean;
+}) {
+  const requestedDate = formatDate(request.requestedAt);
+
+  return (
+    <div className={styles.row}>
+      <div className={styles.rowLeft}>
+        <div className={styles.rowIcon} aria-hidden="true">
+          <IconDownload width={16} height={16} />
+        </div>
+        <div className={styles.rowInfo}>
+          <div className={styles.rowNameLine}>
+            <Text variant="body-sm" as="span" weight="bold" color="primary">
+              {request.providerName}
+            </Text>
+          </div>
+          <div className={styles.rowMeta}>
+            <Text variant="nano" as="span" color="muted" mono>
+              NIP {request.providerNip}
+            </Text>
+            {request.providerEmail && (
+              <>
+                <span className={styles.metaSep} aria-hidden="true" />
+                <span className={styles.metaItem}>
+                  <IconMail width={11} height={11} />
+                  <Text variant="nano" as="span" color="muted">
+                    {request.providerEmail}
+                  </Text>
+                </span>
+              </>
+            )}
+          </div>
+          <Text variant="nano" as="span" color="muted">
+            Zamówiono: {requestedDate}
+          </Text>
+        </div>
+      </div>
+      <div className={styles.rowActions}>
+        <Button
+          variant="primary"
+          size="sm"
+          loading={busy}
+          disabled={busy}
+          onClick={() => onComplete(request.id)}
+        >
+          <IconCheck width={13} height={13} />
+          Zrealizowane
+        </Button>
+        <Button
+          variant="neutral"
+          size="sm"
+          loading={busy}
+          disabled={busy}
+          onClick={() => onCancel(request.id)}
+        >
+          <IconBan width={13} height={13} />
+          Anuluj
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 export default function AdminProvidersPage() {
+  const router = useRouter();
   const { isLoading: authLoading } = useAuthGuard('/admin/providers');
+
+  async function handleLogout() {
+    await logout().catch(() => {});
+    router.push('/login');
+  }
   const {
     data,
     isLoading: dataLoading,
     mutate,
   } = useSWR('/v1/admin/providers?status=PENDING_APPROVAL', listPendingProviders);
+  const {
+    data: deletionData,
+    isLoading: deletionLoading,
+    mutate: mutateDeletion,
+  } = useSWR('/v1/admin/providers?status=PENDING_DELETION', listDeletionRequests);
+  const {
+    data: dataExportData,
+    isLoading: dataExportLoading,
+    mutate: mutateDataExport,
+  } = useSWR('/v1/admin/data-export-requests', listDataExportRequests);
 
   const [busyIds, setBusyIds] = useState<Set<string>>(new Set());
+  const [busyDeletionIds, setBusyDeletionIds] = useState<Set<string>>(new Set());
+  const [busyDataExportIds, setBusyDataExportIds] = useState<Set<string>>(new Set());
 
-  const isLoading = authLoading || dataLoading;
+  const isLoading = authLoading || dataLoading || deletionLoading || dataExportLoading;
 
   async function handleApprove(id: string) {
     setBusyIds((prev) => new Set(prev).add(id));
@@ -211,6 +410,62 @@ export default function AdminProvidersPage() {
     }
   }
 
+  async function handleConfirmDeletion(id: string) {
+    setBusyDeletionIds((prev) => new Set(prev).add(id));
+    try {
+      await confirmDeletion(id);
+      await mutateDeletion();
+    } finally {
+      setBusyDeletionIds((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+    }
+  }
+
+  async function handleCancelDeletion(id: string) {
+    setBusyDeletionIds((prev) => new Set(prev).add(id));
+    try {
+      await cancelDeletion(id);
+      await mutateDeletion();
+    } finally {
+      setBusyDeletionIds((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+    }
+  }
+
+  async function handleCompleteDataExport(id: string) {
+    setBusyDataExportIds((prev) => new Set(prev).add(id));
+    try {
+      await completeDataExportRequest(id);
+      await mutateDataExport();
+    } finally {
+      setBusyDataExportIds((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+    }
+  }
+
+  async function handleCancelDataExport(id: string) {
+    setBusyDataExportIds((prev) => new Set(prev).add(id));
+    try {
+      await cancelDataExportRequest(id);
+      await mutateDataExport();
+    } finally {
+      setBusyDataExportIds((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+    }
+  }
+
   if (isLoading) {
     return (
       <div className={styles.page}>
@@ -223,6 +478,10 @@ export default function AdminProvidersPage() {
 
   const providers = data?.data ?? [];
   const total = data?.total ?? 0;
+  const deletionProviders = deletionData?.data ?? [];
+  const deletionTotal = deletionData?.total ?? 0;
+  const dataExportRequests = dataExportData?.data ?? [];
+  const dataExportTotal = dataExportData?.total ?? 0;
 
   return (
     <div className={styles.page}>
@@ -236,11 +495,18 @@ export default function AdminProvidersPage() {
             ADMIN PANEL
           </Text>
         </Link>
-        <CeidgStatusBadge />
+        <div className={styles.topStripRight}>
+          <CeidgStatusBadge />
+          <Button variant="ghost" size="sm" onClick={() => void handleLogout()}>
+            <IconLogOut width={14} height={14} />
+            Wyloguj
+          </Button>
+        </div>
       </header>
 
       <div className={styles.content}>
         <div className={styles.inner}>
+          {/* ── Verification section ── */}
           <div className={styles.pageHeader}>
             <div>
               <Heading variant="section" as="h1">
@@ -277,6 +543,96 @@ export default function AdminProvidersPage() {
                   onApprove={handleApprove}
                   onReject={handleReject}
                   busy={busyIds.has(provider.id)}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* ── Deletion requests section ── */}
+          <div className={styles.sectionSep} />
+          <div className={styles.pageHeader}>
+            <div>
+              <Heading variant="section" as="h2">
+                Wnioski o usunięcie konta
+              </Heading>
+              <Text variant="body-sm" as="p" color="secondary">
+                Warsztaty oczekujące na potwierdzenie usunięcia przez administratora
+              </Text>
+            </div>
+            {deletionTotal > 0 && (
+              <span className={`${styles.countBadge} ${styles.countBadgeDanger}`}>
+                <Text variant="kicker" as="span" weight="bold" color="danger" mono>
+                  {deletionTotal}
+                </Text>
+                <Text variant="nano" as="span" color="muted">
+                  oczekujących
+                </Text>
+              </span>
+            )}
+          </div>
+
+          {deletionProviders.length === 0 ? (
+            <div className={styles.emptyWrap}>
+              <EmptyState
+                illustration="done"
+                title="Brak wniosków o usunięcie"
+                description="Żaden warsztat nie złożył wniosku o usunięcie konta."
+              />
+            </div>
+          ) : (
+            <div className={styles.list}>
+              {deletionProviders.map((provider) => (
+                <DeletionRow
+                  key={provider.id}
+                  provider={provider}
+                  onConfirm={handleConfirmDeletion}
+                  onCancel={handleCancelDeletion}
+                  busy={busyDeletionIds.has(provider.id)}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* ── Data export requests section ── */}
+          <div className={styles.sectionSep} />
+          <div className={styles.pageHeader}>
+            <div>
+              <Heading variant="section" as="h2">
+                Zamówienia danych (RODO)
+              </Heading>
+              <Text variant="body-sm" as="p" color="secondary">
+                Warsztaty oczekujące na przesłanie kopii swoich danych (art. 20 RODO)
+              </Text>
+            </div>
+            {dataExportTotal > 0 && (
+              <span className={styles.countBadge}>
+                <Text variant="kicker" as="span" weight="bold" color="accent" mono>
+                  {dataExportTotal}
+                </Text>
+                <Text variant="nano" as="span" color="muted">
+                  oczekujących
+                </Text>
+              </span>
+            )}
+          </div>
+
+          {dataExportRequests.length === 0 ? (
+            <div className={styles.emptyWrap}>
+              <EmptyState
+                illustration="done"
+                title="Brak zamówień danych"
+                description="Żaden warsztat nie zamówił kopii swoich danych."
+              />
+            </div>
+          ) : (
+            <div className={styles.list}>
+              {dataExportRequests.map((req) => (
+                <DataExportRow
+                  key={req.id}
+                  request={req}
+                  onComplete={handleCompleteDataExport}
+                  onCancel={handleCancelDataExport}
+                  busy={busyDataExportIds.has(req.id)}
                 />
               ))}
             </div>

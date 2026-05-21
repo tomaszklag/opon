@@ -1,14 +1,19 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { Spinner, Text } from '@opony/design-system-web';
 import type { Booking, BookingStatus } from '../../../../api-data-access/bookings';
 import type { WorkerTask } from '../../../../api-data-access/worker-tasks';
-import { IconInfo, IconArrowRight } from '../../../../components/icons';
+import type { ScheduleException } from '../../../../api-data-access/schedule-exceptions';
+import type { Worker } from '../../../../api-data-access/workers';
+import type { Station } from '../../../../api-data-access/stations';
+import { IconInfo, IconArrowRight, IconGripVertical } from '../../../../components/icons';
+import { HOLIDAY_MAP } from '../../../../lib/holidays';
 import {
   HOURS,
   PX_PER_HOUR,
   GRID_HEIGHT,
+  HOUR_START,
   DAY_ABBR,
   FilterType,
   FILTER_LABELS,
@@ -20,6 +25,10 @@ import {
   timeAgo,
   matchesFilter,
   visitCountLabel,
+  toISODate,
+  snapTimeFromOffset,
+  getStationHours,
+  stationClosedZones,
 } from '../calendar.utils';
 import styles from '../calendar.module.css';
 
@@ -27,9 +36,22 @@ interface DayViewProps {
   day: Date;
   bookings: Booking[];
   tasks: WorkerTask[];
+  exceptions: ScheduleException[];
+  workers: Worker[];
   isLoading: boolean;
   nowLineTop: number;
   nowTime: string;
+  isSlotMenuOpen?: boolean;
+  stations?: Station[];
+  onBookingClick?: (booking: Booking) => void;
+  onTaskClick?: (task: WorkerTask) => void;
+  onSlotClick?: (date: Date, time: string, x: number, y: number) => void;
+  onReschedule?: (booking: Booking, newDate: Date, newTime: string) => void;
+  onTaskReschedule?: (task: WorkerTask, newDate: Date, newTime: string) => void;
+}
+
+function isDraggable(status: BookingStatus): boolean {
+  return status === 'PENDING' || status === 'CONFIRMED' || status === 'IN_PROGRESS';
 }
 
 function getStatusClass(status: BookingStatus): string {
@@ -47,8 +69,242 @@ function getStatusClass(status: BookingStatus): string {
   }
 }
 
-export function DayView({ day, bookings, tasks, isLoading, nowLineTop, nowTime }: DayViewProps) {
+function leavePillClass(type: Worker['leaves'][number]['type']): string {
+  if (type === 'VACATION') return styles.leavePillVacation ?? '';
+  if (type === 'SICK') return styles.leavePillSick ?? '';
+  return styles.leavePillOther ?? '';
+}
+
+function leavePrefix(type: Worker['leaves'][number]['type']): string {
+  if (type === 'VACATION') return 'Urlop';
+  if (type === 'SICK') return 'L4';
+  if (type === 'UNPAID') return 'Bezpł.';
+  return '';
+}
+
+function timeToTop(min: number): number {
+  return (min - HOUR_START * 60) * (PX_PER_HOUR / 60);
+}
+
+export function DayView({
+  day,
+  bookings,
+  tasks,
+  exceptions,
+  workers,
+  isLoading,
+  nowLineTop,
+  nowTime,
+  isSlotMenuOpen,
+  stations,
+  onBookingClick,
+  onTaskClick,
+  onSlotClick,
+  onReschedule,
+  onTaskReschedule,
+}: DayViewProps) {
   const [activeFilter, setActiveFilter] = useState<FilterType>('all');
+  const [hoverTop, setHoverTop] = useState<number | null>(null);
+  const [hoverTime, setHoverTime] = useState<string>('');
+  const [dragDisplay, setDragDisplay] = useState<{
+    bookingId: string;
+    top: number;
+    height: number;
+    time: string;
+    clientName: string;
+  } | null>(null);
+  const [taskDragDisplay, setTaskDragDisplay] = useState<{
+    taskId: string;
+    top: number;
+    height: number;
+    time: string;
+    title: string;
+  } | null>(null);
+  const dragRef = useRef<{ booking: Booking; grabOffsetY: number; heightPx: number } | null>(null);
+  const taskDragRef = useRef<{ task: WorkerTask; grabOffsetY: number; heightPx: number } | null>(
+    null,
+  );
+  const dragDisplayRef = useRef(dragDisplay);
+  dragDisplayRef.current = dragDisplay;
+  const taskDragDisplayRef = useRef(taskDragDisplay);
+  taskDragDisplayRef.current = taskDragDisplay;
+  const justDraggedRef = useRef(false);
+
+  const containerRef = useRef<HTMLDivElement>(null);
+  const initNowTop = useRef(nowLineTop);
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el || initNowTop.current < 0) return;
+    el.scrollTop = Math.max(0, initNowTop.current - el.clientHeight / 2);
+  }, []);
+
+  const dayOfWeek = day.getDay();
+  const stationHoursMap = useMemo(
+    () => (stations ?? []).map((s) => ({ station: s, ...getStationHours(s, dayOfWeek) })),
+    [stations, dayOfWeek],
+  );
+
+  function startBookingDrag(e: React.MouseEvent, booking: Booking) {
+    if (!isDraggable(booking.status) || !onReschedule) return;
+    e.stopPropagation();
+
+    const bookingEl =
+      ((e.currentTarget as HTMLElement).closest('[data-booking]') as HTMLElement) ??
+      (e.currentTarget as HTMLElement);
+    const rect = bookingEl.getBoundingClientRect();
+    const grabOffsetY = e.clientY - rect.top;
+    const startObj = new Date(booking.startAt);
+    const endObj = new Date(booking.endAt);
+    const startMins = startObj.getHours() * 60 + startObj.getMinutes();
+    const endMins = endObj.getHours() * 60 + endObj.getMinutes();
+    const heightPx = Math.max(endMins - startMins, 20);
+
+    dragRef.current = { booking, grabOffsetY, heightPx };
+    const initDisplay = {
+      bookingId: booking.id,
+      top: startMins - HOUR_START * 60,
+      height: heightPx,
+      time: formatTime(booking.startAt),
+      clientName: booking.clientName,
+    };
+    setDragDisplay(initDisplay);
+    dragDisplayRef.current = initDisplay;
+
+    document.body.style.userSelect = 'none';
+    document.body.style.cursor = 'grabbing';
+
+    function onMove(me: MouseEvent) {
+      const drag = dragRef.current;
+      if (!drag) return;
+      const colEl = (document.elementFromPoint(me.clientX, me.clientY) as Element | null)?.closest(
+        '[data-calday]',
+      ) as HTMLElement | null;
+      if (!colEl) return;
+      const colRect = colEl.getBoundingClientRect();
+      const rawTop = me.clientY - colRect.top - drag.grabOffsetY;
+      const snappedTop = Math.max(
+        0,
+        Math.min(Math.round(rawTop / 15) * 15, GRID_HEIGHT - drag.heightPx),
+      );
+      const next = {
+        bookingId: drag.booking.id,
+        top: snappedTop,
+        height: drag.heightPx,
+        time: snapTimeFromOffset(snappedTop),
+        clientName: drag.booking.clientName,
+      };
+      dragDisplayRef.current = next;
+      setDragDisplay(next);
+    }
+
+    function onUp() {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+      document.body.style.userSelect = '';
+      document.body.style.cursor = '';
+
+      const drag = dragRef.current;
+      const display = dragDisplayRef.current;
+      dragRef.current = null;
+      setDragDisplay(null);
+      setHoverTop(null);
+
+      justDraggedRef.current = true;
+      setTimeout(() => {
+        justDraggedRef.current = false;
+      }, 0);
+
+      if (!drag || !display) return;
+      const origTime = formatTime(drag.booking.startAt);
+      if (display.time !== origTime) {
+        onReschedule?.(drag.booking, day, display.time);
+      }
+    }
+
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  }
+
+  function startTaskDrag(e: React.MouseEvent, task: WorkerTask) {
+    if (!onTaskReschedule) return;
+    e.stopPropagation();
+
+    const taskEl =
+      ((e.currentTarget as HTMLElement).closest('[data-task]') as HTMLElement) ??
+      (e.currentTarget as HTMLElement);
+    const rect = taskEl.getBoundingClientRect();
+    const grabOffsetY = e.clientY - rect.top;
+    const startObj = new Date(task.startAt);
+    const endObj = new Date(task.endAt);
+    const startMins = startObj.getHours() * 60 + startObj.getMinutes();
+    const endMins = endObj.getHours() * 60 + endObj.getMinutes();
+    const heightPx = Math.max(endMins - startMins, 20);
+
+    taskDragRef.current = { task, grabOffsetY, heightPx };
+    const initDisplay = {
+      taskId: task.id,
+      top: startMins - HOUR_START * 60,
+      height: heightPx,
+      time: formatTime(task.startAt),
+      title: task.title,
+    };
+    setTaskDragDisplay(initDisplay);
+    taskDragDisplayRef.current = initDisplay;
+
+    document.body.style.userSelect = 'none';
+    document.body.style.cursor = 'grabbing';
+
+    function onMove(me: MouseEvent) {
+      const drag = taskDragRef.current;
+      if (!drag) return;
+      const colEl = (document.elementFromPoint(me.clientX, me.clientY) as Element | null)?.closest(
+        '[data-calday]',
+      ) as HTMLElement | null;
+      if (!colEl) return;
+      const colRect = colEl.getBoundingClientRect();
+      const rawTop = me.clientY - colRect.top - drag.grabOffsetY;
+      const snappedTop = Math.max(
+        0,
+        Math.min(Math.round(rawTop / 15) * 15, GRID_HEIGHT - drag.heightPx),
+      );
+      const next = {
+        taskId: drag.task.id,
+        top: snappedTop,
+        height: drag.heightPx,
+        time: snapTimeFromOffset(snappedTop),
+        title: drag.task.title,
+      };
+      taskDragDisplayRef.current = next;
+      setTaskDragDisplay(next);
+    }
+
+    function onUp() {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+      document.body.style.userSelect = '';
+      document.body.style.cursor = '';
+
+      const drag = taskDragRef.current;
+      const display = taskDragDisplayRef.current;
+      taskDragRef.current = null;
+      setTaskDragDisplay(null);
+      setHoverTop(null);
+
+      justDraggedRef.current = true;
+      setTimeout(() => {
+        justDraggedRef.current = false;
+      }, 0);
+
+      if (!drag || !display) return;
+      const origTime = formatTime(drag.task.startAt);
+      if (display.time !== origTime) {
+        onTaskReschedule?.(drag.task, day, display.time);
+      }
+    }
+
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  }
 
   const todayDay = isToday(day);
   const isSunday = day.getDay() === 0;
@@ -66,15 +322,123 @@ export function DayView({ day, bookings, tasks, isLoading, nowLineTop, nowTime }
   const inProgressCount = allDayBookings.filter((b) => b.status === 'IN_PROGRESS').length;
   const pendingBookings = allDayBookings.filter((b) => b.status === 'PENDING');
 
+  const iso = toISODate(day);
+  const holiday = HOLIDAY_MAP.get(iso);
+  const isDayOff = isSunday || !!holiday;
+  const exception = exceptions.find((e) => e.date.slice(0, 10) === iso);
+  const workersOnLeave = workers.filter((w) =>
+    w.leaves.some((l) => iso >= l.startDate.slice(0, 10) && iso <= l.endDate.slice(0, 10)),
+  );
+
+  const hasMultipleStations = stationHoursMap.length >= 2;
+
+  const handleMouseMove =
+    (bookingsForOverlapCheck: Booking[]) => (e: React.MouseEvent<HTMLDivElement>) => {
+      if (dragRef.current || taskDragRef.current || isSlotMenuOpen) return;
+      if ((e.target as Element).closest('[data-booking]')) {
+        setHoverTop(null);
+        return;
+      }
+      const rect = e.currentTarget.getBoundingClientRect();
+      const rawTop = e.clientY - rect.top;
+      const GHOST_H = 60;
+      const snappedTop = Math.min(Math.round(rawTop / 15) * 15, GRID_HEIGHT - GHOST_H);
+      const minToY = (h: number, m: number) => (h * 60 + m - HOUR_START * 60) * (PX_PER_HOUR / 60);
+      const overlaps = bookingsForOverlapCheck.some((b) => {
+        const s = new Date(b.startAt);
+        const en = new Date(b.endAt);
+        const bTop = minToY(s.getHours(), s.getMinutes());
+        const bBot = minToY(en.getHours(), en.getMinutes());
+        return snappedTop < bBot && snappedTop + GHOST_H > bTop;
+      });
+      if (overlaps) {
+        setHoverTop(null);
+        return;
+      }
+      setHoverTop(snappedTop);
+      setHoverTime(snapTimeFromOffset(rawTop));
+    };
+
+  const handleMouseLeave = () => {
+    if (!dragRef.current && !taskDragRef.current && !isSlotMenuOpen) setHoverTop(null);
+  };
+
+  const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!onSlotClick || isDayOff || dragDisplay || taskDragDisplay || justDraggedRef.current)
+      return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    onSlotClick(day, snapTimeFromOffset(e.clientY - rect.top), e.clientX, e.clientY);
+  };
+
+  const renderBookings = (bookingList: Booking[]) =>
+    !isDayOff &&
+    bookingList.map((booking) => {
+      const showPendingBadge = booking.status === 'PENDING';
+      const showProgressBadge = booking.status === 'IN_PROGRESS';
+      const metaParts: string[] = [];
+      if (booking.tireSize) metaParts.push(booking.tireSize);
+      if (booking.totalPricePln != null) metaParts.push(`${booking.totalPricePln} zł`);
+      return (
+        <div
+          key={booking.id}
+          role="button"
+          tabIndex={0}
+          data-booking="true"
+          className={[
+            styles.booking,
+            getStatusClass(booking.status),
+            isDraggable(booking.status) && onReschedule ? styles.bookingDraggable : '',
+            dragDisplay?.bookingId === booking.id ? styles.bookingDragging : '',
+          ]
+            .filter(Boolean)
+            .join(' ')}
+          style={getBookingStyle(booking.startAt, booking.endAt)}
+          title={`${booking.clientName} — ${formatTime(booking.startAt)} – ${formatTime(booking.endAt)}`}
+          onClick={(e) => {
+            e.stopPropagation();
+            onBookingClick?.(booking);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') onBookingClick?.(booking);
+          }}
+        >
+          {(showPendingBadge || showProgressBadge) && (
+            <span className={styles.bookingBadge}>
+              {showProgressBadge ? 'W trakcie' : 'Oczekuje'}
+            </span>
+          )}
+          <span className={styles.bookingTime}>
+            {formatTime(booking.startAt)} – {formatTime(booking.endAt)}
+          </span>
+          <span className={styles.bookingClient}>{booking.clientName}</span>
+          {metaParts.length > 0 && (
+            <span className={styles.bookingMeta}>{metaParts.join(' · ')}</span>
+          )}
+          {isDraggable(booking.status) && onReschedule && (
+            <div
+              className={styles.dragHandle}
+              onMouseDown={(e) => {
+                e.stopPropagation();
+                startBookingDrag(e, booking);
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <IconGripVertical width="10" height="10" />
+            </div>
+          )}
+        </div>
+      );
+    });
+
   return (
     <div className={styles.content}>
       {/* ── Calendar grid ── */}
-      <div className={styles.calContainer}>
+      <div className={styles.calContainer} ref={containerRef}>
         {/* Day header */}
         <div className={styles.dayViewHeader}>
           <div className={styles.dayHeaderTz}>CET</div>
           <div
-            className={`${styles.dayViewHeadCol} ${todayDay ? styles.today : ''} ${isSunday ? styles.closed : ''}`}
+            className={`${styles.dayViewHeadCol} ${todayDay ? styles.today : ''} ${isDayOff ? styles.closed : ''}`}
           >
             {todayDay && <span className={styles.todayBadge}>Dziś</span>}
             <span className={styles.dayAbbr}>{DAY_ABBR[day.getDay()]}</span>
@@ -84,6 +448,37 @@ export function DayView({ day, bookings, tasks, isLoading, nowLineTop, nowTime }
             >
               {allDayBookings.length > 0 ? visitCountLabel(allDayBookings.length) : '—'}
             </span>
+            {holiday && <span className={styles.holidayBadge}>{holiday}</span>}
+            {exception && (
+              <span
+                className={`${styles.exceptBadge} ${exception.isClosed ? styles.exceptBadgeClosed : styles.exceptBadgeModified}`}
+                title={exception.reason}
+              >
+                {exception.isClosed
+                  ? `Zamknięte`
+                  : `Sk. godz. ${exception.customOpenTime ?? ''}–${exception.customCloseTime ?? ''}`}
+              </span>
+            )}
+            {workersOnLeave.length > 0 && (
+              <div className={styles.leavePills}>
+                {workersOnLeave.map((w) => {
+                  const leave = w.leaves.find(
+                    (l) => iso >= l.startDate.slice(0, 10) && iso <= l.endDate.slice(0, 10),
+                  )!;
+                  const prefix = leavePrefix(leave.type);
+                  return (
+                    <span
+                      key={w.id}
+                      className={`${styles.leavePill} ${leavePillClass(leave.type)}`}
+                      title={`${w.name}${leave.note ? `: ${leave.note}` : ''}`}
+                    >
+                      {prefix ? `${prefix}: ` : ''}
+                      {w.name}
+                    </span>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
 
@@ -95,78 +490,312 @@ export function DayView({ day, bookings, tasks, isLoading, nowLineTop, nowTime }
             ))}
           </div>
 
-          <div
-            className={`${styles.dayViewCol} ${todayDay ? styles.today : ''} ${isSunday ? styles.closed : ''}`}
-          >
-            <div className={styles.dayColInner} style={{ height: `${GRID_HEIGHT}px` }}>
-              {gridlines.map((top) => (
-                <div key={top} className={styles.hourGridline} style={{ top: `${top}px` }} />
-              ))}
-
-              {isSunday && <span className={styles.closedMsg}>Niedziela · nieczynne</span>}
-
-              {!isSunday &&
-                tasks
-                  .filter((t) => isSameDay(new Date(t.startAt), day))
-                  .map((task) => (
+          {!hasMultipleStations ? (
+            /* ── Single station (or no stations) — original layout ── */
+            <div
+              className={`${styles.dayViewCol} ${todayDay ? styles.today : ''} ${isDayOff ? styles.closed : ''}`}
+            >
+              <div
+                data-calday={day.toISOString()}
+                className={styles.dayColInner}
+                style={{ height: `${GRID_HEIGHT}px` }}
+                onMouseMove={!isDayOff ? handleMouseMove(allDayBookings) : undefined}
+                onMouseLeave={handleMouseLeave}
+                onClick={handleClick}
+              >
+                {/* Schedule shading dla 1 stanowiska */}
+                {stationHoursMap[0] &&
+                  stationClosedZones(stationHoursMap[0]).map((z, i) => (
                     <div
-                      key={task.id}
-                      className={styles.workerTask}
-                      style={getBookingStyle(task.startAt, task.endAt)}
-                      title={`${task.title}${task.workerName ? ` — ${task.workerName}` : ''} · ${formatTime(task.startAt)}–${formatTime(task.endAt)}`}
+                      key={`cz-${i}`}
+                      className={styles.stationClosedZone}
+                      style={{ top: z.top, height: z.height }}
+                    />
+                  ))}
+                {/* End-of-shift line dla 1 stanowiska */}
+                {stationHoursMap[0]?.open && (
+                  <div
+                    className={styles.stationShiftEnd}
+                    style={{ top: timeToTop(stationHoursMap[0].endMin) }}
+                  >
+                    <Text
+                      variant="nano"
+                      as="span"
+                      color="muted"
+                      className={styles.stationShiftEndLabel}
                     >
-                      <Text
-                        variant="nano"
-                        as="span"
-                        weight="bold"
-                        className={styles.workerTaskTitle}
+                      {
+                        stationHoursMap[0].station.schedule.find((d) => d.dayOfWeek === dayOfWeek)
+                          ?.endTime
+                      }
+                    </Text>
+                  </div>
+                )}
+                {gridlines.map((top) => (
+                  <div key={top} className={styles.hourGridline} style={{ top: `${top}px` }} />
+                ))}
+                {!isDayOff && !dragDisplay && hoverTop !== null && (
+                  <div className={styles.slotGhost} style={{ top: hoverTop }}>
+                    <span className={styles.slotGhostLabel}>{hoverTime}</span>
+                  </div>
+                )}
+                {!isDayOff && dragDisplay && (
+                  <div
+                    className={styles.bookingDragGhost}
+                    style={{ top: `${dragDisplay.top}px`, height: `${dragDisplay.height}px` }}
+                  >
+                    <span className={styles.bookingDragGhostTime}>{dragDisplay.time}</span>
+                    <span className={styles.bookingDragGhostName}>{dragDisplay.clientName}</span>
+                  </div>
+                )}
+                {!isDayOff && taskDragDisplay && (
+                  <div
+                    className={styles.taskDragGhost}
+                    style={{
+                      top: `${taskDragDisplay.top}px`,
+                      height: `${taskDragDisplay.height}px`,
+                    }}
+                  >
+                    <span className={styles.taskDragGhostTime}>{taskDragDisplay.time}</span>
+                    <span className={styles.taskDragGhostTitle}>{taskDragDisplay.title}</span>
+                  </div>
+                )}
+
+                {!isDayOff &&
+                  tasks
+                    .filter((t) => isSameDay(new Date(t.startAt), day))
+                    .map((task) => (
+                      <div
+                        key={task.id}
+                        role="button"
+                        tabIndex={0}
+                        data-task="true"
+                        className={[
+                          styles.workerTask,
+                          onTaskClick ? styles.workerTaskClickable : '',
+                          onTaskReschedule ? styles.workerTaskDraggable : '',
+                          taskDragDisplay?.taskId === task.id ? styles.workerTaskDragging : '',
+                        ]
+                          .filter(Boolean)
+                          .join(' ')}
+                        style={getBookingStyle(task.startAt, task.endAt)}
+                        title={`${task.title}${task.workerName ? ` — ${task.workerName}` : ''} · ${formatTime(task.startAt)}–${formatTime(task.endAt)}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onTaskClick?.(task);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') onTaskClick?.(task);
+                        }}
                       >
-                        {task.title}
-                      </Text>
-                      {task.workerName && (
                         <Text
                           variant="nano"
                           as="span"
-                          color="muted"
-                          className={styles.workerTaskWorker}
+                          weight="bold"
+                          className={styles.workerTaskTitle}
                         >
-                          {task.workerName}
+                          {task.title}
                         </Text>
-                      )}
-                    </div>
-                  ))}
+                        {task.workerName && (
+                          <Text
+                            variant="nano"
+                            as="span"
+                            color="muted"
+                            className={styles.workerTaskWorker}
+                          >
+                            {task.workerName}
+                          </Text>
+                        )}
+                        {onTaskReschedule && (
+                          <div
+                            className={styles.workerTaskDragHandle}
+                            onMouseDown={(e) => {
+                              e.stopPropagation();
+                              startTaskDrag(e, task);
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <IconGripVertical width="10" height="10" />
+                          </div>
+                        )}
+                      </div>
+                    ))}
 
-              {!isSunday &&
-                visibleBookings.map((booking) => {
-                  const showPendingBadge = booking.status === 'PENDING';
-                  const showProgressBadge = booking.status === 'IN_PROGRESS';
-                  const metaParts: string[] = [];
-                  if (booking.tireSize) metaParts.push(booking.tireSize);
-                  if (booking.totalPricePln != null) metaParts.push(`${booking.totalPricePln} zł`);
-                  return (
-                    <div
-                      key={booking.id}
-                      className={`${styles.booking} ${getStatusClass(booking.status)}`}
-                      style={getBookingStyle(booking.startAt, booking.endAt)}
-                      title={`${booking.clientName} — ${formatTime(booking.startAt)} – ${formatTime(booking.endAt)}`}
-                    >
-                      {(showPendingBadge || showProgressBadge) && (
-                        <span className={styles.bookingBadge}>
-                          {showProgressBadge ? 'W trakcie' : 'Oczekuje'}
-                        </span>
-                      )}
-                      <span className={styles.bookingTime}>
-                        {formatTime(booking.startAt)} – {formatTime(booking.endAt)}
-                      </span>
-                      <span className={styles.bookingClient}>{booking.clientName}</span>
-                      {metaParts.length > 0 && (
-                        <span className={styles.bookingMeta}>{metaParts.join(' · ')}</span>
-                      )}
-                    </div>
-                  );
-                })}
+                {renderBookings(visibleBookings)}
+              </div>
             </div>
-          </div>
+          ) : (
+            /* ── Multiple stations — swim lanes ── */
+            <div
+              className={`${styles.dayViewColMulti} ${todayDay ? styles.today : ''} ${isDayOff ? styles.closed : ''}`}
+            >
+              {stationHoursMap.map(({ station, ...hours }, idx) => {
+                type BookingWithStation = Booking & { stationId?: string };
+                const stationBookings = visibleBookings.filter(
+                  (b) => (b as BookingWithStation).stationId === station.id,
+                );
+                // Fallback: if no booking has stationId, show all in every lane
+                const bookingsToShow =
+                  stationBookings.length === 0 &&
+                  visibleBookings.some((b) => !(b as BookingWithStation).stationId)
+                    ? visibleBookings
+                    : stationBookings;
+
+                return (
+                  <div key={station.id} className={styles.stationCol}>
+                    {/* Station header */}
+                    <Text
+                      variant="body-sm"
+                      as="div"
+                      weight="bold"
+                      color="secondary"
+                      className={styles.stationColHeader}
+                    >
+                      {station.name}
+                    </Text>
+                    {/* Column body */}
+                    <div
+                      data-calday={day.toISOString()}
+                      className={styles.dayColInner}
+                      style={{ height: `${GRID_HEIGHT}px` }}
+                      onMouseMove={!isDayOff ? handleMouseMove(allDayBookings) : undefined}
+                      onMouseLeave={handleMouseLeave}
+                      onClick={handleClick}
+                    >
+                      {/* Closed zones */}
+                      {stationClosedZones(hours).map((z, i) => (
+                        <div
+                          key={i}
+                          className={styles.stationClosedZone}
+                          style={{ top: z.top, height: z.height }}
+                        />
+                      ))}
+                      {/* End-of-shift line */}
+                      {hours.open && (
+                        <div
+                          className={styles.stationShiftEnd}
+                          style={{ top: timeToTop(hours.endMin) }}
+                        >
+                          <Text
+                            variant="nano"
+                            as="span"
+                            color="muted"
+                            className={styles.stationShiftEndLabel}
+                          >
+                            {station.schedule.find((d) => d.dayOfWeek === dayOfWeek)?.endTime}
+                          </Text>
+                        </div>
+                      )}
+                      {/* Gridlines */}
+                      {gridlines.map((top) => (
+                        <div
+                          key={top}
+                          className={styles.hourGridline}
+                          style={{ top: `${top}px` }}
+                        />
+                      ))}
+                      {/* Ghost — in each column */}
+                      {!isDayOff && !dragDisplay && hoverTop !== null && (
+                        <div className={styles.slotGhost} style={{ top: hoverTop }}>
+                          <span className={styles.slotGhostLabel}>{hoverTime}</span>
+                        </div>
+                      )}
+                      {/* Drag ghost — only in first column */}
+                      {idx === 0 && !isDayOff && dragDisplay && (
+                        <div
+                          className={styles.bookingDragGhost}
+                          style={{ top: `${dragDisplay.top}px`, height: `${dragDisplay.height}px` }}
+                        >
+                          <span className={styles.bookingDragGhostTime}>{dragDisplay.time}</span>
+                          <span className={styles.bookingDragGhostName}>
+                            {dragDisplay.clientName}
+                          </span>
+                        </div>
+                      )}
+                      {/* Task drag ghost — only in first column */}
+                      {idx === 0 && !isDayOff && taskDragDisplay && (
+                        <div
+                          className={styles.taskDragGhost}
+                          style={{
+                            top: `${taskDragDisplay.top}px`,
+                            height: `${taskDragDisplay.height}px`,
+                          }}
+                        >
+                          <span className={styles.taskDragGhostTime}>{taskDragDisplay.time}</span>
+                          <span className={styles.taskDragGhostTitle}>{taskDragDisplay.title}</span>
+                        </div>
+                      )}
+                      {/* WorkerTasks — only in first column */}
+                      {idx === 0 &&
+                        !isDayOff &&
+                        tasks
+                          .filter((t) => isSameDay(new Date(t.startAt), day))
+                          .map((task) => (
+                            <div
+                              key={task.id}
+                              role="button"
+                              tabIndex={0}
+                              data-task="true"
+                              className={[
+                                styles.workerTask,
+                                onTaskClick ? styles.workerTaskClickable : '',
+                                onTaskReschedule ? styles.workerTaskDraggable : '',
+                                taskDragDisplay?.taskId === task.id
+                                  ? styles.workerTaskDragging
+                                  : '',
+                              ]
+                                .filter(Boolean)
+                                .join(' ')}
+                              style={getBookingStyle(task.startAt, task.endAt)}
+                              title={`${task.title}${task.workerName ? ` — ${task.workerName}` : ''} · ${formatTime(task.startAt)}–${formatTime(task.endAt)}`}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onTaskClick?.(task);
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' || e.key === ' ') onTaskClick?.(task);
+                              }}
+                            >
+                              <Text
+                                variant="nano"
+                                as="span"
+                                weight="bold"
+                                className={styles.workerTaskTitle}
+                              >
+                                {task.title}
+                              </Text>
+                              {task.workerName && (
+                                <Text
+                                  variant="nano"
+                                  as="span"
+                                  color="muted"
+                                  className={styles.workerTaskWorker}
+                                >
+                                  {task.workerName}
+                                </Text>
+                              )}
+                              {onTaskReschedule && (
+                                <div
+                                  className={styles.workerTaskDragHandle}
+                                  onMouseDown={(e) => {
+                                    e.stopPropagation();
+                                    startTaskDrag(e, task);
+                                  }}
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <IconGripVertical width="10" height="10" />
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                      {/* Bookings for this station */}
+                      {renderBookings(bookingsToShow)}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
 
           {nowLineVisible && (
             <div className={styles.nowLine} style={{ top: `${nowLineTop}px` }}>
@@ -276,6 +905,15 @@ export function DayView({ day, bookings, tasks, isLoading, nowLineTop, nowTime }
               </Text>
               <Text variant="kicker-sm" as="span" className={styles.legendCount}>
                 {completedCount}
+              </Text>
+            </div>
+            <div className={styles.legendItem}>
+              <span className={`${styles.legendSwatch} ${styles.legendSwatchTask}`} />
+              <Text variant="body-sm" as="span" color="secondary">
+                Zadanie
+              </Text>
+              <Text variant="kicker-sm" as="span" className={styles.legendCount}>
+                {tasks.length}
               </Text>
             </div>
           </div>

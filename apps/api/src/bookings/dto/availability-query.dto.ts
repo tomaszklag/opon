@@ -10,4 +10,9 @@ export class AvailabilityQueryDto {
   @IsOptional()
   @IsString()
   workerId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  stationId?: string;
 }

@@ -21,6 +21,12 @@
   flex-shrink: 0;
 }
 
+.topStripRight {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .brand {
   display: inline-flex;
   align-items: center;
@@ -103,15 +109,6 @@
   flex-direction: column;
   align-items: center;
   scrollbar-width: thin;
-}
-
-.content::-webkit-scrollbar {
-  width: 6px;
-}
-
-.content::-webkit-scrollbar-thumb {
-  background: var(--border);
-  border-radius: 3px;
 }
 
 .inner {
@@ -299,6 +296,24 @@
   align-items: center;
   gap: 8px;
   flex-shrink: 0;
+}
+
+.statusBadge[data-status='PENDING_DELETION'] {
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  color: var(--error);
+}
+
+/* ── Section separator ── */
+.sectionSep {
+  height: 1px;
+  background: var(--border);
+  margin: 8px 0;
+}
+
+/* ── Danger count badge ── */
+.countBadgeDanger {
+  border-color: var(--danger-border);
 }
 
 /* ── Empty state wrapper ── */

@@ -77,6 +77,41 @@ export class AuthRepository {
     });
   }
 
+  // Zwraca wszystkie sesje (aktywne + wygasłe + odwołane) — UI wyświetla pełną historię
+  listUserSessions(userId: string) {
+    return this.prisma.session.findMany({
+      where: { userId },
+      orderBy: { lastUsedAt: 'desc' },
+    });
+  }
+
+  async revokeSessionById(id: string, userId: string): Promise<boolean> {
+    const result = await this.prisma.session.updateMany({
+      where: { id, userId, revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
+    return result.count > 0;
+  }
+
+  async updateUserPhone(userId: string, newPhone: string): Promise<void> {
+    await this.prisma.user.update({ where: { id: userId }, data: { phone: newPhone } });
+  }
+
+  async linkClientsByPhone(phone: string, userId: string): Promise<void> {
+    await this.prisma.client.updateMany({
+      where: { phone, userId: null },
+      data: { userId },
+    });
+  }
+
+  async revokeOtherSessions(userId: string, currentJti: string): Promise<number> {
+    const result = await this.prisma.session.updateMany({
+      where: { userId, id: { not: currentJti }, revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
+    return result.count;
+  }
+
   /**
    * Rotacja sesji w jednej transakcji. Zwraca RotateSessionResult zamiast
    * rzucać wyjątkiem — serwis mapuje reason → UnauthorizedException.

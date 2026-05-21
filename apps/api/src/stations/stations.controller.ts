@@ -1,4 +1,14 @@
-import { Body, Controller, Delete, Get, Param, Post, Put } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Post,
+  Put,
+} from '@nestjs/common';
 import { ApiCookieAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { JwtPayload } from '../auth/types/jwt-payload.interface';
@@ -59,8 +69,9 @@ export class StationsController {
   // ── DELETE /v1/providers/me/stations/:id ─────────────────────────────────
 
   @Delete(':id')
+  @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Usuń stanowisko' })
-  @ApiResponse({ status: 200 })
+  @ApiResponse({ status: 204 })
   async remove(@CurrentUser() user: JwtPayload, @Param('id') id: string): Promise<void> {
     const provider = await this.providersService.getMyProvider(user.sub);
     return this.service.delete(id, provider.id);
@@ -83,8 +94,9 @@ export class StationsController {
   // ── DELETE /v1/providers/me/stations/:id/workers/:workerId ───────────────
 
   @Delete(':id/workers/:workerId')
+  @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Odepnij pracownika od stanowiska' })
-  @ApiResponse({ status: 200 })
+  @ApiResponse({ status: 204 })
   async removeWorker(
     @CurrentUser() user: JwtPayload,
     @Param('id') id: string,

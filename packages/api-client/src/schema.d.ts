@@ -92,6 +92,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/v1/auth/change-phone': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /** Zmień numer telefonu — wymaga OTP na stary i nowy numer */
+    patch: operations['AuthController_changePhone'];
+    trace?: never;
+  };
   '/v1/auth/verify-email': {
     parameters: {
       query?: never;
@@ -121,6 +138,41 @@ export interface paths {
     put?: never;
     post?: never;
     delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/auth/sessions': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Lista sesji zalogowanego użytkownika (aktywnych i historycznych) */
+    get: operations['AuthController_listSessions'];
+    put?: never;
+    post?: never;
+    /** Wyloguj wszystkie inne urządzenia (zachowuje bieżącą sesję) */
+    delete: operations['AuthController_revokeOtherSessions'];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/auth/sessions/{id}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /** Wyloguj wybrane urządzenie (nie można wylogować bieżącej sesji) */
+    delete: operations['AuthController_revokeSession'];
     options?: never;
     head?: never;
     patch?: never;
@@ -162,59 +214,25 @@ export interface paths {
     patch: operations['ProvidersController_updateMyProvider'];
     trace?: never;
   };
-  '/v1/providers/{id}': {
+  '/v1/providers/me/photos': {
     parameters: {
       query?: never;
       header?: never;
       path?: never;
       cookie?: never;
     };
-    /** Szczegóły zatwierdzonej firmy (publiczne) */
-    get: operations['ProvidersController_getById'];
+    /** Lista zdjęć mojej firmy */
+    get: operations['PhotosController_getPhotos'];
     put?: never;
-    post?: never;
+    /** Prześlij zdjęcie firmy */
+    post: operations['PhotosController_upload'];
     delete?: never;
     options?: never;
     head?: never;
     patch?: never;
     trace?: never;
   };
-  '/v1/providers/me/market-prices': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /** Ceny rynkowe sąsiednich dostawców w zasięgu bazy */
-    get: operations['PricingTiersController_getMarketPrices'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/v1/providers/me/pricing-tiers': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /** Lista moich tierów cenowych */
-    get: operations['PricingTiersController_listMine'];
-    put?: never;
-    /** Dodaj tier cenowy */
-    post: operations['PricingTiersController_create'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/v1/providers/me/pricing-tiers/{id}': {
+  '/v1/providers/me/photos/reorder': {
     parameters: {
       query?: never;
       header?: never;
@@ -224,58 +242,141 @@ export interface paths {
     get?: never;
     put?: never;
     post?: never;
-    /** Usuń tier cenowy */
-    delete: operations['PricingTiersController_remove'];
+    delete?: never;
     options?: never;
     head?: never;
-    /** Zaktualizuj tier cenowy */
-    patch: operations['PricingTiersController_update'];
+    patch: operations['ProvidersController_reorderPhotos'];
     trace?: never;
   };
-  '/v1/providers/{providerId}/pricing-tiers': {
+  '/v1/providers/me/photos/{id}': {
     parameters: {
       query?: never;
       header?: never;
       path?: never;
       cookie?: never;
     };
-    /** Lista tierów cenowych firmy (publiczne) */
-    get: operations['PricingTiersController_listByProvider'];
+    get?: never;
+    put?: never;
+    post?: never;
+    /** Usuń zdjęcie firmy */
+    delete: operations['PhotosController_deletePhoto'];
+    options?: never;
+    head?: never;
+    /** Zmień nazwę zdjęcia */
+    patch: operations['PhotosController_rename'];
+    trace?: never;
+  };
+  '/v1/providers/me/pause': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
     put?: never;
     post?: never;
     delete?: never;
     options?: never;
     head?: never;
-    patch?: never;
+    /** Ustaw pauzę warsztatu (null = odblokuj) */
+    patch: operations['ProvidersController_pause'];
     trace?: never;
   };
-  '/v1/providers/me/working-hours': {
+  '/v1/providers/me/suspend': {
     parameters: {
       query?: never;
       header?: never;
       path?: never;
       cookie?: never;
     };
-    /** Moje godziny pracy */
-    get: operations['WorkingHoursController_listMine'];
-    /** Ustaw / zaktualizuj godziny pracy (upsert per dzień) */
-    put: operations['WorkingHoursController_upsert'];
-    post?: never;
+    get?: never;
+    put?: never;
+    /** Zawieś widoczność warsztatu (APPROVED → SUSPENDED) */
+    post: operations['ProvidersController_selfSuspend'];
     delete?: never;
     options?: never;
     head?: never;
     patch?: never;
     trace?: never;
   };
-  '/v1/providers/{providerId}/working-hours': {
+  '/v1/providers/me/deletion-requests': {
     parameters: {
       query?: never;
       header?: never;
       path?: never;
       cookie?: never;
     };
-    /** Godziny pracy firmy (publiczne) */
-    get: operations['WorkingHoursController_listByProvider'];
+    get?: never;
+    put?: never;
+    /** Złóż wniosek o usunięcie konta (APPROVED → PENDING_DELETION) */
+    post: operations['ProvidersController_requestDeletion'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/providers/me/data-export-requests': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Zamów kopię danych (RODO art. 20) */
+    post: operations['ProvidersController_requestDataExport'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/providers/me/email/request-otp': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Wyślij kod OTP na nowy adres email */
+    post: operations['ProvidersController_requestEmailChangeOtp'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/providers/me/email': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /** Potwierdź zmianę adresu email kodem OTP */
+    patch: operations['ProvidersController_confirmEmailChange'];
+    trace?: never;
+  };
+  '/v1/providers/{id}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Szczegóły zatwierdzonej firmy (publiczne) */
+    get: operations['ProvidersController_getById'];
     put?: never;
     post?: never;
     delete?: never;
@@ -316,42 +417,6 @@ export interface paths {
     options?: never;
     head?: never;
     patch?: never;
-    trace?: never;
-  };
-  '/v1/providers/me/photos': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /** Lista zdjęć mojej firmy */
-    get: operations['PhotosController_getPhotos'];
-    put?: never;
-    /** Prześlij zdjęcie firmy */
-    post: operations['PhotosController_upload'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/v1/providers/me/photos/{id}': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    post?: never;
-    /** Usuń zdjęcie firmy */
-    delete: operations['PhotosController_deletePhoto'];
-    options?: never;
-    head?: never;
-    /** Zmień nazwę zdjęcia */
-    patch: operations['PhotosController_rename'];
     trace?: never;
   };
   '/v1/providers/me/photos/{id}/primary': {
@@ -422,6 +487,40 @@ export interface paths {
     patch: operations['AdminProvidersController_rejectProvider'];
     trace?: never;
   };
+  '/v1/admin/providers/{id}/confirm-deletion': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /** Potwierdź usunięcie konta (PENDING_DELETION → usuwa dane) */
+    patch: operations['AdminProvidersController_confirmDeletion'];
+    trace?: never;
+  };
+  '/v1/admin/providers/{id}/cancel-deletion': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /** Anuluj wniosek o usunięcie (PENDING_DELETION → APPROVED) */
+    patch: operations['AdminProvidersController_cancelDeletion'];
+    trace?: never;
+  };
   '/v1/admin/gus/health': {
     parameters: {
       query?: never;
@@ -437,6 +536,57 @@ export interface paths {
     options?: never;
     head?: never;
     patch?: never;
+    trace?: never;
+  };
+  '/v1/admin/data-export-requests': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Lista wniosków o kopię danych (PENDING) */
+    get: operations['AdminDataExportController_listPending'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/admin/data-export-requests/{id}/complete': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /** Oznacz wniosek jako zrealizowany */
+    patch: operations['AdminDataExportController_complete'];
+    trace?: never;
+  };
+  '/v1/admin/data-export-requests/{id}/cancel': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /** Anuluj wniosek o dane */
+    patch: operations['AdminDataExportController_cancel'];
     trace?: never;
   };
   '/v1/providers/me/stations': {
@@ -580,6 +730,38 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/v1/providers/me/tasks': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['WorkerTasksController_list'];
+    put?: never;
+    post: operations['WorkerTasksController_create'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/providers/me/tasks/{id}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['WorkerTasksController_findById'];
+    put?: never;
+    post?: never;
+    delete: operations['WorkerTasksController_delete'];
+    options?: never;
+    head?: never;
+    patch: operations['WorkerTasksController_update'];
+    trace?: never;
+  };
   '/v1/providers/me/bookings': {
     parameters: {
       query?: never;
@@ -589,6 +771,125 @@ export interface paths {
     };
     /** List bookings for current week (provider) */
     get: operations['BookingsController_list'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/providers/me/bookings/summary': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Paginated booking list with filters (admin table) */
+    get: operations['BookingsController_listAdmin'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/providers/me/bookings/stats': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Booking KPI stats (last 30 days vs prior 30 days) */
+    get: operations['BookingsController_getStats'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/providers/me/bookings/bulk-status': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /** Bulk update booking status (confirm or cancel) */
+    patch: operations['BookingsController_bulkUpdateStatus'];
+    trace?: never;
+  };
+  '/v1/providers/me/bookings/manual': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Create manual booking (provider-initiated) */
+    post: operations['BookingsController_createManual'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/providers/me/bookings/clients': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Search clients by phone/name for autocomplete */
+    get: operations['BookingsController_searchClients'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/providers/me/bookings/custom-services': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Autocomplete for custom (off-pricelist) service names */
+    get: operations['BookingsController_getCustomServiceSuggestions'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/providers/me/bookings/availability': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get available time slots for a given date */
+    get: operations['BookingsController_getAvailability'];
     put?: never;
     post?: never;
     delete?: never;
@@ -614,6 +915,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/v1/providers/me/bookings/{referenceCode}/reschedule': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /** Reschedule a booking (move to new date/time) */
+    patch: operations['BookingsController_reschedule'];
+    trace?: never;
+  };
   '/v1/providers/me/bookings/{referenceCode}/status': {
     parameters: {
       query?: never;
@@ -629,6 +947,406 @@ export interface paths {
     head?: never;
     /** Update booking status (provider action) */
     patch: operations['BookingsController_updateStatus'];
+    trace?: never;
+  };
+  '/v1/providers/me/reviews': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List reviews for provider */
+    get: operations['ReviewsController_list'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/providers/me/reviews/stats': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get review stats for provider hero section */
+    get: operations['ReviewsController_getStats'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/providers/me/reviews/mark-seen': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Mark all unseen reviews as seen */
+    post: operations['ReviewsController_markSeen'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/providers/me/reviews/{id}/reply': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /** Create or update provider reply */
+    put: operations['ReviewsController_upsertReply'];
+    post?: never;
+    /** Delete provider reply */
+    delete: operations['ReviewsController_deleteReply'];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/providers/me/reviews/{id}/report': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Report review abuse (US-48) */
+    post: operations['ReviewsController_report'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/providers/me/realtime/events': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['RealtimeController_onConnect'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/providers/me/service-configs': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Pobierz konfigurację czasów usług */
+    get: operations['ServiceConfigsController_getAll'];
+    /** Upsert konfiguracji czasów usług */
+    put: operations['ServiceConfigsController_upsertAll'];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/providers/me/services': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Pobierz listę usług warsztatu */
+    get: operations['ServicesController_getServices'];
+    /** Zastąp listę usług warsztatu (pełna synchronizacja) */
+    put: operations['ServicesController_replaceServices'];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/providers/me/services/{id}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /** Usuń usługę (hard lub soft delete w zależności od historii rezerwacji) */
+    delete: operations['ServicesController_deleteService'];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/providers/me/addons': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Pobierz kolekcję dodatków warsztatu */
+    get: operations['ServicesController_getAddons'];
+    /** Zastąp kolekcję dodatków warsztatu (pełna synchronizacja) */
+    put: operations['ServicesController_replaceAddons'];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/providers/me/addons/{id}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /** Usuń dodatek (hard lub soft delete w zależności od historii rezerwacji) */
+    delete: operations['ServicesController_deleteAddon'];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/providers/me/notification-preferences': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Pobierz ustawienia powiadomień (tworzy domyślne jeśli brak) */
+    get: operations['NotificationPreferencesController_get'];
+    /** Zaktualizuj ustawienia powiadomień */
+    put: operations['NotificationPreferencesController_update'];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/providers/me/push-subscriptions': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Zarejestruj Web Push subscription urządzenia */
+    post: operations['PushSubscriptionsController_register'];
+    /** Wyrejestruj Web Push subscription (po wyłączeniu push w ustawieniach) */
+    delete: operations['PushSubscriptionsController_unregister'];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/providers/me/schedule-exceptions': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Lista wyjątków (od -7 dni wzwyż) */
+    get: operations['ScheduleExceptionsController_list'];
+    put?: never;
+    /** Dodaj / zaktualizuj wyjątek (upsert per data) */
+    post: operations['ScheduleExceptionsController_create'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/providers/me/schedule-exceptions/{id}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /** Usuń wyjątek */
+    delete: operations['ScheduleExceptionsController_remove'];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/providers/me/depot': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List tire sets (paginated) */
+    get: operations['DepotController_list'];
+    put?: never;
+    /** Add tire set to depot */
+    post: operations['DepotController_create'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/providers/me/depot/stats': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Depot KPI stats */
+    get: operations['DepotController_getStats'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/providers/me/depot/slots': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List all depot slots with occupancy */
+    get: operations['DepotController_getSlots'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/providers/me/depot/slots/bulk': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Bulk create depot slots */
+    post: operations['DepotController_bulkCreateSlots'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/providers/me/depot/{id}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get tire set detail */
+    get: operations['DepotController_getById'];
+    put?: never;
+    post?: never;
+    /** Delete tire set (only PICKED_UP) */
+    delete: operations['DepotController_remove'];
+    options?: never;
+    head?: never;
+    /** Update tire set data / location / condition */
+    patch: operations['DepotController_update'];
+    trace?: never;
+  };
+  '/v1/providers/me/depot/{id}/pickup': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Mark tire set as picked up by client */
+    post: operations['DepotController_pickup'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/providers/me/depot/{id}/store': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Re-admit picked-up tire set back to depot */
+    post: operations['DepotController_store'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/providers/me/depot/slots/{slotId}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /** Delete empty depot slot */
+    delete: operations['DepotController_removeSlot'];
+    options?: never;
+    head?: never;
+    patch?: never;
     trace?: never;
   };
 }
@@ -653,6 +1371,8 @@ export interface components {
       message: string;
       /** @example 300 */
       expiresIn: number;
+      /** @example true */
+      alreadySent?: boolean;
     };
     VerifyOtpDto: {
       /** @example +48123456789 */
@@ -673,6 +1393,29 @@ export interface components {
       /** @example OK */
       message: string;
     };
+    ChangePhoneDto: {
+      /**
+       * @description Kod OTP wysłany na bieżący numer
+       * @example 123456
+       */
+      currentCode: string;
+      /**
+       * @description Nowy numer telefonu w formacie E.164
+       * @example +48123456789
+       */
+      newPhone: string;
+      /**
+       * @description Kod OTP wysłany na nowy numer
+       * @example 654321
+       */
+      newCode: string;
+    };
+    ChangePhoneResponseDto: {
+      /** @example Numer telefonu zmieniony */
+      message: string;
+      /** @example +48123456789 */
+      phone: string;
+    };
     AuthMeResponseDto: {
       sub: string;
       phone: string;
@@ -687,7 +1430,18 @@ export interface components {
         | 'PENDING_APPROVAL'
         | 'APPROVED'
         | 'SUSPENDED'
-        | 'REJECTED';
+        | 'REJECTED'
+        | 'PENDING_DELETION';
+    };
+    SessionResponseDto: {
+      id: string;
+      userAgent?: string | null;
+      ipAddress?: string | null;
+      createdAt: string;
+      lastUsedAt: string;
+      expiresAt: string;
+      revokedAt?: string | null;
+      isCurrent: boolean;
     };
     CreateProviderDto: {
       /** @example Opony Express Sp. z o.o. */
@@ -698,7 +1452,7 @@ export interface components {
        */
       nip: string;
       /** @enum {string} */
-      type: 'MOBILE' | 'STATIONARY';
+      type: 'MOBILE' | 'STATIONARY' | 'BOTH';
       /** @example +48600000000 */
       phone?: string;
       /** @example kontakt@firma.pl */
@@ -710,7 +1464,7 @@ export interface components {
       slug?: string | null;
       nip: string;
       /** @enum {string} */
-      type: 'MOBILE' | 'STATIONARY';
+      type: 'MOBILE' | 'STATIONARY' | 'BOTH';
       /** @enum {string} */
       status:
         | 'PENDING_NIP'
@@ -718,7 +1472,8 @@ export interface components {
         | 'PENDING_APPROVAL'
         | 'APPROVED'
         | 'SUSPENDED'
-        | 'REJECTED';
+        | 'REJECTED'
+        | 'PENDING_DELETION';
       description?: string | null;
       logoUrl?: string | null;
       phone?: string | null;
@@ -738,7 +1493,18 @@ export interface components {
       /** Format: date-time */
       approvedAt?: string | null;
       /** Format: date-time */
+      deletionRequestedAt?: string | null;
+      /** Format: date-time */
       updatedAt: string;
+      tagline?: string | null;
+      foundedYear?: number | null;
+      showPhone: boolean;
+      address?: string | null;
+      vehicleTypes: string[];
+      tireSizes: string[];
+      additionalServices: string[];
+      /** Format: date-time */
+      pausedUntil?: string | null;
     };
     ProviderPageResponseDto: {
       data: components['schemas']['ProviderResponseDto'][];
@@ -752,12 +1518,74 @@ export interface components {
       logoUrl?: string;
       /** @example +48600000000 */
       phone?: string;
-      email?: string;
       /** @description Szerokość geogr. centrum operacji (mobilni) */
       cityCenterLat?: number;
       /** @description Długość geogr. centrum operacji (mobilni) */
       cityCenterLng?: number;
       serviceRadiusKm?: number;
+      /** @enum {string} */
+      type?: 'MOBILE' | 'STATIONARY' | 'BOTH';
+      tagline?: string;
+      foundedYear?: number;
+      showPhone?: boolean;
+      address?: string;
+      vehicleTypes?: string[];
+      tireSizes?: string[];
+      additionalServices?: string[];
+      /** @description Dopłata TPMS per sensor (PLN) */
+      tpmsPricePln?: number;
+      /** @description Opłata dojazd strefa 1: 0–10 km (PLN) */
+      travelFeeZone1Pln?: number;
+      /** @description Opłata dojazd strefa 2: 10–15 km (PLN) */
+      travelFeeZone2Pln?: number;
+    };
+    PhotoResponseDto: {
+      id: string;
+      url: string;
+      /** @enum {string} */
+      type: 'LOGO' | 'VEHICLE' | 'WORKSPACE' | 'ADDITIONAL';
+      isPrimary: boolean;
+      size: number;
+      mimeType: string;
+      originalName: string;
+      /** Format: date-time */
+      createdAt: string;
+    };
+    AddPhotoDto: {
+      url: string;
+      /** @enum {string} */
+      type?: 'LOGO' | 'VEHICLE' | 'WORKSPACE' | 'ADDITIONAL';
+    };
+    ReorderPhotosDto: {
+      orderedIds: string[];
+    };
+    SetProviderPauseDto: {
+      /**
+       * Format: date-time
+       * @description Data wygaśnięcia pauzy w formacie ISO 8601. null = odblokuj.
+       * @example 2026-05-01T23:59:59.999Z
+       */
+      until?: string | null;
+    };
+    ProviderPauseResponseDto: {
+      /** Format: date-time */
+      pausedUntil?: string | null;
+    };
+    RequestEmailChangeDto: {
+      /**
+       * @description Nowy adres email
+       * @example nowy@example.pl
+       */
+      newEmail: string;
+    };
+    ConfirmEmailChangeDto: {
+      /** @example nowy@example.pl */
+      newEmail: string;
+      /**
+       * @description 6-cyfrowy kod z emaila
+       * @example 123456
+       */
+      code: string;
     };
     MarketPriceResponseDto: {
       /**
@@ -772,124 +1600,9 @@ export interface components {
       /** @description Liczba unikalnych dostawców w próbce */
       providerCount: number;
     };
-    PricingTierResponseDto: {
-      id: string;
-      providerId: string;
-      /** @enum {string} */
-      sizeTier: 'S' | 'M' | 'L';
-      priceSwapPln: number;
-      priceBalancingPerWheelPln?: number | null;
-      travelFeeFirstKmPln: number;
-      travelFeeExtraKmPln: number;
-    };
-    CreatePricingTierDto: {
-      /**
-       * @description Tier rozmiaru felgi: S (≤R15), M (R16–R17), L (≥R18)
-       * @enum {string}
-       */
-      sizeTier: 'S' | 'M' | 'L';
-      /**
-       * @description Cena wymiany kompletu (PLN)
-       * @example 120
-       */
-      priceSwapPln: number;
-      /**
-       * @description Cena wyważania za koło (PLN)
-       * @example 25
-       */
-      priceBalancingPerWheelPln?: number;
-      /**
-       * @description Opłata dojazd — pierwsze km (PLN)
-       * @example 0
-       */
-      travelFeeFirstKmPln?: number;
-      /**
-       * @description Opłata dojazd — każdy kolejny km (PLN)
-       * @example 2.5
-       */
-      travelFeeExtraKmPln?: number;
-    };
-    UpdatePricingTierDto: {
-      priceSwapPln?: number;
-      priceBalancingPerWheelPln?: number;
-      travelFeeFirstKmPln?: number;
-      travelFeeExtraKmPln?: number;
-    };
-    CapacityBlockResponseDto: {
-      /** @example 08:00 */
-      from: string;
-      /** @example 13:00 */
-      to: string;
-      /** @example 2 */
-      workstations: number;
-    };
-    WorkingHoursResponseDto: {
-      id: string;
-      providerId: string;
-      dayOfWeek: number;
-      isClosed: boolean;
-      openTime?: string | null;
-      closeTime?: string | null;
-      slotMinutes: number;
-      /** @default 1 */
-      workstations: number;
-      blocks?: components['schemas']['CapacityBlockResponseDto'][] | null;
-    };
-    CapacityBlockDto: {
-      /** @example 08:00 */
-      from: string;
-      /** @example 13:00 */
-      to: string;
-      /**
-       * @description Liczba równoległych stanowisk w bloku
-       * @example 2
-       */
-      workstations: number;
-    };
-    WorkingHoursDayDto: {
-      /**
-       * @description 0=niedz … 6=sobota
-       * @example 1
-       */
-      dayOfWeek: number;
-      /** @example false */
-      isClosed: boolean;
-      /** @example 08:00 */
-      openTime?: string;
-      /** @example 17:00 */
-      closeTime?: string;
-      /**
-       * @description Długość slotu (minuty)
-       * @default 45
-       */
-      slotMinutes: number;
-      /**
-       * @description Liczba równoległych stanowisk dla całego dnia
-       * @default 1
-       */
-      workstations: number;
-      /** @description Bloki obsady (max 3); null = cały dzień jednorodny */
-      blocks?: components['schemas']['CapacityBlockDto'][] | null;
-    };
-    UpsertWorkingHoursDto: {
-      /** @description 1–7 dni (upsert po dayOfWeek) */
-      days: components['schemas']['WorkingHoursDayDto'][];
-    };
     UploadPhotoDto: {
       /** @enum {string} */
       type: 'LOGO' | 'VEHICLE' | 'WORKSPACE' | 'ADDITIONAL';
-    };
-    PhotoResponseDto: {
-      id: string;
-      url: string;
-      /** @enum {string} */
-      type: 'LOGO' | 'VEHICLE' | 'WORKSPACE' | 'ADDITIONAL';
-      isPrimary: boolean;
-      size: number;
-      mimeType: string;
-      originalName: string;
-      /** Format: date-time */
-      createdAt: string;
     };
     RenamePhotoDto: {
       /** @example Logo warsztatu */
@@ -909,8 +1622,8 @@ export interface components {
       id: string;
       providerId: string;
       name: string;
-      services: ('SEASONAL_SWAP' | 'WHEEL_SWAP' | 'BALANCING' | 'PUNCTURE_REPAIR')[];
-      schedule: Record<string, never>;
+      serviceIds: string[];
+      schedule: Record<string, unknown>;
       workers: components['schemas']['StationWorkerResponseDto'][];
       /** Format: date-time */
       createdAt: string;
@@ -938,7 +1651,7 @@ export interface components {
       /** @example Stanowisko 1 */
       name: string;
       /** @default [] */
-      services: ('SEASONAL_SWAP' | 'WHEEL_SWAP' | 'BALANCING' | 'PUNCTURE_REPAIR')[];
+      serviceIds: string[];
       /**
        * @description DaySchedule[] — grafik tygodniowy (JSON)
        * @example [
@@ -955,7 +1668,7 @@ export interface components {
     UpdateStationDto: {
       /** @example Stanowisko 1 */
       name?: string;
-      services?: ('SEASONAL_SWAP' | 'WHEEL_SWAP' | 'BALANCING' | 'PUNCTURE_REPAIR')[];
+      serviceIds?: string[];
       /**
        * @description DaySchedule[] — grafik tygodniowy (JSON)
        * @example [
@@ -1054,6 +1767,37 @@ export interface components {
       /** @example Urlop wypoczynkowy */
       note?: string;
     };
+    CreateWorkerTaskDto: {
+      title: string;
+      workerId?: string;
+      startAt: string;
+      endAt: string;
+      notes?: string;
+    };
+    LinkedBookingDto: {
+      referenceCode: string;
+      clientName: string;
+      startAt: string;
+    };
+    WorkerTaskResponseDto: {
+      id: string;
+      providerId: string;
+      workerId: string | null;
+      workerName: string | null;
+      title: string;
+      startAt: string;
+      endAt: string;
+      notes: string | null;
+      linkedBookingId: string | null;
+      linkedBooking: components['schemas']['LinkedBookingDto'] | null;
+      createdAt: string;
+    };
+    UpdateWorkerTaskDto: {
+      notes?: string | null;
+      linkedBookingId?: string | null;
+      startAt?: string;
+      endAt?: string;
+    };
     BookingResponseDto: {
       id: string;
       referenceCode: string;
@@ -1063,26 +1807,127 @@ export interface components {
       clientName: string;
       clientPhone: string;
       tireSize?: string | null;
-      serviceType?: string | null;
-      sizeTier?: string | null;
-      tpmsRequired: boolean;
       basePricePln?: number | null;
       travelFeePln?: number | null;
       totalPricePln?: number | null;
       stationId?: string | null;
+      workerName?: string | null;
       notes?: string | null;
       createdAt: string;
+      isManual: boolean;
+    };
+    BookingPageResponseDto: {
+      items: components['schemas']['BookingResponseDto'][];
+      total: number;
+      page: number;
+      pageSize: number;
+      totalPages: number;
+    };
+    BookingStatsResponseDto: {
+      total: number;
+      totalPrev?: number | null;
+      revenuePln: number;
+      revenuePrevPln?: number | null;
+      avgValuePln: number;
+      completionRate: number;
+      completionRatePrev?: number | null;
+    };
+    BulkUpdateStatusDto: {
+      ids: string[];
+      action: string;
+    };
+    ManualSubServiceDto: {
+      name: string;
+      pricePln?: number | null;
+    };
+    CreateManualBookingDto: {
+      /** @example Jan Kowalski */
+      clientName: string;
+      /** @example +48123456789 */
+      clientPhone: string;
+      /** @example 2026-05-01T09:00:00.000Z */
+      startAt: string;
+      /** @example 2026-05-01T09:30:00.000Z */
+      endAt: string;
+      /** @example 205/55R16 */
+      tireSize?: string;
+      /** @example 150 */
+      totalPricePln?: number;
+      /** @example Wymiana sezonowa — Osobowe */
+      serviceName?: string;
+      subServices?: components['schemas']['ManualSubServiceDto'][];
+      /** @example Klient prosi o kontakt przed wizytą. */
+      notes?: string;
+      workerId?: string;
+      stationId?: string;
+      /**
+       * @default true
+       * @example true
+       */
+      autoConfirm: boolean;
+      /**
+       * @description Pomiń walidację dostępności (recepcja świadomie nadpisuje)
+       * @example false
+       */
+      skipAvailabilityCheck?: boolean;
+      /**
+       * @description Fingerprint z GET /availability. Jeśli podany i nieaktualny, serwer zwraca 409 z aktualną dostępnością.
+       * @example a1b2c3d4
+       */
+      availabilityVersion?: string;
+      /** @description Usługa zdefiniowana poza cennikiem */
+      isCustomService?: boolean;
+      /** @description Cena usługi custom (opcjonalna) */
+      customPricePln?: number;
+      /** @description Czas trwania usługi custom w minutach */
+      customDurationMinutes?: number;
+    };
+    CustomServiceSuggestionDto: {
+      name: string;
+      avgPricePln?: number | null;
+      avgDurationMinutes?: number | null;
+      count: number;
+    };
+    ClientSearchResultDto: {
+      phone: string;
+      name: string;
+    };
+    AvailabilitySlotDto: {
+      startAt: string;
+      endAt: string;
+      isAvailable: boolean;
+      conflictCount: number;
+    };
+    AvailabilityResponseDto: {
+      slots: components['schemas']['AvailabilitySlotDto'][];
+      slotMinutes: number;
+      isClosedDay: boolean;
+      version: string;
     };
     BookingClientDto: {
       clientId: string;
       clientName: string;
       clientPhone: string;
       bookingCount: number;
+      bookingCountThisYear: number;
+      lastVisitAt?: string | null;
+      upcomingCount: number;
+      avgRating?: number | null;
+      clientSince: number;
     };
     BookingVehicleDto: {
       vehicleId: string;
       nickname: string;
       tireSize: string;
+    };
+    BookingSubServiceDto: {
+      name: string;
+      pricePln?: number | null;
+    };
+    BookingServiceDto: {
+      name?: string | null;
+      tireSize?: string | null;
+      subServices: components['schemas']['BookingSubServiceDto'][];
     };
     BookingDetailResponseDto: {
       id: string;
@@ -1096,27 +1941,343 @@ export interface components {
       addressCity?: string | null;
       addressLat?: number | null;
       addressLng?: number | null;
-      tireSize?: string | null;
-      serviceType?: string | null;
-      sizeTier?: string | null;
-      tpmsRequired: boolean;
+      service: components['schemas']['BookingServiceDto'];
       basePricePln?: number | null;
       travelFeePln?: number | null;
       totalPricePln?: number | null;
       stationId?: string | null;
+      stationName?: string | null;
+      workerId?: string | null;
+      workerName?: string | null;
       notes?: string | null;
+      clientNote?: string | null;
       rejectReason?: string | null;
       cancelReason?: string | null;
+      isManual: boolean;
+      isCustomService: boolean;
+      customPricePln?: number | null;
+      customDurationMinutes?: number | null;
+      hasTireSetsInDepot: boolean;
       createdAt: string;
       confirmedAt?: string | null;
       startedAt?: string | null;
       completedAt?: string | null;
       cancelledAt?: string | null;
     };
+    RescheduleBookingDto: {
+      /** @example 2025-06-15T09:00:00.000Z */
+      startAt: string;
+      /** @example 2025-06-15T10:30:00.000Z */
+      endAt: string;
+      /** @default false */
+      notifyClient: boolean;
+    };
     UpdateBookingStatusDto: {
       /** @enum {string} */
       action: 'confirm' | 'start' | 'complete' | 'cancel' | 'reject' | 'no_show';
       reason?: string;
+    };
+    ReviewResponseDto: {
+      id: string;
+      bookingReferenceCode: string;
+      authorName: string;
+      authorInitials: string;
+      rating: number;
+      comment: string | null;
+      providerReply: string | null;
+      providerRepliedAt: string | null;
+      isReported: boolean;
+      seenByProvider: boolean;
+      createdAt: string;
+    };
+    ReviewStatsResponseDto: {
+      avgRating: number;
+      totalCount: number;
+      newCount: number;
+      pendingReplyCount: number;
+      repliedCount: number;
+      reportedCount: number;
+      replyRatePct: number;
+      avgReplyTimeHours: number | null;
+      ratingCounts: number[];
+      lastThirtyDaysCount: number;
+    };
+    CreateReplyDto: {
+      text: string;
+    };
+    ServiceConfigResponseDto: {
+      /** @enum {string} */
+      serviceType: 'SEASONAL_SWAP' | 'WHEEL_SWAP' | 'BALANCING' | 'PUNCTURE_REPAIR';
+      /** @example 45 */
+      durationMinutes: number;
+    };
+    ServiceConfigItemDto: {
+      /** @enum {string} */
+      serviceType: 'SEASONAL_SWAP' | 'WHEEL_SWAP' | 'BALANCING' | 'PUNCTURE_REPAIR';
+      durationMinutes: number;
+    };
+    UpsertServiceConfigsDto: {
+      configs: components['schemas']['ServiceConfigItemDto'][];
+    };
+    ServiceVariantResponseDto: {
+      id: string;
+      name?: string | null;
+      rimSizes: string[];
+      pricePln: number;
+      durationMinutes: number;
+      pricePerWheelPln?: number | null;
+      durationPerWheelMinutes?: number | null;
+      sortOrder: number;
+    };
+    ServiceResponseDto: {
+      id: string;
+      name: string;
+      description?: string | null;
+      /** @enum {string} */
+      pricingType: 'FLAT' | 'VARIANTS' | 'RIM_SIZES';
+      enabled: boolean;
+      sortOrder: number;
+      variants: components['schemas']['ServiceVariantResponseDto'][];
+      subServiceIds: string[];
+      addonIds: string[];
+    };
+    UpsertServiceVariantDto: {
+      id?: string;
+      name?: string | null;
+      rimSizes: string[];
+      pricePln: number;
+      durationMinutes: number;
+      pricePerWheelPln?: number | null;
+      durationPerWheelMinutes?: number | null;
+      sortOrder: number;
+    };
+    UpsertServiceDto: {
+      id?: string;
+      name: string;
+      description?: string | null;
+      /** @enum {string} */
+      pricingType: 'FLAT' | 'VARIANTS' | 'RIM_SIZES';
+      enabled: boolean;
+      sortOrder: number;
+      variants: components['schemas']['UpsertServiceVariantDto'][];
+      subServiceIds: string[];
+      addonIds: string[];
+    };
+    UpsertServicesDto: {
+      services: components['schemas']['UpsertServiceDto'][];
+    };
+    AddonResponseDto: {
+      id: string;
+      name: string;
+      pricePln: number;
+      durationMinutes?: number | null;
+      enabled: boolean;
+      sortOrder: number;
+    };
+    UpsertAddonDto: {
+      id?: string;
+      name: string;
+      pricePln: number;
+      durationMinutes?: number | null;
+      enabled: boolean;
+      sortOrder: number;
+    };
+    UpsertAddonsDto: {
+      addons: components['schemas']['UpsertAddonDto'][];
+    };
+    NotificationPreferencesDto: {
+      newBookingSms: boolean;
+      newBookingEmail: boolean;
+      newBookingPush: boolean;
+      cancelationSms: boolean;
+      cancelationEmail: boolean;
+      cancelationPush: boolean;
+      reminder30Sms: boolean;
+      reminder30Email: boolean;
+      reminder30Push: boolean;
+      newReviewSms: boolean;
+      newReviewEmail: boolean;
+      newReviewPush: boolean;
+      weeklyReportSms: boolean;
+      weeklyReportEmail: boolean;
+      weeklyReportPush: boolean;
+      platformNewsSms: boolean;
+      platformNewsEmail: boolean;
+      platformNewsPush: boolean;
+    };
+    UpdateNotificationPreferencesDto: {
+      newBookingSms?: boolean;
+      newBookingEmail?: boolean;
+      newBookingPush?: boolean;
+      cancelationSms?: boolean;
+      cancelationEmail?: boolean;
+      cancelationPush?: boolean;
+      reminder30Sms?: boolean;
+      reminder30Email?: boolean;
+      reminder30Push?: boolean;
+      newReviewSms?: boolean;
+      newReviewEmail?: boolean;
+      newReviewPush?: boolean;
+      weeklyReportSms?: boolean;
+      weeklyReportEmail?: boolean;
+      weeklyReportPush?: boolean;
+      platformNewsSms?: boolean;
+      platformNewsEmail?: boolean;
+      platformNewsPush?: boolean;
+    };
+    RegisterPushSubscriptionDto: {
+      endpoint: string;
+      p256dh: string;
+      auth: string;
+      userAgent?: string;
+    };
+    ScheduleExceptionResponseDto: {
+      id: string;
+      /** @example 2026-12-25 */
+      date: string;
+      /** @example Boże Narodzenie */
+      reason: string;
+      isClosed: boolean;
+      /** @example 10:00 */
+      customOpenTime?: string | null;
+      /** @example 14:00 */
+      customCloseTime?: string | null;
+    };
+    CreateScheduleExceptionDto: {
+      /**
+       * @description Data (YYYY-MM-DD)
+       * @example 2026-12-25
+       */
+      date: string;
+      /** @example Boże Narodzenie */
+      reason: string;
+      /**
+       * @description Jeśli brak — dzień zamknięty
+       * @example 10:00
+       */
+      customOpenTime?: string;
+      /** @example 14:00 */
+      customCloseTime?: string;
+    };
+    TireSetResponseDto: {
+      id: string;
+      clientName: string;
+      clientPhone: string;
+      vehicleName?: string | null;
+      licensePlate?: string | null;
+      brand?: string | null;
+      model?: string | null;
+      tireSize: string;
+      tireType: string;
+      isOnRims: boolean;
+      condition: string;
+      status: string;
+      slotId?: string | null;
+      slotLabel?: string | null;
+      storagePricePln?: number | null;
+      releaseDue?: string | null;
+      createdAt: string;
+    };
+    TireSetPageResponseDto: {
+      items: components['schemas']['TireSetResponseDto'][];
+      total: number;
+      page: number;
+      pageSize: number;
+    };
+    DepotStatsResponseDto: {
+      inDepot: number;
+      dueSoon: number;
+      revenueMonth: number;
+    };
+    DepotSlotResponseDto: {
+      id: string;
+      section: string;
+      row: number;
+      position: number;
+      label?: string | null;
+      occupied: boolean;
+      tireSetId?: string | null;
+      tireSetClientName?: string | null;
+    };
+    CreateTireSetDto: {
+      clientName: string;
+      clientPhone: string;
+      vehicleName?: string;
+      licensePlate?: string;
+      brand?: string;
+      model?: string;
+      tireSize: string;
+      /** @enum {string} */
+      tireType: 'SUMMER' | 'WINTER' | 'ALL_SEASON';
+      isOnRims: boolean;
+      dotCode?: string;
+      treadDepthMm?: number;
+      slotId?: string;
+      storagePricePln?: number;
+      storedAt?: string;
+      releaseDue?: string;
+      sourceBookingId?: string;
+      notes?: string;
+    };
+    StoragePeriodResponseDto: {
+      id: string;
+      storedAt: string;
+      releaseDue?: string | null;
+      pickedUpAt?: string | null;
+      pricePln?: number | null;
+      notes?: string | null;
+    };
+    TireSetDetailResponseDto: {
+      id: string;
+      clientId?: string | null;
+      clientName: string;
+      clientPhone: string;
+      vehicleName?: string | null;
+      licensePlate?: string | null;
+      brand?: string | null;
+      model?: string | null;
+      tireSize: string;
+      tireType: string;
+      isOnRims: boolean;
+      dotCode?: string | null;
+      treadDepthMm?: number | null;
+      condition: string;
+      slotId?: string | null;
+      slotLabel?: string | null;
+      status: string;
+      storagePricePln?: number | null;
+      sourceBookingId?: string | null;
+      notes?: string | null;
+      createdAt: string;
+      updatedAt: string;
+      periods: components['schemas']['StoragePeriodResponseDto'][];
+    };
+    UpsertDepotSlotsDto: {
+      /** @description Section label, e.g. "A" */
+      section: string;
+      /** @description First row number (inclusive) */
+      rowFrom: number;
+      /** @description Last row number (inclusive) */
+      rowTo: number;
+      /** @description Number of positions per row */
+      positionsPerRow: number;
+    };
+    UpdateTireSetDto: {
+      vehicleName?: string;
+      licensePlate?: string;
+      brand?: string;
+      model?: string;
+      tireSize?: string;
+      /** @enum {string} */
+      tireType?: 'SUMMER' | 'WINTER' | 'ALL_SEASON';
+      isOnRims?: boolean;
+      dotCode?: string;
+      treadDepthMm?: number;
+      /** @enum {string} */
+      condition?: 'GOOD' | 'WORN' | 'CRITICAL';
+      slotId?: string | null;
+      storagePricePln?: number;
+      notes?: string;
     };
   };
   responses: never;
@@ -1251,6 +2412,43 @@ export interface operations {
       };
     };
   };
+  AuthController_changePhone: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ChangePhoneDto'];
+      };
+    };
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ChangePhoneResponseDto'];
+        };
+      };
+      /** @description Nieprawidłowy lub wygasły kod OTP */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Numer telefonu jest już w użyciu */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
   AuthController_verifyEmail: {
     parameters: {
       query: {
@@ -1296,10 +2494,81 @@ export interface operations {
       };
     };
   };
+  AuthController_listSessions: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['SessionResponseDto'][];
+        };
+      };
+    };
+  };
+  AuthController_revokeOtherSessions: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Pozostałe sesje unieważnione */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  AuthController_revokeSession: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Sesja unieważniona */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description To jest bieżąca sesja — użyj /logout */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Sesja nie istnieje */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
   ProvidersController_listApproved: {
     parameters: {
       query?: {
-        type?: 'MOBILE' | 'STATIONARY';
+        type?: 'MOBILE' | 'STATIONARY' | 'BOTH';
         page?: number;
         limit?: number;
       };
@@ -1405,299 +2674,6 @@ export interface operations {
       };
     };
   };
-  ProvidersController_getById: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        id: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ProviderResponseDto'];
-        };
-      };
-      /** @description Firma nie jest zatwierdzona */
-      403: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Firma nie istnieje */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  PricingTiersController_getMarketPrices: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['MarketPriceResponseDto'][];
-        };
-      };
-    };
-  };
-  PricingTiersController_listMine: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['PricingTierResponseDto'][];
-        };
-      };
-    };
-  };
-  PricingTiersController_create: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['CreatePricingTierDto'];
-      };
-    };
-    responses: {
-      201: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['PricingTierResponseDto'];
-        };
-      };
-      /** @description Przedział felg już istnieje */
-      409: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  PricingTiersController_remove: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        id: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Tier usunięty */
-      204: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  PricingTiersController_update: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        id: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['UpdatePricingTierDto'];
-      };
-    };
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['PricingTierResponseDto'];
-        };
-      };
-    };
-  };
-  PricingTiersController_listByProvider: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        providerId: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['PricingTierResponseDto'][];
-        };
-      };
-    };
-  };
-  WorkingHoursController_listMine: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['WorkingHoursResponseDto'][];
-        };
-      };
-    };
-  };
-  WorkingHoursController_upsert: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['UpsertWorkingHoursDto'];
-      };
-    };
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['WorkingHoursResponseDto'][];
-        };
-      };
-    };
-  };
-  WorkingHoursController_listByProvider: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        providerId: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['WorkingHoursResponseDto'][];
-        };
-      };
-    };
-  };
-  GusController_getByNip: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        /** @description 10-cyfrowy NIP */
-        nip: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Dane firmy z CEIDG */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Nieprawidłowy NIP */
-      400: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description NIP nie znaleziony w CEIDG */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  PhotosController_submitForApproval: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': Record<string, never>;
-        };
-      };
-      /** @description Brakuje wymaganych zdjęć lub firma w złym stanie */
-      400: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
   PhotosController_getPhotos: {
     parameters: {
       query?: never;
@@ -1740,6 +2716,27 @@ export interface operations {
       };
       /** @description Nieprawidłowy plik lub przekroczono limit zdjęć */
       400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  ProvidersController_reorderPhotos: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ReorderPhotosDto'];
+      };
+    };
+    responses: {
+      204: {
         headers: {
           [name: string]: unknown;
         };
@@ -1806,6 +2803,259 @@ export interface operations {
       };
     };
   };
+  ProvidersController_pause: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['SetProviderPauseDto'];
+      };
+    };
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ProviderPauseResponseDto'];
+        };
+      };
+    };
+  };
+  ProvidersController_selfSuspend: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Warsztat zawieszony */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Firma nie jest w stanie aktywnym */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  ProvidersController_requestDeletion: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Wniosek przyjęty */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Firma nie jest w stanie aktywnym */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  ProvidersController_requestDataExport: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Wniosek przyjęty */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Masz już oczekujący wniosek */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  ProvidersController_requestEmailChangeOtp: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['RequestEmailChangeDto'];
+      };
+    };
+    responses: {
+      /** @description Kod wysłany */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Zbyt wiele prób */
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  ProvidersController_confirmEmailChange: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ConfirmEmailChangeDto'];
+      };
+    };
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ProviderResponseDto'];
+        };
+      };
+      /** @description Nieprawidłowy lub wygasły kod */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  ProvidersController_getById: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ProviderResponseDto'];
+        };
+      };
+      /** @description Firma nie jest zatwierdzona */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Firma nie istnieje */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  GusController_getByNip: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description 10-cyfrowy NIP */
+        nip: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Dane firmy z CEIDG */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Nieprawidłowy NIP */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description NIP nie znaleziony w CEIDG */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  PhotosController_submitForApproval: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': Record<string, never>;
+        };
+      };
+      /** @description Brakuje wymaganych zdjęć lub firma w złym stanie */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
   PhotosController_setPrimary: {
     parameters: {
       query?: never;
@@ -1843,7 +3093,8 @@ export interface operations {
           | 'PENDING_APPROVAL'
           | 'APPROVED'
           | 'SUSPENDED'
-          | 'REJECTED';
+          | 'REJECTED'
+          | 'PENDING_DELETION';
         page?: number;
         limit?: number;
       };
@@ -1955,6 +3206,88 @@ export interface operations {
       };
     };
   };
+  AdminProvidersController_confirmDeletion: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Konto usunięte */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Firma nie oczekuje na usunięcie */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Brak uprawnień */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Firma nie istnieje */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  AdminProvidersController_cancelDeletion: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Wniosek anulowany */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Firma nie oczekuje na usunięcie */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Brak uprawnień */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Firma nie istnieje */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
   AdminGusController_getHealth: {
     parameters: {
       query?: never;
@@ -1973,6 +3306,64 @@ export interface operations {
       };
       /** @description Brak uprawnień */
       403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  AdminDataExportController_listPending: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Paginowana lista wniosków */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  AdminDataExportController_complete: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Wniosek zrealizowany */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  AdminDataExportController_cancel: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Wniosek anulowany */
+      200: {
         headers: {
           [name: string]: unknown;
         };
@@ -2058,7 +3449,7 @@ export interface operations {
     };
     requestBody?: never;
     responses: {
-      200: {
+      204: {
         headers: {
           [name: string]: unknown;
         };
@@ -2129,7 +3520,7 @@ export interface operations {
     };
     requestBody?: never;
     responses: {
-      200: {
+      204: {
         headers: {
           [name: string]: unknown;
         };
@@ -2268,6 +3659,115 @@ export interface operations {
       };
     };
   };
+  WorkerTasksController_list: {
+    parameters: {
+      query: {
+        weekStart: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['WorkerTaskResponseDto'][];
+        };
+      };
+    };
+  };
+  WorkerTasksController_create: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CreateWorkerTaskDto'];
+      };
+    };
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['WorkerTaskResponseDto'];
+        };
+      };
+    };
+  };
+  WorkerTasksController_findById: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['WorkerTaskResponseDto'];
+        };
+      };
+    };
+  };
+  WorkerTasksController_delete: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  WorkerTasksController_update: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['UpdateWorkerTaskDto'];
+      };
+    };
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['WorkerTaskResponseDto'];
+        };
+      };
+    };
+  };
   BookingsController_list: {
     parameters: {
       query?: never;
@@ -2283,6 +3783,162 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['BookingResponseDto'][];
+        };
+      };
+    };
+  };
+  BookingsController_listAdmin: {
+    parameters: {
+      query?: {
+        search?: string;
+        status?: string;
+        dateFrom?: string;
+        dateTo?: string;
+        page?: number;
+        pageSize?: number;
+        sortBy?: string;
+        sortDir?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['BookingPageResponseDto'];
+        };
+      };
+    };
+  };
+  BookingsController_getStats: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['BookingStatsResponseDto'];
+        };
+      };
+    };
+  };
+  BookingsController_bulkUpdateStatus: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['BulkUpdateStatusDto'];
+      };
+    };
+    responses: {
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  BookingsController_createManual: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CreateManualBookingDto'];
+      };
+    };
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['BookingResponseDto'];
+        };
+      };
+    };
+  };
+  BookingsController_searchClients: {
+    parameters: {
+      query: {
+        q: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ClientSearchResultDto'][];
+        };
+      };
+    };
+  };
+  BookingsController_getCustomServiceSuggestions: {
+    parameters: {
+      query: {
+        q: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['CustomServiceSuggestionDto'][];
+        };
+      };
+    };
+  };
+  BookingsController_getAvailability: {
+    parameters: {
+      query: {
+        date: string;
+        workerId?: string;
+        stationId?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AvailabilityResponseDto'];
         };
       };
     };
@@ -2304,6 +3960,31 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['BookingDetailResponseDto'];
+        };
+      };
+    };
+  };
+  BookingsController_reschedule: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        referenceCode: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['RescheduleBookingDto'];
+      };
+    };
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['BookingResponseDto'];
         };
       };
     };
@@ -2330,6 +4011,684 @@ export interface operations {
         content: {
           'application/json': components['schemas']['BookingDetailResponseDto'];
         };
+      };
+    };
+  };
+  ReviewsController_list: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ReviewResponseDto'][];
+        };
+      };
+    };
+  };
+  ReviewsController_getStats: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ReviewStatsResponseDto'];
+        };
+      };
+    };
+  };
+  ReviewsController_markSeen: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  ReviewsController_upsertReply: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CreateReplyDto'];
+      };
+    };
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ReviewResponseDto'];
+        };
+      };
+    };
+  };
+  ReviewsController_deleteReply: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  ReviewsController_report: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  RealtimeController_onConnect: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  ServiceConfigsController_getAll: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ServiceConfigResponseDto'][];
+        };
+      };
+    };
+  };
+  ServiceConfigsController_upsertAll: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['UpsertServiceConfigsDto'];
+      };
+    };
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ServiceConfigResponseDto'][];
+        };
+      };
+    };
+  };
+  ServicesController_getServices: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ServiceResponseDto'][];
+        };
+      };
+    };
+  };
+  ServicesController_replaceServices: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['UpsertServicesDto'];
+      };
+    };
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ServiceResponseDto'][];
+        };
+      };
+    };
+  };
+  ServicesController_deleteService: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  ServicesController_getAddons: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AddonResponseDto'][];
+        };
+      };
+    };
+  };
+  ServicesController_replaceAddons: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['UpsertAddonsDto'];
+      };
+    };
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AddonResponseDto'][];
+        };
+      };
+    };
+  };
+  ServicesController_deleteAddon: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  NotificationPreferencesController_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['NotificationPreferencesDto'];
+        };
+      };
+    };
+  };
+  NotificationPreferencesController_update: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['UpdateNotificationPreferencesDto'];
+      };
+    };
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['NotificationPreferencesDto'];
+        };
+      };
+    };
+  };
+  PushSubscriptionsController_register: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['RegisterPushSubscriptionDto'];
+      };
+    };
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  PushSubscriptionsController_unregister: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['RegisterPushSubscriptionDto'];
+      };
+    };
+    responses: {
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  ScheduleExceptionsController_list: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ScheduleExceptionResponseDto'][];
+        };
+      };
+    };
+  };
+  ScheduleExceptionsController_create: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CreateScheduleExceptionDto'];
+      };
+    };
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ScheduleExceptionResponseDto'];
+        };
+      };
+    };
+  };
+  ScheduleExceptionsController_remove: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  DepotController_list: {
+    parameters: {
+      query?: {
+        status?: 'IN_DEPOT' | 'PICKED_UP';
+        search?: string;
+        page?: number;
+        pageSize?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['TireSetPageResponseDto'];
+        };
+      };
+    };
+  };
+  DepotController_create: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CreateTireSetDto'];
+      };
+    };
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['TireSetDetailResponseDto'];
+        };
+      };
+    };
+  };
+  DepotController_getStats: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['DepotStatsResponseDto'];
+        };
+      };
+    };
+  };
+  DepotController_getSlots: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['DepotSlotResponseDto'][];
+        };
+      };
+    };
+  };
+  DepotController_bulkCreateSlots: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['UpsertDepotSlotsDto'];
+      };
+    };
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['DepotSlotResponseDto'][];
+        };
+      };
+    };
+  };
+  DepotController_getById: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['TireSetDetailResponseDto'];
+        };
+      };
+    };
+  };
+  DepotController_remove: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  DepotController_update: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['UpdateTireSetDto'];
+      };
+    };
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['TireSetDetailResponseDto'];
+        };
+      };
+    };
+  };
+  DepotController_pickup: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['TireSetDetailResponseDto'];
+        };
+      };
+    };
+  };
+  DepotController_store: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['TireSetDetailResponseDto'];
+        };
+      };
+    };
+  };
+  DepotController_removeSlot: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        slotId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
       };
     };
   };

@@ -26,8 +26,6 @@ export function useWorkers() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [expandedId, setExpandedId] = useState<string | null>(null);
-
   useEffect(() => {
     setLoading(true);
     workersApi
@@ -41,7 +39,7 @@ export function useWorkers() {
       .finally(() => setLoading(false));
   }, []);
 
-  const createWorker = useCallback(async (name: string, role?: string) => {
+  const createWorker = useCallback(async (name: string, role?: string): Promise<string> => {
     setSaving(true);
     setError(null);
     try {
@@ -49,7 +47,7 @@ export function useWorkers() {
       if (role?.trim()) body.role = role.trim();
       const created = await workersApi.create(body);
       setWorkers((prev) => [...prev, created]);
-      setExpandedId(created.id);
+      return created.id;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Błąd dodawania pracownika');
       throw err;
@@ -72,23 +70,19 @@ export function useWorkers() {
     }
   }, []);
 
-  const deleteWorker = useCallback(
-    async (id: string) => {
-      setSaving(true);
-      setError(null);
-      try {
-        await workersApi.remove(id);
-        setWorkers((prev) => prev.filter((w) => w.id !== id));
-        if (expandedId === id) setExpandedId(null);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Błąd usuwania pracownika');
-        throw err;
-      } finally {
-        setSaving(false);
-      }
-    },
-    [expandedId],
-  );
+  const deleteWorker = useCallback(async (id: string) => {
+    setSaving(true);
+    setError(null);
+    try {
+      await workersApi.remove(id);
+      setWorkers((prev) => prev.filter((w) => w.id !== id));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Błąd usuwania pracownika');
+      throw err;
+    } finally {
+      setSaving(false);
+    }
+  }, []);
 
   const addLeave = useCallback(async (workerId: string, leave: CreateLeaveBody) => {
     if (leave.endDate < leave.startDate) {
@@ -97,10 +91,8 @@ export function useWorkers() {
     setSaving(true);
     setError(null);
     try {
-      const newLeave = await workersApi.addLeave(workerId, leave);
-      setWorkers((prev) =>
-        prev.map((w) => (w.id === workerId ? { ...w, leaves: [...w.leaves, newLeave] } : w)),
-      );
+      const updated = await workersApi.addLeave(workerId, leave);
+      setWorkers((prev) => prev.map((w) => (w.id === workerId ? updated : w)));
     } catch (err) {
       const msg = getLeaveConflictMessage(err);
       setError(msg);
@@ -108,6 +100,32 @@ export function useWorkers() {
     } finally {
       setSaving(false);
     }
+  }, []);
+
+  const updateLeave = useCallback(
+    async (workerId: string, leaveId: string, leave: CreateLeaveBody) => {
+      if (leave.endDate < leave.startDate) {
+        throw new Error('Data końca nieobecności musi być po dacie początku');
+      }
+      setSaving(true);
+      setError(null);
+      try {
+        await workersApi.removeLeave(workerId, leaveId);
+        const updated = await workersApi.addLeave(workerId, leave);
+        setWorkers((prev) => prev.map((w) => (w.id === workerId ? updated : w)));
+      } catch (err) {
+        const msg = getLeaveConflictMessage(err);
+        setError(msg);
+        throw new Error(msg);
+      } finally {
+        setSaving(false);
+      }
+    },
+    [],
+  );
+
+  const patchWorkerStations = useCallback((workerId: string, stations: Worker['stations']) => {
+    setWorkers((prev) => prev.map((w) => (w.id === workerId ? { ...w, stations } : w)));
   }, []);
 
   const removeLeave = useCallback(async (workerId: string, leaveId: string) => {
@@ -133,12 +151,12 @@ export function useWorkers() {
     loading,
     saving,
     error,
-    expandedId,
-    setExpandedId,
     createWorker,
     updateWorker,
     deleteWorker,
+    patchWorkerStations,
     addLeave,
+    updateLeave,
     removeLeave,
   };
 }

@@ -9,7 +9,7 @@ import {
   Post,
   Query,
 } from '@nestjs/common';
-import { ApiCookieAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiCookieAuth, ApiOkResponse, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { JwtPayload } from '../auth/types/jwt-payload.interface';
 import { ProvidersService } from '../providers/providers.service';
@@ -17,7 +17,9 @@ import { BookingDetailResponseDto } from './dto/booking-detail-response.dto';
 import { BookingListQueryDto } from './dto/booking-list-query.dto';
 import { BookingResponseDto } from './dto/booking-response.dto';
 import { UpdateBookingStatusDto } from './dto/update-booking-status.dto';
+import { RescheduleBookingDto } from './dto/reschedule-booking.dto';
 import { BookingsService } from './bookings.service';
+import { ClientSearchResultDto } from './dto/client-search-result.dto';
 import { BookingAdminListQueryDto } from './dto/booking-admin-list-query.dto';
 import { BookingPageResponseDto } from './dto/booking-page-response.dto';
 import { BookingStatsResponseDto } from './dto/booking-stats-response.dto';
@@ -25,6 +27,9 @@ import { BulkUpdateStatusDto } from './dto/bulk-update-status.dto';
 import { CreateManualBookingDto } from './dto/create-manual-booking.dto';
 import { AvailabilityQueryDto } from './dto/availability-query.dto';
 import { AvailabilityResponseDto } from './dto/availability-response.dto';
+import { CustomServiceSuggestionDto } from './dto/custom-service-suggestion.dto';
+import { UpdateBookingNotesDto } from './dto/update-booking-notes.dto';
+import { EditBookingDto } from './dto/edit-booking.dto';
 
 @ApiTags('bookings')
 @ApiCookieAuth('access_token')
@@ -98,6 +103,32 @@ export class BookingsController {
     return this.service.createManual(provider.id, dto);
   }
 
+  // ── GET /v1/providers/me/bookings/clients?q= ─────────────────────────────
+
+  @Get('clients')
+  @ApiOperation({ summary: 'Search clients by phone/name for autocomplete' })
+  @ApiOkResponse({ type: ClientSearchResultDto, isArray: true })
+  async searchClients(
+    @CurrentUser() user: JwtPayload,
+    @Query('q') q: string,
+  ): Promise<ClientSearchResultDto[]> {
+    const provider = await this.providersService.getMyProvider(user.sub);
+    return this.service.searchClients(provider.id, q ?? '');
+  }
+
+  // ── GET /v1/providers/me/bookings/custom-services?q= ─────────────────────
+
+  @Get('custom-services')
+  @ApiOperation({ summary: 'Autocomplete for custom (off-pricelist) service names' })
+  @ApiOkResponse({ type: CustomServiceSuggestionDto, isArray: true })
+  async getCustomServiceSuggestions(
+    @CurrentUser() user: JwtPayload,
+    @Query('q') q: string,
+  ): Promise<CustomServiceSuggestionDto[]> {
+    const provider = await this.providersService.getMyProvider(user.sub);
+    return this.service.getCustomServiceSuggestions(provider.id, q ?? '');
+  }
+
   // ── GET /v1/providers/me/bookings/availability ────────────────────────────
 
   @Get('availability')
@@ -122,6 +153,51 @@ export class BookingsController {
   ): Promise<BookingDetailResponseDto> {
     const provider = await this.providersService.getMyProvider(user.sub);
     return this.service.getDetail(provider.id, referenceCode);
+  }
+
+  // ── PATCH /v1/providers/me/bookings/:referenceCode/reschedule ────────────
+
+  @Patch(':referenceCode/reschedule')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Reschedule a booking (move to new date/time)' })
+  @ApiResponse({ status: 200, type: BookingResponseDto })
+  async reschedule(
+    @CurrentUser() user: JwtPayload,
+    @Param('referenceCode') referenceCode: string,
+    @Body() dto: RescheduleBookingDto,
+  ): Promise<BookingResponseDto> {
+    const provider = await this.providersService.getMyProvider(user.sub);
+    return this.service.reschedule(provider.id, referenceCode, dto);
+  }
+
+  // ── PATCH /v1/providers/me/bookings/:referenceCode/edit ──────────────────
+
+  @Patch(':referenceCode/edit')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Edit booking price, sub-services and client note' })
+  @ApiResponse({ status: 204 })
+  async editBooking(
+    @CurrentUser() user: JwtPayload,
+    @Param('referenceCode') referenceCode: string,
+    @Body() dto: EditBookingDto,
+  ): Promise<void> {
+    const provider = await this.providersService.getMyProvider(user.sub);
+    return this.service.editBooking(provider.id, referenceCode, dto);
+  }
+
+  // ── PATCH /v1/providers/me/bookings/:referenceCode/notes ──────────────────
+
+  @Patch(':referenceCode/notes')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Update internal notes for a booking (provider only)' })
+  @ApiResponse({ status: 204 })
+  async updateNotes(
+    @CurrentUser() user: JwtPayload,
+    @Param('referenceCode') referenceCode: string,
+    @Body() dto: UpdateBookingNotesDto,
+  ): Promise<void> {
+    const provider = await this.providersService.getMyProvider(user.sub);
+    return this.service.updateNotes(provider.id, referenceCode, dto.notes ?? null);
   }
 
   // ── PATCH /v1/providers/me/bookings/:referenceCode/status ─────────────────

@@ -1,9 +1,10 @@
 import type { Booking, BookingStatus } from '../../../api-data-access/bookings';
+import type { Station } from '../../../api-data-access/stations';
 
 // ── Grid constants ────────────────────────────────────────────────────────────
-export const HOUR_START = 8;
-export const HOUR_END = 18;
-export const HOURS = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18];
+export const HOUR_START = 6;
+export const HOUR_END = 20;
+export const HOURS = [6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20];
 export const PX_PER_HOUR = 60;
 export const GRID_HEIGHT = (HOUR_END - HOUR_START + 1) * PX_PER_HOUR;
 
@@ -184,8 +185,66 @@ export function matchesFilter(booking: Booking, filter: FilterType): boolean {
   return true;
 }
 
+export function toISODate(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
 export function visitCountLabel(n: number): string {
   if (n === 1) return '1 wizyta';
   if (n < 5) return `${n} wizyty`;
   return `${n} wizyt`;
+}
+
+export function snapTimeFromOffset(offsetY: number): string {
+  const startMins = (HOURS[0] ?? 8) * 60;
+  const rawMins = startMins + (offsetY / PX_PER_HOUR) * 60;
+  const snapped = Math.round(rawMins / 15) * 15;
+  const clamped = Math.min(Math.max(snapped, startMins), 21 * 60 + 45);
+  const h = Math.floor(clamped / 60);
+  const m = clamped % 60;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+}
+
+// ── Station schedule helpers ───────────────────────────────────────────────────
+
+export function getStationHours(station: Station, dayOfWeek: number) {
+  const day = station.schedule.find((d) => d.dayOfWeek === dayOfWeek);
+  if (!day || !day.open) return { open: false, startMin: HOUR_START * 60, endMin: HOUR_START * 60 };
+  const [sh = 0, sm = 0] = day.startTime.split(':').map(Number);
+  const [eh = 0, em = 0] = day.endTime.split(':').map(Number);
+  return { open: true, startMin: sh * 60 + sm, endMin: eh * 60 + em };
+}
+
+export function stationClosedZones(hours: {
+  open: boolean;
+  startMin: number;
+  endMin: number;
+}): { top: number; height: number }[] {
+  const pxPerMin = PX_PER_HOUR / 60;
+  if (!hours.open) return [{ top: 0, height: GRID_HEIGHT }];
+  const zones: { top: number; height: number }[] = [];
+  if (hours.startMin > HOUR_START * 60)
+    zones.push({ top: 0, height: (hours.startMin - HOUR_START * 60) * pxPerMin });
+  if (hours.endMin < HOUR_END * 60) {
+    const top = (hours.endMin - HOUR_START * 60) * pxPerMin;
+    zones.push({ top, height: GRID_HEIGHT - top });
+  }
+  return zones;
+}
+
+export function stationUnionClosedZones(
+  stations: Station[],
+  dayOfWeek: number,
+): { zones: { top: number; height: number }[]; endTop: number | null } {
+  const openHours = stations.flatMap((s) => {
+    const h = getStationHours(s, dayOfWeek);
+    return h.open ? [h] : [];
+  });
+  if (!openHours.length) return { zones: [{ top: 0, height: GRID_HEIGHT }], endTop: null };
+  const unionStart = Math.min(...openHours.map((h) => h.startMin));
+  const unionEnd = Math.max(...openHours.map((h) => h.endMin));
+  return {
+    zones: stationClosedZones({ open: true, startMin: unionStart, endMin: unionEnd }),
+    endTop: (unionEnd - HOUR_START * 60) * (PX_PER_HOUR / 60),
+  };
 }

@@ -14,17 +14,15 @@ export interface DaySchedule {
 type StationBase = components['schemas']['StationResponseDto'];
 export type Station = Omit<StationBase, 'schedule'> & { schedule: DaySchedule[] };
 
-export type ServiceType = Station['services'][number];
-
 export interface CreateStationBody {
   name: string;
-  services: ServiceType[];
+  serviceIds: string[];
   schedule: DaySchedule[];
 }
 
 export interface UpdateStationBody {
   name?: string;
-  services?: ServiceType[];
+  serviceIds?: string[];
   schedule?: DaySchedule[];
 }
 
@@ -33,13 +31,6 @@ export interface AssignWorkerBody {
   shiftStart?: string;
   shiftEnd?: string;
 }
-
-export const SERVICE_LABELS: Record<ServiceType, string> = {
-  SEASONAL_SWAP: 'Sezonowa wymiana',
-  WHEEL_SWAP: 'Wymiana kół',
-  BALANCING: 'Wyważanie kół',
-  PUNCTURE_REPAIR: 'Naprawa opony',
-};
 
 const BASE = '/v1/providers/me/stations';
 
@@ -51,7 +42,7 @@ export const stationsApi = {
   assignWorker: (stationId: string, body: AssignWorkerBody) =>
     api.post<Station>(`${BASE}/${stationId}/workers`, body),
   removeWorker: (stationId: string, workerId: string) =>
-    api.del<Station>(`${BASE}/${stationId}/workers/${workerId}`),
+    api.del<void>(`${BASE}/${stationId}/workers/${workerId}`),
   updateShift: (
     stationId: string,
     workerId: string,

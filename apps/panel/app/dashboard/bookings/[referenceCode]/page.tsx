@@ -1,27 +1,34 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { Heading, Spinner, Text } from '@opony/design-system-web';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Button, Heading, Modal, Spinner, Text, toast } from '@opony/design-system-web';
 import { useAuthGuard } from '../../../../lib/hooks/use-auth-guard';
+import { RescheduleModal } from '../../_components/RescheduleModal';
+import { EditBookingModal } from '../../_components/EditBookingModal';
 import { useBookingDetail } from '../../../../lib/hooks/use-booking-detail';
 import { bookingsApi } from '../../../../api-data-access/bookings';
 import type { BookingStatus, StatusAction } from '../../../../api-data-access/bookings';
+import { depotApi } from '../../../../api-data-access/depot';
+import type { CreateTireSetBody } from '../../../../api-data-access/depot';
+import { TireSetModal } from '../../depot/_components/TireSetModal';
 import {
   IconChevronLeft,
-  IconShare,
-  IconPrint,
   IconPhone,
   IconMail,
   IconPlay,
   IconMap,
   IconReschedule,
   IconCar,
-  IconCalendarAdd,
   IconLocation,
   IconXClose,
   IconCheck,
   IconInfo,
+  IconWorkers,
+  IconStations,
+  IconPencil,
+  IconClock,
+  IconWarehouse,
 } from '../../../../components/icons';
 import styles from './booking-detail.module.css';
 
@@ -57,6 +64,19 @@ const MONTH_NAMES_GEN = [
 const DAY_NAMES = ['Niedziela', 'Poniedziałek', 'Wtorek', 'Środa', 'Czwartek', 'Piątek', 'Sobota'];
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
+
+function parseWheelInfo(name: string | null): { displayName: string; wheelCount: number | null } {
+  if (!name) return { displayName: '', wheelCount: null };
+  // ManualBookingModal appends " (N koło|koła)" when wheelCount < 4
+  const match = name.match(/\s+\((\d+)\s+ko[łl]/);
+  if (match && match.index != null) {
+    return {
+      displayName: name.slice(0, match.index).trim(),
+      wheelCount: parseInt(match[1] ?? '0', 10),
+    };
+  }
+  return { displayName: name, wheelCount: null };
+}
 
 function formatTime(isoString: string): string {
   const d = new Date(isoString);
@@ -138,21 +158,6 @@ function isCancelled(status: BookingStatus): boolean {
 }
 
 // ── Status pill helper ────────────────────────────────────────────────────────
-
-function getStatusPillClass(status: BookingStatus): string {
-  switch (status) {
-    case 'PENDING':
-      return styles.pillPending ?? '';
-    case 'CONFIRMED':
-      return styles.pillConfirmed ?? '';
-    case 'IN_PROGRESS':
-      return styles.pillInProgress ?? '';
-    case 'COMPLETED':
-      return styles.pillCompleted ?? '';
-    default:
-      return styles.pillCancelled ?? '';
-  }
-}
 
 function getHeroClass(status: BookingStatus): string {
   switch (status) {
@@ -324,8 +329,21 @@ export default function BookingDetailPage({ params }: PageProps) {
   const { isLoading: authLoading } = useAuthGuard('/dashboard');
   const { booking, isLoading, error, mutate } = useBookingDetail(referenceCode);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const fromCalendar = searchParams.get('from') === 'calendar';
+  const calendarDate = searchParams.get('date');
+  const backHref = fromCalendar
+    ? `/dashboard/calendar${calendarDate ? `?date=${calendarDate}` : ''}`
+    : '/dashboard/bookings';
   const [actionLoading, setActionLoading] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [showDepotModal, setShowDepotModal] = useState(false);
+  const [showReschedule, setShowReschedule] = useState(false);
+  const [showEdit, setShowEdit] = useState(false);
+  const [showStartConfirm, setShowStartConfirm] = useState(false);
+  const [editingNotes, setEditingNotes] = useState(false);
+  const [notesValue, setNotesValue] = useState('');
+  const [notesSaving, setNotesSaving] = useState(false);
 
   async function handleAction(action: StatusAction, reason?: string) {
     setActionLoading(true);
@@ -338,6 +356,24 @@ export default function BookingDetailPage({ params }: PageProps) {
       setActionError(msg);
     } finally {
       setActionLoading(false);
+    }
+  }
+
+  function openNotesEdit() {
+    setNotesValue(booking?.notes ?? '');
+    setEditingNotes(true);
+  }
+
+  async function handleSaveNotes() {
+    setNotesSaving(true);
+    try {
+      await bookingsApi.updateNotes(referenceCode, notesValue.trim() || null);
+      await mutate();
+      setEditingNotes(false);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Nie udało się zapisać notatki.');
+    } finally {
+      setNotesSaving(false);
     }
   }
 
@@ -362,6 +398,12 @@ export default function BookingDetailPage({ params }: PageProps) {
   const { status } = booking;
   const countdown = getCountdown(booking.startAt, status);
   const durationMin = getDurationMin(booking.startAt, booking.endAt);
+  const minutesRunning =
+    status === 'IN_PROGRESS'
+      ? Math.floor((Date.now() - new Date(booking.startedAt ?? booking.startAt).getTime()) / 60000)
+      : null;
+  const isOverrun = minutesRunning != null && minutesRunning > durationMin;
+  const overrunMin = isOverrun ? minutesRunning - durationMin : 0;
   const initials = getInitials(booking.client.clientName);
   const timeline = buildTimeline(booking);
 
@@ -370,492 +412,723 @@ export default function BookingDetailPage({ params }: PageProps) {
     ? `https://maps.google.com/?q=${encodeURIComponent(addressFull)}`
     : null;
 
-  const statusPillClass = getStatusPillClass(status);
   const heroClass = getHeroClass(status);
   const heroPillClass = getHeroPillClass(status);
   const statusGlow = getStatusGlow(status);
-  const isActiveStatus = status === 'CONFIRMED' || status === 'IN_PROGRESS' || status === 'PENDING';
+
+  const canAddToDepot = booking.status === 'COMPLETED' && !booking.hasTireSetsInDepot;
+  const canEdit = status === 'PENDING' || status === 'CONFIRMED' || status === 'IN_PROGRESS';
+  const startAtDate = new Date(booking.startAt);
+  const showNoShow =
+    (status === 'CONFIRMED' || status === 'IN_PROGRESS') && startAtDate < new Date();
+  const subServices = booking.service.subServices ?? [];
+  const paidSubServices = subServices.filter((s) => s.pricePln != null && s.pricePln > 0);
+  const includedSubServices = subServices.filter((s) => s.pricePln == null || s.pricePln === 0);
+  const { displayName: serviceDisplayName, wheelCount: parsedWheelCount } = parseWheelInfo(
+    booking.service.name ?? null,
+  );
+  // basePricePln is null for manual bookings — derive it from totalPricePln
+  const derivedBasePricePln: number | null = (() => {
+    if (booking.isCustomService) return booking.customPricePln ?? null;
+    if (booking.basePricePln != null) return booking.basePricePln;
+    if (booking.totalPricePln == null) return null;
+    const paidSubsSum = paidSubServices.reduce((sum, s) => sum + (s.pricePln ?? 0), 0);
+    const travel = (booking.travelFeePln ?? 0) > 0 ? (booking.travelFeePln ?? 0) : 0;
+    return booking.totalPricePln - paidSubsSum - travel;
+  })();
+
+  async function handleDepotSubmit(body: CreateTireSetBody) {
+    await depotApi.create(body);
+    await mutate();
+  }
 
   return (
-    <div className={styles.main} style={{ '--status-glow': statusGlow } as React.CSSProperties}>
-      {/* ── Topbar ── */}
-      <header className={styles.topbar}>
-        <button
-          type="button"
-          className={styles.backBtn}
-          aria-label="Wstecz do rezerwacji"
-          onClick={() => router.push('/dashboard/bookings')}
-        >
-          <IconChevronLeft width="13" height="13" />
-        </button>
-
-        <nav className={styles.breadcrumb} aria-label="Ścieżka nawigacji">
-          <Text variant="body-sm" as="span" color="muted" weight="semibold">
-            Panel
+    <>
+      <Modal
+        isOpen={showStartConfirm}
+        onClose={() => setShowStartConfirm(false)}
+        title="Rozpocząć wizytę przed czasem?"
+        size="sm"
+        footer={
+          <>
+            <Button
+              variant="neutral"
+              size="md"
+              onClick={() => setShowStartConfirm(false)}
+              disabled={actionLoading}
+            >
+              Anuluj
+            </Button>
+            <Button
+              variant="primary"
+              size="md"
+              loading={actionLoading}
+              onClick={() => {
+                setShowStartConfirm(false);
+                void handleAction('start');
+              }}
+            >
+              Tak, rozpocznij
+            </Button>
+          </>
+        }
+      >
+        <Text variant="body-sm" as="p" color="secondary">
+          Wizyta zaplanowana jest na{' '}
+          <Text variant="body-sm" as="span" weight="bold" color="primary">
+            {formatTime(booking.startAt)}
           </Text>
-          <span className={styles.breadcrumbSep}>/</span>
-          <Text variant="body-sm" as="span" color="muted" weight="semibold">
-            Rezerwacje
-          </Text>
-          <span className={styles.breadcrumbSep}>/</span>
-          <Text as="span" variant="body-sm" mono className={styles.breadcrumbCode}>
-            <ReferenceCode code={referenceCode} />
-          </Text>
-        </nav>
+          . Czy na pewno chcesz ją teraz rozpocząć?
+        </Text>
+      </Modal>
 
-        <span className={styles.spacer} />
+      <RescheduleModal
+        isOpen={showReschedule}
+        onClose={() => setShowReschedule(false)}
+        onSuccess={() => void mutate()}
+        referenceCode={referenceCode}
+        currentBookingId={booking.id}
+        initialStartAt={booking.startAt}
+        initialEndAt={booking.endAt}
+        workerId={booking.workerId}
+      />
 
-        <span
-          className={`${styles.statusPill} ${statusPillClass} ${isActiveStatus ? styles.statusPillActive : ''}`}
-        >
-          {STATUS_LABEL[status]}
-        </span>
+      <EditBookingModal
+        isOpen={showEdit}
+        onClose={() => setShowEdit(false)}
+        onSuccess={() => void mutate()}
+        referenceCode={referenceCode}
+        initialTotalPricePln={booking.totalPricePln ?? null}
+        initialSubServices={booking.service.subServices.map((s) => ({
+          name: s.name,
+          pricePln: s.pricePln ?? null,
+        }))}
+        initialClientNote={booking.clientNote ?? null}
+      />
 
-        <button type="button" className={styles.tbBtn}>
-          <IconShare width="13" height="13" />
-          Udostępnij
-        </button>
-        <button type="button" className={styles.tbBtn}>
-          <IconPrint width="13" height="13" />
-          Drukuj zlecenie
-        </button>
-      </header>
+      <TireSetModal
+        isOpen={showDepotModal}
+        onClose={() => setShowDepotModal(false)}
+        onSubmit={handleDepotSubmit}
+        initial={{
+          clientName: booking.client.clientName,
+          clientPhone: booking.client.clientPhone,
+          tireSize: booking.service.tireSize ?? '',
+          sourceBookingId: booking.id,
+        }}
+      />
+      <div className={styles.main} style={{ '--status-glow': statusGlow } as React.CSSProperties}>
+        {/* ── Topbar ── */}
+        <header className={styles.topbar}>
+          <button
+            type="button"
+            className={styles.backBtn}
+            aria-label={fromCalendar ? 'Wstecz do kalendarza' : 'Wstecz do rezerwacji'}
+            onClick={() => router.push(backHref)}
+          >
+            <IconChevronLeft width="13" height="13" />
+          </button>
 
-      {/* ── Content ── */}
-      <div className={styles.content}>
-        {actionError && (
-          <Text variant="body-sm" as="p" className={styles.errorBanner}>
-            {actionError}
-          </Text>
-        )}
+          <nav className={styles.breadcrumb} aria-label="Ścieżka nawigacji">
+            <Text variant="body-sm" as="span" color="muted" weight="semibold">
+              Panel
+            </Text>
+            <span className={styles.breadcrumbSep}>/</span>
+            <Text variant="body-sm" as="span" color="muted" weight="semibold">
+              {fromCalendar ? 'Kalendarz' : 'Rezerwacje'}
+            </Text>
+            <span className={styles.breadcrumbSep}>/</span>
+            <Text as="span" variant="body-sm" mono className={styles.breadcrumbCode}>
+              <ReferenceCode code={referenceCode} />
+            </Text>
+          </nav>
+        </header>
 
-        {/* ── Status Hero ── */}
-        <section className={`${styles.statusHero} ${heroClass}`} aria-label="Status rezerwacji">
-          <div className={styles.heroStatusCol}>
-            <span className={`${styles.heroPillBig} ${heroPillClass}`}>{STATUS_LABEL[status]}</span>
-            <span className={styles.heroCode}>
-              <HeroCode code={booking.referenceCode} />
-            </span>
-          </div>
+        {/* ── Content ── */}
+        <div className={styles.content}>
+          {actionError && (
+            <Text variant="body-sm" as="p" className={styles.errorBanner}>
+              {actionError}
+            </Text>
+          )}
 
-          <div className={styles.heroWhenCol}>
-            <span className={styles.heroCountdown}>{countdown}</span>
-            <span className={styles.heroWhen}>
-              <Text variant="body-sm" as="span" weight="bold">
-                {formatDayDate(booking.startAt)}
-              </Text>
-              <span className={styles.heroWhenTime}>
-                {formatTime(booking.startAt)} – {formatTime(booking.endAt)}
+          {/* ── Status Hero ── */}
+          <section className={`${styles.statusHero} ${heroClass}`} aria-label="Status rezerwacji">
+            <div className={styles.heroStatusCol}>
+              <span className={`${styles.heroPillBig} ${heroPillClass}`}>
+                {STATUS_LABEL[status]}
               </span>
-              <span className={styles.heroDurationChip}>~{durationMin} min</span>
-            </span>
-          </div>
+              <span className={styles.heroCode}>
+                <HeroCode code={booking.referenceCode} />
+              </span>
+            </div>
 
-          <div className={styles.heroActions}>
-            <button type="button" className={styles.tbBtn}>
-              <IconCalendarAdd width="13" height="13" />
-              Dodaj do kalendarza
-            </button>
-          </div>
-        </section>
-
-        {/* ── 2-col ── */}
-        <div className={styles.twoCol}>
-          {/* ── Left column ── */}
-          <div className={styles.colLeft}>
-            {/* Client card */}
-            <section className={styles.secCard} aria-label="Klient">
-              <div className={styles.secHead}>
-                <Heading variant="section" as="h2">
-                  Klient
-                </Heading>
-                <Text variant="nano" as="span" mono color="muted">
-                  Zweryfikowany · {booking.client.bookingCount}. rezerwacja
-                </Text>
+            <div className={styles.heroWhenCol}>
+              <div className={styles.heroCountdownRow}>
+                <span className={styles.heroCountdown}>{countdown}</span>
+                {minutesRunning != null && (
+                  <span className={isOverrun ? styles.heroOverrunChip : styles.heroElapsedChip}>
+                    {isOverrun
+                      ? `+${overrunMin} min ponad plan`
+                      : `${minutesRunning} min w trakcie`}
+                  </span>
+                )}
               </div>
-              <div className={styles.clientRow}>
-                <div className={styles.clientAvatar} aria-hidden="true">
-                  {initials}
+              <span className={styles.heroWhen}>
+                <Text variant="body-sm" as="span" weight="bold">
+                  {formatDayDate(booking.startAt)}
+                </Text>
+                <span className={styles.heroWhenTime}>
+                  {formatTime(booking.startAt)} – {formatTime(booking.endAt)}
+                </span>
+                <span className={styles.heroDurationChip}>~{durationMin} min</span>
+              </span>
+            </div>
+          </section>
+
+          {/* ── 2-col ── */}
+          <div className={styles.twoCol}>
+            {/* ── Left column ── */}
+            <div className={styles.colLeft}>
+              {/* Client card */}
+              <section className={styles.secCard} aria-label="Klient">
+                <div className={styles.secHead}>
+                  <Heading variant="section" as="h2">
+                    Klient
+                  </Heading>
                 </div>
-                <div className={styles.clientCol}>
-                  <div className={styles.clientNameRow}>
-                    <Text variant="body-md" as="span" weight="bold">
-                      {booking.client.clientName}
-                    </Text>
-                    <span className={styles.verifiedBadge}>
-                      <IconCheck width="10" height="10" />
-                      Zweryfikowany
-                    </span>
+                <div className={styles.clientRow}>
+                  <div className={styles.clientAvatar} aria-hidden="true">
+                    {initials}
                   </div>
-                  <div className={styles.clientMeta}>
-                    <Text variant="nano" as="span" color="muted">
-                      <strong>{booking.client.bookingCount}</strong>{' '}
+                  <div className={styles.clientCol}>
+                    <div className={styles.clientNameRow}>
+                      <Text variant="body-md" as="span" weight="bold">
+                        {booking.client.clientName}
+                      </Text>
+                    </div>
+                    <Text
+                      variant="nano"
+                      as="span"
+                      color="muted"
+                      className={styles.clientInlineStats}
+                    >
+                      {booking.client.bookingCount}{' '}
                       {booking.client.bookingCount === 1
                         ? 'rezerwacja'
                         : booking.client.bookingCount < 5
                           ? 'rezerwacje'
                           : 'rezerwacji'}
+                      {' · '}
+                      {booking.client.bookingCountThisYear} w tym roku
+                      {booking.client.avgRating != null && (
+                        <> · ocena {booking.client.avgRating.toFixed(1)}</>
+                      )}
+                      {' · '}klient od {booking.client.clientSince}
                     </Text>
                   </div>
-                </div>
-                <button type="button" className={styles.smsBtn}>
-                  <IconMail width="13" height="13" />
-                  Wyślij SMS
-                </button>
-                <button type="button" className={styles.callBtn}>
-                  <IconPhone width="15" height="15" />
-                  Zadzwoń
-                  <span className={styles.phoneMono}>{booking.client.clientPhone}</span>
-                </button>
-              </div>
-            </section>
-
-            {/* Address card — only if address present */}
-            {(booking.addressLine ?? booking.addressCity) && (
-              <section className={styles.secCard} aria-label="Miejsce wizyty">
-                <div className={styles.secHead}>
-                  <Heading variant="section" as="h2">
-                    Miejsce wizyty
-                  </Heading>
-                  <Text variant="nano" as="span" color="muted">
-                    w dojezdzie
-                  </Text>
-                </div>
-                <div className={styles.addressGrid}>
-                  <div className={styles.addrInfo}>
-                    <div className={styles.addrRow}>
-                      <span
-                        className={`${styles.addrIco} ${styles.addrIcoAccent}`}
-                        aria-hidden="true"
-                      >
-                        <IconLocation width="14" height="14" />
-                      </span>
-                      <div className={styles.addrCol}>
-                        <Text variant="nano" as="span" weight="bold" color="muted">
-                          Adres klienta
-                        </Text>
-                        {booking.addressLine && (
-                          <Text variant="body-sm" as="span" weight="bold">
-                            {booking.addressLine}
-                          </Text>
-                        )}
-                        {booking.addressCity && (
-                          <Text variant="nano" as="span" color="secondary">
-                            {booking.addressCity}
-                          </Text>
-                        )}
-                        {booking.travelFeePln !== null && booking.travelFeePln === 0 && (
-                          <span className={styles.travelZoneBadge}>W strefie · dopłata 0 zł</span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Mini map placeholder */}
-                  <div className={styles.miniMapPlaceholder}>
-                    <IconLocation width="24" height="24" className={styles.miniMapIco} />
-                    <Text variant="nano" as="span" color="muted">
-                      {addressFull}
-                    </Text>
-                    {mapsUrl && (
-                      <a
-                        href={mapsUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className={styles.navigateBtn}
-                      >
-                        <IconMap width="14" height="14" />
-                        Nawiguj w Google Maps
-                      </a>
-                    )}
+                  <div className={styles.clientPhone}>
+                    <span className={styles.clientPhoneIco}>
+                      <IconPhone width="13" height="13" />
+                    </span>
+                    <span className={styles.phoneMono}>{booking.client.clientPhone}</span>
                   </div>
                 </div>
               </section>
-            )}
 
-            {/* Vehicle card — only if vehicle present */}
-            {booking.vehicle && (
-              <section className={styles.secCard} aria-label="Pojazd">
-                <div className={styles.secHead}>
-                  <Heading variant="section" as="h2">
-                    Pojazd
-                  </Heading>
-                  <Text variant="nano" as="span" mono color="muted">
-                    Z profilu klienta
-                  </Text>
-                </div>
-                <div className={styles.vehicleRow}>
-                  <span className={styles.vehicleIco} aria-hidden="true">
-                    <IconCar width="20" height="20" />
-                  </span>
-                  <div className={styles.vehicleCol}>
-                    <Text variant="body" as="span" weight="bold">
-                      {booking.vehicle.nickname}
+              {/* Address card — only if address present */}
+              {(booking.addressLine ?? booking.addressCity) && (
+                <section className={styles.secCard} aria-label="Miejsce wizyty">
+                  <div className={styles.secHead}>
+                    <Heading variant="section" as="h2">
+                      Miejsce wizyty
+                    </Heading>
+                    <Text variant="nano" as="span" color="muted">
+                      w dojezdzie
                     </Text>
-                    <div className={styles.vehicleMeta}>
-                      <span className={styles.tireTaq}>{booking.vehicle.tireSize}</span>
-                      {booking.sizeTier && (
-                        <Text variant="nano" as="span" color="muted">
-                          tier &bdquo;{booking.sizeTier}&rdquo;
-                        </Text>
+                  </div>
+                  <div className={styles.addressGrid}>
+                    <div className={styles.addrInfo}>
+                      <div className={styles.addrRow}>
+                        <span
+                          className={`${styles.addrIco} ${styles.addrIcoAccent}`}
+                          aria-hidden="true"
+                        >
+                          <IconLocation width="14" height="14" />
+                        </span>
+                        <div className={styles.addrCol}>
+                          <Text variant="nano" as="span" weight="bold" color="muted">
+                            Adres klienta
+                          </Text>
+                          {booking.addressLine && (
+                            <Text variant="body-sm" as="span" weight="bold">
+                              {booking.addressLine}
+                            </Text>
+                          )}
+                          {booking.addressCity && (
+                            <Text variant="nano" as="span" color="secondary">
+                              {booking.addressCity}
+                            </Text>
+                          )}
+                          {booking.travelFeePln !== null && booking.travelFeePln === 0 && (
+                            <span className={styles.travelZoneBadge}>W strefie · dopłata 0 zł</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Mini map placeholder */}
+                    <div className={styles.miniMapPlaceholder}>
+                      <IconLocation width="24" height="24" className={styles.miniMapIco} />
+                      <Text variant="nano" as="span" color="muted">
+                        {addressFull}
+                      </Text>
+                      {mapsUrl && (
+                        <a
+                          href={mapsUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className={styles.navigateBtn}
+                        >
+                          <IconMap width="14" height="14" />
+                          Nawiguj w Google Maps
+                        </a>
                       )}
                     </div>
                   </div>
-                  {booking.basePricePln !== null && (
-                    <div className={styles.pricePreview}>
-                      <Text variant="nano" as="span" weight="bold" color="muted">
-                        {booking.serviceType ?? 'Usługa'}
+                </section>
+              )}
+
+              {/* Vehicle card — only if vehicle present */}
+              {booking.vehicle && (
+                <section className={styles.secCard} aria-label="Pojazd">
+                  <div className={styles.secHead}>
+                    <Heading variant="section" as="h2">
+                      Pojazd
+                    </Heading>
+                    <Text variant="nano" as="span" mono color="muted">
+                      Z profilu klienta
+                    </Text>
+                  </div>
+                  <div className={styles.vehicleRow}>
+                    <span className={styles.vehicleIco} aria-hidden="true">
+                      <IconCar width="20" height="20" />
+                    </span>
+                    <div className={styles.vehicleCol}>
+                      <Text variant="body" as="span" weight="bold">
+                        {booking.vehicle.nickname}
                       </Text>
-                      <span className={styles.pricePreviewValue}>
-                        {formatPrice(booking.basePricePln ?? 0)}
-                        <span className={styles.pricePreviewZl}>zł</span>
+                      <div className={styles.vehicleMeta}>
+                        <span className={styles.tireTaq}>{booking.vehicle.tireSize}</span>
+                      </div>
+                    </div>
+                    {booking.basePricePln !== null && (
+                      <div className={styles.pricePreview}>
+                        <Text variant="nano" as="span" weight="bold" color="muted">
+                          {booking.service.name ?? 'Usługa'}
+                        </Text>
+                        <span className={styles.pricePreviewValue}>
+                          {formatPrice(booking.basePricePln ?? 0)}
+                          <span className={styles.pricePreviewZl}>zł</span>
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </section>
+              )}
+
+              {/* Note card — always visible, inline-editable */}
+              <section className={styles.secCard} aria-label="Notatki">
+                <div className={styles.secHead}>
+                  <Heading variant="section" as="h2">
+                    Notatki
+                  </Heading>
+                  <div className={styles.notesHeadRight}>
+                    <span className={styles.notesBadge}>
+                      <IconPencil width="10" height="10" />
+                      Wewnętrzne
+                    </span>
+                    {!editingNotes && (
+                      <button
+                        type="button"
+                        className={styles.notesEditBtn}
+                        onClick={openNotesEdit}
+                        aria-label="Edytuj notatki"
+                      >
+                        <IconPencil width="11" height="11" />
+                        {booking.notes ? 'Edytuj' : 'Dodaj'}
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {editingNotes ? (
+                  <div className={styles.notesEditWrap}>
+                    <textarea
+                      className={styles.notesTextarea}
+                      value={notesValue}
+                      onChange={(e) => setNotesValue(e.target.value)}
+                      rows={4}
+                      maxLength={1000}
+                      placeholder="Notatki widoczne tylko dla warsztatu…"
+                      aria-label="Notatki wewnętrzne warsztatu"
+                      autoFocus
+                    />
+                    <div className={styles.notesEditActions}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setEditingNotes(false)}
+                        disabled={notesSaving}
+                      >
+                        Anuluj
+                      </Button>
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        onClick={() => void handleSaveNotes()}
+                        disabled={notesSaving}
+                      >
+                        {notesSaving ? 'Zapisuję…' : 'Zapisz'}
+                      </Button>
+                    </div>
+                  </div>
+                ) : booking.notes ? (
+                  <blockquote className={styles.noteQuote}>
+                    <Text variant="body" as="span" color="primary">
+                      {booking.notes}
+                    </Text>
+                  </blockquote>
+                ) : (
+                  <button type="button" className={styles.notesEmptyBtn} onClick={openNotesEdit}>
+                    <Text variant="body-sm" as="span" color="muted">
+                      Brak notatek — kliknij, aby dodać
+                    </Text>
+                  </button>
+                )}
+              </section>
+
+              {/* Depot link — if tires in storage */}
+              {booking.hasTireSetsInDepot && (
+                <section className={styles.secCard} aria-label="Opony w składzie">
+                  <div className={styles.secHead}>
+                    <Heading variant="section" as="h2">
+                      Skład opon
+                    </Heading>
+                    <span className={styles.depotBadge}>
+                      <IconWarehouse width="11" height="11" />W składzie
+                    </span>
+                  </div>
+                  <div className={styles.depotLinkRow}>
+                    <Text variant="body-sm" as="span" color="secondary">
+                      Opony tego klienta są przechowywane w składzie.
+                    </Text>
+                    <a href="/dashboard/depot" className={styles.depotLink}>
+                      <IconWarehouse width="12" height="12" />
+                      Przejdź do składu
+                    </a>
+                  </div>
+                </section>
+              )}
+
+              {/* Timeline */}
+              <section className={styles.secCard} aria-label="Historia rezerwacji">
+                <div className={styles.secHead}>
+                  <Heading variant="section" as="h2">
+                    Historia
+                  </Heading>
+                  <Text variant="nano" as="span" mono color="muted">
+                    {timeline.length}{' '}
+                    {timeline.length === 1
+                      ? 'zdarzenie'
+                      : timeline.length <= 4
+                        ? 'zdarzenia'
+                        : 'zdarzeń'}
+                  </Text>
+                </div>
+                <div className={styles.tlWrap}>
+                  {timeline.map((event, idx) => (
+                    <div
+                      key={idx}
+                      className={`${styles.tlEvent} ${
+                        event.type === 'current' ? styles.tlEventCurrent : ''
+                      } ${event.type === 'future' ? styles.tlEventFuture : ''}`}
+                    >
+                      <Text
+                        variant="body-sm"
+                        as="div"
+                        weight="bold"
+                        color={
+                          event.type === 'current'
+                            ? 'accent'
+                            : event.type === 'future'
+                              ? 'muted'
+                              : 'primary'
+                        }
+                      >
+                        {event.label}
+                      </Text>
+                      {event.time && (
+                        <Text variant="nano" as="div" mono color="muted" style={{ marginTop: 3 }}>
+                          {event.time}
+                        </Text>
+                      )}
+                      {event.by && (
+                        <Text variant="nano" as="div" color="muted" className={styles.tlEventBy}>
+                          {event.by}
+                        </Text>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </section>
+            </div>
+
+            {/* ── Right column (sticky) ── */}
+            <aside className={styles.colRight} aria-label="Płatność i akcje">
+              {/* Merged service + price card */}
+              <section className={styles.priceCard} aria-label="Usługa i płatność">
+                {/* ── Service identity ── */}
+                <div className={styles.svcHead}>
+                  <Text variant="body-md" as="span" weight="bold">
+                    {serviceDisplayName || '—'}
+                  </Text>
+                  <div className={styles.svcHeadRight}>
+                    <span
+                      className={booking.isCustomService ? styles.customBadge : styles.catalogBadge}
+                    >
+                      {booking.isCustomService ? 'Poza cennikiem' : 'Z cennika'}
+                    </span>
+                    {canEdit && (
+                      <Button variant="ghost" size="sm" onClick={() => setShowEdit(true)}>
+                        <IconPencil width="11" height="11" />
+                        Edytuj
+                      </Button>
+                    )}
+                  </div>
+                </div>
+
+                {(booking.service.tireSize ||
+                  !booking.isCustomService ||
+                  booking.customDurationMinutes != null) && (
+                  <div className={styles.svcMeta}>
+                    {booking.service.tireSize && (
+                      <span className={styles.tireTaq}>{booking.service.tireSize}</span>
+                    )}
+                    {!booking.isCustomService && (
+                      <span className={styles.wheelChip}>
+                        {parsedWheelCount !== null
+                          ? `${parsedWheelCount} ${parsedWheelCount === 1 ? 'koło' : 'koła'}`
+                          : 'komplet'}
+                      </span>
+                    )}
+                    {booking.isCustomService && booking.customDurationMinutes != null && (
+                      <span className={styles.durationChip}>
+                        <IconClock width="11" height="11" />
+                        {booking.customDurationMinutes} min
+                      </span>
+                    )}
+                  </div>
+                )}
+
+                {(booking.workerName ?? booking.stationName) && (
+                  <div className={styles.svcAssign}>
+                    {booking.workerName && (
+                      <span className={styles.svcAssignItem}>
+                        <IconWorkers width="12" height="12" />
+                        <Text variant="nano" as="span" color="secondary">
+                          {booking.workerName}
+                        </Text>
+                      </span>
+                    )}
+                    {booking.stationName && (
+                      <span className={styles.svcAssignItem}>
+                        <IconStations width="12" height="12" />
+                        <Text variant="nano" as="span" color="secondary">
+                          {booking.stationName}
+                        </Text>
+                      </span>
+                    )}
+                  </div>
+                )}
+
+                <hr className={styles.svcDivider} />
+
+                {/* ── Price breakdown ── */}
+                <div className={styles.priceRows}>
+                  <div className={styles.priceRow}>
+                    <Text variant="body-sm" as="span" color="secondary">
+                      Usługa
+                    </Text>
+                    <span className={styles.priceRowVal}>
+                      {derivedBasePricePln != null ? `${formatPrice(derivedBasePricePln)} zł` : '—'}
+                    </span>
+                  </div>
+
+                  {includedSubServices.map((s, i) => (
+                    <div key={i} className={styles.priceRow}>
+                      <Text variant="body-sm" as="span" color="secondary">
+                        {s.name}
+                      </Text>
+                      <span className={`${styles.priceRowVal} ${styles.priceRowValSuccess}`}>
+                        w cenie
+                      </span>
+                    </div>
+                  ))}
+
+                  {paidSubServices.map((s, i) => (
+                    <div key={i} className={styles.priceRow}>
+                      <Text variant="body-sm" as="span" color="secondary">
+                        {s.name}
+                      </Text>
+                      <span className={styles.priceRowVal}>+{formatPrice(s.pricePln!)} zł</span>
+                    </div>
+                  ))}
+
+                  {booking.travelFeePln != null && (
+                    <div className={styles.priceRow}>
+                      <Text variant="body-sm" as="span" color="secondary">
+                        Dojazd
+                      </Text>
+                      <span
+                        className={`${styles.priceRowVal} ${
+                          booking.travelFeePln === 0 ? styles.priceRowValSuccess : ''
+                        }`}
+                      >
+                        {booking.travelFeePln === 0
+                          ? 'w cenie'
+                          : `${formatPrice(booking.travelFeePln)} zł`}
                       </span>
                     </div>
                   )}
                 </div>
-              </section>
-            )}
 
-            {/* Note card — only if notes present */}
-            {booking.notes && (
-              <section className={styles.secCard} aria-label="Notatka od klienta">
-                <div className={styles.secHead}>
-                  <Heading variant="section" as="h2">
-                    Notatka od klienta
-                  </Heading>
-                  <Text variant="nano" as="span" color="muted">
-                    opcjonalna
-                  </Text>
-                </div>
-                <div>
-                  <blockquote className={styles.noteQuote}>
-                    <Text variant="body" as="span" color="primary">
-                      &bdquo;{booking.notes}&rdquo;
-                    </Text>
-                  </blockquote>
-                  <Text variant="nano" as="p" color="muted" className={styles.noteAttrib}>
-                    — {booking.client.clientName} · dodano {formatDateTime(booking.createdAt)}
-                  </Text>
-                </div>
-              </section>
-            )}
+                <hr className={styles.priceDivider} />
 
-            {/* Timeline */}
-            <section className={styles.secCard} aria-label="Historia rezerwacji">
-              <div className={styles.secHead}>
-                <Heading variant="section" as="h2">
-                  Historia
-                </Heading>
-                <Text variant="nano" as="span" mono color="muted">
-                  {timeline.length}{' '}
-                  {timeline.length === 1
-                    ? 'zdarzenie'
-                    : timeline.length <= 4
-                      ? 'zdarzenia'
-                      : 'zdarzeń'}
-                </Text>
-              </div>
-              <div className={styles.tlWrap}>
-                {timeline.map((event, idx) => (
-                  <div
-                    key={idx}
-                    className={`${styles.tlEvent} ${
-                      event.type === 'current' ? styles.tlEventCurrent : ''
-                    } ${event.type === 'future' ? styles.tlEventFuture : ''}`}
+                <div className={styles.priceTotal}>
+                  <Text
+                    variant="nano"
+                    as="span"
+                    weight="bold"
+                    color="muted"
+                    className={styles.priceTotalLabel}
                   >
-                    <Text
-                      variant="body-sm"
-                      as="div"
-                      weight="bold"
-                      color={
-                        event.type === 'current'
-                          ? 'accent'
-                          : event.type === 'future'
-                            ? 'muted'
-                            : 'primary'
-                      }
-                    >
-                      {event.label}
+                    Klient zapłaci Ci
+                  </Text>
+                  <span className={styles.priceTotalVal}>
+                    {booking.totalPricePln != null ? formatPrice(booking.totalPricePln) : '—'}
+                    <span className={styles.priceTotalZl}>zł</span>
+                  </span>
+                </div>
+
+                {booking.clientNote && (
+                  <div className={styles.clientNoteRow}>
+                    <Text variant="nano" as="span" color="muted" className={styles.clientNoteLabel}>
+                      Notatka dla klienta
                     </Text>
-                    {event.time && (
-                      <Text variant="nano" as="div" mono color="muted" style={{ marginTop: 3 }}>
-                        {event.time}
-                      </Text>
-                    )}
-                    {event.by && (
-                      <Text variant="nano" as="div" color="muted" className={styles.tlEventBy}>
-                        {event.by}
-                      </Text>
-                    )}
+                    <Text variant="body-sm" as="p" color="secondary">
+                      {booking.clientNote}
+                    </Text>
                   </div>
-                ))}
-              </div>
-            </section>
-          </div>
+                )}
+              </section>
 
-          {/* ── Right column (sticky) ── */}
-          <aside className={styles.colRight} aria-label="Płatność i akcje">
-            {/* Price card */}
-            <section className={styles.priceCard}>
-              <div className={styles.priceHead}>
-                <Heading variant="section" as="h3">
-                  Do zapłaty
-                </Heading>
-                <span className={styles.offlineBadge}>Po wizycie · offline</span>
-              </div>
-
-              <div className={styles.priceRows}>
-                {/* Base service */}
-                <div className={styles.priceRow}>
-                  <Text variant="body-sm" as="span" color="secondary">
-                    {booking.serviceType ?? 'Usługa'}
-                    {booking.tireSize ? ` (${booking.tireSize})` : ''}
-                  </Text>
-                  <span className={styles.priceRowVal}>
-                    {booking.basePricePln != null ? `${formatPrice(booking.basePricePln)} zł` : '—'}
-                  </span>
-                </div>
-
-                {/* Travel fee */}
-                <div className={styles.priceRow}>
-                  <Text variant="body-sm" as="span" color="secondary">
-                    Dojazd
-                  </Text>
-                  <span
-                    className={`${styles.priceRowVal} ${
-                      booking.travelFeePln === 0 ? styles.priceRowValSuccess : ''
-                    }`}
-                  >
-                    {booking.travelFeePln == null
-                      ? '—'
-                      : booking.travelFeePln === 0
-                        ? 'w cenie'
-                        : `${formatPrice(booking.travelFeePln)} zł`}
-                  </span>
-                </div>
-
-                {/* TPMS / balancing */}
-                <div className={styles.priceRow}>
-                  <Text variant="body-sm" as="span" color="secondary">
-                    Wyważanie (opcj.)
-                  </Text>
-                  <span className={`${styles.priceRowVal} ${styles.priceRowValMuted}`}>
-                    niewybrane
-                  </span>
-                </div>
-              </div>
-
-              <hr className={styles.priceDivider} />
-
-              <div className={styles.priceTotal}>
-                <Text
-                  variant="nano"
-                  as="span"
-                  weight="bold"
-                  color="muted"
-                  className={styles.priceTotalLabel}
-                >
-                  Klient zapłaci Ci
-                </Text>
-                <span className={styles.priceTotalVal}>
-                  {booking.totalPricePln != null ? formatPrice(booking.totalPricePln) : '—'}
-                  <span className={styles.priceTotalZl}>zł</span>
-                </span>
-              </div>
-
-              <div className={styles.adrNote}>
-                <span className={styles.adrNoteIcon}>
-                  <IconInfo width="13" height="13" />
-                </span>
-                <Text variant="nano" as="div" color="muted">
-                  <strong className={styles.adrNoteStrong}>Aplikacja darmowa w pilocie.</strong>{' '}
-                  Klient płaci Tobie bezpośrednio — gotówka lub przelew. Platforma pobiera{' '}
-                  <strong className={styles.adrNoteStrong}>0% prowizji</strong> (zgodnie z ADR-004 i
-                  regulaminem).
-                </Text>
-              </div>
-            </section>
-
-            {/* Actions card */}
-            <section className={styles.actionsCard} aria-label="Akcje">
-              {status === 'PENDING' && (
-                <>
-                  <button
-                    type="button"
-                    className={styles.actionPrimary}
-                    disabled={actionLoading}
-                    onClick={() => handleAction('confirm')}
-                  >
-                    <IconCheck width="16" height="16" />
-                    Potwierdź rezerwację
-                  </button>
-                  <button
-                    type="button"
-                    className={styles.actionDanger}
-                    disabled={actionLoading}
-                    onClick={() => handleAction('reject')}
-                  >
-                    <IconXClose width="12" height="12" />
-                    Odrzuć
-                  </button>
-                </>
-              )}
-
-              {status === 'CONFIRMED' && (
-                <>
-                  <button
-                    type="button"
-                    className={styles.actionPrimary}
-                    disabled={actionLoading}
-                    onClick={() => handleAction('start')}
-                  >
-                    <IconPlay width="16" height="16" />
-                    Rozpocznij wizytę
-                  </button>
-                  <div className={styles.actionSecondaryRow}>
+              {/* Actions card */}
+              <section className={styles.actionsCard} aria-label="Akcje">
+                {status === 'PENDING' && (
+                  <>
                     <button
                       type="button"
-                      className={styles.actionSecondary}
+                      className={styles.actionPrimary}
                       disabled={actionLoading}
+                      onClick={() => handleAction('confirm')}
                     >
-                      <IconReschedule width="12" height="12" />
-                      Zmień termin
+                      <IconCheck width="16" height="16" />
+                      Potwierdź rezerwację
                     </button>
                     <button
                       type="button"
-                      className={styles.actionSecondary}
+                      className={styles.actionDanger}
                       disabled={actionLoading}
+                      onClick={() => handleAction('reject')}
                     >
-                      <IconMail width="12" height="12" />
-                      SMS do klienta
+                      <IconXClose width="12" height="12" />
+                      Odrzuć
                     </button>
-                  </div>
-                  <button
-                    type="button"
-                    className={styles.actionDanger}
-                    disabled={actionLoading}
-                    onClick={() => handleAction('cancel')}
-                  >
-                    <IconXClose width="12" height="12" />
-                    Anuluj rezerwację
-                  </button>
-                  <div className={styles.noShowHint}>
-                    <span className={styles.noShowHintIcon}>
-                      <IconInfo width="12" height="12" />
-                    </span>
-                    <Text variant="nano" as="span" color="muted">
-                      Po upływie {formatTime(booking.startAt)} pojawi się opcja{' '}
-                      <span className={styles.noShowHintWarn}>
-                        &bdquo;Klient się nie pojawił&rdquo;
-                      </span>{' '}
-                      (2-strike policy)
-                    </Text>
-                  </div>
-                </>
-              )}
+                  </>
+                )}
 
-              {status === 'IN_PROGRESS' && (
-                <>
+                {status === 'CONFIRMED' && (
+                  <>
+                    <button
+                      type="button"
+                      className={styles.actionPrimary}
+                      disabled={actionLoading}
+                      onClick={() => {
+                        if (new Date() < startAtDate) {
+                          setShowStartConfirm(true);
+                        } else {
+                          void handleAction('start');
+                        }
+                      }}
+                    >
+                      <IconPlay width="16" height="16" />
+                      Rozpocznij wizytę
+                    </button>
+                    <div className={styles.actionSecondaryRow}>
+                      <button
+                        type="button"
+                        className={styles.actionSecondary}
+                        disabled={actionLoading}
+                        onClick={() => setShowReschedule(true)}
+                      >
+                        <IconReschedule width="12" height="12" />
+                        Zmień termin
+                      </button>
+                      <button
+                        type="button"
+                        className={styles.actionSecondary}
+                        disabled={actionLoading}
+                      >
+                        <IconMail width="12" height="12" />
+                        SMS do klienta
+                      </button>
+                    </div>
+                    <button
+                      type="button"
+                      className={styles.actionDanger}
+                      disabled={actionLoading}
+                      onClick={() => handleAction('cancel')}
+                    >
+                      <IconXClose width="12" height="12" />
+                      Anuluj rezerwację
+                    </button>
+                    {showNoShow ? (
+                      <button
+                        type="button"
+                        className={styles.actionNoShow}
+                        disabled={actionLoading}
+                        onClick={() => handleAction('no_show')}
+                      >
+                        Klient się nie pojawił
+                      </button>
+                    ) : (
+                      <div className={styles.noShowHint}>
+                        <span className={styles.noShowHintIcon}>
+                          <IconInfo width="12" height="12" />
+                        </span>
+                        <Text variant="nano" as="span" color="muted">
+                          Po {formatTime(booking.startAt)} pojawi się opcja{' '}
+                          <span className={styles.noShowHintWarn}>
+                            &bdquo;Klient się nie pojawił&rdquo;
+                          </span>
+                        </Text>
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {status === 'IN_PROGRESS' && (
                   <button
                     type="button"
                     className={`${styles.actionPrimary} ${styles.actionPrimarySuccess}`}
@@ -865,33 +1138,35 @@ export default function BookingDetailPage({ params }: PageProps) {
                     <IconCheck width="16" height="16" />
                     Zakończ wizytę
                   </button>
+                )}
+
+                {isTerminalStatus(status) && (
+                  <Text variant="body-sm" as="p" color="muted" className={styles.terminalMsg}>
+                    {status === 'COMPLETED'
+                      ? 'Wizyta zakończona.'
+                      : isCancelled(status)
+                        ? 'Rezerwacja anulowana.'
+                        : status === 'NO_SHOW'
+                          ? 'Klient się nie pojawił.'
+                          : 'Rezerwacja odrzucona.'}
+                  </Text>
+                )}
+
+                {canAddToDepot && (
                   <button
                     type="button"
-                    className={styles.actionDanger}
-                    disabled={actionLoading}
-                    onClick={() => handleAction('cancel')}
+                    className={styles.actionSecondaryFull}
+                    onClick={() => setShowDepotModal(true)}
                   >
-                    <IconXClose width="12" height="12" />
-                    Anuluj rezerwację
+                    <IconWarehouse width="13" height="13" />
+                    Dodaj stary zestaw do składu
                   </button>
-                </>
-              )}
-
-              {isTerminalStatus(status) && (
-                <Text variant="body-sm" as="p" color="muted" className={styles.terminalMsg}>
-                  {status === 'COMPLETED'
-                    ? 'Wizyta zakończona.'
-                    : isCancelled(status)
-                      ? 'Rezerwacja anulowana.'
-                      : status === 'NO_SHOW'
-                        ? 'Klient się nie pojawił.'
-                        : 'Rezerwacja odrzucona.'}
-                </Text>
-              )}
-            </section>
-          </aside>
+                )}
+              </section>
+            </aside>
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }

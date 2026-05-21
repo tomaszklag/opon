@@ -1,6 +1,15 @@
 'use client';
-import React, { useState, useCallback } from 'react';
-import { Modal, Button, Input, Select, Textarea, Text } from '@opony/design-system-web';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import {
+  Modal,
+  Button,
+  Input,
+  Select,
+  Combobox,
+  DatePicker,
+  Textarea,
+  Text,
+} from '@opony/design-system-web';
 import { useWorkersList } from '../../../lib/hooks/use-workers-list';
 import { workerTasksApi } from '../../../api-data-access/worker-tasks';
 import styles from './WorkerTaskModal.module.css';
@@ -10,34 +19,106 @@ interface WorkerTaskModalProps {
   onClose: () => void;
   onSuccess?: () => void;
   weekStart: string;
+  initialDate?: string;
+  initialTime?: string;
 }
 
 function getDefaultDate(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-export function WorkerTaskModal({ isOpen, onClose, onSuccess, weekStart }: WorkerTaskModalProps) {
+function buildTimeOptions(from = 6, to = 22, stepMin = 15) {
+  const opts: { value: string; label: string }[] = [];
+  for (let h = from; h <= to; h++) {
+    for (let m = 0; m < 60; m += stepMin) {
+      if (h === to && m > 0) break;
+      const hh = String(h).padStart(2, '0');
+      const mm = String(m).padStart(2, '0');
+      opts.push({ value: `${hh}:${mm}`, label: `${hh}:${mm}` });
+    }
+  }
+  return opts;
+}
+
+const TIME_OPTIONS = buildTimeOptions();
+
+function timeToMinutes(t: string): number {
+  const [hStr, mStr] = t.split(':');
+  return Number(hStr) * 60 + Number(mStr);
+}
+
+function minutesToTime(mins: number): string {
+  const clamped = Math.min(Math.max(mins, 6 * 60), 22 * 60);
+  const snapped = Math.round(clamped / 15) * 15;
+  const h = Math.floor(snapped / 60);
+  const m = snapped % 60;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+}
+
+function getNearestSlotTime(): string {
+  const now = new Date();
+  const mins = now.getHours() * 60 + now.getMinutes();
+  const next = Math.ceil(mins / 15) * 15;
+  const clamped = Math.min(Math.max(next, 6 * 60), 21 * 60 + 45);
+  return minutesToTime(clamped);
+}
+
+function getDefaultEndTime(startTime: string): string {
+  const endMins = Math.min(timeToMinutes(startTime) + 60, 22 * 60);
+  return minutesToTime(endMins);
+}
+
+export function WorkerTaskModal({
+  isOpen,
+  onClose,
+  onSuccess,
+  weekStart,
+  initialDate,
+  initialTime,
+}: WorkerTaskModalProps) {
   const { workers } = useWorkersList();
   const [title, setTitle] = useState('');
   const [workerId, setWorkerId] = useState('');
   const [date, setDate] = useState(() => weekStart || getDefaultDate());
-  const [timeFrom, setTimeFrom] = useState('08:00');
-  const [timeTo, setTimeTo] = useState('09:00');
+  const [timeFrom, setTimeFrom] = useState(() => getNearestSlotTime());
+  const [timeTo, setTimeTo] = useState(() => getDefaultEndTime(getNearestSlotTime()));
   const [notes, setNotes] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    setDate(initialDate || weekStart || getDefaultDate());
+    const startTime = initialTime ?? getNearestSlotTime();
+    setTimeFrom(startTime);
+    setTimeTo(getDefaultEndTime(startTime));
+  }, [isOpen, weekStart, initialDate, initialTime]);
 
   const workerOptions = [
     { value: '', label: 'Brak (zadanie ogólne)' },
     ...workers.map((w) => ({ value: w.id, label: w.name })),
   ];
 
+  const toOptions = useMemo(() => TIME_OPTIONS.filter((o) => o.value > timeFrom), [timeFrom]);
+
+  function handleFromChange(newFrom: string) {
+    const durationMins = timeToMinutes(timeTo) - timeToMinutes(timeFrom);
+    const newToMins = timeToMinutes(newFrom) + Math.max(durationMins, 15);
+    const newTo = minutesToTime(newToMins);
+    const validTo =
+      TIME_OPTIONS.find((o) => o.value > newFrom && o.value >= newTo) ??
+      [...TIME_OPTIONS].reverse().find((o) => o.value > newFrom);
+    setTimeFrom(newFrom);
+    setTimeTo(validTo?.value ?? newFrom);
+  }
+
   const resetForm = useCallback(() => {
     setTitle('');
     setWorkerId('');
     setDate(getDefaultDate());
-    setTimeFrom('08:00');
-    setTimeTo('09:00');
+    const nearest = getNearestSlotTime();
+    setTimeFrom(nearest);
+    setTimeTo(getDefaultEndTime(nearest));
     setNotes('');
     setError(null);
   }, []);
@@ -48,20 +129,14 @@ export function WorkerTaskModal({ isOpen, onClose, onSuccess, weekStart }: Worke
       setError('Podaj tytuł zadania.');
       return;
     }
-    const startAt = `${date}T${timeFrom}:00.000Z`;
-    const endAt = `${date}T${timeTo}:00.000Z`;
-    if (new Date(endAt) <= new Date(startAt)) {
-      setError('Godzina zakończenia musi być późniejsza niż rozpoczęcia.');
-      return;
-    }
     setError(null);
     setIsLoading(true);
     try {
       await workerTasksApi.create({
         title: title.trim(),
         workerId: workerId || undefined,
-        startAt,
-        endAt,
+        startAt: `${date}T${timeFrom}:00.000Z`,
+        endAt: `${date}T${timeTo}:00.000Z`,
         notes: notes.trim() || undefined,
       });
       onSuccess?.();
@@ -113,26 +188,20 @@ export function WorkerTaskModal({ isOpen, onClose, onSuccess, weekStart }: Worke
           options={workerOptions}
         />
         <div className={[styles.row, styles.row3].join(' ')}>
-          <Input
-            label="Data"
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            required
-          />
-          <Input
+          <DatePicker label="Data" value={date} onChange={setDate} required />
+          <Combobox
             label="Od"
-            type="time"
             value={timeFrom}
-            onChange={(e) => setTimeFrom(e.target.value)}
-            required
+            onChange={handleFromChange}
+            options={TIME_OPTIONS}
+            placeholder="gg:mm"
           />
-          <Input
+          <Combobox
             label="Do"
-            type="time"
             value={timeTo}
-            onChange={(e) => setTimeTo(e.target.value)}
-            required
+            onChange={setTimeTo}
+            options={toOptions}
+            placeholder="gg:mm"
           />
         </div>
         <Textarea

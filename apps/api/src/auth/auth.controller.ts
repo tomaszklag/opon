@@ -1,4 +1,18 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Post, Query, Req, Res } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  ParseUUIDPipe,
+  Patch,
+  Post,
+  Query,
+  Req,
+  Res,
+} from '@nestjs/common';
 import { ApiCookieAuth, ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { ConfigService } from '@nestjs/config';
 import { randomUUID } from 'crypto';
@@ -9,6 +23,9 @@ import { AuthService } from './auth.service';
 import { CurrentUser } from './decorators/current-user.decorator';
 import { Public } from './decorators/public.decorator';
 import { AuthMeResponseDto } from './dto/auth-me-response.dto';
+import { ChangePhoneDto } from './dto/change-phone.dto';
+import { ChangePhoneResponseDto } from './dto/change-phone-response.dto';
+import { SessionResponseDto } from './dto/session-response.dto';
 import { MessageResponseDto } from './dto/message-response.dto';
 import { RequestOtpDto } from './dto/request-otp.dto';
 import { RequestOtpResponseDto } from './dto/request-otp-response.dto';
@@ -164,6 +181,38 @@ export class AuthController {
     return { message: 'Wylogowano' };
   }
 
+  // ── PATCH /v1/auth/change-phone ───────────────────────────────────────────
+
+  @Patch('change-phone')
+  @HttpCode(HttpStatus.OK)
+  @ApiCookieAuth('access_token')
+  @ApiOperation({ summary: 'Zmień numer telefonu — wymaga OTP na stary i nowy numer' })
+  @ApiResponse({ status: 200, type: ChangePhoneResponseDto })
+  @ApiResponse({ status: 401, description: 'Nieprawidłowy lub wygasły kod OTP' })
+  @ApiResponse({ status: 409, description: 'Numer telefonu jest już w użyciu' })
+  async changePhone(
+    @CurrentUser() user: JwtPayload,
+    @Body() dto: ChangePhoneDto,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<ChangePhoneResponseDto> {
+    await this.authService.changePhone(
+      user.sub,
+      user.phone,
+      dto.currentCode,
+      dto.newPhone,
+      dto.newCode,
+    );
+
+    // Re-issue access token with updated phone (session jti stays the same)
+    if (user.jti) {
+      const newPayload: JwtPayload = { ...user, phone: dto.newPhone };
+      const accessToken = this.authService.issueAccessToken(newPayload, user.jti);
+      this.authService.setAccessTokenCookie(res, accessToken);
+    }
+
+    return { message: 'Numer telefonu zmieniony', phone: dto.newPhone };
+  }
+
   // ── GET /v1/auth/verify-email ──────────────────────────────────────────────
 
   @Public()
@@ -189,5 +238,42 @@ export class AuthController {
   @ApiResponse({ status: 401, description: 'Nieautoryzowany' })
   me(@CurrentUser() user: JwtPayload): JwtPayload {
     return user;
+  }
+
+  // ── GET /v1/auth/sessions ──────────────────────────────────────────────────
+
+  @Get('sessions')
+  @ApiCookieAuth('access_token')
+  @ApiOperation({ summary: 'Lista sesji zalogowanego użytkownika (aktywnych i historycznych)' })
+  @ApiResponse({ status: 200, type: [SessionResponseDto] })
+  async listSessions(@CurrentUser() user: JwtPayload): Promise<SessionResponseDto[]> {
+    return this.authService.listSessions(user.sub, user.jti);
+  }
+
+  // ── DELETE /v1/auth/sessions/:id ──────────────────────────────────────────
+
+  @Delete('sessions/:id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiCookieAuth('access_token')
+  @ApiOperation({ summary: 'Wyloguj wybrane urządzenie (nie można wylogować bieżącej sesji)' })
+  @ApiResponse({ status: 204, description: 'Sesja unieważniona' })
+  @ApiResponse({ status: 400, description: 'To jest bieżąca sesja — użyj /logout' })
+  @ApiResponse({ status: 404, description: 'Sesja nie istnieje' })
+  async revokeSession(
+    @CurrentUser() user: JwtPayload,
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<void> {
+    await this.authService.revokeSingleSession(id, user.sub, user.jti);
+  }
+
+  // ── DELETE /v1/auth/sessions ───────────────────────────────────────────────
+
+  @Delete('sessions')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiCookieAuth('access_token')
+  @ApiOperation({ summary: 'Wyloguj wszystkie inne urządzenia (zachowuje bieżącą sesję)' })
+  @ApiResponse({ status: 204, description: 'Pozostałe sesje unieważnione' })
+  async revokeOtherSessions(@CurrentUser() user: JwtPayload): Promise<void> {
+    await this.authService.revokeOtherSessions(user.sub, user.jti);
   }
 }

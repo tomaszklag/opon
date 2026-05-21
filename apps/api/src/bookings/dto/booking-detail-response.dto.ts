@@ -1,10 +1,26 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
+export class BookingSubServiceDto {
+  @ApiProperty() name!: string;
+  @ApiPropertyOptional({ type: Number, nullable: true }) pricePln!: number | null;
+}
+
+export class BookingServiceDto {
+  @ApiPropertyOptional({ type: String, nullable: true }) name!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) tireSize!: string | null;
+  @ApiProperty({ type: [BookingSubServiceDto] }) subServices!: BookingSubServiceDto[];
+}
+
 export class BookingClientDto {
   @ApiProperty() clientId!: string;
   @ApiProperty() clientName!: string;
   @ApiProperty() clientPhone!: string;
   @ApiProperty() bookingCount!: number;
+  @ApiProperty() bookingCountThisYear!: number;
+  @ApiPropertyOptional({ type: String, nullable: true }) lastVisitAt!: string | null;
+  @ApiProperty() upcomingCount!: number;
+  @ApiPropertyOptional({ type: Number, nullable: true }) avgRating!: number | null;
+  @ApiProperty() clientSince!: number;
 }
 
 export class BookingVehicleDto {
@@ -26,18 +42,23 @@ export class BookingDetailResponseDto {
   @ApiPropertyOptional({ type: String, nullable: true }) addressCity!: string | null;
   @ApiPropertyOptional({ type: Number, nullable: true }) addressLat!: number | null;
   @ApiPropertyOptional({ type: Number, nullable: true }) addressLng!: number | null;
-  @ApiPropertyOptional({ type: String, nullable: true }) tireSize!: string | null;
-  @ApiPropertyOptional({ type: String, nullable: true }) serviceType!: string | null;
-  @ApiPropertyOptional({ type: String, nullable: true }) sizeTier!: string | null;
-  @ApiProperty() tpmsRequired!: boolean;
+  @ApiProperty({ type: () => BookingServiceDto }) service!: BookingServiceDto;
   @ApiPropertyOptional({ type: Number, nullable: true }) basePricePln!: number | null;
   @ApiPropertyOptional({ type: Number, nullable: true }) travelFeePln!: number | null;
   @ApiPropertyOptional({ type: Number, nullable: true }) totalPricePln!: number | null;
   @ApiPropertyOptional({ type: String, nullable: true }) stationId!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) stationName!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) workerId!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) workerName!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) notes!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) clientNote!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) rejectReason!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) cancelReason!: string | null;
   @ApiProperty() isManual!: boolean;
+  @ApiProperty() isCustomService!: boolean;
+  @ApiPropertyOptional({ type: Number, nullable: true }) customPricePln!: number | null;
+  @ApiPropertyOptional({ type: Number, nullable: true }) customDurationMinutes!: number | null;
+  @ApiProperty() hasTireSetsInDepot!: boolean;
   @ApiProperty() createdAt!: string;
   @ApiPropertyOptional({ type: String, nullable: true }) confirmedAt!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) startedAt!: string | null;

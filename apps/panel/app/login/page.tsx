@@ -10,7 +10,7 @@ import styles from './login.module.css';
 export default function LoginPage() {
   const flow = useLoginFlow();
 
-  if (flow.authLoading) return null;
+  if (flow.authLoading || flow.isAuthenticated) return null;
 
   return (
     <div className={styles.page}>

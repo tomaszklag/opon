@@ -2,14 +2,12 @@
 import React, { useState } from 'react';
 import {
   Text,
-  Heading,
   KPICard,
   SearchInput,
   Tabs,
   Badge,
   Checkbox,
   Pagination,
-  Button,
 } from '@opony/design-system-web';
 import {
   IconCalendar,
@@ -36,8 +34,9 @@ import {
 } from '../../../lib/hooks/use-booking-admin';
 import { BookingTopbarActions } from '../_components/BookingTopbarActions';
 import { ManualBookingModal } from '../_components/ManualBookingModal';
+import { WorkerTaskDetailModal } from '../_components/WorkerTaskDetailModal';
 import { useWorkerTasks } from '../../../lib/hooks/use-worker-tasks';
-import { workerTasksApi } from '../../../api-data-access/worker-tasks';
+import { workerTasksApi, type WorkerTask } from '../../../api-data-access/worker-tasks';
 import styles from './bookings.module.css';
 
 function getTodayWeekStart(): string {
@@ -223,13 +222,7 @@ function BookingRow({ booking, selected, onToggle }: RowProps) {
   const badgeStatus = toBadgeStatus(booking.status);
   const isCancelled = badgeStatus === 'CANCELLED' || badgeStatus === 'NO_SHOW';
   const dt = formatDate(booking.startAt);
-  const serviceLabel = [
-    booking.serviceType === 'SWAP' ? 'Wymiana' : booking.serviceType,
-    booking.sizeTier ? `${booking.sizeTier}` : null,
-    booking.tireSize ? `— ${booking.tireSize}` : null,
-  ]
-    .filter(Boolean)
-    .join(' ');
+  const serviceLabel = booking.tireSize ? `— ${booking.tireSize}` : '';
 
   return (
     <tr
@@ -282,13 +275,6 @@ function BookingRow({ booking, selected, onToggle }: RowProps) {
           <Text variant="body-sm" weight="semibold" as="span">
             {serviceLabel || 'Usługa'}
           </Text>
-          <div className={styles.serviceMeta}>
-            {booking.tpmsRequired && (
-              <Text variant="nano" mono color="muted" as="span">
-                TPMS
-              </Text>
-            )}
-          </div>
         </div>
       </td>
       <td className={[styles.td, styles.tdRight].join(' ')}>
@@ -404,88 +390,87 @@ function BulkBar({ count, onConfirm, onCancel, onDeselect, onExport }: BulkBarPr
   );
 }
 
-// ── Worker Tasks Section ─────────────────────────────────────────────────────
+// ── Task row ─────────────────────────────────────────────────────────────────
 
-function WorkerTasksSection() {
-  const { tasks, mutate } = useWorkerTasks(getTodayWeekStart());
+interface TaskRowProps {
+  task: WorkerTask;
+  onOpen: () => void;
+  onDelete: () => void;
+}
 
-  if (tasks.length === 0) return null;
-
-  async function handleDelete(id: string) {
-    await workerTasksApi.remove(id);
-    void mutate();
-  }
-
-  function formatTaskTime(startAt: string, endAt: string): string {
-    const fmt = (iso: string) =>
-      new Date(iso).toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' });
-    const d = new Date(startAt).toLocaleDateString('pl-PL', {
-      day: 'numeric',
-      month: 'short',
-    });
-    return `${d} · ${fmt(startAt)}–${fmt(endAt)}`;
-  }
-
+function TaskRow({ task, onOpen, onDelete }: TaskRowProps) {
+  const dt = formatDate(task.startAt);
+  const workerLabel = task.workerName ?? 'Pracownik';
   return (
-    <div className={styles.tasksSection}>
-      <Heading variant="subsection" as="h2" className={styles.tasksSectionTitle}>
-        Zadania bieżącego tygodnia
-      </Heading>
-      <table className={styles.tasksTable} aria-label="Zadania warsztatu">
-        <thead>
-          <tr>
-            <th className={styles.tasksTh}>
-              <Text variant="nano" mono weight="extrabold" color="muted" as="span">
-                Tytuł
-              </Text>
-            </th>
-            <th className={styles.tasksTh}>
-              <Text variant="nano" mono weight="extrabold" color="muted" as="span">
-                Pracownik
-              </Text>
-            </th>
-            <th className={styles.tasksTh}>
-              <Text variant="nano" mono weight="extrabold" color="muted" as="span">
-                Czas
-              </Text>
-            </th>
-            <th className={styles.tasksTh} />
-          </tr>
-        </thead>
-        <tbody>
-          {tasks.map((task) => (
-            <tr key={task.id} className={styles.tasksTr}>
-              <td className={styles.tasksTd}>
-                <Text variant="body-sm" weight="semibold" as="span">
-                  {task.title}
-                </Text>
-              </td>
-              <td className={styles.tasksTd}>
-                <Text variant="body-sm" color="muted" as="span">
-                  {task.workerName ?? '—'}
-                </Text>
-              </td>
-              <td className={styles.tasksTd}>
-                <Text variant="body-sm" mono color="muted" as="span">
-                  {formatTaskTime(task.startAt, task.endAt)}
-                </Text>
-              </td>
-              <td className={styles.tasksTd}>
-                <Button
-                  variant="neutral"
-                  size="sm"
-                  type="button"
-                  onClick={() => void handleDelete(task.id)}
-                >
-                  <IconTrash width={12} height={12} />
-                  Usuń
-                </Button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+    <tr className={styles.trTask} onClick={onOpen} style={{ cursor: 'pointer' }}>
+      <td className={styles.tcChk} />
+      <td className={styles.td}>
+        <Text variant="body-sm" weight="bold" mono as="span" className={styles.dateMain}>
+          {dt.main}
+        </Text>
+        <Text variant="nano" color="muted" as="span" className={styles.dateRel}>
+          {dt.rel}
+        </Text>
+      </td>
+      <td className={styles.td}>
+        <div className={styles.clientCell}>
+          <span className={styles.taskAvatar} aria-hidden="true">
+            <Text variant="nano" weight="bold" as="span">
+              {workerLabel[0]?.toUpperCase() ?? 'Z'}
+            </Text>
+          </span>
+          <div className={styles.clientInfo}>
+            <Text variant="body-sm" weight="bold" as="span">
+              {workerLabel}
+            </Text>
+          </div>
+        </div>
+      </td>
+      <td className={styles.td}>
+        <Text variant="body-sm" weight="semibold" as="span">
+          {task.title}
+        </Text>
+      </td>
+      <td className={[styles.td, styles.tdRight].join(' ')}>
+        <Text variant="body-sm" color="muted" as="span">
+          —
+        </Text>
+      </td>
+      <td className={styles.td}>
+        <span className={styles.taskPill}>
+          <Text variant="nano" mono weight="bold" as="span">
+            ZADANIE
+          </Text>
+        </span>
+      </td>
+      <td className={styles.td} />
+      <td className={[styles.td, styles.tdRight].join(' ')}>
+        <div className={styles.rowActions}>
+          <button
+            type="button"
+            className={styles.actionBtn}
+            aria-label="Szczegóły zadania"
+            onClick={(e) => {
+              e.stopPropagation();
+              onOpen();
+            }}
+          >
+            <IconEye width={14} height={14} />
+          </button>
+          <button
+            type="button"
+            className={styles.actionBtn}
+            aria-label="Usuń zadanie"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete();
+            }}
+          >
+            <IconTrash width={14} height={14} />
+          </button>
+        </div>
+      </td>
+    </tr>
   );
 }
 
@@ -498,6 +483,7 @@ export default function BookingsPage() {
   const [pageSize, setPageSize] = useState(10);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isManualOpen, setIsManualOpen] = useState(false);
+  const [taskDetailId, setTaskDetailId] = useState<string | null>(null);
 
   const params: BookingListParams = {
     status: statusFilter,
@@ -510,6 +496,7 @@ export default function BookingsPage() {
 
   const { page: bookingPage, isLoading, mutate } = useBookingAdmin(params);
   const tabCounts = useBookingTabCounts();
+  const { tasks, mutate: mutateTasks } = useWorkerTasks(getTodayWeekStart());
   const items = bookingPage?.items ?? [];
 
   // Selection
@@ -574,8 +561,6 @@ export default function BookingsPage() {
 
       <div className={styles.content}>
         <KpiStrip />
-
-        <WorkerTasksSection />
 
         {/* Filter bar */}
         <div className={styles.filterBar} role="search">
@@ -710,14 +695,36 @@ export default function BookingsPage() {
                   </td>
                 </tr>
               )}
-              {items.map((b) => (
-                <BookingRow
-                  key={b.id}
-                  booking={b}
-                  selected={selectedIds.has(b.id)}
-                  onToggle={() => toggleRow(b.id)}
-                />
-              ))}
+              {(() => {
+                type Row = { kind: 'booking'; data: Booking } | { kind: 'task'; data: WorkerTask };
+                const rows: Row[] = [
+                  ...items.map((b): Row => ({ kind: 'booking', data: b })),
+                  ...tasks.map((t): Row => ({ kind: 'task', data: t })),
+                ];
+                rows.sort(
+                  (a, b) => new Date(b.data.startAt).getTime() - new Date(a.data.startAt).getTime(),
+                );
+                return rows.map((row) =>
+                  row.kind === 'booking' ? (
+                    <BookingRow
+                      key={`b-${row.data.id}`}
+                      booking={row.data}
+                      selected={selectedIds.has(row.data.id)}
+                      onToggle={() => toggleRow(row.data.id)}
+                    />
+                  ) : (
+                    <TaskRow
+                      key={`t-${row.data.id}`}
+                      task={row.data}
+                      onOpen={() => setTaskDetailId(row.data.id)}
+                      onDelete={async () => {
+                        await workerTasksApi.remove(row.data.id);
+                        void mutateTasks();
+                      }}
+                    />
+                  ),
+                );
+              })()}
             </tbody>
           </table>
 
@@ -774,6 +781,12 @@ export default function BookingsPage() {
         isOpen={isManualOpen}
         onClose={() => setIsManualOpen(false)}
         onSuccess={() => void mutate()}
+      />
+
+      <WorkerTaskDetailModal
+        taskId={taskDetailId}
+        onClose={() => setTaskDetailId(null)}
+        onDeleted={() => void mutateTasks()}
       />
     </div>
   );

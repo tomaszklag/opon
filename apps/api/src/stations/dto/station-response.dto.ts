@@ -1,5 +1,4 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { ServiceType } from '@prisma/client';
 
 export class StationWorkerResponseDto {
   @ApiProperty() workerId!: string;
@@ -13,8 +12,8 @@ export class StationResponseDto {
   @ApiProperty() id!: string;
   @ApiProperty() providerId!: string;
   @ApiProperty() name!: string;
-  @ApiProperty({ enum: ServiceType, isArray: true }) services!: ServiceType[];
-  @ApiProperty() schedule!: unknown;
+  @ApiProperty({ type: [String] }) serviceIds!: string[];
+  @ApiProperty({ type: Object }) schedule!: unknown;
   @ApiProperty({ type: [StationWorkerResponseDto] }) workers!: StationWorkerResponseDto[];
   @ApiProperty() createdAt!: Date;
 }

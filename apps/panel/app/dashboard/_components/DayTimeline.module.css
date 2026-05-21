@@ -1,0 +1,201 @@
+.timeline {
+  position: relative;
+  height: 300px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  cursor: crosshair;
+  user-select: none;
+  scrollbar-width: thin;
+  background: var(--bg);
+}
+
+.timelineTrack {
+  position: relative;
+}
+
+.timelineHour {
+  position: absolute;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: flex-start;
+  pointer-events: none;
+}
+
+.timelineHourLabel {
+  width: 40px;
+  flex-shrink: 0;
+  padding: 0 6px 0 4px;
+  text-align: right;
+  font-size: 9px;
+  font-family: var(--font-body);
+  color: var(--text-muted);
+  line-height: 1;
+  margin-top: -5px;
+}
+
+.timelineHourRule {
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+.timelineHalfRule {
+  position: absolute;
+  left: 40px;
+  right: 0;
+  height: 1px;
+  background: var(--border);
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+.timelineNow {
+  position: absolute;
+  left: 40px;
+  right: 0;
+  height: 2px;
+  background: var(--danger);
+  pointer-events: none;
+  z-index: 3;
+}
+
+.timelineNow::before {
+  content: '';
+  position: absolute;
+  left: -5px;
+  top: -3px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--danger);
+}
+
+.timelineBusy {
+  position: absolute;
+  left: 44px;
+  right: 4px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-hover);
+  border: 1px solid var(--border-strong);
+  pointer-events: none;
+}
+
+.timelineNew {
+  position: absolute;
+  left: 44px;
+  right: 4px;
+  border-radius: var(--radius-sm);
+  background: var(--accent-muted);
+  border: 2px solid var(--accent);
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 2;
+  display: flex;
+  align-items: flex-start;
+  padding: 3px 5px;
+}
+
+.timelineNewConflict {
+  background: var(--warning-muted);
+  border-color: var(--warning);
+}
+
+.timelineNewLabel {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--accent);
+  white-space: nowrap;
+  line-height: 1.2;
+}
+
+.timelineNewConflict .timelineNewLabel {
+  color: var(--warning);
+}
+
+/* ── Existing booking blocks ── */
+.timelineBooking {
+  position: absolute;
+  left: 44px;
+  right: 4px;
+  border-radius: var(--radius-sm);
+  border-left: 3px solid var(--border-strong);
+  background: var(--surface-hover);
+  pointer-events: none;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 2px 5px;
+  overflow: hidden;
+}
+
+.timelineBookingConfirmed {
+  border-left-color: var(--success);
+  background: var(--success-muted);
+}
+
+.timelineBookingPending {
+  border-left-color: var(--warning);
+  background: var(--warning-muted);
+}
+
+.timelineBookingProgress {
+  border-left-color: var(--accent);
+  background: var(--accent-muted);
+}
+
+.timelineBookingCompleted {
+  opacity: 0.45;
+}
+
+.timelineBookingTime {
+  font-size: 9px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  line-height: 1.3;
+}
+
+.timelineBookingName {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.3;
+}
+
+/* ── Hover ghost ── */
+.timelineHoverGhost {
+  position: absolute;
+  left: 44px;
+  right: 4px;
+  border-radius: var(--radius-sm);
+  background: var(--accent-muted);
+  border: 2px dashed var(--accent);
+  pointer-events: none;
+  z-index: 2;
+  opacity: 0.55;
+  display: flex;
+  align-items: flex-start;
+  padding: 3px 5px;
+}
+
+.timelineHoverGhostConflict {
+  background: var(--warning-muted);
+  border-color: var(--warning);
+}
+
+.timelineHoverGhostLabel {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--accent);
+  white-space: nowrap;
+  line-height: 1.2;
+}
+
+.timelineHoverGhostConflict .timelineHoverGhostLabel {
+  color: var(--warning);
+}

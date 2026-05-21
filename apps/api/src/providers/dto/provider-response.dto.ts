@@ -25,6 +25,8 @@ export class ProviderResponseDto {
   submittedAt?: Date | null;
   @ApiPropertyOptional({ type: String, format: 'date-time', nullable: true })
   approvedAt?: Date | null;
+  @ApiPropertyOptional({ type: String, format: 'date-time', nullable: true })
+  deletionRequestedAt?: Date | null;
   @ApiProperty() updatedAt!: Date;
   @ApiPropertyOptional({ type: String, nullable: true }) tagline?: string | null;
   @ApiPropertyOptional({ type: Number, nullable: true }) foundedYear?: number | null;
@@ -33,4 +35,7 @@ export class ProviderResponseDto {
   @ApiProperty({ type: [String] }) vehicleTypes!: string[];
   @ApiProperty({ type: [String] }) tireSizes!: string[];
   @ApiProperty({ type: [String] }) additionalServices!: string[];
+  @ApiPropertyOptional({ type: String, format: 'date-time', nullable: true }) pausedUntil?:
+    | string
+    | null;
 }

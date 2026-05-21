@@ -35,7 +35,7 @@ export class StationsService {
       id: station.id,
       providerId: station.providerId,
       name: station.name,
-      services: station.services,
+      serviceIds: station.serviceIds,
       schedule: station.schedule,
       workers,
       createdAt: station.createdAt,
@@ -67,7 +67,7 @@ export class StationsService {
   async create(providerId: string, dto: CreateStationDto): Promise<StationResponseDto> {
     const station = await this.stationsRepository.create(providerId, {
       name: dto.name,
-      services: dto.services ?? [],
+      serviceIds: dto.serviceIds ?? [],
       schedule: dto.schedule as unknown as Prisma.InputJsonValue,
     });
 
@@ -85,7 +85,7 @@ export class StationsService {
 
     const data: Prisma.StationUpdateInput = {};
     if (dto.name !== undefined) data.name = dto.name;
-    if (dto.services !== undefined) data.services = { set: dto.services };
+    if (dto.serviceIds !== undefined) data.serviceIds = { set: dto.serviceIds };
     if (dto.schedule !== undefined)
       data.schedule = dto.schedule as unknown as Prisma.InputJsonValue;
 

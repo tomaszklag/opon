@@ -1,0 +1,92 @@
+.variantCard {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 2px 0 4px;
+}
+
+.variantRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.nameWrap {
+  flex: 1;
+  min-width: 0;
+}
+
+.addWheelBtn {
+  align-self: flex-start;
+  margin-left: 2px;
+  padding: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  opacity: 0.6;
+  transition: opacity var(--transition-fast), color var(--transition-fast);
+}
+
+.addWheelBtn:hover {
+  opacity: 1;
+  color: var(--accent);
+}
+
+.addWheelHint {
+  margin-left: 3px;
+  opacity: 0.7;
+}
+
+.wheelRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 2px;
+}
+
+.wheelLabel {
+  flex-shrink: 0;
+  width: 38px;
+}
+
+.clearWheelBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 3px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: var(--text-muted);
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.clearWheelBtn:hover {
+  background: var(--danger-muted);
+  color: var(--danger);
+}
+
+.delBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  border: 1px solid transparent;
+  background: transparent;
+  cursor: pointer;
+  color: var(--text-muted);
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.delBtn:hover {
+  border-color: var(--danger-border);
+  color: var(--danger);
+  background: var(--danger-muted);
+}

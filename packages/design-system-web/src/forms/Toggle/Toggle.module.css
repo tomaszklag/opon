@@ -1,5 +1,6 @@
 .wrapper {
   display: inline-flex;
+  position: relative;
 }
 
 .wrapper.disabled {
@@ -36,9 +37,9 @@
   position: relative;
   flex-shrink: 0;
   border-radius: var(--radius-full);
-  background: var(--surface-hover);
-  border: 1px solid var(--border);
-  transition: background var(--transition-fast), border-color var(--transition-fast);
+  background: var(--border-strong);
+  border: none;
+  transition: background var(--transition-fast);
 }
 
 .track.md {
@@ -47,18 +48,16 @@
 }
 
 .track.sm {
-  width: 36px;
+  width: 34px;
   height: 20px;
 }
 
-.input:checked + .track {
+.track.on {
   background: var(--accent);
-  border-color: var(--accent);
 }
 
-.input:checked + .track.error {
+.track.error.on {
   background: var(--danger);
-  border-color: var(--danger);
 }
 
 .input:focus-visible + .track {
@@ -70,32 +69,30 @@
 .dot {
   position: absolute;
   top: 50%;
-  transform: translateY(-50%) translateX(3px);
+  left: 0;
+  transform: translateY(-50%) translateX(2px);
   border-radius: 50%;
-  background: var(--text-muted);
-  transition: transform var(--transition-fast), background var(--transition-fast);
+  background: var(--white);
+  box-shadow: var(--shadow-sm);
+  transition: transform var(--transition-fast);
 }
 
-.md .dot {
+.track.md .dot {
   width: 18px;
   height: 18px;
 }
 
-.sm .dot {
-  width: 14px;
-  height: 14px;
+.track.sm .dot {
+  width: 16px;
+  height: 16px;
 }
 
-.input:checked + .track .dot {
-  background: var(--text-on-accent);
+.track.md.on .dot {
+  transform: translateY(-50%) translateX(24px);
 }
 
-.input:checked + .track.md .dot {
-  transform: translateY(-50%) translateX(21px);
-}
-
-.input:checked + .track.sm .dot {
-  transform: translateY(-50%) translateX(17px);
+.track.sm.on .dot {
+  transform: translateY(-50%) translateX(16px);
 }
 
 /* Label content */

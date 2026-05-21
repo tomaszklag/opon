@@ -1,0 +1,22 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 24px 28px;
+  height: 100%;
+  overflow-y: auto;
+}
+
+.loadingWrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
+}
+
+.content {
+  max-width: 560px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}

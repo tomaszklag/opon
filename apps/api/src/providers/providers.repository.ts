@@ -1,5 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import {
+  DataExportRequest,
+  DataExportStatus,
   PhotoType,
   Prisma,
   Provider,
@@ -109,6 +111,25 @@ export class ProvidersRepository {
         });
       }
     });
+  }
+
+  setPause(providerId: string, pausedUntil: Date | null) {
+    return this.prisma.provider.update({
+      where: { id: providerId },
+      data: { pausedUntil },
+    });
+  }
+
+  // ── Data Export Requests ───────────────────────────────────────────────────
+
+  findPendingDataExportRequest(providerId: string): Promise<DataExportRequest | null> {
+    return this.prisma.dataExportRequest.findFirst({
+      where: { providerId, status: DataExportStatus.PENDING },
+    });
+  }
+
+  createDataExportRequest(providerId: string): Promise<DataExportRequest> {
+    return this.prisma.dataExportRequest.create({ data: { providerId } });
   }
 
   /**

@@ -1,6 +1,7 @@
 Zapisz tą regułę w dokumentacji aby była respektowana podczas dalszych prac.
 
 Zweryfikuj czy trzeba coś w oparciu o powyższe dodać do dokumentacji. Czy jest sens coś dopisywać aby takie niścisłości nie pojawiały się w przyszłości.
+Czy trzeba zaktualizować dokumnetację?
 
 sprawdź zatem solucję w poszukiwaniu pozostałości w css po font-family, font-size,letter-spacing, line-height itp. Nie powinny się takie klasy pojawiać. Wszystko powinno być w DS
 
@@ -12,10 +13,12 @@ Co z flow wysyłki mail do weryfikacji? Jest to już zaimplementowe i zaprojekto
 
 otpToken powinien być jakoś unieważniany. Wygasa po 5 minutach chyba. Powinno to być też w bazie
 
-Operator powinien mieć możliwość ręcznego dodania wizyty wraz z opisem oraz szacowanym zajęciem slotu
-
-teraz przedźmy do implementacji b2b-11-profil
-
 zleć wyspecjalizowanym agentom weryfikację tego rozwiazania. Głównie zależy mi na respektowaniu wcześniejszych postanowień oraz
 przyjętej architektury
 zaplanowanego design
+
+jak przypisuje pracownika do stanowiska to czmu leci od razu zapis?
+
+dodać przypisanie enuma typu samochodu do usługi. Będzie to przydatne w celu późniejszego filtrowania po stronie klienta. Wartość default może być typ "Any"
+
+teraz jak mam popup do dodawania zadania dla pracownika, to wybór godziny powinien być tym samym komponentem z linią czasu co w popupie dodawania rezerwacji

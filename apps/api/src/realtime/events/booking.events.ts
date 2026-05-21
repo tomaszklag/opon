@@ -21,6 +21,21 @@ export class BookingStatusChangedEvent {
   ) {}
 }
 
+export class BookingRescheduledEvent {
+  static readonly EVENT = 'booking.rescheduled';
+
+  constructor(
+    public readonly providerId: string,
+    public readonly bookingId: string,
+    public readonly referenceCode: string,
+    public readonly oldWeekStart: string,
+    public readonly newWeekStart: string,
+    public readonly notifyClient: boolean,
+    public readonly clientPhone: string | null,
+    public readonly newStartAtIso: string,
+  ) {}
+}
+
 export class BookingBulkStatusChangedEvent {
   static readonly EVENT = 'booking.bulk_status_changed';
 

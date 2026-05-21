@@ -13,6 +13,69 @@
   align-items: start;
 }
 
+/* Compact/attached variant — single fused control */
+.phoneGridCompact {
+  display: flex;
+  align-items: stretch;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  transition: border-color 120ms;
+}
+
+.phoneGridCompact:focus-within {
+  border-color: var(--accent);
+}
+
+.phoneGridCompact .prefixBox {
+  height: 44px;
+  border: none;
+  border-right: 1px solid var(--border);
+  border-radius: 0;
+  background: var(--surface-raised);
+  padding: 0 10px;
+}
+
+.compactInput {
+  flex: 1;
+  min-width: 0;
+  height: 44px;
+  background: transparent;
+  border: none;
+  outline: none;
+  padding: 0 var(--space-4);
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  color: var(--text-primary);
+}
+
+.compactInput::placeholder {
+  color: var(--text-muted);
+}
+
+.compactSpinner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  flex-shrink: 0;
+}
+
+.compactSpinner::after {
+  content: '';
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: phoneSpin 0.7s linear infinite;
+}
+
+@keyframes phoneSpin {
+  to { transform: rotate(360deg); }
+}
+
 /* Prefix box — separate element */
 .prefixBox {
   height: 44px;

@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Opony Panel — B2B-16L Cennik · Wariant L — Pod-usługi inherit/override</title>
+<!--
+  Screen: Panel providera — Cennik (Wariant L)
+  Baza: Wariant K (identyczna logika i layout)
+  Jedna zmiana:
+  Pod-usługi domyślnie dziedziczą cenę i czas z usługi głównej ("jak usł.").
+  Przycisk override-btn (zamknięta kłódka) odblokuje własne inputy ceny i czasu.
+  Trzy stany pokazane:
+    1. Wyważanie — wliczone, czas dziedziczony (override off)
+    2. Nowy wentyl — opcjonalne, override ON → własna cena i czas
+    3. Przechowanie — opcjonalne, dziedziczone (override off)
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Bebas+Neue&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0A0B0E;--surface:#14171D;--surface-raised:#1B1E26;
+  --border:#262A34;--border-strong:#363B47;--hairline:rgba(255,255,255,0.06);
+  --text-primary:#F5F4EF;--text-secondary:#9EA2AD;--text-muted:#60646F;--text-on-accent:#0A0B0E;
+  --accent:#FF6B1A;--accent-muted:rgba(255,107,26,0.14);--accent-border:rgba(255,107,26,0.32);--accent-glow:rgba(255,107,26,0.45);
+  --success:#2EE0A0;--success-muted:rgba(46,224,160,0.12);--success-border:rgba(46,224,160,0.30);
+  --warning:#FFB020;--warning-muted:rgba(255,176,32,0.14);--warning-border:rgba(255,176,32,0.32);
+  --blue:#60A5FA;--blue-muted:rgba(96,165,250,0.1);--blue-border:rgba(96,165,250,0.25);
+  --teal:#2DD4BF;--teal-muted:rgba(45,212,191,0.1);--teal-border:rgba(45,212,191,0.28);
+  --purple:#A78BFA;--purple-muted:rgba(167,139,250,0.1);--purple-border:rgba(167,139,250,0.26);
+  --font-display:'Bebas Neue',sans-serif;--font-body:'Archivo',system-ui,sans-serif;--font-mono:'JetBrains Mono',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;overflow-x:hidden;}
+body{
+  --s:min(1,calc((100vh - 160px)/900px),calc((100vw - 80px)/1440px));
+  font-family:var(--font-body);background:var(--bg);color:var(--text-primary);-webkit-font-smoothing:antialiased;
+  background-image:radial-gradient(ellipse 70% 50% at 50% 0%,rgba(255,107,26,0.05) 0%,transparent 60%),linear-gradient(180deg,#12141A 0%,var(--bg) 30%);
+  min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:36px 40px 60px;gap:20px;
+}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 4px var(--accent-muted);opacity:1;}50%{box-shadow:0 0 0 8px transparent;opacity:0.6;}}
+
+.canvas-label{width:100%;max-width:1440px;display:grid;grid-template-columns:auto 1fr auto;align-items:baseline;gap:20px;padding-bottom:12px;border-bottom:1px solid var(--border);}
+.film-strip{font-family:var(--font-display);font-size:28px;letter-spacing:3px;line-height:1;}
+.slug{font-family:var(--font-mono);font-size:11px;color:var(--text-muted);letter-spacing:1.5px;text-transform:uppercase;border-left:1px solid var(--border);padding-left:16px;}
+.canvas-meta{font-family:var(--font-mono);font-size:11px;color:var(--text-secondary);letter-spacing:1px;display:inline-flex;align-items:center;gap:10px;}
+.canvas-meta .pulse{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 4px var(--accent-muted);animation:pulse 1800ms ease-in-out infinite;}
+
+.desktop-frame{width:1440px;height:900px;background:var(--bg);border-radius:14px;border:1px solid #1C1E24;box-shadow:0 40px 120px rgba(0,0,0,0.6);overflow:hidden;flex-shrink:0;transform:scale(var(--s));transform-origin:top center;margin-bottom:calc((var(--s)-1)*900px);display:flex;flex-direction:column;}
+.browser-chrome{height:44px;background:linear-gradient(180deg,#1A1D23,#14171D);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 16px;gap:16px;flex-shrink:0;}
+.traffic-lights{display:inline-flex;gap:8px;}
+.light{width:12px;height:12px;border-radius:50%;}
+.light.r{background:#FF5F57;}.light.y{background:#FEBC2E;}.light.g{background:#28C840;}
+.browser-tab{display:inline-flex;align-items:center;gap:8px;padding:6px 14px;background:var(--surface);border:1px solid var(--border);border-bottom:none;border-radius:8px 8px 0 0;font-size:12px;position:relative;top:6px;}
+.fav{width:14px;height:14px;border-radius:3px;background:var(--accent);display:inline-flex;align-items:center;justify-content:center;font-family:var(--font-display);font-size:9px;color:var(--text-on-accent);}
+.addr{flex:1;max-width:480px;display:inline-flex;align-items:center;gap:8px;padding:6px 14px;background:var(--bg);border:1px solid var(--border);border-radius:8px;font-family:var(--font-mono);font-size:12px;color:var(--text-secondary);}
+
+.app-root{flex:1;min-height:0;display:grid;grid-template-columns:210px 1fr;}
+.sidebar{background:var(--surface);border-right:1px solid var(--border);padding:16px 10px 10px;display:flex;flex-direction:column;gap:3px;}
+.sb-brand{display:flex;align-items:center;gap:10px;padding:4px 8px 14px;}
+.wordmark{font-family:var(--font-display);font-size:22px;letter-spacing:3px;display:inline-flex;align-items:baseline;gap:3px;}
+.dot{display:inline-block;width:6px;height:6px;background:var(--accent);border-radius:50%;transform:translateY(-2px);box-shadow:0 0 8px var(--accent-glow);}
+.panel-tag{font-family:var(--font-mono);font-size:9px;padding:2px 5px;border-radius:4px;background:var(--bg);border:1px solid var(--border);color:var(--text-muted);letter-spacing:1px;text-transform:uppercase;font-weight:700;margin-left:auto;}
+.sec{font-size:9px;font-weight:800;letter-spacing:1.4px;text-transform:uppercase;color:var(--text-muted);padding:7px 8px 3px;}
+.nav-item{display:flex;align-items:center;gap:9px;padding:7px 8px;border-radius:7px;border:1px solid transparent;color:var(--text-secondary);font-size:12px;font-weight:600;cursor:pointer;background:transparent;width:100%;text-align:left;}
+.nav-item.active{background:var(--accent-muted);color:var(--accent);border-color:var(--accent-border);}
+.sb-spacer{flex:1;}
+.sb-user{display:flex;align-items:center;gap:8px;padding:9px;background:var(--bg);border:1px solid var(--border);border-radius:9px;}
+.avatar{width:30px;height:30px;border-radius:7px;background:linear-gradient(135deg,#FF8039,#C73F0A);display:inline-flex;align-items:center;justify-content:center;font-family:var(--font-display);font-size:13px;color:var(--text-on-accent);flex-shrink:0;}
+.user-col{flex:1;display:flex;flex-direction:column;gap:1px;}
+.user-name{font-size:11px;font-weight:700;}
+.user-role{font-family:var(--font-mono);font-size:8px;color:var(--accent);letter-spacing:0.5px;text-transform:uppercase;font-weight:700;}
+
+.main{display:flex;flex-direction:column;overflow:hidden;}
+.topbar{height:48px;border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 22px;gap:12px;flex-shrink:0;}
+.breadcrumb{display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--text-muted);font-weight:600;}
+.breadcrumb .cur{color:var(--text-primary);font-weight:700;}
+.tb-spacer{flex:1;}
+.dirty-chip{display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border-radius:5px;background:var(--warning-muted);border:1px solid var(--warning-border);color:var(--warning);font-size:9px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase;}
+.tb-btn{display:inline-flex;align-items:center;gap:6px;padding:5px 11px;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--text-primary);}
+.tb-btn.primary{background:var(--accent);color:var(--text-on-accent);border-color:var(--accent);box-shadow:0 4px 12px rgba(255,107,26,0.28);}
+
+.content{flex:1;min-height:0;overflow-y:auto;padding:14px 18px 20px;scrollbar-width:thin;display:grid;grid-template-columns:1fr 280px;gap:14px;align-items:start;}
+.col-form{display:flex;flex-direction:column;gap:9px;}
+
+.page-hero{padding-bottom:10px;border-bottom:1px solid var(--border);}
+.page-title{font-family:var(--font-display);font-size:30px;letter-spacing:2px;line-height:1;}
+.page-sub{font-size:11px;color:var(--text-secondary);margin-top:4px;display:flex;align-items:center;gap:7px;}
+.live-chip{display:inline-flex;align-items:center;gap:4px;padding:2px 7px;border-radius:4px;background:var(--success-muted);border:1px solid var(--success-border);color:var(--success);font-size:8px;font-weight:800;letter-spacing:1px;text-transform:uppercase;}
+.live-chip::before{content:'';width:5px;height:5px;border-radius:50%;background:var(--success);}
+
+.section-divider{display:flex;align-items:center;gap:10px;padding:4px 0 2px;}
+.section-divider-label{font-family:var(--font-display);font-size:11px;letter-spacing:2px;color:var(--text-muted);}
+.section-divider-line{flex:1;height:1px;background:var(--border);}
+.section-divider-count{font-family:var(--font-mono);font-size:9px;color:var(--text-muted);padding:1px 6px;border-radius:3px;background:var(--bg);border:1px solid var(--border);}
+
+.svc-group{background:var(--surface);border:1px solid var(--border);border-radius:11px;overflow:hidden;position:relative;}
+.svc-group::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:var(--hairline);pointer-events:none;}
+.svc-group-hdr{display:flex;align-items:center;gap:8px;padding:7px 12px;background:linear-gradient(180deg,rgba(255,107,26,0.04),transparent);border-bottom:1px solid var(--border);}
+.svc-group-name{font-family:var(--font-display);font-size:14px;letter-spacing:1.8px;}
+.svc-group-count{font-family:var(--font-mono);font-size:8px;color:var(--text-muted);padding:2px 5px;border-radius:3px;background:var(--bg);border:1px solid var(--border);}
+.svc-group-spacer{flex:1;}
+.pricing-mode{display:inline-flex;border:1px solid var(--border);border-radius:6px;overflow:hidden;margin-left:8px;}
+.pm-opt{padding:3px 9px;font-size:9px;font-weight:700;cursor:pointer;color:var(--text-muted);background:transparent;border:none;}
+.pm-opt.active{background:var(--accent-muted);color:var(--accent);}
+.svc-group-add{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:6px;border:1px dashed var(--border);background:transparent;font-size:9px;color:var(--text-muted);cursor:pointer;font-weight:600;}
+
+.svc-block{border-bottom:1px solid var(--border);}
+.svc-block:last-child{border-bottom:none;}
+.svc-row{display:flex;align-items:center;gap:9px;padding:8px 12px;cursor:pointer;}
+.svc-row.open{background:rgba(255,107,26,0.025);}
+.chevron{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:4px;border:1px solid var(--border);background:var(--bg);flex-shrink:0;}
+.chevron.open{border-color:var(--accent-border);background:var(--accent-muted);}
+.chevron svg{color:var(--text-muted);}
+.chevron.open svg{color:var(--accent);}
+.svc-row-info{flex:1;display:flex;flex-direction:column;gap:2px;}
+.svc-row-name{font-size:12px;font-weight:700;display:flex;align-items:center;gap:5px;flex-wrap:wrap;}
+.svc-row-meta{font-size:9px;color:var(--text-muted);display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+.svc-row-price{font-family:var(--font-mono);font-size:11px;font-weight:700;color:var(--text-secondary);flex-shrink:0;white-space:nowrap;}
+
+.badge{display:inline-flex;align-items:center;gap:3px;padding:1px 5px;border-radius:3px;font-size:8px;font-weight:800;letter-spacing:0.4px;text-transform:uppercase;border:1px solid;white-space:nowrap;}
+.b-on{background:var(--success-muted);border-color:var(--success-border);color:var(--success);}
+.b-on::before{content:'';width:4px;height:4px;border-radius:50%;background:var(--success);}
+.b-off{background:var(--bg);border-color:var(--border);color:var(--text-muted);}
+.b-inc{background:var(--success-muted);border-color:var(--success-border);color:var(--success);}
+.b-teal{background:var(--teal-muted);border-color:var(--teal-border);color:var(--teal);}
+.b-cat{background:var(--blue-muted);border-color:var(--blue-border);color:var(--blue);}
+
+.toggle-sm{width:26px;height:15px;border-radius:999px;background:var(--border);border:1px solid var(--border-strong);position:relative;flex-shrink:0;cursor:pointer;}
+.toggle-sm::after{content:'';position:absolute;top:2px;left:2px;width:9px;height:9px;border-radius:50%;background:var(--text-muted);}
+.toggle-sm.on{background:var(--success);border-color:var(--success);}
+.toggle-sm.on::after{left:13px;background:#0A0B0E;}
+.toggle-sm.purple{background:var(--purple);border-color:var(--purple);}
+.toggle-sm.purple::after{left:13px;background:#0A0B0E;}
+
+.svc-expanded{padding:10px 12px;display:flex;flex-direction:column;gap:10px;}
+.exp-label{font-size:8px;font-weight:800;letter-spacing:1.4px;text-transform:uppercase;color:var(--text-muted);display:flex;align-items:center;gap:6px;}
+.exp-label .line{flex:1;height:1px;background:var(--border);}
+
+.rim-tiers{display:flex;flex-direction:column;gap:4px;}
+.rim-tier-row{display:grid;grid-template-columns:1fr auto auto auto;align-items:center;gap:7px;padding:6px 9px;background:var(--bg);border:1px solid var(--border);border-radius:7px;}
+.rim-chips{display:flex;flex-wrap:wrap;gap:3px;align-items:center;}
+.rim-chip{display:inline-flex;align-items:center;gap:2px;padding:2px 6px;border-radius:4px;background:var(--surface-raised);border:1px solid var(--border-strong);font-family:var(--font-mono);font-size:10px;font-weight:700;color:var(--text-secondary);}
+.rim-chip .x{width:11px;height:11px;display:inline-flex;align-items:center;justify-content:center;border-radius:2px;background:rgba(255,255,255,0.04);color:var(--text-muted);cursor:pointer;font-size:9px;}
+.rim-chip-add{display:inline-flex;align-items:center;gap:2px;padding:2px 6px;border-radius:4px;border:1px dashed var(--border);font-family:var(--font-mono);font-size:9px;color:var(--text-muted);cursor:pointer;}
+.price-cell{display:inline-flex;align-items:stretch;background:var(--surface-raised);border:1px solid var(--border-strong);border-radius:6px;overflow:hidden;}
+.price-cell input{width:38px;background:transparent;border:none;outline:none;padding:4px 3px;color:var(--text-primary);font-family:var(--font-mono);font-weight:700;font-size:13px;text-align:right;}
+.price-cell .u{display:inline-flex;align-items:center;padding:0 4px;background:var(--bg);border-left:1px solid var(--border);font-family:var(--font-mono);font-size:8px;color:var(--accent);font-weight:700;}
+.dur-cell{display:inline-flex;align-items:stretch;background:var(--bg);border:1px solid var(--border);border-radius:6px;overflow:hidden;}
+.dur-cell input{width:28px;background:transparent;border:none;outline:none;padding:4px 3px;color:var(--text-primary);font-family:var(--font-mono);font-weight:700;font-size:12px;text-align:center;}
+.dur-cell .u{display:inline-flex;align-items:center;padding:0 4px;border-left:1px solid var(--border);font-family:var(--font-mono);font-size:8px;color:var(--text-muted);}
+.del-btn{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:4px;border:1px solid transparent;background:transparent;cursor:pointer;color:var(--text-muted);}
+.add-tier-btn{display:inline-flex;align-items:center;gap:5px;padding:4px 9px;border-radius:6px;border:1px dashed var(--border);background:transparent;font-size:9px;color:var(--text-muted);cursor:pointer;align-self:flex-start;font-weight:600;}
+
+/* ═══════════════════════════════════════
+   Pod-usługi — INHERIT / OVERRIDE
+   ═══════════════════════════════════════ */
+.subsvc-list{display:flex;flex-direction:column;gap:3px;}
+
+/* Grid: drag(12) | incl-chk(18) | name(1fr) | price | dur | override-btn(20) | del(20) */
+.subsvc-row{
+  display:grid;
+  grid-template-columns:12px 18px 1fr auto auto 20px 20px;
+  align-items:center;gap:7px;
+  padding:6px 10px;border-radius:7px;
+  border:1px solid var(--border);background:var(--bg);
+}
+.subsvc-row.included{background:var(--success-muted);border-color:var(--success-border);}
+.subsvc-row.from-catalog{border-left:2px solid var(--teal-border);}
+.subsvc-row.override-active{border-color:var(--accent-border);background:var(--accent-muted);}
+
+.drag-handle{display:flex;flex-direction:column;gap:2px;cursor:grab;opacity:0.3;padding:2px 0;}
+.drag-handle span{display:block;width:10px;height:1.5px;background:var(--text-muted);border-radius:1px;}
+.incl-chk{width:16px;height:16px;border-radius:4px;border:1px solid var(--border-strong);background:var(--bg);display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer;}
+.incl-chk.checked{background:var(--success);border-color:var(--success);}
+.subsvc-name-wrap{display:flex;flex-direction:column;gap:2px;}
+.subsvc-name{font-size:11px;font-weight:700;color:var(--text-primary);display:flex;align-items:center;gap:5px;flex-wrap:wrap;}
+.subsvc-hint{font-size:8px;color:var(--text-muted);}
+
+/* Cena i czas — inherit state */
+.inherit-tag{
+  display:inline-flex;align-items:center;gap:3px;
+  padding:2px 7px;border-radius:4px;
+  background:var(--bg);border:1px solid var(--border);
+  font-family:var(--font-mono);font-size:8px;color:var(--text-muted);
+  white-space:nowrap;cursor:pointer;
+}
+.inherit-tag svg{color:var(--text-muted);opacity:0.55;flex-shrink:0;}
+
+/* Cena i czas — override state (inputs) */
+.subsvc-price{display:inline-flex;align-items:stretch;background:var(--surface-raised);border:1px solid var(--border-strong);border-radius:5px;overflow:hidden;}
+.subsvc-price input{width:36px;background:transparent;border:none;outline:none;padding:3px 3px;color:var(--text-primary);font-family:var(--font-mono);font-weight:700;font-size:11px;text-align:right;}
+.subsvc-price .u{display:inline-flex;align-items:center;padding:0 4px;background:var(--bg);border-left:1px solid var(--border);font-family:var(--font-mono);font-size:8px;color:var(--accent);font-weight:700;}
+.subsvc-dur{display:inline-flex;align-items:stretch;background:var(--bg);border:1px solid var(--border);border-radius:5px;overflow:hidden;}
+.subsvc-dur input{width:24px;background:transparent;border:none;outline:none;padding:3px 3px;color:var(--text-primary);font-family:var(--font-mono);font-weight:700;font-size:11px;text-align:center;}
+.subsvc-dur .u{display:inline-flex;align-items:center;padding:0 4px;border-left:1px solid var(--border);font-family:var(--font-mono);font-size:8px;color:var(--warning);}
+
+/* Included badge (zamiast ceny gdy wliczone) */
+.incl-label{font-family:var(--font-mono);font-size:9px;font-weight:700;color:var(--success);padding:2px 6px;border-radius:4px;background:var(--success-muted);border:1px solid var(--success-border);white-space:nowrap;}
+
+/* Override toggle — zawsze widoczny, wskazuje tryb */
+.override-btn{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:20px;height:20px;border-radius:4px;
+  border:1px solid var(--border);background:transparent;
+  cursor:pointer;color:var(--text-muted);flex-shrink:0;
+}
+/* Kłódka zamknięta (dziedziczenie aktywne) */
+.override-btn:not(.active){opacity:0.45;}
+/* Kłódka otwarta (własne wartości) */
+.override-btn.active{
+  border-color:var(--accent-border);
+  background:var(--accent-muted);
+  color:var(--accent);
+  opacity:1;
+}
+
+/* Dropdown pod-usług (bez zmian z K) */
+.add-subsvc-wrap{position:relative;align-self:stretch;}
+.add-subsvc-btn{display:flex;align-items:center;gap:7px;width:100%;padding:6px 10px;border-radius:7px;border:1px solid var(--accent-border);background:var(--accent-muted);font-size:10px;font-weight:700;color:var(--accent);cursor:pointer;}
+.add-subsvc-btn .caret{margin-left:auto;opacity:0.6;}
+.subsvc-dropdown{position:absolute;top:calc(100% + 5px);left:0;width:290px;background:var(--surface-raised);border:1px solid var(--border-strong);border-radius:10px;box-shadow:0 20px 60px rgba(0,0,0,0.55);z-index:50;overflow:hidden;}
+.sdd-search{padding:7px 8px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:6px;}
+.sdd-search svg{flex-shrink:0;color:var(--text-muted);}
+.sdd-search input{flex:1;background:transparent;border:none;outline:none;font-family:var(--font-body);font-size:11px;color:var(--text-primary);}
+.sdd-search input::placeholder{color:var(--text-muted);}
+.sdd-esc{font-family:var(--font-mono);font-size:8px;padding:1px 4px;border-radius:3px;background:var(--bg);border:1px solid var(--border);color:var(--text-muted);white-space:nowrap;}
+.sdd-section{padding:4px 0;}
+.sdd-section+.sdd-section{border-top:1px solid var(--border);}
+.sdd-sec-hdr{display:flex;align-items:center;gap:5px;padding:3px 10px 4px;font-size:8px;font-weight:800;letter-spacing:1.1px;text-transform:uppercase;color:var(--text-muted);}
+.cat-tag{padding:1px 4px;border-radius:2px;font-size:7px;font-weight:700;border:1px solid;}
+.cat-tag-svc{background:var(--teal-muted);border-color:var(--teal-border);color:var(--teal);}
+.cat-tag-addon{background:var(--blue-muted);border-color:var(--blue-border);color:var(--blue);}
+.sdd-item{display:flex;align-items:center;gap:8px;padding:5px 10px;cursor:pointer;}
+.sdd-item:hover:not(.sdd-item-added){background:rgba(255,255,255,0.04);}
+.sdd-item-added{opacity:0.42;cursor:default;}
+.sdd-icon{width:22px;height:22px;border-radius:5px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;}
+.sdd-icon.svc{background:var(--teal-muted);border:1px solid var(--teal-border);}
+.sdd-icon.addon{background:var(--blue-muted);border:1px solid var(--blue-border);}
+.sdd-item-info{flex:1;min-width:0;}
+.sdd-item-name{font-size:10px;font-weight:700;}
+.sdd-item-meta{font-size:8px;color:var(--text-muted);}
+.sdd-item-state{flex-shrink:0;font-size:9px;font-weight:700;white-space:nowrap;}
+.sdd-item-state.done{color:var(--success);display:flex;align-items:center;gap:3px;}
+.sdd-add-btn{padding:2px 8px;border-radius:4px;border:1px solid var(--border);background:transparent;font-size:9px;font-weight:700;color:var(--text-muted);cursor:pointer;white-space:nowrap;}
+.sdd-footer{border-top:1px solid var(--border);padding:5px 8px;}
+.sdd-custom-btn{width:100%;text-align:left;display:flex;align-items:center;gap:6px;padding:5px 8px;border-radius:6px;border:1px dashed var(--border);background:transparent;font-size:9px;color:var(--text-muted);cursor:pointer;font-weight:600;}
+
+/* Inline nowa usługa (bez zmian z K) */
+.new-svc-block{background:var(--surface);border:1px solid var(--accent-border);border-radius:11px;overflow:hidden;box-shadow:0 0 0 3px var(--accent-muted);}
+.new-svc-hdr{display:flex;align-items:center;gap:8px;padding:7px 12px;background:linear-gradient(180deg,var(--accent-muted),transparent);border-bottom:1px solid var(--accent-border);}
+.new-svc-label{font-size:9px;font-weight:800;letter-spacing:1.4px;text-transform:uppercase;color:var(--accent);}
+.new-svc-body{padding:12px 14px;display:flex;flex-direction:column;gap:10px;}
+.new-svc-name-input{flex:1;background:var(--bg);border:1px solid var(--accent-border);border-radius:8px;padding:7px 11px;font-family:var(--font-body);font-size:13px;font-weight:700;color:var(--text-primary);outline:none;box-shadow:0 0 0 2px var(--accent-muted);width:100%);}
+.new-svc-name-input::placeholder{color:var(--text-muted);font-weight:400;}
+.new-svc-options{display:flex;flex-wrap:wrap;gap:7px;}
+.new-svc-opt{display:inline-flex;align-items:center;gap:7px;padding:5px 10px;border-radius:7px;border:1px solid var(--border);background:var(--bg);font-size:10px;font-weight:600;color:var(--text-secondary);cursor:pointer;}
+.new-svc-opt.selected{border-color:var(--accent-border);background:var(--accent-muted);color:var(--accent);}
+.opt-chk{width:14px;height:14px;border-radius:3px;border:1px solid var(--border-strong);background:var(--bg);display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;}
+.new-svc-opt.selected .opt-chk{background:var(--accent);border-color:var(--accent);}
+.new-svc-opt-hint{font-size:8px;color:var(--text-muted);margin-top:1px;}
+.new-svc-hint-row{font-size:9px;color:var(--text-muted);padding:6px 10px;background:var(--bg);border:1px solid var(--border);border-radius:6px;line-height:1.5;}
+.new-svc-hint-row strong{color:var(--text-secondary);}
+.new-svc-actions{display:flex;gap:8px;align-items:center;}
+.new-svc-create{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:7px;background:var(--accent);color:var(--text-on-accent);border:none;font-size:11px;font-weight:800;cursor:pointer;}
+.new-svc-cancel{display:inline-flex;align-items:center;padding:6px 11px;border-radius:7px;border:1px solid var(--border);background:transparent;font-size:11px;font-weight:600;color:var(--text-muted);cursor:pointer;}
+
+/* Dopłaty (bez zmian z K) */
+.surcharge-list{background:var(--surface);border:1px solid var(--purple-border);border-radius:11px;overflow:hidden;position:relative;}
+.surcharge-list::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--purple),transparent);opacity:0.35;pointer-events:none;}
+.surcharge-list-hdr{display:flex;align-items:center;gap:8px;padding:7px 12px;background:linear-gradient(180deg,var(--purple-muted),transparent);border-bottom:1px solid var(--purple-border);}
+.surcharge-list-title{font-family:var(--font-display);font-size:14px;letter-spacing:1.8px;color:var(--purple);}
+.surcharge-list-sub{font-size:9px;color:var(--text-muted);}
+.surcharge-spacer{flex:1;}
+.surcharge-add-simple{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:6px;border:1px dashed var(--purple-border);background:transparent;font-size:9px;color:var(--purple);cursor:pointer;font-weight:700;}
+.surcharge-row{display:grid;grid-template-columns:26px 22px 1fr auto auto auto auto;align-items:center;gap:8px;padding:8px 12px;border-top:1px solid var(--border);}
+.surcharge-row:first-of-type{border-top:none;}
+.surcharge-row.off{opacity:0.42;}
+.surcharge-row.new-row{border-top:1px solid var(--purple-border);background:var(--purple-muted);}
+.surcharge-icon{width:22px;height:22px;border-radius:5px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;background:var(--purple-muted);border:1px solid var(--purple-border);}
+.surcharge-info{display:flex;flex-direction:column;gap:2px;}
+.surcharge-name{font-size:11px;font-weight:700;}
+.surcharge-desc{font-size:8px;color:var(--text-muted);}
+.surcharge-name-input{background:var(--bg);border:1px solid var(--purple-border);border-radius:5px;padding:3px 7px;font-family:var(--font-body);font-size:11px;font-weight:700;color:var(--text-primary);outline:none;width:100%;box-shadow:0 0 0 2px var(--purple-muted);}
+.surcharge-name-input::placeholder{color:var(--text-muted);font-weight:400;}
+.surcharge-scope{display:inline-flex;align-items:center;padding:2px 7px;border-radius:4px;background:var(--bg);border:1px solid var(--border);font-family:var(--font-mono);font-size:8px;color:var(--text-muted);white-space:nowrap;cursor:pointer;}
+.surcharge-scope svg{flex-shrink:0;margin-left:3px;color:var(--text-muted);}
+.surcharge-price{display:inline-flex;align-items:stretch;background:var(--surface-raised);border:1px solid var(--purple-border);border-radius:5px;overflow:hidden;}
+.surcharge-price input{width:30px;background:transparent;border:none;outline:none;padding:3px 3px;color:var(--text-primary);font-family:var(--font-mono);font-weight:700;font-size:11px;text-align:right;}
+.surcharge-price .u{display:inline-flex;align-items:center;padding:0 4px;background:var(--bg);border-left:1px solid var(--border);font-family:var(--font-mono);font-size:8px;color:var(--purple);font-weight:700;}
+.surcharge-calc{font-family:var(--font-mono);font-size:9px;color:var(--purple);white-space:nowrap;min-width:44px;text-align:right;}
+.confirm-btn{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:4px;border:1px solid var(--success-border);background:var(--success-muted);cursor:pointer;color:var(--success);}
+
+/* Right column */
+.col-right{display:flex;flex-direction:column;gap:9px;position:sticky;top:0;}
+.help-card{background:var(--surface);border:1px solid var(--border);border-radius:11px;overflow:hidden;}
+.help-hdr{padding:8px 13px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:7px;}
+.help-title{font-size:11px;font-weight:700;color:var(--text-secondary);}
+.help-body{padding:8px 13px;display:flex;flex-direction:column;gap:5px;}
+.help-row{display:flex;align-items:flex-start;gap:7px;font-size:9px;color:var(--text-muted);line-height:1.4;}
+.help-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;margin-top:3px;}
+.sim-card{background:var(--surface);border:1px solid var(--border);border-radius:11px;overflow:hidden;position:relative;}
+.sim-card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:var(--hairline);}
+.sim-hdr{padding:9px 13px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:7px;}
+.sim-title{font-family:var(--font-display);font-size:14px;letter-spacing:1.8px;}
+.sim-sub{font-family:var(--font-mono);font-size:8px;color:var(--text-muted);letter-spacing:0.4px;text-transform:uppercase;}
+.sim-body{padding:9px 12px;display:flex;flex-direction:column;gap:4px;}
+.sim-steps{display:flex;align-items:center;gap:4px;font-size:9px;color:var(--text-muted);flex-wrap:wrap;margin-bottom:4px;}
+.sim-step-val{font-weight:700;color:var(--text-secondary);}
+.sim-sep{color:var(--border-strong);}
+.sim-divider{height:1px;background:var(--border);margin:4px 0;}
+.sim-row{display:flex;align-items:center;justify-content:space-between;padding:4px 8px;border-radius:5px;}
+.sim-row.base{background:var(--bg);border:1px solid var(--border);}
+.sim-row.incl{background:var(--success-muted);border:1px solid var(--success-border);}
+.sim-row.opt{background:var(--accent-muted);border:1px solid var(--accent-border);}
+.sim-row.surcharge{background:var(--purple-muted);border:1px solid var(--purple-border);}
+.sim-label{font-size:9px;font-weight:600;color:var(--text-secondary);display:flex;align-items:center;gap:5px;}
+.sim-dur{font-family:var(--font-mono);font-size:8px;color:var(--text-muted);}
+.sim-val{font-family:var(--font-mono);font-size:10px;font-weight:700;}
+.sim-val.green{color:var(--success);}
+.sim-val.orange{color:var(--accent);}
+.sim-val.purple{color:var(--purple);}
+.sim-total{display:flex;align-items:baseline;justify-content:space-between;padding:7px 10px;background:var(--accent-muted);border:1px solid var(--accent-border);border-radius:7px;margin-top:4px;}
+.st-label{font-size:9px;color:var(--text-secondary);font-weight:600;}
+.st-time{font-family:var(--font-mono);font-size:8px;color:var(--text-muted);}
+.st-price{font-family:var(--font-display);font-size:22px;letter-spacing:1.5px;color:var(--accent);}
+
+.caption{max-width:1440px;width:100%;padding-top:10px;border-top:1px solid var(--border);font-family:var(--font-mono);font-size:10px;color:var(--text-muted);display:flex;gap:20px;}
+.caption strong{color:var(--text-secondary);font-weight:500;}
+</style>
+</head>
+<body>
+
+<header class="canvas-label">
+  <span class="film-strip">OPONY PANEL — B2B-16L</span>
+  <span class="slug">cennik · wariant L — pod-usługi inherit/override</span>
+  <span class="canvas-meta"><span class="pulse"></span>design · 2026</span>
+</header>
+
+<main class="desktop-frame">
+  <div class="browser-chrome" aria-hidden="true">
+    <span class="traffic-lights"><span class="light r"></span><span class="light y"></span><span class="light g"></span></span>
+    <span class="browser-tab"><span class="fav">O</span>Opony Panel — Usługi & Cennik</span>
+    <span class="addr">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#2EE0A0" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+      panel.opony.app<span style="color:var(--text-muted)">/dashboard/services</span>
+    </span>
+  </div>
+
+  <div class="app-root">
+    <aside class="sidebar">
+      <div class="sb-brand"><div class="wordmark">OPONY<span class="dot"></span></div><span class="panel-tag">PANEL</span></div>
+      <span class="sec">Dziś</span>
+      <button class="nav-item"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>Dashboard</button>
+      <button class="nav-item"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 10h18M8 2v4M16 2v4"/></svg>Kalendarz</button>
+      <button class="nav-item"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11H5a2 2 0 0 0-2 2v7h18v-7a2 2 0 0 0-2-2h-4M9 11V5a3 3 0 0 1 6 0v6M9 11h6"/></svg>Rezerwacje</button>
+      <span class="sec">Warsztat</span>
+      <button class="nav-item active"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="6"/><path d="M8 14l-2 7h12l-2-7"/></svg>Usługi & Cennik</button>
+      <button class="nav-item"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="13" rx="2"/></svg>Stanowiska</button>
+      <button class="nav-item"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Godziny pracy</button>
+      <button class="nav-item"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>Pracownicy</button>
+      <div class="sb-spacer"></div>
+      <div class="sb-user"><div class="avatar">TK</div><div class="user-col"><span class="user-name">Warsztat Kowalski</span><span class="user-role">Approved</span></div></div>
+    </aside>
+
+    <section class="main">
+      <header class="topbar">
+        <nav class="breadcrumb"><span>Panel</span><span style="color:var(--border-strong)">/</span><span>Warsztat</span><span style="color:var(--border-strong)">/</span><span class="cur">Usługi & Cennik</span></nav>
+        <span class="tb-spacer"></span>
+        <span class="dirty-chip">Niezapisane zmiany</span>
+        <button class="tb-btn">Cofnij</button>
+        <button class="tb-btn primary"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/></svg>Zapisz zmiany</button>
+      </header>
+
+      <div class="content">
+        <div class="col-form">
+
+          <header class="page-hero">
+            <h1 class="page-title">Usługi & Cennik</h1>
+            <div class="page-sub"><span class="live-chip">Widoczne publicznie</span><span>6 usług · 2 dopłaty aktywne</span></div>
+          </header>
+
+          <div class="section-divider">
+            <span class="section-divider-label">Usługi</span>
+            <span class="section-divider-line"></span>
+            <span class="section-divider-count">3 grupy · 6 wariantów</span>
+          </div>
+
+          <!-- Wymiana sezonowa -->
+          <div class="svc-group">
+            <div class="svc-group-hdr">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+              <span class="svc-group-name">Wymiana sezonowa</span>
+              <span class="svc-group-count">3/4 aktywne</span>
+              <span class="svc-group-spacer"></span>
+              <button class="svc-group-add"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Dodaj wariant</button>
+            </div>
+
+            <!-- Osobowe — EXPANDED -->
+            <div class="svc-block">
+              <div class="svc-row open">
+                <div class="chevron open"><svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>
+                <div class="svc-row-info">
+                  <div class="svc-row-name">Osobowe <span class="badge b-on">aktywna</span> <span class="badge b-inc">↳ wyważ. + przech.</span></div>
+                  <div class="svc-row-meta"><svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>R13–R17 · 2 zakresy · 1 wliczone · 2 opcjonalne</div>
+                </div>
+                <span class="svc-row-price">180–210 zł</span>
+                <span class="toggle-sm on"></span>
+              </div>
+              <div class="svc-expanded">
+                <!-- Zakresy rozmiarów -->
+                <div class="exp-label"><svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>Zakresy rozmiarów<span class="line"></span></div>
+                <div class="rim-tiers">
+                  <div class="rim-tier-row">
+                    <div class="rim-chips"><span class="rim-chip">R13<span class="x">×</span></span><span class="rim-chip">R14<span class="x">×</span></span><span class="rim-chip">R15<span class="x">×</span></span><span class="rim-chip-add"><svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span></div>
+                    <div class="price-cell"><input type="number" value="180"/><span class="u">zł</span></div>
+                    <div class="dur-cell"><input type="number" value="40"/><span class="u">min</span></div>
+                    <button class="del-btn"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg></button>
+                  </div>
+                  <div class="rim-tier-row">
+                    <div class="rim-chips"><span class="rim-chip">R16<span class="x">×</span></span><span class="rim-chip">R17<span class="x">×</span></span><span class="rim-chip-add"><svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span></div>
+                    <div class="price-cell"><input type="number" value="210"/><span class="u">zł</span></div>
+                    <div class="dur-cell"><input type="number" value="45"/><span class="u">min</span></div>
+                    <button class="del-btn"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg></button>
+                  </div>
+                </div>
+                <button class="add-tier-btn"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Dodaj zakres</button>
+
+                <!-- Pod-usługi z legendą -->
+                <div class="exp-label">
+                  <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                  Pod-usługi
+                  <span class="line"></span>
+                  <!-- Legenda stanów -->
+                  <span style="display:inline-flex;align-items:center;gap:7px;font-size:7.5px;font-weight:600;color:var(--text-muted);letter-spacing:0;text-transform:none;">
+                    <!-- inherit state indicator -->
+                    <span style="display:inline-flex;align-items:center;gap:3px;">
+                      <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                      jak usł. = dziedziczy
+                    </span>
+                    <span style="color:var(--border-strong);">·</span>
+                    <!-- override state indicator -->
+                    <span style="display:inline-flex;align-items:center;gap:3px;color:var(--accent);">
+                      <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg>
+                      otwarta = własna cena/czas
+                    </span>
+                  </span>
+                </div>
+
+                <div class="subsvc-list">
+
+                  <!-- ① Wyważanie — WLICZONE, INHERIT (domyślny) -->
+                  <!-- Cena: zawsze "wliczone", Czas: dziedziczony → inherit-tag "+jak usł." -->
+                  <!-- override-btn nieaktywny (closed lock, muted) -->
+                  <div class="subsvc-row included from-catalog">
+                    <div class="drag-handle"><span></span><span></span><span></span></div>
+                    <div class="incl-chk checked"><svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#0A0B0E" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+                    <div class="subsvc-name-wrap">
+                      <div class="subsvc-name">Wyważanie <span class="badge b-teal" style="font-size:7px;">z katalogu</span></div>
+                      <div class="subsvc-hint">wliczone — klient nie dopłaca</div>
+                    </div>
+                    <!-- Cena: wliczone (nie ma sensu override dla ceny gdy wliczone) -->
+                    <span class="incl-label">wliczone</span>
+                    <!-- Czas: inherit (domyślnie dodaje 0 min, override ujawnia input) -->
+                    <div class="inherit-tag" title="Kliknij override-btn aby ustawić własny czas">
+                      <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                      +0 min
+                    </div>
+                    <!-- Override: closed lock = dziedziczone -->
+                    <button class="override-btn" title="Wymuś własny czas">
+                      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                    </button>
+                    <button class="del-btn"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg></button>
+                  </div>
+
+                  <!-- ② Nowy wentyl — OPCJONALNE, OVERRIDE AKTYWNY -->
+                  <!-- override-btn aktywny (open lock, orange) → widoczne inputy ceny i czasu -->
+                  <div class="subsvc-row override-active">
+                    <div class="drag-handle"><span></span><span></span><span></span></div>
+                    <div class="incl-chk"></div>
+                    <div class="subsvc-name-wrap">
+                      <div class="subsvc-name">Nowy wentyl <span class="badge b-cat" style="font-size:7px;">dodatek</span></div>
+                      <div class="subsvc-hint">opcjonalne · <span style="color:var(--accent);font-weight:700;">własna cena i czas</span></div>
+                    </div>
+                    <!-- Override ON: własna cena -->
+                    <div class="subsvc-price" style="border-color:var(--accent-border);"><input type="number" value="10"/><span class="u">zł</span></div>
+                    <!-- Override ON: własny czas -->
+                    <div class="subsvc-dur" style="border-color:var(--accent-border);"><input type="number" value="5"/><span class="u" style="color:var(--accent);">min</span></div>
+                    <!-- Override: open lock = własne wartości aktywne -->
+                    <button class="override-btn active" title="Wróć do dziedziczenia z usługi">
+                      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg>
+                    </button>
+                    <button class="del-btn"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg></button>
+                  </div>
+
+                  <!-- ③ Przechowanie — OPCJONALNE, INHERIT (domyślny) -->
+                  <!-- Cena i czas: dziedziczone → oba inherit-tag -->
+                  <!-- override-btn nieaktywny (closed lock) -->
+                  <div class="subsvc-row from-catalog">
+                    <div class="drag-handle"><span></span><span></span><span></span></div>
+                    <div class="incl-chk"></div>
+                    <div class="subsvc-name-wrap">
+                      <div class="subsvc-name">Przechowanie opon <span class="badge b-teal" style="font-size:7px;">z katalogu</span></div>
+                      <div class="subsvc-hint">opcjonalne — cross-sell</div>
+                    </div>
+                    <!-- Cena: inherit -->
+                    <div class="inherit-tag" title="Kliknij override-btn aby ustawić własną cenę">
+                      <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                      jak usł.
+                    </div>
+                    <!-- Czas: inherit -->
+                    <div class="inherit-tag" title="Kliknij override-btn aby ustawić własny czas">
+                      <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                      jak usł.
+                    </div>
+                    <!-- Override: closed lock = dziedziczone -->
+                    <button class="override-btn" title="Wymuś własną cenę i czas">
+                      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                    </button>
+                    <button class="del-btn"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg></button>
+                  </div>
+
+                </div><!-- /subsvc-list -->
+
+                <div class="add-subsvc-wrap">
+                  <button class="add-subsvc-btn">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    Dodaj pod-usługę
+                    <svg class="caret" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                  </button>
+                </div>
+
+              </div><!-- /svc-expanded -->
+            </div><!-- /svc-block Osobowe -->
+
+            <div class="svc-block">
+              <div class="svc-row">
+                <div class="chevron"><svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>
+                <div class="svc-row-info"><div class="svc-row-name">SUV / Crossover <span class="badge b-on">aktywna</span> <span class="badge b-inc">↳ wyważ.</span></div><div class="svc-row-meta">R18–R22 · 2 zakresy</div></div>
+                <span class="svc-row-price">260–310 zł</span><span class="toggle-sm on"></span>
+              </div>
+            </div>
+            <div class="svc-block">
+              <div class="svc-row">
+                <div class="chevron"><svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>
+                <div class="svc-row-info"><div class="svc-row-name">Dostawcze ≤ 3.5t <span class="badge b-on">aktywna</span></div><div class="svc-row-meta">R16–R22 · 1 zakres</div></div>
+                <span class="svc-row-price">380 zł</span><span class="toggle-sm on"></span>
+              </div>
+            </div>
+            <div class="svc-block">
+              <div class="svc-row" style="opacity:0.45;">
+                <div class="chevron"><svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>
+                <div class="svc-row-info"><div class="svc-row-name">TIR / Ciężarowe <span class="badge b-off">wyłączona</span></div><div class="svc-row-meta">brak konfiguracji</div></div>
+                <span class="svc-row-price" style="color:var(--text-muted);">—</span><span class="toggle-sm"></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Wyważanie -->
+          <div class="svc-group">
+            <div class="svc-group-hdr">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+              <span class="svc-group-name">Wyważanie</span><span class="svc-group-count">2/2</span>
+              <div class="pricing-mode"><button class="pm-opt active">per koło</button><button class="pm-opt">zestaw 4</button></div>
+              <span class="svc-group-spacer"></span>
+              <button class="svc-group-add"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Dodaj</button>
+            </div>
+            <div class="svc-block"><div class="svc-row"><div class="chevron"><svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div><div class="svc-row-info"><div class="svc-row-name">Osobowe <span class="badge b-on">aktywna</span></div><div class="svc-row-meta">R13–R17 · 2 zakresy</div></div><span class="svc-row-price">25–30 zł/k</span><span class="toggle-sm on"></span></div></div>
+            <div class="svc-block"><div class="svc-row"><div class="chevron"><svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div><div class="svc-row-info"><div class="svc-row-name">SUV / Crossover <span class="badge b-on">aktywna</span></div><div class="svc-row-meta">R18–R22</div></div><span class="svc-row-price">35 zł/k</span><span class="toggle-sm on"></span></div></div>
+          </div>
+
+          <!-- ═══ NOWA USŁUGA (identycznie jak K) ═══ -->
+          <div class="new-svc-block">
+            <div class="new-svc-hdr">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.6" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              <span class="new-svc-label">Nowa usługa</span>
+              <span style="flex:1;"></span>
+              <span style="font-size:8px;color:var(--text-muted);font-family:var(--font-mono);">ESC anuluj</span>
+            </div>
+            <div class="new-svc-body">
+              <input class="new-svc-name-input" type="text" placeholder="Nazwa usługi…" value="Naprawa przebicia"/>
+              <div style="display:flex;flex-direction:column;gap:5px;">
+                <div style="font-size:8px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-muted);">Charakter usługi</div>
+                <div class="new-svc-options">
+                  <label class="new-svc-opt selected">
+                    <div class="opt-chk"><svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#0A0B0E" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+                    <div><div>Wymaga rozmiaru felgi</div><div class="new-svc-opt-hint">klient poda R-kę → dopasuje tier cenowy</div></div>
+                  </label>
+                  <label class="new-svc-opt">
+                    <div class="opt-chk"></div>
+                    <div><div>Cena stała (flat)</div><div class="new-svc-opt-hint">jedna cena niezależnie od rozmiaru</div></div>
+                  </label>
+                </div>
+              </div>
+              <div class="new-svc-hint-row"><strong>Wymaga rozmiaru felgi</strong> — po zapisaniu pojawi się pusty accordion, gdzie dodasz zakresy R-ek i warianty pojazdu (Osobowe, SUV…).</div>
+              <div class="new-svc-actions">
+                <button class="new-svc-create"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Utwórz usługę</button>
+                <button class="new-svc-cancel">Anuluj</button>
+                <span style="font-family:var(--font-mono);font-size:8px;color:var(--text-muted);margin-left:auto;">Enter ↵ utwórz</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- ─── DOPŁATY (identycznie jak K) ─── -->
+          <div class="section-divider" style="padding-top:8px;">
+            <span class="section-divider-label" style="color:var(--purple);">Dopłaty</span>
+            <span class="section-divider-line" style="background:var(--purple-border);"></span>
+            <span class="section-divider-count" style="border-color:var(--purple-border);color:var(--purple);">2 aktywne · doliczane auto</span>
+          </div>
+
+          <div class="surcharge-list">
+            <div class="surcharge-list-hdr">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--purple)" stroke-width="2.2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+              <div><div class="surcharge-list-title">Dopłaty do usług</div><div class="surcharge-list-sub">cecha pojazdu → doliczana automatycznie przy rezerwacji</div></div>
+              <span class="surcharge-spacer"></span>
+              <button class="surcharge-add-simple">
+                <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                Dodaj dopłatę
+              </button>
+            </div>
+
+            <div class="surcharge-row">
+              <span class="toggle-sm purple"></span>
+              <div class="surcharge-icon"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--purple)" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg></div>
+              <div class="surcharge-info"><div class="surcharge-name">Run-Flat</div><div class="surcharge-desc">opony wzmocnione · ×4 kół przy wymianach</div></div>
+              <div class="surcharge-scope">per koło<svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg></div>
+              <div class="surcharge-price"><input type="number" value="20"/><span class="u">+zł</span></div>
+              <span class="surcharge-calc">= +80 zł</span>
+              <button class="del-btn"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg></button>
+            </div>
+
+            <div class="surcharge-row">
+              <span class="toggle-sm purple"></span>
+              <div class="surcharge-icon"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--purple)" stroke-width="2.2"><rect x="2" y="8" width="20" height="8" rx="2"/></svg></div>
+              <div class="surcharge-info"><div class="surcharge-name">Low-Profile ≤35</div><div class="surcharge-desc">nakład pracy · ostrożność przy felgach</div></div>
+              <div class="surcharge-scope">per koło<svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg></div>
+              <div class="surcharge-price"><input type="number" value="10"/><span class="u">+zł</span></div>
+              <span class="surcharge-calc">= +40 zł</span>
+              <button class="del-btn"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg></button>
+            </div>
+
+            <div class="surcharge-row off">
+              <span class="toggle-sm"></span>
+              <div class="surcharge-icon" style="opacity:0.5;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--purple)" stroke-width="2.2"><path d="M12 22s-8-4.5-8-11.8A8 8 0 0 1 12 2a8 8 0 0 1 8 8.2c0 7.3-8 11.8-8 11.8z"/><circle cx="12" cy="10" r="3"/></svg></div>
+              <div class="surcharge-info"><div class="surcharge-name">TPMS obsługa</div><div class="surcharge-desc">reset czujników ciśnienia · wyłączone</div></div>
+              <div class="surcharge-scope">per sensor<svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg></div>
+              <div class="surcharge-price"><input type="number" value="15"/><span class="u">+zł</span></div>
+              <span class="surcharge-calc" style="color:var(--text-muted);">off</span>
+              <button class="del-btn"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg></button>
+            </div>
+
+            <div class="surcharge-row new-row">
+              <span class="toggle-sm purple"></span>
+              <div class="surcharge-icon" style="border-style:dashed;opacity:0.5;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--purple)" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></div>
+              <div class="surcharge-info" style="flex:1;">
+                <input class="surcharge-name-input" type="text" placeholder="Nazwa dopłaty…"/>
+              </div>
+              <div class="surcharge-scope">per koło<svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg></div>
+              <div class="surcharge-price"><input type="number" placeholder="0"/><span class="u">+zł</span></div>
+              <span class="surcharge-calc" style="color:var(--text-muted);">—</span>
+              <button class="confirm-btn"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8"><polyline points="20 6 9 17 4 12"/></svg></button>
+            </div>
+          </div>
+
+        </div><!-- /col-form -->
+
+        <!-- RIGHT COLUMN -->
+        <div class="col-right">
+          <div class="help-card">
+            <div class="help-hdr">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              <span class="help-title">Pod-usługi — inherit / override</span>
+            </div>
+            <div class="help-body">
+              <div class="help-row">
+                <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2.2" stroke-linecap="round" style="flex-shrink:0;margin-top:2px;"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                <span><strong style="color:var(--text-secondary);">jak usł.</strong> — domyślny stan. Pod-usługa dziedziczy cenę i czas z usługi głównej. Nie musisz nic konfigurować.</span>
+              </div>
+              <div class="help-row">
+                <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.3" stroke-linecap="round" style="flex-shrink:0;margin-top:2px;"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg>
+                <span><strong style="color:var(--accent);">Otwarta kłódka</strong> — override aktywny. Pod-usługa ma własną cenę i czas — niezależne od usługi głównej.</span>
+              </div>
+              <div class="help-row">
+                <div class="help-dot" style="background:var(--success);"></div>
+                <span><strong style="color:var(--text-secondary);">Wliczone</strong> — cena zawsze "wliczone". Kliknij kłódkę żeby ustawić własny dodatkowy czas (domyślnie +0 min).</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="help-card" style="border-color:var(--purple-border);">
+            <div class="help-hdr" style="border-color:var(--purple-border);">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--purple)" stroke-width="2.2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+              <span class="help-title" style="color:var(--purple);">Dopłaty do usług</span>
+            </div>
+            <div class="help-body">
+              <div class="help-row"><div class="help-dot" style="background:var(--purple);"></div>Klient zaznacza cechy pojazdu przy rezerwacji. Doliczane automatycznie.</div>
+              <div class="help-row"><div class="help-dot" style="background:var(--border-strong);"></div>"Per koło" → ×4. "Per sensor" → ×4–5. Zakres klikalny — można zmienić.</div>
+            </div>
+          </div>
+
+          <div class="sim-card">
+            <div class="sim-hdr">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.2"><path d="M5 17H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v5"/><circle cx="16" cy="17" r="3"/><circle cx="8" cy="17" r="3"/></svg>
+              <div><div class="sim-title">Symulacja</div><div class="sim-sub">Osobowe · R15 · Run-Flat</div></div>
+            </div>
+            <div class="sim-body">
+              <div class="sim-steps">
+                <span class="sim-step-val">Osobowe</span><span class="sim-sep">→</span>
+                <span class="sim-step-val">Wymiana sez.</span><span class="sim-sep">→</span>
+                <span class="sim-step-val">R15</span><span class="sim-sep">→</span>
+                <span class="sim-step-val" style="color:var(--purple);">Run-Flat ✓</span>
+              </div>
+              <div class="sim-divider"></div>
+              <div class="sim-row base"><span class="sim-label">Wymiana sezonowa — R13-15<span class="sim-dur">40 min baza</span></span><span class="sim-val">180 zł</span></div>
+              <!-- Wyważanie: wliczone, inherit → czas +0 min (nie dodaje czasu jeśli nie skonfigurowano) -->
+              <div class="sim-row incl"><span class="sim-label"><svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Wyważanie (wliczone, inherit)<span class="sim-dur">+0 min</span></span><span class="sim-val green">— wlicz.</span></div>
+              <!-- Nowy wentyl: override aktywny → własna cena 10 zł / 5 min -->
+              <div class="sim-row opt"><span class="sim-label">+ Nowy wentyl (własna)<span class="sim-dur">+5 min</span></span><span class="sim-val orange">+10 zł</span></div>
+              <div class="sim-row surcharge"><span class="sim-label">+ Run-Flat (4×20 zł)</span><span class="sim-val purple">+80 zł</span></div>
+              <div class="sim-total">
+                <div><div class="st-label">Do zapłaty</div><div class="st-time">10:00 → 10:45 · 45 min łącznie</div></div>
+                <span class="st-price">270 zł</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+  </div>
+</main>
+
+<footer class="caption">
+  <div><strong>Wariant L — baza: Wariant K</strong> · Jedna zmiana: pod-usługi dziedziczą cenę i czas z usługi głównej domyślnie ("jak usł." + zamknięta kłódka). Kliknięcie kłódki odblokowuje własne inputy (stan: otwarta kłódka, orange). Trzy stany: ① Wyważanie — wliczone + czas inherit (+0 min) ② Nowy wentyl — override aktywny, własna cena (10 zł) i czas (5 min) ③ Przechowanie — opcjonalne + inherit dla ceny i czasu. Pomoc w prawej kolumnie zaktualizowana o wyjaśnienie wzorca.</div>
+  <div><strong>Kłódka zamknięta</strong> = dziedziczone (domyślnie). <strong>Kłódka otwarta (orange)</strong> = własne wartości wymuszone. Kliknięcie kłódki toggleuje tryb — gdy override wyłączamy, inputy znikają i wracamy do "jak usł."</div>
+</footer>
+
+</body>
+</html>

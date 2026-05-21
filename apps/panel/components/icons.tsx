@@ -1,8 +1,10 @@
-import { type SVGProps } from 'react';
+import { type ComponentProps } from 'react';
+
+type IconProps = Omit<ComponentProps<'svg'>, 'ref'>;
 
 // ── Navigation ──────────────────────────────────────────────────────────────
 
-export function IconDashboard(props: SVGProps<SVGSVGElement>) {
+export function IconDashboard(props: IconProps) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -22,7 +24,7 @@ export function IconDashboard(props: SVGProps<SVGSVGElement>) {
   );
 }
 
-export function IconBookings(props: SVGProps<SVGSVGElement>) {
+export function IconBookings(props: IconProps) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -39,7 +41,7 @@ export function IconBookings(props: SVGProps<SVGSVGElement>) {
   );
 }
 
-export function IconPricing(props: SVGProps<SVGSVGElement>) {
+export function IconPricing(props: IconProps) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -57,7 +59,7 @@ export function IconPricing(props: SVGProps<SVGSVGElement>) {
   );
 }
 
-export function IconHours(props: SVGProps<SVGSVGElement>) {
+export function IconHours(props: IconProps) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -75,7 +77,7 @@ export function IconHours(props: SVGProps<SVGSVGElement>) {
   );
 }
 
-export function IconProfile(props: SVGProps<SVGSVGElement>) {
+export function IconProfile(props: IconProps) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -93,7 +95,7 @@ export function IconProfile(props: SVGProps<SVGSVGElement>) {
   );
 }
 
-export function IconBriefcase(props: SVGProps<SVGSVGElement>) {
+export function IconBriefcase(props: IconProps) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -113,7 +115,7 @@ export function IconBriefcase(props: SVGProps<SVGSVGElement>) {
 
 // ── UI ──────────────────────────────────────────────────────────────────────
 
-export function IconCheck(props: SVGProps<SVGSVGElement>) {
+export function IconCheck(props: IconProps) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -130,7 +132,7 @@ export function IconCheck(props: SVGProps<SVGSVGElement>) {
   );
 }
 
-export function IconChevronRight(props: SVGProps<SVGSVGElement>) {
+export function IconChevronRight(props: IconProps) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -147,7 +149,7 @@ export function IconChevronRight(props: SVGProps<SVGSVGElement>) {
   );
 }
 
-export function IconArrowRight(props: SVGProps<SVGSVGElement>) {
+export function IconArrowRight(props: IconProps) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -163,7 +165,7 @@ export function IconArrowRight(props: SVGProps<SVGSVGElement>) {
   );
 }
 
-export function IconHelp(props: SVGProps<SVGSVGElement>) {
+export function IconHelp(props: IconProps) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -180,7 +182,7 @@ export function IconHelp(props: SVGProps<SVGSVGElement>) {
   );
 }
 
-export function IconLock(props: SVGProps<SVGSVGElement>) {
+export function IconLock(props: IconProps) {
   return (
     <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true" {...props}>
       <path d="M4.5 7V5.5a3.5 3.5 0 0 1 7 0V7h.5a1 1 0 0 1 1 1v5.5a1 1 0 0 1-1 1h-8a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1h.5Zm1.5 0h4V5.5a2 2 0 0 0-4 0V7Z" />
@@ -188,7 +190,7 @@ export function IconLock(props: SVGProps<SVGSVGElement>) {
   );
 }
 
-export function IconLockOutline(props: SVGProps<SVGSVGElement>) {
+export function IconLockOutline(props: IconProps) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -206,7 +208,7 @@ export function IconLockOutline(props: SVGProps<SVGSVGElement>) {
   );
 }
 
-export function IconShield(props: SVGProps<SVGSVGElement>) {
+export function IconShield(props: IconProps) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -221,7 +223,7 @@ export function IconShield(props: SVGProps<SVGSVGElement>) {
   );
 }
 
-export function IconTrash(props: SVGProps<SVGSVGElement>) {
+export function IconTrash(props: IconProps) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -238,7 +240,24 @@ export function IconTrash(props: SVGProps<SVGSVGElement>) {
   );
 }
 
-export function IconInfo(props: SVGProps<SVGSVGElement>) {
+export function IconBolt(props: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      {...props}
+    >
+      <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+    </svg>
+  );
+}
+
+export function IconInfo(props: IconProps) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -257,7 +276,7 @@ export function IconInfo(props: SVGProps<SVGSVGElement>) {
   );
 }
 
-export function IconRefresh(props: SVGProps<SVGSVGElement>) {
+export function IconRefresh(props: IconProps) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -277,7 +296,7 @@ export function IconRefresh(props: SVGProps<SVGSVGElement>) {
 
 // ── Photos ──────────────────────────────────────────────────────────────────
 
-export function IconCamera(props: SVGProps<SVGSVGElement>) {
+export function IconCamera(props: IconProps) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -295,7 +314,7 @@ export function IconCamera(props: SVGProps<SVGSVGElement>) {
   );
 }
 
-export function IconUpload(props: SVGProps<SVGSVGElement>) {
+export function IconUpload(props: IconProps) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -312,7 +331,7 @@ export function IconUpload(props: SVGProps<SVGSVGElement>) {
   );
 }
 
-export function IconChevronLeft(props: SVGProps<SVGSVGElement>) {
+export function IconChevronLeft(props: IconProps) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -329,7 +348,7 @@ export function IconChevronLeft(props: SVGProps<SVGSVGElement>) {
   );
 }
 
-export function IconStar(props: SVGProps<SVGSVGElement>) {
+export function IconStar(props: IconProps) {
   return (
     <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" {...props}>
       <polygon points="12 2 15 9 22 9.5 17 14 18.5 21 12 17.5 5.5 21 7 14 2 9.5 9 9 12 2" />
@@ -337,7 +356,7 @@ export function IconStar(props: SVGProps<SVGSVGElement>) {
   );
 }
 
-export function IconXClose(props: SVGProps<SVGSVGElement>) {
+export function IconXClose(props: IconProps) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -354,7 +373,7 @@ export function IconXClose(props: SVGProps<SVGSVGElement>) {
   );
 }
 
-export function IconHome(props: SVGProps<SVGSVGElement>) {
+export function IconHome(props: IconProps) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -372,7 +391,7 @@ export function IconHome(props: SVGProps<SVGSVGElement>) {
   );
 }
 
-export function IconDisplay(props: SVGProps<SVGSVGElement>) {
+export function IconDisplay(props: IconProps) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -390,7 +409,7 @@ export function IconDisplay(props: SVGProps<SVGSVGElement>) {
   );
 }
 
-export function IconPencil(props: SVGProps<SVGSVGElement>) {
+export function IconPencil(props: IconProps) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -408,7 +427,7 @@ export function IconPencil(props: SVGProps<SVGSVGElement>) {
   );
 }
 
-export function IconBan(props: SVGProps<SVGSVGElement>) {
+export function IconBan(props: IconProps) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -426,7 +445,7 @@ export function IconBan(props: SVGProps<SVGSVGElement>) {
   );
 }
 
-export function IconMail(props: SVGProps<SVGSVGElement>) {
+export function IconMail(props: IconProps) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -444,7 +463,7 @@ export function IconMail(props: SVGProps<SVGSVGElement>) {
   );
 }
 
-export function IconPlus(props: SVGProps<SVGSVGElement>) {
+export function IconPlus(props: IconProps) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -461,7 +480,7 @@ export function IconPlus(props: SVGProps<SVGSVGElement>) {
   );
 }
 
-export function IconMobilePhone(props: SVGProps<SVGSVGElement>) {
+export function IconMobilePhone(props: IconProps) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -479,7 +498,7 @@ export function IconMobilePhone(props: SVGProps<SVGSVGElement>) {
   );
 }
 
-export function IconCopy(props: SVGProps<SVGSVGElement>) {
+export function IconCopy(props: IconProps) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -497,7 +516,7 @@ export function IconCopy(props: SVGProps<SVGSVGElement>) {
   );
 }
 
-export function IconUsers(props: SVGProps<SVGSVGElement>) {
+export function IconUsers(props: IconProps) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -517,7 +536,7 @@ export function IconUsers(props: SVGProps<SVGSVGElement>) {
   );
 }
 
-export function IconCalendarOff(props: SVGProps<SVGSVGElement>) {
+export function IconCalendarOff(props: IconProps) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -535,7 +554,7 @@ export function IconCalendarOff(props: SVGProps<SVGSVGElement>) {
   );
 }
 
-export function IconHourglass(props: SVGProps<SVGSVGElement>) {
+export function IconHourglass(props: IconProps) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -554,7 +573,7 @@ export function IconHourglass(props: SVGProps<SVGSVGElement>) {
   );
 }
 
-export function IconMinus(props: SVGProps<SVGSVGElement>) {
+export function IconMinus(props: IconProps) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -571,7 +590,7 @@ export function IconMinus(props: SVGProps<SVGSVGElement>) {
   );
 }
 
-export function IconSplit(props: SVGProps<SVGSVGElement>) {
+export function IconSplit(props: IconProps) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -591,7 +610,7 @@ export function IconSplit(props: SVGProps<SVGSVGElement>) {
 }
 
 // Stanowisko — monitor z krzyżykiem (lifter/hoist)
-export function IconStations(props: SVGProps<SVGSVGElement>) {
+export function IconStations(props: IconProps) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -610,7 +629,7 @@ export function IconStations(props: SVGProps<SVGSVGElement>) {
 }
 
 // Dodaj pracownika — sylwetka z plusem
-export function IconUserAdd(props: SVGProps<SVGSVGElement>) {
+export function IconUserAdd(props: IconProps) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -630,7 +649,7 @@ export function IconUserAdd(props: SVGProps<SVGSVGElement>) {
 }
 
 // Alert w kółku — ostrzeżenie
-export function IconAlertCircle(props: SVGProps<SVGSVGElement>) {
+export function IconAlertCircle(props: IconProps) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -649,7 +668,7 @@ export function IconAlertCircle(props: SVGProps<SVGSVGElement>) {
 }
 
 // Pracownicy — dwie sylwetki
-export function IconWorkers(props: SVGProps<SVGSVGElement>) {
+export function IconWorkers(props: IconProps) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -668,7 +687,7 @@ export function IconWorkers(props: SVGProps<SVGSVGElement>) {
   );
 }
 
-export function IconCalendar(props: SVGProps<SVGSVGElement>) {
+export function IconCalendar(props: IconProps) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -686,7 +705,7 @@ export function IconCalendar(props: SVGProps<SVGSVGElement>) {
   );
 }
 
-export function IconDownload(props: SVGProps<SVGSVGElement>) {
+export function IconDownload(props: IconProps) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -703,7 +722,7 @@ export function IconDownload(props: SVGProps<SVGSVGElement>) {
   );
 }
 
-export function IconPhone(props: SVGProps<SVGSVGElement>) {
+export function IconPhone(props: IconProps) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -720,7 +739,7 @@ export function IconPhone(props: SVGProps<SVGSVGElement>) {
   );
 }
 
-export function IconShare(props: SVGProps<SVGSVGElement>) {
+export function IconShare(props: IconProps) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -740,7 +759,7 @@ export function IconShare(props: SVGProps<SVGSVGElement>) {
   );
 }
 
-export function IconPrint(props: SVGProps<SVGSVGElement>) {
+export function IconPrint(props: IconProps) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -757,7 +776,7 @@ export function IconPrint(props: SVGProps<SVGSVGElement>) {
   );
 }
 
-export function IconPlay(props: SVGProps<SVGSVGElement>) {
+export function IconPlay(props: IconProps) {
   return (
     <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" {...props}>
       <polygon points="5 3 19 12 5 21 5 3" />
@@ -765,7 +784,7 @@ export function IconPlay(props: SVGProps<SVGSVGElement>) {
   );
 }
 
-export function IconMap(props: SVGProps<SVGSVGElement>) {
+export function IconMap(props: IconProps) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -782,7 +801,7 @@ export function IconMap(props: SVGProps<SVGSVGElement>) {
   );
 }
 
-export function IconReschedule(props: SVGProps<SVGSVGElement>) {
+export function IconReschedule(props: IconProps) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -800,7 +819,7 @@ export function IconReschedule(props: SVGProps<SVGSVGElement>) {
   );
 }
 
-export function IconCar(props: SVGProps<SVGSVGElement>) {
+export function IconCar(props: IconProps) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -819,7 +838,7 @@ export function IconCar(props: SVGProps<SVGSVGElement>) {
   );
 }
 
-export function IconCalendarAdd(props: SVGProps<SVGSVGElement>) {
+export function IconCalendarAdd(props: IconProps) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -837,7 +856,7 @@ export function IconCalendarAdd(props: SVGProps<SVGSVGElement>) {
   );
 }
 
-export function IconFlag(props: SVGProps<SVGSVGElement>) {
+export function IconFlag(props: IconProps) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -855,7 +874,7 @@ export function IconFlag(props: SVGProps<SVGSVGElement>) {
   );
 }
 
-export function IconSearch(props: SVGProps<SVGSVGElement>) {
+export function IconSearch(props: IconProps) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -873,7 +892,7 @@ export function IconSearch(props: SVGProps<SVGSVGElement>) {
   );
 }
 
-export function IconReviews(props: SVGProps<SVGSVGElement>) {
+export function IconReviews(props: IconProps) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -890,7 +909,7 @@ export function IconReviews(props: SVGProps<SVGSVGElement>) {
   );
 }
 
-export function IconLocation(props: SVGProps<SVGSVGElement>) {
+export function IconLocation(props: IconProps) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -908,7 +927,7 @@ export function IconLocation(props: SVGProps<SVGSVGElement>) {
   );
 }
 
-export function IconEye(props: SVGProps<SVGSVGElement>) {
+export function IconEye(props: IconProps) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -926,7 +945,7 @@ export function IconEye(props: SVGProps<SVGSVGElement>) {
   );
 }
 
-export function IconPublish(props: SVGProps<SVGSVGElement>) {
+export function IconPublish(props: IconProps) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -945,7 +964,7 @@ export function IconPublish(props: SVGProps<SVGSVGElement>) {
   );
 }
 
-export function IconTruck(props: SVGProps<SVGSVGElement>) {
+export function IconTruck(props: IconProps) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -965,7 +984,7 @@ export function IconTruck(props: SVGProps<SVGSVGElement>) {
   );
 }
 
-export function IconBothWays(props: SVGProps<SVGSVGElement>) {
+export function IconBothWays(props: IconProps) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -986,7 +1005,7 @@ export function IconBothWays(props: SVGProps<SVGSVGElement>) {
   );
 }
 
-export function IconChevronDown(props: SVGProps<SVGSVGElement>) {
+export function IconChevronDown(props: IconProps) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -1003,7 +1022,7 @@ export function IconChevronDown(props: SVGProps<SVGSVGElement>) {
   );
 }
 
-export function IconMoreHoriz(props: SVGProps<SVGSVGElement>) {
+export function IconMoreHoriz(props: IconProps) {
   return (
     <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" {...props}>
       <circle cx="5" cy="12" r="1.5" />
@@ -1013,7 +1032,7 @@ export function IconMoreHoriz(props: SVGProps<SVGSVGElement>) {
   );
 }
 
-export function IconFilter(props: SVGProps<SVGSVGElement>) {
+export function IconFilter(props: IconProps) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -1030,7 +1049,7 @@ export function IconFilter(props: SVGProps<SVGSVGElement>) {
   );
 }
 
-export function IconSMS(props: SVGProps<SVGSVGElement>) {
+export function IconSMS(props: IconProps) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -1047,7 +1066,7 @@ export function IconSMS(props: SVGProps<SVGSVGElement>) {
   );
 }
 
-export function IconSettings(props: SVGProps<SVGSVGElement>) {
+export function IconSettings(props: IconProps) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -1065,7 +1084,7 @@ export function IconSettings(props: SVGProps<SVGSVGElement>) {
   );
 }
 
-export function IconPause(props: SVGProps<SVGSVGElement>) {
+export function IconPause(props: IconProps) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -1083,7 +1102,7 @@ export function IconPause(props: SVGProps<SVGSVGElement>) {
   );
 }
 
-export function IconBell(props: SVGProps<SVGSVGElement>) {
+export function IconBell(props: IconProps) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -1101,7 +1120,7 @@ export function IconBell(props: SVGProps<SVGSVGElement>) {
   );
 }
 
-export function IconLogOut(props: SVGProps<SVGSVGElement>) {
+export function IconLogOut(props: IconProps) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -1120,7 +1139,7 @@ export function IconLogOut(props: SVGProps<SVGSVGElement>) {
   );
 }
 
-export function IconAlertTriangle(props: SVGProps<SVGSVGElement>) {
+export function IconAlertTriangle(props: IconProps) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -1139,7 +1158,24 @@ export function IconAlertTriangle(props: SVGProps<SVGSVGElement>) {
   );
 }
 
-export function IconEyeOff(props: SVGProps<SVGSVGElement>) {
+export function IconServices(props: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      {...props}
+    >
+      <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
+    </svg>
+  );
+}
+
+export function IconEyeOff(props: IconProps) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -1153,6 +1189,145 @@ export function IconEyeOff(props: SVGProps<SVGSVGElement>) {
     >
       <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
       <line x1="1" y1="1" x2="23" y2="23" />
+    </svg>
+  );
+}
+
+export function IconDollar(props: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.2"
+      strokeLinecap="round"
+      aria-hidden="true"
+      {...props}
+    >
+      <line x1="12" y1="1" x2="12" y2="23" />
+      <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+    </svg>
+  );
+}
+
+export function IconList(props: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.2"
+      strokeLinecap="round"
+      aria-hidden="true"
+      {...props}
+    >
+      <line x1="8" y1="6" x2="21" y2="6" />
+      <line x1="8" y1="12" x2="21" y2="12" />
+      <line x1="8" y1="18" x2="21" y2="18" />
+      <line x1="3" y1="6" x2="3.01" y2="6" />
+      <line x1="3" y1="12" x2="3.01" y2="12" />
+      <line x1="3" y1="18" x2="3.01" y2="18" />
+    </svg>
+  );
+}
+
+export function IconRim(props: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.2"
+      aria-hidden="true"
+      {...props}
+    >
+      <circle cx="12" cy="12" r="10" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  );
+}
+
+export function IconLinkChain(props: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.2"
+      strokeLinecap="round"
+      aria-hidden="true"
+      {...props}
+    >
+      <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+      <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+    </svg>
+  );
+}
+
+export function IconPlusCircle(props: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.2"
+      aria-hidden="true"
+      {...props}
+    >
+      <circle cx="12" cy="12" r="10" />
+      <line x1="12" y1="8" x2="12" y2="16" />
+      <line x1="8" y1="12" x2="16" y2="12" />
+    </svg>
+  );
+}
+
+export function IconClock(props: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      {...props}
+    >
+      <circle cx="12" cy="12" r="9" />
+      <polyline points="12 7 12 12 15 15" />
+    </svg>
+  );
+}
+
+export function IconWarehouse(props: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      {...props}
+    >
+      <path d="M3 9.5 12 4l9 5.5V20H3V9.5Z" />
+      <rect x="9" y="14" width="6" height="6" />
+      <line x1="9" y1="14" x2="9" y2="20" />
+      <line x1="15" y1="14" x2="15" y2="20" />
+    </svg>
+  );
+}
+
+export function IconGripVertical(props: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" {...props}>
+      <circle cx="9" cy="6" r="1.5" />
+      <circle cx="9" cy="12" r="1.5" />
+      <circle cx="9" cy="18" r="1.5" />
+      <circle cx="15" cy="6" r="1.5" />
+      <circle cx="15" cy="12" r="1.5" />
+      <circle cx="15" cy="18" r="1.5" />
     </svg>
   );
 }

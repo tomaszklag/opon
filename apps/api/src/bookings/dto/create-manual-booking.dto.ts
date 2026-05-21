@@ -1,14 +1,33 @@
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
+  IsArray,
   IsBoolean,
   IsISO8601,
+  IsInt,
   IsNumber,
   IsOptional,
+  IsPositive,
   IsString,
   Matches,
+  Max,
   MaxLength,
+  Min,
   MinLength,
+  ValidateNested,
 } from 'class-validator';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
+
+export class ManualSubServiceDto {
+  @ApiProperty()
+  @IsString()
+  @MaxLength(200)
+  name!: string;
+
+  @ApiPropertyOptional({ type: Number, nullable: true })
+  @IsOptional()
+  @IsNumber()
+  pricePln?: number | null;
+}
 
 export class CreateManualBookingDto {
   @ApiProperty({ example: 'Jan Kowalski' })
@@ -41,10 +60,18 @@ export class CreateManualBookingDto {
   @IsNumber()
   totalPricePln?: number;
 
-  @ApiPropertyOptional({ example: 'SEASONAL_SWAP' })
+  @ApiPropertyOptional({ example: 'Wymiana sezonowa — Osobowe' })
   @IsOptional()
   @IsString()
-  serviceType?: string;
+  @MaxLength(300)
+  serviceName?: string;
+
+  @ApiPropertyOptional({ type: [ManualSubServiceDto] })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => ManualSubServiceDto)
+  subServices?: ManualSubServiceDto[];
 
   @ApiPropertyOptional({ example: 'Klient prosi o kontakt przed wizytą.' })
   @IsOptional()
@@ -66,4 +93,40 @@ export class CreateManualBookingDto {
   @IsOptional()
   @IsBoolean()
   autoConfirm?: boolean;
+
+  @ApiPropertyOptional({
+    example: false,
+    description: 'Pomiń walidację dostępności (recepcja świadomie nadpisuje)',
+  })
+  @IsOptional()
+  @IsBoolean()
+  skipAvailabilityCheck?: boolean;
+
+  @ApiPropertyOptional({ example: true, description: 'Usługa zdefiniowana poza cennikiem' })
+  @IsOptional()
+  @IsBoolean()
+  isCustomService?: boolean;
+
+  @ApiPropertyOptional({ example: 150, description: 'Cena usługi custom (opcjonalna)' })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  customPricePln?: number;
+
+  @ApiPropertyOptional({ example: 60, description: 'Czas trwania usługi custom w minutach' })
+  @IsOptional()
+  @IsInt()
+  @IsPositive()
+  @Max(600)
+  customDurationMinutes?: number;
+
+  @ApiPropertyOptional({
+    example: 'a1b2c3d4',
+    description:
+      'Fingerprint z GET /availability. Jeśli podany i nieaktualny, serwer zwraca 409 z aktualną dostępnością.',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(8)
+  availabilityVersion?: string;
 }

@@ -10,11 +10,11 @@
 }
 
 .brand {
-  padding: 18px 14px 16px;
+  height: 54px;
+  padding: 0 14px;
   display: flex;
   align-items: center;
   gap: 8px;
-  border-bottom: 1px solid var(--border);
   flex-shrink: 0;
 }
 
@@ -43,6 +43,7 @@
   gap: 1px;
   overflow-y: auto;
 }
+
 
 .navSection {
   display: block;
@@ -90,7 +91,6 @@
 
 .footer {
   padding: 12px;
-  border-top: 1px solid var(--border);
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -152,7 +152,9 @@
   font-weight: var(--font-semibold);
   cursor: pointer;
   transition: border-color 0.12s, color 0.12s;
-  text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .logoutBtn:hover {
@@ -160,76 +162,26 @@
   color: var(--danger);
 }
 
-/* ── Topbar ── */
-.topbar {
-  height: 54px;
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  padding: 0 28px;
-  gap: 14px;
-  flex-shrink: 0;
-  background: var(--surface);
-  grid-column: 2;
-}
-
-.breadcrumb {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.breadcrumbItem {
-  font-size: var(--text-sm);
-  font-weight: var(--font-semibold);
-  color: var(--text-muted);
-}
-
-.breadcrumbSep {
-  color: var(--border-strong);
-  font-size: var(--text-sm);
-}
-
-.breadcrumbCurrent {
-  color: var(--text-primary);
-}
-
-.topbarSpacer {
-  flex: 1;
-}
-
-.firmName {
-  color: var(--text-primary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 220px;
-}
-
-/* ── Status badge ── */
-.statusBadge {
+/* ── Pause badge ── */
+.pauseBadge {
   display: inline-flex;
   align-items: center;
-  padding: 3px 10px;
+  gap: 5px;
+  padding: 4px 10px;
   border-radius: 100px;
+  background: var(--warning-muted);
+  border: 1px solid var(--warning-border);
+  color: var(--warning);
+  font-size: var(--text-nano);
+  font-weight: 700;
+  font-family: var(--font-mono);
+  text-decoration: none;
   white-space: nowrap;
   flex-shrink: 0;
+  transition: background 120ms;
 }
 
-.statusPending {
-  background: var(--warning-muted);
-  color: var(--warning);
-  border: 1px solid var(--warning-border);
+.pauseBadge:hover {
+  background: color-mix(in srgb, var(--warning) 20%, transparent);
 }
 
-.statusApproved {
-  background: var(--success-muted);
-  color: var(--success);
-  border: 1px solid var(--success-border);
-}
-
-.statusSuspended {
-  background: color-mix(in srgb, var(--danger) 12%, transparent);
-  color: var(--danger);
-  border: 1px solid color-mix(in srgb, var(--danger) 30%, transparent);
-}

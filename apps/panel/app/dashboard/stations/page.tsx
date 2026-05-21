@@ -1,11 +1,12 @@
 'use client';
 
-import { useState } from 'react';
 import { Button, Heading, Modal, Spinner, Text } from '@opony/design-system-web';
 import { useAuthGuard } from '../../../lib/hooks/use-auth-guard';
 import { useNavigationGuard } from '../../../lib/hooks/use-navigation-guard';
 import { useStations } from '../../../lib/hooks/use-stations';
-import { type ServiceType, type DaySchedule } from '../../../api-data-access/stations';
+import { useWorkers } from '../../../lib/hooks/use-workers';
+import { useServicesPage } from '../../../lib/hooks/use-services-page';
+import { type DaySchedule } from '../../../api-data-access/stations';
 import { StationsActionBar } from './_components/StationsActionBar';
 import { StationsEmptyState } from './_components/StationsEmptyState';
 import { StationCard } from './_components/StationCard';
@@ -13,11 +14,14 @@ import { StationsPreview } from './_components/StationsPreview';
 import { IconPlus } from '../../../components/icons';
 import styles from './stations.module.css';
 
-// All services are considered "available" until we have a pricing API integration
-const ALL_SERVICES: ServiceType[] = ['SEASONAL_SWAP', 'WHEEL_SWAP', 'BALANCING', 'PUNCTURE_REPAIR'];
-
 export default function StationsPage() {
   const { isLoading: authLoading } = useAuthGuard('/dashboard');
+  const { state: servicesState, isLoading: servicesLoading } = useServicesPage();
+  const availableServices = servicesState.services.map((s) => ({
+    id: s.id,
+    name: s.name || 'Usługa bez nazwy',
+    enabled: s.enabled,
+  }));
   const {
     stations,
     loading,
@@ -26,12 +30,15 @@ export default function StationsPage() {
     dirty,
     error,
     createStation,
-    updateStation,
     deleteStation,
-    removeWorker,
+    assignWorkerLocal,
+    removeWorkerLocal,
     updateStationLocal,
+    saveAll,
     revert,
   } = useStations();
+
+  const { workers, loading: workersLoading } = useWorkers();
 
   const {
     showModal: showNavWarning,
@@ -39,23 +46,15 @@ export default function StationsPage() {
     cancel: cancelNav,
   } = useNavigationGuard(dirty);
 
-  const [creating, setCreating] = useState(false);
-
-  async function handleCreate() {
-    setCreating(true);
-    const count = stations.length + 1;
-    await createStation(`Stanowisko ${count}`);
-    setCreating(false);
+  function handleCreate() {
+    createStation(`Stanowisko ${stations.length + 1}`);
   }
 
   function handleSave() {
-    // For stations, each mutation is directly saved via API.
-    // The "save" here is a no-op if all local changes have been pushed.
-    // This button resets dirty state if somehow it's still set.
-    revert();
+    saveAll(stations);
   }
 
-  if (authLoading || loading) {
+  if (authLoading || loading || servicesLoading || workersLoading) {
     return (
       <div className={styles.loadingWrap}>
         <Spinner size="md" label="Ładowanie stanowisk…" />
@@ -134,28 +133,34 @@ export default function StationsPage() {
 
             {/* Station list or empty state */}
             {stations.length === 0 ? (
-              <StationsEmptyState onCreate={handleCreate} creating={creating} />
+              <StationsEmptyState onCreate={handleCreate} creating={false} />
             ) : (
               <>
                 {stations.map((station) => (
                   <StationCard
                     key={station.id}
                     station={station}
-                    availableServices={ALL_SERVICES}
+                    availableServices={availableServices}
+                    workers={workers}
                     onUpdateName={(name) => {
-                      updateStation(station.id, { name });
+                      updateStationLocal(station.id, { name });
                     }}
-                    onToggleService={(svc) => {
-                      const services = station.services.includes(svc)
-                        ? station.services.filter((s) => s !== svc)
-                        : [...station.services, svc];
-                      updateStation(station.id, { services });
+                    onToggleService={(serviceId) => {
+                      const serviceIds = station.serviceIds.includes(serviceId)
+                        ? station.serviceIds.filter((id) => id !== serviceId)
+                        : [...station.serviceIds, serviceId];
+                      updateStationLocal(station.id, { serviceIds });
                     }}
                     onUpdateSchedule={(schedule: DaySchedule[]) => {
                       updateStationLocal(station.id, { schedule });
                     }}
+                    onAssignWorker={(workerId) => {
+                      const w = workers.find((x) => x.id === workerId);
+                      if (!w) return;
+                      assignWorkerLocal(station.id, workerId, w.name, w.role ?? null);
+                    }}
                     onRemoveWorker={(workerId) => {
-                      removeWorker(station.id, workerId);
+                      removeWorkerLocal(station.id, workerId);
                     }}
                     onDelete={() => {
                       deleteStation(station.id);
@@ -164,13 +169,11 @@ export default function StationsPage() {
                 ))}
 
                 {/* Add station button */}
-                <button
-                  className={styles.addStationBtn}
-                  onClick={handleCreate}
-                  disabled={creating || saving}
-                >
-                  <IconPlus width="14" height="14" />
-                  Dodaj stanowisko
+                <button className={styles.addStationBtn} onClick={handleCreate} disabled={saving}>
+                  <IconPlus width="12" height="12" />
+                  <Text variant="nano" as="span" weight="bold" color="accent">
+                    Dodaj stanowisko
+                  </Text>
                 </button>
               </>
             )}
@@ -178,7 +181,11 @@ export default function StationsPage() {
 
           {/* Right preview column */}
           <div className={styles.previewCol}>
-            <StationsPreview stations={stations} />
+            <StationsPreview
+              stations={stations}
+              availableServices={availableServices}
+              workers={workers}
+            />
           </div>
         </div>
       </div>

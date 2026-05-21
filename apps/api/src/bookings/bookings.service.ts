@@ -1,12 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { BookingStatus, Prisma } from '@prisma/client';
+import { createHash } from 'crypto';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { AppException, ErrorCode } from '../common/errors';
 import { WorkerTasksService } from '../worker-tasks/worker-tasks.service';
 import { BookingDetailResponseDto } from './dto/booking-detail-response.dto';
 import { BookingResponseDto } from './dto/booking-response.dto';
+import { CustomServiceSuggestionDto } from './dto/custom-service-suggestion.dto';
 import { UpdateBookingStatusDto } from './dto/update-booking-status.dto';
-import { BookingsRepository, BookingWithDetail } from './bookings.repository';
+import { BookingsRepository, BookingWithDetail, ManualBookingData } from './bookings.repository';
 import { BookingAdminListQueryDto } from './dto/booking-admin-list-query.dto';
 import { BookingPageResponseDto } from './dto/booking-page-response.dto';
 import { BookingStatsResponseDto } from './dto/booking-stats-response.dto';
@@ -17,9 +19,27 @@ import { AvailabilityResponseDto, AvailabilitySlotDto } from './dto/availability
 import { PrismaService } from '../prisma/prisma.service';
 import {
   BookingCreatedEvent,
+  BookingRescheduledEvent,
   BookingStatusChangedEvent,
   BookingBulkStatusChangedEvent,
 } from '../realtime/events/booking.events';
+import { RescheduleBookingDto } from './dto/reschedule-booking.dto';
+import { EditBookingDto } from './dto/edit-booking.dto';
+
+const INACTIVE_STATUSES = [
+  BookingStatus.CANCELLED_BY_CLIENT,
+  BookingStatus.CANCELLED_BY_PROVIDER,
+  BookingStatus.CANCELLED_BY_SYSTEM,
+  BookingStatus.REJECTED,
+  BookingStatus.NO_SHOW,
+] as const;
+
+interface DaySchedule {
+  dayOfWeek: number;
+  open: boolean;
+  startTime: string;
+  endTime: string;
+}
 
 type BookingWithClient = Prisma.BookingGetPayload<{
   include: {
@@ -67,9 +87,6 @@ export class BookingsService {
       clientName,
       clientPhone: client.phone,
       tireSize: booking.tireSize ?? null,
-      serviceType: booking.serviceType ?? null,
-      sizeTier: booking.sizeTier ?? null,
-      tpmsRequired: booking.tpmsRequired,
       basePricePln: booking.basePricePln != null ? Number(booking.basePricePln) : null,
       travelFeePln: booking.travelFeePln != null ? Number(booking.travelFeePln) : null,
       totalPricePln: booking.totalPricePln != null ? Number(booking.totalPricePln) : null,
@@ -86,6 +103,11 @@ export class BookingsService {
   private toDetailResponseDto(
     booking: BookingWithDetail,
     bookingCount: number,
+    bookingCountThisYear: number,
+    hasTireSetsInDepot: boolean,
+    lastVisitAt: Date | null = null,
+    upcomingCount = 0,
+    avgRating: number | null = null,
   ): BookingDetailResponseDto {
     const { client, vehicle } = booking;
     const fullName = [client.firstName, client.lastName].filter(Boolean).join(' ').trim();
@@ -102,6 +124,11 @@ export class BookingsService {
         clientName,
         clientPhone: client.phone,
         bookingCount,
+        bookingCountThisYear,
+        lastVisitAt: lastVisitAt?.toISOString() ?? null,
+        upcomingCount,
+        avgRating,
+        clientSince: client.createdAt.getFullYear(),
       },
       vehicle: vehicle
         ? {
@@ -114,18 +141,32 @@ export class BookingsService {
       addressCity: booking.addressCity ?? null,
       addressLat: booking.addressLat != null ? Number(booking.addressLat) : null,
       addressLng: booking.addressLng != null ? Number(booking.addressLng) : null,
-      tireSize: booking.tireSize ?? null,
-      serviceType: booking.serviceType ?? null,
-      sizeTier: booking.sizeTier ?? null,
-      tpmsRequired: booking.tpmsRequired,
+      service: {
+        name: booking.serviceName ?? null,
+        tireSize: booking.tireSize ?? null,
+        subServices:
+          (
+            booking.serviceDetails as {
+              subServices?: { name: string; pricePln: number | null }[];
+            } | null
+          )?.subServices ?? [],
+      },
       basePricePln: booking.basePricePln != null ? Number(booking.basePricePln) : null,
       travelFeePln: booking.travelFeePln != null ? Number(booking.travelFeePln) : null,
       totalPricePln: booking.totalPricePln != null ? Number(booking.totalPricePln) : null,
       stationId: booking.stationId ?? null,
+      stationName: booking.station?.name ?? null,
+      workerId: booking.workerId ?? null,
+      workerName: booking.worker?.name ?? null,
       notes: booking.notes ?? null,
+      clientNote: booking.clientNote ?? null,
       rejectReason: booking.rejectReason ?? null,
       cancelReason: booking.cancelReason ?? null,
       isManual: booking.isManual,
+      isCustomService: booking.isCustomService,
+      customPricePln: booking.customPricePln != null ? Number(booking.customPricePln) : null,
+      customDurationMinutes: booking.customDurationMinutes ?? null,
+      hasTireSetsInDepot,
       createdAt: booking.createdAt.toISOString(),
       confirmedAt: booking.confirmedAt?.toISOString() ?? null,
       startedAt: booking.startedAt?.toISOString() ?? null,
@@ -136,25 +177,234 @@ export class BookingsService {
 
   // ── create manual ─────────────────────────────────────────────────────────
 
+  private async validateManualSlot(
+    providerId: string,
+    startAt: Date,
+    endAt: Date,
+    workerId?: string | null,
+  ): Promise<void> {
+    const dayOfWeek = startAt.getUTCDay();
+    const dateStr = startAt.toISOString().slice(0, 10);
+
+    const [stations, provider, exception] = await Promise.all([
+      this.prisma.station.findMany({ where: { providerId }, select: { schedule: true } }),
+      this.prisma.provider.findUnique({ where: { id: providerId } }),
+      this.prisma.scheduleException.findUnique({
+        where: { providerId_date: { providerId, date: new Date(dateStr) } },
+      }),
+    ]);
+
+    const isOpenDay = stations.some((s) =>
+      ((s.schedule as unknown as DaySchedule[]) ?? []).some(
+        (d) => d.dayOfWeek === dayOfWeek && d.open,
+      ),
+    );
+
+    if (exception) {
+      if (!exception.customOpenTime) {
+        throw new AppException(
+          ErrorCode.BOOKING_OUTSIDE_HOURS,
+          'Warsztat jest zamknięty w tym dniu (wyjątek kalendarzowy).',
+          422,
+        );
+      }
+    } else if (!isOpenDay) {
+      throw new AppException(
+        ErrorCode.BOOKING_OUTSIDE_HOURS,
+        'Warsztat jest zamknięty w tym dniu.',
+        422,
+      );
+    }
+
+    if (provider?.pausedUntil && provider.pausedUntil > new Date()) {
+      throw new AppException(ErrorCode.PROVIDER_PAUSED, 'Warsztat ma aktywną pauzę.', 422);
+    }
+
+    if (workerId) {
+      const [leave, tasks] = await Promise.all([
+        this.prisma.workerLeave.findFirst({
+          where: { workerId, startDate: { lte: startAt }, endDate: { gte: startAt } },
+        }),
+        this.workerTasksService.findActiveInRange(workerId, startAt, endAt),
+      ]);
+      if (leave)
+        throw new AppException(
+          ErrorCode.WORKER_ON_LEAVE,
+          'Pracownik jest nieobecny w tym dniu.',
+          422,
+        );
+      if (tasks.length > 0)
+        throw new AppException(
+          ErrorCode.WORKER_ON_LEAVE,
+          'Pracownik ma zaplanowane zadanie w tym czasie.',
+          422,
+        );
+    }
+  }
+
+  // ── version helpers ───────────────────────────────────────────────────────
+
+  private async computeDayVersion(providerId: string, date: Date): Promise<string> {
+    const dayStart = new Date(
+      Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()),
+    );
+    const dayEnd = new Date(
+      Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate() + 1),
+    );
+    const bookings = await this.prisma.booking.findMany({
+      where: {
+        providerId,
+        startAt: { gte: dayStart, lt: dayEnd },
+        status: { notIn: [...INACTIVE_STATUSES] },
+      },
+      select: { id: true, startAt: true },
+      orderBy: { startAt: 'asc' },
+    });
+    const input = bookings.map((b) => `${b.id}:${b.startAt.toISOString()}`).join('|');
+    return createHash('sha256').update(input).digest('hex').slice(0, 8);
+  }
+
+  private async getWorkstationCapacity(
+    providerId: string,
+    date: Date,
+    stationId?: string | null,
+  ): Promise<number> {
+    const dayOfWeek = date.getUTCDay();
+    const where = stationId ? { id: stationId, providerId } : { providerId };
+    const stations = await this.prisma.station.findMany({
+      where,
+      select: { schedule: true },
+    });
+    const openEntries = stations
+      .flatMap((s) => (s.schedule as unknown as DaySchedule[]) ?? [])
+      .filter((d) => d.dayOfWeek === dayOfWeek && d.open);
+    return openEntries.length || 1;
+  }
+
   async createManual(providerId: string, dto: CreateManualBookingDto): Promise<BookingResponseDto> {
+    const startAt = new Date(dto.startAt);
+    const endAt = new Date(dto.endAt);
+
+    if (!dto.skipAvailabilityCheck) {
+      await this.validateManualSlot(providerId, startAt, endAt, dto.workerId);
+    }
+
     const status = dto.autoConfirm !== false ? BookingStatus.CONFIRMED : BookingStatus.PENDING;
     const confirmedAt = status === BookingStatus.CONFIRMED ? new Date() : null;
 
-    const booking = await this.bookingsRepository.createManual({
+    const data: ManualBookingData = {
       clientPhone: dto.clientPhone,
       clientName: dto.clientName,
       providerId,
-      startAt: new Date(dto.startAt),
-      endAt: new Date(dto.endAt),
+      startAt,
+      endAt,
       tireSize: dto.tireSize ?? null,
       totalPricePln: dto.totalPricePln ?? null,
-      serviceType: dto.serviceType ?? null,
+      serviceName: dto.serviceName ?? null,
+      serviceDetails:
+        dto.subServices && dto.subServices.length > 0
+          ? {
+              subServices: dto.subServices.map((s) => ({
+                name: s.name,
+                pricePln: s.pricePln ?? null,
+              })),
+            }
+          : null,
       notes: dto.notes ?? null,
       status,
       confirmedAt,
       workerId: dto.workerId ?? null,
       stationId: dto.stationId ?? null,
-    });
+      isCustomService: dto.isCustomService ?? false,
+      customPricePln: dto.customPricePln ?? null,
+      customDurationMinutes: dto.customDurationMinutes ?? null,
+    };
+
+    if (dto.skipAvailabilityCheck) {
+      // Receptionist explicitly overrides — skip all concurrency guards
+      const booking = await this.bookingsRepository.createManual(data);
+      this.eventEmitter.emit(
+        BookingCreatedEvent.EVENT,
+        new BookingCreatedEvent(
+          providerId,
+          booking.id,
+          booking.referenceCode,
+          this.getWeekStart(booking.startAt),
+        ),
+      );
+      return this.toResponseDto(booking);
+    }
+
+    // ── Layer 3: fast version check (before DB transaction) ──────────────────
+    if (dto.availabilityVersion) {
+      const currentVersion = await this.computeDayVersion(providerId, startAt);
+      if (currentVersion !== dto.availabilityVersion) {
+        throw new AppException(
+          ErrorCode.BOOKING_VERSION_MISMATCH,
+          'Dostępność zmieniła się od ostatniego sprawdzenia.',
+          409,
+        );
+      }
+    }
+
+    // ── Layer 1: serializable transaction — atomic capacity check + insert ───
+    const capacity = await this.getWorkstationCapacity(providerId, startAt, dto.stationId);
+
+    let booking: Awaited<ReturnType<typeof this.bookingsRepository.createManualTx>>;
+    try {
+      booking = await this.prisma.$transaction(
+        async (tx) => {
+          // Provider-level capacity: count all overlapping active bookings
+          const overlap = await tx.booking.count({
+            where: {
+              providerId,
+              startAt: { lt: endAt },
+              endAt: { gt: startAt },
+              status: { notIn: [...INACTIVE_STATUSES] },
+            },
+          });
+          if (overlap >= capacity) {
+            throw new AppException(
+              ErrorCode.BOOKING_SLOT_TAKEN,
+              'Termin jest już zajęty — pojemność stanowisk wyczerpana.',
+              409,
+            );
+          }
+
+          // Per-worker uniqueness: if worker specified, must have no overlap
+          if (dto.workerId) {
+            const workerOverlap = await tx.booking.count({
+              where: {
+                workerId: dto.workerId,
+                startAt: { lt: endAt },
+                endAt: { gt: startAt },
+                status: { notIn: [...INACTIVE_STATUSES] },
+              },
+            });
+            if (workerOverlap > 0) {
+              throw new AppException(
+                ErrorCode.BOOKING_SLOT_TAKEN,
+                'Pracownik ma już rezerwację w tym czasie.',
+                409,
+              );
+            }
+          }
+
+          return this.bookingsRepository.createManualTx(tx, data);
+        },
+        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+      );
+    } catch (err) {
+      // P2034 = PostgreSQL serialization failure (40001) — two concurrent txs raced
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2034') {
+        throw new AppException(
+          ErrorCode.BOOKING_SLOT_TAKEN,
+          'Termin właśnie zajęty przez inną rezerwację — spróbuj ponownie.',
+          409,
+        );
+      }
+      throw err;
+    }
 
     this.eventEmitter.emit(
       BookingCreatedEvent.EVENT,
@@ -169,6 +419,63 @@ export class BookingsService {
     return this.toResponseDto(booking);
   }
 
+  // ── reschedule ────────────────────────────────────────────────────────────
+
+  async reschedule(
+    providerId: string,
+    referenceCode: string,
+    dto: RescheduleBookingDto,
+  ): Promise<BookingResponseDto> {
+    const existing = await this.bookingsRepository.findDetailByReferenceCode(
+      providerId,
+      referenceCode,
+    );
+
+    if (!existing) {
+      throw new AppException(ErrorCode.BOOKING_NOT_FOUND, 'Rezerwacja nie istnieje.', 404);
+    }
+
+    const reschedulableStatuses: BookingStatus[] = [
+      BookingStatus.PENDING,
+      BookingStatus.CONFIRMED,
+      BookingStatus.IN_PROGRESS,
+    ];
+    if (!reschedulableStatuses.includes(existing.status)) {
+      throw new AppException(
+        ErrorCode.VALIDATION_ERROR,
+        'Rezerwacja w tym statusie nie może być przeniesiona.',
+        422,
+      );
+    }
+
+    const oldWeekStart = this.getWeekStart(existing.startAt);
+    const newStartAt = new Date(dto.startAt);
+    const newEndAt = new Date(dto.endAt);
+
+    const updated = await this.bookingsRepository.rescheduleBooking(
+      existing.id,
+      providerId,
+      newStartAt,
+      newEndAt,
+    );
+
+    this.eventEmitter.emit(
+      BookingRescheduledEvent.EVENT,
+      new BookingRescheduledEvent(
+        providerId,
+        existing.id,
+        referenceCode,
+        oldWeekStart,
+        this.getWeekStart(newStartAt),
+        dto.notifyClient ?? false,
+        existing.client.phone,
+        dto.startAt,
+      ),
+    );
+
+    return this.toResponseDto(updated);
+  }
+
   // ── get detail ────────────────────────────────────────────────────────────
 
   async getDetail(providerId: string, referenceCode: string): Promise<BookingDetailResponseDto> {
@@ -181,12 +488,77 @@ export class BookingsService {
       throw new AppException(ErrorCode.BOOKING_NOT_FOUND, 'Rezerwacja nie istnieje.', 404);
     }
 
-    const bookingCount = await this.bookingsRepository.countClientBookings(
-      booking.clientId,
-      providerId,
-    );
+    const [
+      bookingCount,
+      bookingCountThisYear,
+      tireSetCount,
+      lastVisitAt,
+      upcomingCount,
+      avgRating,
+    ] = await Promise.all([
+      this.bookingsRepository.countClientBookings(booking.clientId, providerId),
+      this.bookingsRepository.countClientBookingsThisYear(booking.clientId, providerId),
+      this.bookingsRepository.countTireSetsForBooking(booking.id, providerId),
+      this.bookingsRepository.getClientLastVisitAt(booking.clientId, providerId),
+      this.bookingsRepository.countClientUpcomingBookings(booking.clientId, providerId, booking.id),
+      this.bookingsRepository.getClientAvgRating(booking.clientId, providerId),
+    ]);
 
-    return this.toDetailResponseDto(booking, bookingCount);
+    return this.toDetailResponseDto(
+      booking,
+      bookingCount,
+      bookingCountThisYear,
+      tireSetCount > 0,
+      lastVisitAt,
+      upcomingCount,
+      avgRating,
+    );
+  }
+
+  // ── update notes ─────────────────────────────────────────────────────────
+
+  async updateNotes(
+    providerId: string,
+    referenceCode: string,
+    notes: string | null,
+  ): Promise<void> {
+    const booking = await this.bookingsRepository.findDetailByReferenceCode(
+      providerId,
+      referenceCode,
+    );
+    if (!booking) {
+      throw new AppException(ErrorCode.BOOKING_NOT_FOUND, 'Rezerwacja nie istnieje.', 404);
+    }
+    await this.bookingsRepository.updateNotes(booking.id, providerId, notes);
+  }
+
+  // ── edit booking (price / services / clientNote) ─────────────────────────
+
+  async editBooking(providerId: string, referenceCode: string, dto: EditBookingDto): Promise<void> {
+    const booking = await this.bookingsRepository.findDetailByReferenceCode(
+      providerId,
+      referenceCode,
+    );
+    if (!booking) {
+      throw new AppException(ErrorCode.BOOKING_NOT_FOUND, 'Rezerwacja nie istnieje.', 404);
+    }
+    const editableStatuses: BookingStatus[] = [
+      BookingStatus.PENDING,
+      BookingStatus.CONFIRMED,
+      BookingStatus.IN_PROGRESS,
+    ];
+    if (!editableStatuses.includes(booking.status)) {
+      throw new AppException(
+        ErrorCode.BOOKING_INVALID_STATUS,
+        'Nie można edytować zakończonej rezerwacji.',
+        422,
+      );
+    }
+    await this.bookingsRepository.updateBookingEdit(booking.id, providerId, {
+      totalPricePln: dto.totalPricePln,
+      subServices: dto.subServices,
+      clientNote: dto.clientNote,
+    });
   }
 
   // ── update status ─────────────────────────────────────────────────────────
@@ -249,6 +621,7 @@ export class BookingsService {
 
     await this.bookingsRepository.updateStatus(
       booking.id,
+      providerId,
       newStatus,
       timestamps,
       dto.reason,
@@ -366,6 +739,14 @@ export class BookingsService {
     );
   }
 
+  // ── client search ─────────────────────────────────────────────────────────
+
+  async searchClients(providerId: string, q: string): Promise<{ phone: string; name: string }[]> {
+    const clean = q.trim();
+    if (clean.length < 2) return [];
+    return this.bookingsRepository.searchClients(providerId, clean);
+  }
+
   // ── availability ──────────────────────────────────────────────────────────
 
   async getAvailability(
@@ -376,37 +757,62 @@ export class BookingsService {
     // dayOfWeek: 0=Sun…6=Sat
     const dayOfWeek = parsedDate.getUTCDay();
 
-    // Fetch working hours for this day
-    const workingHours = await this.prisma.workingHours.findUnique({
-      where: { providerId_dayOfWeek: { providerId, dayOfWeek } },
-    });
+    const stationsWhere = query.stationId ? { id: query.stationId, providerId } : { providerId };
 
-    // Fetch schedule exception for this date
-    const exception = await this.prisma.scheduleException.findUnique({
-      where: { providerId_date: { providerId, date: parsedDate } },
-    });
+    const [stations, providerData, exception] = await Promise.all([
+      this.prisma.station.findMany({ where: stationsWhere, select: { schedule: true } }),
+      this.prisma.provider.findUnique({ where: { id: providerId } }),
+      this.prisma.scheduleException.findUnique({
+        where: { providerId_date: { providerId, date: parsedDate } },
+      }),
+    ]);
+
+    const SLOT_MINUTES = 45;
+
+    const pausedUntil = (providerData as unknown as { pausedUntil?: Date | null })?.pausedUntil;
+    if (pausedUntil && pausedUntil > new Date()) {
+      return { slots: [], slotMinutes: SLOT_MINUTES, isClosedDay: true, version: '' };
+    }
 
     // If exception exists with no custom open time → closed day
     if (exception && !exception.customOpenTime) {
-      return { slots: [], slotMinutes: 0, isClosedDay: true };
+      return { slots: [], slotMinutes: 0, isClosedDay: true, version: '' };
     }
 
-    // If no working hours at all or marked closed (and no exception override)
-    if (!workingHours || (workingHours.isClosed && !exception?.customOpenTime)) {
-      return { slots: [], slotMinutes: 0, isClosedDay: true };
+    // Collect schedule entries for this day across all queried stations
+    const openEntries = stations
+      .flatMap((s) => (s.schedule as unknown as DaySchedule[]) ?? [])
+      .filter((d) => d.dayOfWeek === dayOfWeek && d.open);
+
+    if (!exception?.customOpenTime && openEntries.length === 0) {
+      return { slots: [], slotMinutes: 0, isClosedDay: true, version: '' };
     }
 
     // Determine effective open/close times
-    const openTimeRaw = exception?.customOpenTime ?? workingHours.openTime;
-    const closeTimeRaw = exception?.customCloseTime ?? workingHours.closeTime;
-    const slotMinutes = workingHours.slotMinutes;
-    const workstations = workingHours.workstations ?? 1;
+    let openHour: number;
+    let openMin: number;
+    let closeHour: number;
+    let closeMin: number;
 
-    // Extract HH:MM from stored DateTime (Time type stored as 1970-01-01THH:MM:SS.000Z)
-    const openHour = openTimeRaw.getUTCHours();
-    const openMin = openTimeRaw.getUTCMinutes();
-    const closeHour = closeTimeRaw.getUTCHours();
-    const closeMin = closeTimeRaw.getUTCMinutes();
+    if (exception?.customOpenTime) {
+      // Exception overrides: Prisma Time stored as 1970-01-01THH:MM:SS.000Z
+      openHour = (exception.customOpenTime as unknown as Date).getUTCHours();
+      openMin = (exception.customOpenTime as unknown as Date).getUTCMinutes();
+      closeHour = (exception.customCloseTime as unknown as Date).getUTCHours();
+      closeMin = (exception.customCloseTime as unknown as Date).getUTCMinutes();
+    } else {
+      // Earliest start / latest end across all open stations
+      const earliest = openEntries.reduce((a, b) => (a.startTime < b.startTime ? a : b));
+      const latest = openEntries.reduce((a, b) => (a.endTime > b.endTime ? a : b));
+      openHour = Number(earliest.startTime.split(':')[0]);
+      openMin = Number(earliest.startTime.split(':')[1]);
+      closeHour = Number(latest.endTime.split(':')[0]);
+      closeMin = Number(latest.endTime.split(':')[1]);
+    }
+
+    const slotMinutes = SLOT_MINUTES;
+    // Capacity = number of stations open on this day (or 1 if driven by exception only)
+    const workstations = openEntries.length || 1;
 
     // Build slot boundaries as full ISO strings for the given date (UTC)
     const dayStart = new Date(
@@ -467,6 +873,30 @@ export class BookingsService {
       workerOnLeave = !!leave;
     }
 
+    // Check station-level leave: if all assigned workers are on leave → block all slots
+    let stationAllWorkersOnLeave = false;
+    if (query.stationId) {
+      // Include station: { providerId } to enforce provider ownership silently
+      const stationWorkers = await this.prisma.stationWorker.findMany({
+        where: { stationId: query.stationId, station: { providerId } },
+        select: { workerId: true },
+      });
+      if (stationWorkers.length > 0) {
+        const workerIds = stationWorkers.map((sw) => sw.workerId);
+        // Use distinct to count unique workers on leave (one worker may have multiple leave records)
+        const workersOnLeave = await this.prisma.workerLeave.findMany({
+          where: {
+            workerId: { in: workerIds },
+            startDate: { lte: parsedDate },
+            endDate: { gte: parsedDate },
+          },
+          select: { workerId: true },
+          distinct: ['workerId'],
+        });
+        stationAllWorkersOnLeave = workersOnLeave.length >= stationWorkers.length;
+      }
+    }
+
     // Check worker task conflicts if workerId provided
     let workerTaskConflicts: { startAt: Date; endAt: Date }[] = [];
     if (query.workerId) {
@@ -513,7 +943,11 @@ export class BookingsService {
         (t) => t.startAt < slotEnd && t.endAt > slotStart,
       );
 
-      const isAvailable = !workerOnLeave && !taskConflict && conflictCount < workstations;
+      const isAvailable =
+        !workerOnLeave &&
+        !taskConflict &&
+        !stationAllWorkersOnLeave &&
+        conflictCount < workstations;
 
       slots.push({
         startAt: slotStart.toISOString(),
@@ -525,6 +959,18 @@ export class BookingsService {
       cursor += slotMs;
     }
 
-    return { slots, slotMinutes, isClosedDay: false };
+    const version = await this.computeDayVersion(providerId, parsedDate);
+
+    return { slots, slotMinutes, isClosedDay: false, version };
+  }
+
+  // ── custom service autocomplete ───────────────────────────────────────────
+
+  async getCustomServiceSuggestions(
+    providerId: string,
+    q: string,
+  ): Promise<CustomServiceSuggestionDto[]> {
+    const clean = q.trim();
+    return this.bookingsRepository.getCustomServiceSuggestions(providerId, clean);
   }
 }

@@ -3,11 +3,11 @@ import { ProviderType } from '@prisma/client';
 import {
   IsArray,
   IsBoolean,
-  IsEmail,
   IsEnum,
   IsInt,
   IsLatitude,
   IsLongitude,
+  IsNumber,
   IsOptional,
   IsString,
   IsUrl,
@@ -40,12 +40,6 @@ export class UpdateProviderDto {
   @IsOptional()
   @Matches(/^\+\d{7,15}$/, { message: 'Nieprawidłowy numer telefonu' })
   phone?: string;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsEmail()
-  @MaxLength(254)
-  email?: string;
 
   @ApiPropertyOptional({ description: 'Szerokość geogr. centrum operacji (mobilni)' })
   @IsOptional()
@@ -110,4 +104,22 @@ export class UpdateProviderDto {
   @IsArray()
   @IsString({ each: true })
   additionalServices?: string[];
+
+  @ApiPropertyOptional({ description: 'Dopłata TPMS per sensor (PLN)', minimum: 0 })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  tpmsPricePln?: number;
+
+  @ApiPropertyOptional({ description: 'Opłata dojazd strefa 1: 0–10 km (PLN)', minimum: 0 })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  travelFeeZone1Pln?: number;
+
+  @ApiPropertyOptional({ description: 'Opłata dojazd strefa 2: 10–15 km (PLN)', minimum: 0 })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  travelFeeZone2Pln?: number;
 }

@@ -19,10 +19,12 @@ export function Toggle({
   error,
   id,
   disabled,
+  checked,
   className,
   ...props
 }: ToggleProps) {
   const toggleId = id ?? (label ? `toggle-${label.toLowerCase().replace(/\s+/g, '-')}` : undefined);
+  const isOn = Boolean(checked);
 
   return (
     <div className={[styles.wrapper, disabled ? styles.disabled : null].filter(Boolean).join(' ')}>
@@ -33,10 +35,17 @@ export function Toggle({
           role="switch"
           className={styles.input}
           disabled={disabled}
+          checked={checked}
           {...props}
         />
         <span
-          className={[styles.track, styles[size], error ? styles.error : null, className]
+          className={[
+            styles.track,
+            styles[size],
+            isOn ? styles.on : null,
+            error ? styles.error : null,
+            className,
+          ]
             .filter(Boolean)
             .join(' ')}
           aria-hidden="true"

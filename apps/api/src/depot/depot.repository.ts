@@ -1,0 +1,298 @@
+import { Injectable } from '@nestjs/common';
+import { Prisma, TireCondition, TireSetStatus, TireType } from '@prisma/client';
+import { PrismaService } from '../prisma/prisma.service';
+
+type TireSetWithRelations = Prisma.TireSetGetPayload<{
+  include: {
+    client: { select: { id: true; phone: true; firstName: true; lastName: true } };
+    slot: { select: { section: true; row: true; position: true; label: true } };
+    periods: { orderBy: { storedAt: 'desc' }; take: 1 };
+  };
+}>;
+
+type TireSetDetail = Prisma.TireSetGetPayload<{
+  include: {
+    client: { select: { id: true; phone: true; firstName: true; lastName: true } };
+    slot: { select: { section: true; row: true; position: true; label: true } };
+    periods: { orderBy: { storedAt: 'desc' } };
+  };
+}>;
+
+@Injectable()
+export class DepotRepository {
+  constructor(private readonly prisma: PrismaService) {}
+
+  private splitName(fullName: string): { firstName: string; lastName: string | null } {
+    const parts = fullName.trim().split(/\s+/);
+    const firstName = parts[0] ?? fullName;
+    const lastName = parts.slice(1).join(' ') || null;
+    return { firstName, lastName };
+  }
+
+  private clientInclude = {
+    client: { select: { id: true, phone: true, firstName: true, lastName: true } },
+  } as const;
+
+  async findMany(
+    providerId: string,
+    opts: { status?: TireSetStatus; search?: string; page: number; pageSize: number },
+  ): Promise<{ items: TireSetWithRelations[]; total: number }> {
+    const where: Prisma.TireSetWhereInput = {
+      providerId,
+      ...(opts.status ? { status: opts.status } : {}),
+      ...(opts.search
+        ? {
+            OR: [
+              { client: { firstName: { contains: opts.search, mode: 'insensitive' } } },
+              { client: { lastName: { contains: opts.search, mode: 'insensitive' } } },
+              { client: { phone: { contains: opts.search } } },
+              { licensePlate: { contains: opts.search, mode: 'insensitive' } },
+            ],
+          }
+        : {}),
+    };
+
+    const include = {
+      ...this.clientInclude,
+      slot: { select: { section: true, row: true, position: true, label: true } },
+      periods: { orderBy: { storedAt: 'desc' as const }, take: 1 },
+    };
+
+    const [items, total] = await this.prisma.$transaction([
+      this.prisma.tireSet.findMany({
+        where,
+        include,
+        orderBy: { createdAt: 'desc' },
+        skip: (opts.page - 1) * opts.pageSize,
+        take: opts.pageSize,
+      }),
+      this.prisma.tireSet.count({ where }),
+    ]);
+
+    return { items, total };
+  }
+
+  findById(providerId: string, id: string): Promise<TireSetDetail | null> {
+    return this.prisma.tireSet.findFirst({
+      where: { id, providerId },
+      include: {
+        ...this.clientInclude,
+        slot: { select: { section: true, row: true, position: true, label: true } },
+        periods: { orderBy: { storedAt: 'desc' } },
+      },
+    });
+  }
+
+  async create(data: {
+    providerId: string;
+    clientPhone: string;
+    clientName: string;
+    vehicleName?: string;
+    licensePlate?: string;
+    brand?: string;
+    model?: string;
+    tireSize: string;
+    tireType: TireType;
+    isOnRims: boolean;
+    dotCode?: string;
+    treadDepthMm?: number;
+    slotId?: string;
+    storagePricePln?: number;
+    storedAt?: Date;
+    releaseDue?: Date;
+    sourceBookingId?: string;
+    notes?: string;
+  }): Promise<TireSetDetail> {
+    const { firstName, lastName } = this.splitName(data.clientName);
+    const client = await this.prisma.client.upsert({
+      where: { providerId_phone: { providerId: data.providerId, phone: data.clientPhone } },
+      create: { providerId: data.providerId, phone: data.clientPhone, firstName, lastName },
+      update: {},
+      select: { id: true },
+    });
+
+    return this.prisma.tireSet.create({
+      data: {
+        providerId: data.providerId,
+        clientId: client.id,
+        vehicleName: data.vehicleName ?? null,
+        licensePlate: data.licensePlate ?? null,
+        brand: data.brand ?? null,
+        model: data.model ?? null,
+        tireSize: data.tireSize,
+        tireType: data.tireType,
+        isOnRims: data.isOnRims,
+        dotCode: data.dotCode ?? null,
+        treadDepthMm: data.treadDepthMm ?? null,
+        slotId: data.slotId ?? null,
+        storagePricePln: data.storagePricePln ?? null,
+        sourceBookingId: data.sourceBookingId ?? null,
+        notes: data.notes ?? null,
+        status: TireSetStatus.IN_DEPOT,
+        periods: {
+          create: {
+            storedAt: data.storedAt ?? new Date(),
+            releaseDue: data.releaseDue ?? null,
+            pricePln: data.storagePricePln ?? null,
+          },
+        },
+      },
+      include: {
+        ...this.clientInclude,
+        slot: { select: { section: true, row: true, position: true, label: true } },
+        periods: { orderBy: { storedAt: 'desc' } },
+      },
+    });
+  }
+
+  async update(
+    providerId: string,
+    id: string,
+    data: {
+      vehicleName?: string | null;
+      licensePlate?: string | null;
+      brand?: string | null;
+      model?: string | null;
+      tireSize?: string;
+      tireType?: TireType;
+      isOnRims?: boolean;
+      dotCode?: string | null;
+      treadDepthMm?: number | null;
+      condition?: TireCondition;
+      slotId?: string | null;
+      storagePricePln?: number | null;
+      notes?: string | null;
+    },
+  ): Promise<TireSetDetail> {
+    return this.prisma.tireSet.update({
+      where: { id, providerId },
+      data,
+      include: {
+        ...this.clientInclude,
+        slot: { select: { section: true, row: true, position: true, label: true } },
+        periods: { orderBy: { storedAt: 'desc' } },
+      },
+    });
+  }
+
+  async pickup(providerId: string, id: string): Promise<TireSetDetail> {
+    const now = new Date();
+
+    await this.prisma.storagePeriod.updateMany({
+      where: { tireSetId: id, pickedUpAt: null, tireSet: { providerId } },
+      data: { pickedUpAt: now },
+    });
+
+    return this.prisma.tireSet.update({
+      where: { id, providerId },
+      data: { status: TireSetStatus.PICKED_UP, slotId: null },
+      include: {
+        ...this.clientInclude,
+        slot: { select: { section: true, row: true, position: true, label: true } },
+        periods: { orderBy: { storedAt: 'desc' } },
+      },
+    });
+  }
+
+  async store(
+    providerId: string,
+    id: string,
+    data: { storedAt?: Date; releaseDue?: Date; pricePln?: number; notes?: string },
+  ): Promise<TireSetDetail> {
+    return this.prisma.tireSet.update({
+      where: { id, providerId },
+      data: {
+        status: TireSetStatus.IN_DEPOT,
+        periods: {
+          create: {
+            storedAt: data.storedAt ?? new Date(),
+            releaseDue: data.releaseDue ?? null,
+            pricePln: data.pricePln ?? null,
+            notes: data.notes ?? null,
+          },
+        },
+      },
+      include: {
+        ...this.clientInclude,
+        slot: { select: { section: true, row: true, position: true, label: true } },
+        periods: { orderBy: { storedAt: 'desc' } },
+      },
+    });
+  }
+
+  async remove(providerId: string, id: string): Promise<void> {
+    await this.prisma.tireSet.delete({ where: { id, providerId } });
+  }
+
+  async getStats(
+    providerId: string,
+  ): Promise<{ inDepot: number; dueSoon: number; revenueMonth: number }> {
+    const now = new Date();
+    const in30Days = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+
+    const [inDepot, dueSoon, revenueAgg] = await this.prisma.$transaction([
+      this.prisma.tireSet.count({ where: { providerId, status: TireSetStatus.IN_DEPOT } }),
+      this.prisma.storagePeriod.count({
+        where: {
+          tireSet: { providerId },
+          pickedUpAt: null,
+          releaseDue: { lte: in30Days, gte: now },
+        },
+      }),
+      this.prisma.storagePeriod.aggregate({
+        where: {
+          tireSet: { providerId },
+          storedAt: { gte: monthStart, lte: monthEnd },
+        },
+        _sum: { pricePln: true },
+      }),
+    ]);
+
+    return {
+      inDepot,
+      dueSoon,
+      revenueMonth: Number(revenueAgg._sum.pricePln ?? 0),
+    };
+  }
+
+  // ── Slots ────────────────────────────────────────────────────────────────────
+
+  async findSlots(providerId: string) {
+    return this.prisma.depotSlot.findMany({
+      where: { providerId },
+      include: {
+        tireSets: {
+          where: { status: TireSetStatus.IN_DEPOT },
+          select: {
+            id: true,
+            client: { select: { firstName: true, lastName: true } },
+          },
+        },
+      },
+      orderBy: [{ section: 'asc' }, { row: 'asc' }, { position: 'asc' }],
+    });
+  }
+
+  async bulkCreateSlots(
+    providerId: string,
+    section: string,
+    rowFrom: number,
+    rowTo: number,
+    positionsPerRow: number,
+  ) {
+    const data: Prisma.DepotSlotCreateManyInput[] = [];
+    for (let row = rowFrom; row <= rowTo; row++) {
+      for (let position = 1; position <= positionsPerRow; position++) {
+        data.push({ providerId, section, row, position });
+      }
+    }
+    await this.prisma.depotSlot.createMany({ data, skipDuplicates: true });
+    return this.findSlots(providerId);
+  }
+
+  async removeSlot(providerId: string, slotId: string): Promise<void> {
+    await this.prisma.depotSlot.delete({ where: { id: slotId, providerId } });
+  }
+}

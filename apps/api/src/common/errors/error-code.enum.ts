@@ -12,6 +12,8 @@ export enum ErrorCode {
   AUTH_SESSION_NOT_FOUND = 'AUTH_SESSION_NOT_FOUND',
   /** Sesja wygasła */
   AUTH_SESSION_EXPIRED = 'AUTH_SESSION_EXPIRED',
+  /** Próba unieważnienia bieżącej sesji przez endpoint sesji (użyj /logout) */
+  AUTH_SESSION_IS_CURRENT = 'AUTH_SESSION_IS_CURRENT',
   /** Wykryto ponowne użycie tokenu */
   AUTH_TOKEN_REUSE_DETECTED = 'AUTH_TOKEN_REUSE_DETECTED',
   /** Wykryto podejrzaną aktywność (hash mismatch) */
@@ -26,6 +28,14 @@ export enum ErrorCode {
   OTP_RATE_LIMIT_EXCEEDED = 'OTP_RATE_LIMIT_EXCEEDED',
   /** Nieprawidłowy lub wygasły kod OTP */
   OTP_INVALID_OR_EXPIRED = 'OTP_INVALID_OR_EXPIRED',
+  /** Nieprawidłowy lub wygasły kod OTP bieżącego numeru (zmiana telefonu) */
+  PHONE_OTP_CURRENT_INVALID = 'PHONE_OTP_CURRENT_INVALID',
+  /** Nieprawidłowy lub wygasły kod OTP nowego numeru (zmiana telefonu) */
+  PHONE_OTP_NEW_INVALID = 'PHONE_OTP_NEW_INVALID',
+  /** Nowy numer telefonu jest już przypisany do innego konta */
+  PHONE_ALREADY_IN_USE = 'PHONE_ALREADY_IN_USE',
+  /** Nieprawidłowy lub wygasły kod OTP zmiany adresu email */
+  EMAIL_CHANGE_OTP_INVALID = 'EMAIL_CHANGE_OTP_INVALID',
 
   // ── PROVIDER ──────────────────────────────────────────────────────────────
   /** Użytkownik ma już zarejestrowaną firmę */
@@ -40,6 +50,8 @@ export enum ErrorCode {
   PROVIDER_INVALID_STATUS = 'PROVIDER_INVALID_STATUS',
   /** Firma nie jest w stanie oczekującym na weryfikację (admin) */
   PROVIDER_NOT_PENDING_APPROVAL = 'PROVIDER_NOT_PENDING_APPROVAL',
+  /** Firma nie jest w stanie oczekującym na usunięcie (admin) */
+  PROVIDER_NOT_PENDING_DELETION = 'PROVIDER_NOT_PENDING_DELETION',
   /** Nie udało się zarejestrować firmy — błąd wewnętrzny */
   PROVIDER_CREATE_FAILED = 'PROVIDER_CREATE_FAILED',
 
@@ -96,6 +108,22 @@ export enum ErrorCode {
   // ── BOOKING ───────────────────────────────────────────────────────────────
   /** Rezerwacja nie istnieje */
   BOOKING_NOT_FOUND = 'BOOKING_NOT_FOUND',
+  /** Termin poza godzinami pracy warsztatu */
+  BOOKING_OUTSIDE_HOURS = 'BOOKING_OUTSIDE_HOURS',
+  /** Warsztat ma aktywną pauzę */
+  PROVIDER_PAUSED = 'PROVIDER_PAUSED',
+  /** Pracownik jest na urlopie */
+  WORKER_ON_LEAVE = 'WORKER_ON_LEAVE',
+  /** Termin zajęty — pojemność stanowisk wyczerpana lub pracownik niedostępny */
+  BOOKING_SLOT_TAKEN = 'BOOKING_SLOT_TAKEN',
+  /** Dostępność zmieniła się od ostatniego sprawdzenia (wersja nieaktualna) */
+  BOOKING_VERSION_MISMATCH = 'BOOKING_VERSION_MISMATCH',
+  /** Operacja niedozwolona dla bieżącego statusu rezerwacji */
+  BOOKING_INVALID_STATUS = 'BOOKING_INVALID_STATUS',
+
+  // ── IDEMPOTENCY ───────────────────────────────────────────────────────────
+  /** Ten sam klucz idempotentności użyty z innym ciałem żądania */
+  IDEMPOTENCY_CONFLICT = 'IDEMPOTENCY_CONFLICT',
 
   // ── REVIEW ────────────────────────────────────────────────────────────────
   /** Opinia nie istnieje lub brak dostępu */
@@ -106,6 +134,14 @@ export enum ErrorCode {
   VALIDATION_ERROR = 'VALIDATION_ERROR',
   /** Zasób nie znaleziony */
   NOT_FOUND = 'NOT_FOUND',
+
+  // ── DATA EXPORT ───────────────────────────────────────────────────────────
+  /** Wniosek o dane nie istnieje */
+  DATA_EXPORT_NOT_FOUND = 'DATA_EXPORT_NOT_FOUND',
+  /** Istnieje już oczekujący wniosek o dane */
+  DATA_EXPORT_ALREADY_PENDING = 'DATA_EXPORT_ALREADY_PENDING',
+  /** Wniosek o dane nie jest w oczekiwanym stanie (np. już COMPLETED) */
+  DATA_EXPORT_INVALID_STATUS = 'DATA_EXPORT_INVALID_STATUS',
 
   // ── INTERNAL ──────────────────────────────────────────────────────────────
   /** Wewnętrzny błąd serwera */

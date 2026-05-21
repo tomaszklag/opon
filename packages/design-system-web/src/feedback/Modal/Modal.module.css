@@ -25,12 +25,24 @@
   width: min(720px, 90vw);
 }
 
+.xl .panel {
+  width: min(980px, 96vw);
+}
+
+.xxl .panel {
+  width: min(1200px, 96vw);
+}
+
 .panel {
   background: var(--surface-raised);
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-lg);
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100dvh - 40px);
 }
 
 .header {
@@ -40,6 +52,11 @@
   padding: var(--space-5) var(--space-6);
   border-bottom: 1px solid var(--border);
   gap: var(--space-4);
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--surface-raised);
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
 }
 
 .title {
@@ -78,6 +95,7 @@
 
 .body {
   padding: var(--space-6);
+  flex: 1;
 }
 
 .footer {
@@ -88,6 +106,10 @@
   padding: var(--space-4) var(--space-6);
   border-top: 1px solid var(--border);
   background: var(--surface);
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  border-radius: 0 0 var(--radius-xl) var(--radius-xl);
 }
 
 @media (max-width: 480px) {

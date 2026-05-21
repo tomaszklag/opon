@@ -6,6 +6,7 @@ import { EmailVerificationService } from '../email/email-verification.service';
 import { AddPhotoDto } from './dto/add-photo.dto';
 import { CreateProviderDto } from './dto/create-provider.dto';
 import { ListProvidersQueryDto } from './dto/list-providers-query.dto';
+import { ProviderPauseResponseDto } from './dto/provider-pause-response.dto';
 import { ReorderPhotosDto } from './dto/reorder-photos.dto';
 import { UpdateProviderDto } from './dto/update-provider.dto';
 import { ProvidersRepository } from './providers.repository';
@@ -183,6 +184,57 @@ export class ProvidersService {
   async reorderPhotos(ownerId: string, dto: ReorderPhotosDto) {
     const provider = await this.getMyProvider(ownerId);
     await this.repo.reorderPhotos(provider.id, dto.orderedIds);
+  }
+
+  async setProviderPause(ownerId: string, until: string | null): Promise<ProviderPauseResponseDto> {
+    const provider = await this.repo.findByOwnerId(ownerId);
+    if (!provider) throw new AppException(ErrorCode.PROVIDER_NOT_FOUND, 'Brak firmy.', 404);
+    const pausedUntil = until ? new Date(until) : null;
+    await this.repo.setPause(provider.id, pausedUntil);
+    return { pausedUntil: pausedUntil?.toISOString() ?? null };
+  }
+
+  async selfSuspend(ownerId: string): Promise<{ status: string }> {
+    const provider = await this.repo.findByOwnerId(ownerId);
+    if (!provider) throw new AppException(ErrorCode.PROVIDER_NOT_FOUND, 'Brak firmy.', 404);
+    if (provider.status !== ProviderStatus.APPROVED)
+      throw new AppException(
+        ErrorCode.PROVIDER_INVALID_STATUS,
+        'Zawieszenie możliwe tylko dla aktywnych firm.',
+        400,
+      );
+    await this.repo.update(provider.id, { status: ProviderStatus.SUSPENDED });
+    return { status: 'SUSPENDED' };
+  }
+
+  async requestDeletion(ownerId: string): Promise<{ status: string }> {
+    const provider = await this.repo.findByOwnerId(ownerId);
+    if (!provider) throw new AppException(ErrorCode.PROVIDER_NOT_FOUND, 'Brak firmy.', 404);
+    if (provider.status !== ProviderStatus.APPROVED)
+      throw new AppException(
+        ErrorCode.PROVIDER_INVALID_STATUS,
+        'Wniosek o usunięcie możliwy tylko dla aktywnych firm.',
+        400,
+      );
+    await this.repo.update(provider.id, {
+      status: ProviderStatus.PENDING_DELETION,
+      deletionRequestedAt: new Date(),
+    });
+    return { status: 'PENDING_DELETION' };
+  }
+
+  async requestDataExport(ownerId: string): Promise<{ status: string; requestedAt: string }> {
+    const provider = await this.repo.findByOwnerId(ownerId);
+    if (!provider) throw new AppException(ErrorCode.PROVIDER_NOT_FOUND, 'Brak firmy.', 404);
+    const existing = await this.repo.findPendingDataExportRequest(provider.id);
+    if (existing)
+      throw new AppException(
+        ErrorCode.DATA_EXPORT_ALREADY_PENDING,
+        'Masz już złożony wniosek o dane. Skontaktuj się z administratorem.',
+        409,
+      );
+    const req = await this.repo.createDataExportRequest(provider.id);
+    return { status: 'PENDING', requestedAt: req.requestedAt.toISOString() };
   }
 
   /** Usuwa pola finansowe — używane przy publicznych endpointach. */

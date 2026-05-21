@@ -13,8 +13,7 @@
 /* ── Root grid ── */
 
 .root {
-  flex: 1;
-  min-height: 0;
+  height: 100%;
   overflow-y: auto;
   padding: 24px 28px 32px;
   display: grid;
@@ -137,16 +136,6 @@
   gap: 10px;
   padding-bottom: 12px;
   border-bottom: 1px dashed var(--border);
-}
-
-.cardKicker {
-  padding: 3px 7px;
-  border: 1px solid var(--border);
-  border-radius: 5px;
-  display: inline-flex;
-  align-items: center;
-  margin-left: auto;
-  flex-shrink: 0;
 }
 
 /* ── Timeline card ── */

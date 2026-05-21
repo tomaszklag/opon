@@ -79,15 +79,6 @@
   scrollbar-width: thin;
 }
 
-.formCol::-webkit-scrollbar {
-  width: 6px;
-}
-
-.formCol::-webkit-scrollbar-thumb {
-  background: var(--border);
-  border-radius: 3px;
-}
-
 /* ── Preview column ── */
 .previewCol {
   border-left: 1px solid var(--border);
@@ -118,14 +109,6 @@
   border-bottom: 1px dashed var(--border);
 }
 
-.secKicker {
-  text-transform: uppercase;
-  padding: 3px 7px;
-  border: 1px solid var(--border);
-  border-radius: 5px;
-  display: inline-flex;
-  align-items: center;
-}
 
 .secHint {
   margin-left: auto;

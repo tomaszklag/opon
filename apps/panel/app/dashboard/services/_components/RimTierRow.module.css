@@ -1,0 +1,180 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 6px 9px 8px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+}
+
+.mainRow {
+  display: grid;
+  grid-template-columns: 1fr auto auto auto;
+  align-items: center;
+  gap: 7px;
+}
+
+.addWheelBtn {
+  align-self: flex-start;
+  margin-left: 2px;
+  padding: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  opacity: 0.6;
+  transition: opacity var(--transition-fast), color var(--transition-fast);
+}
+
+.addWheelBtn:hover {
+  opacity: 1;
+  color: var(--accent);
+}
+
+.addWheelHint {
+  margin-left: 3px;
+  opacity: 0.7;
+}
+
+.wheelRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 2px;
+}
+
+.wheelLabel {
+  flex-shrink: 0;
+  width: 38px;
+}
+
+.clearWheelBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 3px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: var(--text-muted);
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.clearWheelBtn:hover {
+  background: var(--danger-muted);
+  color: var(--danger);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  align-items: center;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border-strong);
+}
+
+.chipX {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 11px;
+  height: 11px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-muted);
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+.chipX:hover {
+  background: var(--danger-muted);
+  color: var(--danger);
+}
+
+.chipAdd {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px dashed var(--border);
+  color: var(--text-muted);
+  background: transparent;
+  cursor: pointer;
+}
+
+.chipAdd:hover {
+  border-color: var(--accent-border);
+  color: var(--accent);
+}
+
+.addWrap {
+  position: relative;
+}
+
+.sizeDropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 100;
+  background: var(--surface-raised);
+  border: 1px solid var(--border-strong);
+  border-radius: 7px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3);
+  padding: 4px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2px;
+  min-width: 110px;
+}
+
+.sizeOption {
+  padding: 4px 6px;
+  border-radius: 4px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  text-align: center;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.sizeOption:hover {
+  background: var(--accent-muted);
+  color: var(--accent);
+}
+
+.delBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  border: 1px solid transparent;
+  background: transparent;
+  cursor: pointer;
+  color: var(--text-muted);
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.delBtn:hover {
+  border-color: var(--danger-border);
+  color: var(--danger);
+  background: var(--danger-muted);
+}

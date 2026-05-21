@@ -1,0 +1,7 @@
+.taskBtnWrap {
+  --accent: rgba(160, 120, 255, 0.9);
+  --accent-hover: rgba(170, 135, 255, 1);
+  --accent-border: rgba(140, 100, 240, 0.35);
+  --accent-muted: rgba(140, 100, 240, 0.1);
+  display: contents;
+}

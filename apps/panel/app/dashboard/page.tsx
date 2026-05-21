@@ -43,12 +43,6 @@ export default function DashboardPage() {
 
       <div className={styles.actionsGrid}>
         <ActionTile
-          title="Godziny pracy"
-          description="Ustaw dni i godziny, w których przyjmujesz klientów"
-          href="/dashboard/hours"
-          locked={locked}
-        />
-        <ActionTile
           title="Cennik"
           description="Zdefiniuj ceny wymiany opon według rozmiaru felgi"
           href="/dashboard/pricing"

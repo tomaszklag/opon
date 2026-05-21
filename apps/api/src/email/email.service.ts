@@ -6,6 +6,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import {
   accountApprovedTemplate,
   accountRejectedTemplate,
+  emailChangeOtpTemplate,
   emailVerificationTemplate,
   submissionReceivedTemplate,
 } from './templates/email.templates';
@@ -23,6 +24,17 @@ export class EmailService {
     const apiKey = this.config.get<string>('RESEND_API_KEY', '');
     this.resend = new Resend(apiKey);
     this.fromEmail = this.config.get<string>('RESEND_FROM_EMAIL', 'noreply@opony.app');
+  }
+
+  async sendEmailChangeOtp(providerId: string, to: string, code: string): Promise<void> {
+    const html = emailChangeOtpTemplate(code, to);
+    await this.sendAndLog(
+      providerId,
+      EmailType.EMAIL_CHANGE_OTP,
+      to,
+      `${code} — kod zmiany adresu email · Opony.app`,
+      html,
+    );
   }
 
   async sendEmailVerification(providerId: string, to: string, rawToken: string): Promise<void> {

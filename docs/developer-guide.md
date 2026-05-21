@@ -48,6 +48,30 @@ Zasady nazewnictwa:
 - **Tabela** → snake_case (mapowana przez `@@map`): `@@map("providers")`
 - **FK** → `providerId` (camelCase) odwołuje się do `Provider.id`
 
+### 2.1a. Konwencja wyrównania pól w modelu
+
+Pola wewnątrz modelu Prisma wyrównuj pionowo tak, żeby wszystkie typy i modyfikatory zaczynały się w tej samej kolumnie — wyznaczonej przez **najdłuższą nazwę pola + 1 spacja**. Komentarze `//` wyrównuj do tej samej kolumny (najdłuższe wyrażenie typowe + 1 spacja).
+
+```prisma
+// ✅ TAK — typy wyrównane do kolumny 27 (longest: "durationPerWheelMinutes" 23 + indent 2 + 1 = 27)
+model ServiceVariant {
+  id                      String   @id @default(uuid())
+  pricePln                Decimal  @db.Decimal(10, 2) // cena za komplet
+  durationMinutes         Int                         // czas dla kompletu
+  pricePerWheelPln        Decimal? @db.Decimal(10, 2) // null = pricePln / 4
+  durationPerWheelMinutes Int?                        // null = durationMinutes / 4
+}
+
+// ❌ NIE — nieregularne wcięcia, trudno porównać typy wzrokiem
+model ServiceVariant {
+  id String @id @default(uuid())
+  pricePln Decimal @db.Decimal(10, 2)
+  durationPerWheelMinutes Int?
+}
+```
+
+> **Dla reviewerów i agentów:** Wyrównanie zawsze liczy się **od początku linii** (łącznie z 2-spacjowym wcięciem). Pole `pricePln` (8 znaków) + 16 spacji = 24 znaki → typ na kolumnie 25 (1-indexed 27). Nie zmieniaj wyrównania jeśli wszystkie typy zaczynają się w tej samej kolumnie — nawet jeśli wizualnie wygląda na „zbyt dużo spacji".
+
 ### 2.2. Dodawanie nowego modelu — krok po kroku
 
 ```
@@ -81,10 +105,84 @@ Bezpośrednio:
 ```bash
 cd apps/api
 pnpm prisma migrate dev --name <nazwa>
+pnpm prisma migrate deploy    # aplikuje istniejące migracje bez tworzenia nowych (gdy plik SQL już istnieje)
 pnpm prisma generate          # regeneruj klienta bez migracji
 pnpm prisma migrate reset     # ⚠ resetuje bazę i aplikuje od nowa (dev only)
 pnpm prisma studio
 ```
+
+**Windows — EPERM przy `prisma generate`:**
+
+Na Windows `prisma generate` może zakończyć się błędem `EPERM: operation not permitted, rename ... query_engine-windows.dll.node`. Dzieje się tak gdy serwer API jest uruchomiony i trzyma blokadę na pliku DLL. **TypeScript typy (`.d.ts`) są jednak wygenerowane poprawnie** — tylko rename DLL failuje. Workaround: zatrzymaj API przed uruchomieniem `prisma generate`, lub po prostu zrestartuj serwer po migracji — pobierze nowe typy przy ponownym starcie.
+
+### 2.4. Typowanie include w repository — wzorzec `satisfies`
+
+Używanie `as const` na obiekcie `include` powoduje błędy TypeScript gdy include zawiera zagnieżdżone relacje (np. `linkedBooking.select.client`). `as const` produkuje typy `readonly`, które nie są assignowalne do Prisma's mutable include types.
+
+```ts
+// ❌ NIE — `as const` powoduje TS2322 przy zagnieżdżonych relacjach
+const myInclude = {
+  worker: { select: { name: true } },
+  linkedBooking: { select: { referenceCode: true } },
+} as const;
+
+// ✅ TAK — `satisfies` weryfikuje typ bez zawężania go do `readonly`
+import { Prisma } from '@prisma/client';
+
+const myInclude = {
+  worker: { select: { name: true } },
+  linkedBooking: {
+    select: {
+      referenceCode: true,
+      startAt: true,
+      client: { select: { firstName: true, lastName: true } },
+    } satisfies Prisma.BookingSelect,
+  },
+} satisfies Prisma.WorkerTaskInclude;
+```
+
+`satisfies` sprawdza zgodność z typem Prisma **w miejscu deklaracji**, zachowując precyzyjne wąskie typy dla inferencji zwracanych danych. Stosuj ten wzorzec dla wszystkich stałych `include` w repozytoriach.
+
+### 2.5. Model User — rola w systemie
+
+`User` (tabela `users`) to **wyłącznie tożsamość auth** — numer telefonu OTP, rola, sesje. Nie przechowuje danych biznesowych klienta warsztatu.
+
+**Dane biznesowe klienta (imię, nazwisko, notatki) trzyma model `Client` — patrz §25.**
+
+```prisma
+model User {
+  id        String    @id
+  phone     String    @unique
+  role      UserRole
+  firstName String?   @db.VarChar(100)   // opcjonalne — dane profilowe konta
+  lastName  String?   @db.VarChar(100)
+  // relacje: sessions, clients (Client.userId → User)
+}
+```
+
+Pola `firstName`/`lastName` na `User` to dane profilowe konta (wypełniane opcjonalnie przez użytkownika). Nie używaj ich do wyświetlania „klienta rezerwacji" — zamiast tego czytaj z `Client`:
+
+```ts
+// ✅ poprawnie — z relacji Client
+client: { select: { firstName: true, lastName: true, phone: true } }
+
+// ❌ błąd — User nie jest klientem warsztatu
+user: { select: { firstName: true, lastName: true } }
+```
+
+Składanie pełnej nazwy klienta (helper w serwisach):
+
+```ts
+function clientName(c: {
+  firstName: string | null;
+  lastName: string | null;
+  phone: string;
+}): string {
+  return [c.firstName, c.lastName].filter(Boolean).join(' ').trim() || c.phone;
+}
+```
+
+`clientName` **nie istnieje jako gotowe pole** w żadnej tabeli — zawsze składasz je z `firstName + lastName`.
 
 ---
 
@@ -102,6 +200,37 @@ pnpm --filter api dev   # lub pnpm dev
 pnpm generate:api-client
 # generuje: packages/api-client/src/schema.d.ts
 ```
+
+**Jeśli API nie jest uruchomione (np. sesja offline, brak bazy):** zaktualizuj `packages/api-client/src/schema.d.ts` ręcznie — plik jest zwykłym TypeScriptem, commitowanym do repo. Wzorzec edycji jest identyczny z tym co generator by wyprodukował:
+
+```diff
+// Nowe pole opcjonalne w istniejącym DTO
+  ProviderResponseDto: {
+    ...
++   /** Format: date-time */
++   deletionRequestedAt?: string | null;
+    updatedAt: string;
+  }
+
+// Nowa wartość enuma w istniejącym union
+  status:
+    | 'APPROVED'
++   | 'PENDING_DELETION';
+```
+
+**Regułą jest:** każda zmiana w `*ResponseDto` po stronie backendu wymaga odpowiedniej zmiany w `schema.d.ts` — albo przez generator, albo ręcznie. Brak synchronizacji skutkuje brakującymi polami w typach FE bez żadnego błędu kompilacji (pole po prostu nie istnieje w typie).
+
+**Windows — fallback gdy `pnpm generate:api-client` nie działa (brak `/dev/stdin`):**
+
+```powershell
+# 1. Pobierz spec do pliku
+Invoke-WebRequest http://localhost:4000/v1/docs-json -OutFile C:\Temp\spec.json
+
+# 2. Wygeneruj schema z pliku
+npx openapi-typescript C:\Temp\spec.json -o packages/api-client/src/schema.d.ts
+```
+
+Komenda `pnpm generate:api-client` może failować na Windows gdy skrypt próbuje czytać z `/dev/stdin`. Powyższy flow jest bezpiecznym zamiennikiem.
 
 ### 3.2. Wymagania dla agenta BE (nowy endpoint)
 
@@ -128,6 +257,75 @@ listBookings() { ... }
 @ApiResponse({ status: 201, type: BookingResponseDto })
 createBooking() { ... }
 ```
+
+**Reguła: `@ApiProperty` z `nullable: true` wymaga jawnego `type`.**
+
+Brak `type` przy `nullable: true` powoduje że Swagger generuje pusty schemat, a `openapi-typescript` produkuje `Record<string, never>` zamiast `string | null`. Błąd jest **cichy** — TypeScript nie zgłasza nic, ale pole staje się bezużyteczne w FE.
+
+```ts
+// ❌ NIE — brak `type` → schema.d.ts wygeneruje Record<string, never>
+@ApiProperty({ nullable: true })
+notes!: string | null;
+
+// ✅ TAK — jawny `type` przy każdym nullable
+@ApiProperty({ type: String, nullable: true })
+notes!: string | null;
+
+@ApiPropertyOptional({ type: String, nullable: true })
+notes?: string | null;
+
+@ApiProperty({ type: Number, nullable: true })
+pricePln!: number | null;
+```
+
+Dotyczy wszystkich typów skalarnych (`String`, `Number`, `Boolean`). Jedynym wyjątkiem są pola, gdzie `@ApiProperty()` bez opcji inferuje typ poprawnie (np. `@ApiProperty() id!: string` — Swagger widzi typ z TypeScript refleksji, o ile nie ma `nullable`).
+
+**Reguła: `@ApiPropertyOptional` ≠ „wartość może być null" — znaczy „pole można pominąć w body".**
+
+W zagnieżdżonych DTO (nested objects w tablicach) pola wymagane wewnątrz obiektu muszą używać `@ApiProperty()`, nawet jeśli cały array jest opcjonalny. Pomyłka nie powoduje błędu TS — Swagger jedynie błędnie oznaczy pole jako niewymagane.
+
+```ts
+export class EditSubServiceDto {
+  // ❌ NIE — name jest wymagane wewnątrz obiektu, nie "opcjonalne"
+  @ApiPropertyOptional() @IsString() name!: string;
+
+  // ✅ TAK — @ApiProperty bo name jest obowiązkowe w każdym elemencie tablicy
+  @ApiProperty() @IsString() name!: string;
+
+  // ✅ OK — pricePln rzeczywiście można pominąć (null = "w cenie")
+  @ApiPropertyOptional({ type: Number, nullable: true }) @IsOptional() @IsNumber() pricePln?:
+    | number
+    | null;
+}
+```
+
+**Reguła: nowy semantyczny błąd = nowy kod w `ErrorCode` enum przed użyciem.**
+
+`apps/api/src/common/errors/error-code.enum.ts` jest jedynym źródłem prawdy dla kodów błędów. Użycie nieistniejącego kodu (`ErrorCode.BOOKING_INVALID_STATUS`) nie powoduje błędu kompilacji — TypeScript nie sprawdza wartości enum w runtime. Skutkuje to `undefined` przekazanym do klienta jako kod błędu.
+
+```ts
+// ❌ NIE — użycie kodu którego nie ma w enum (cichy bug)
+throw new AppException(ErrorCode.BOOKING_INVALID_STATUS, 'Niedozwolony status.', 422);
+
+// ✅ TAK — najpierw dodaj do enum, potem użyj
+// error-code.enum.ts:
+//   BOOKING_INVALID_STATUS = 'BOOKING_INVALID_STATUS',
+throw new AppException(ErrorCode.BOOKING_INVALID_STATUS, 'Niedozwolony status.', 422);
+```
+
+Przy każdym `throw new AppException(ErrorCode.XYZ, ...)` sprawdź czy `XYZ` istnieje w enumie. Enum jest w `apps/api/src/common/errors/error-code.enum.ts`.
+
+**Reguła: pola wymagające weryfikacji nigdy nie trafiają do `Update*Dto`.**
+
+Pola takie jak `email` czy `phone` mają własny endpoint + OTP/token flow (patrz §16). Umieszczenie ich w `UpdateProviderDto` pozwala je zmienić bez weryfikacji, co narusza bezpieczeństwo.
+
+```
+❌  PATCH /v1/providers/me  { email: "nowy@example.pl" }   ← zmienia bez OTP
+✅  POST  /v1/providers/me/email/request-otp  { newEmail }  ← wysyła kod
+    PATCH /v1/providers/me/email              { newEmail, code }  ← potwierdza
+```
+
+Jeśli usuniesz pole z `UpdateDto` — usuń je też z `FE form hook` (np. `use-provider-form.ts`), bo TypeScript nie będzie o tym wiedział dopóki nie uruchomisz `tsc --noEmit`.
 
 ### 3.3. Wymagania dla agenta FE (nowa strona)
 
@@ -302,7 +500,25 @@ export class StationsService {
 }
 ```
 
-Moduły z repozytoriami: `providers`, `pricing-tiers`, `working-hours`, `stations`, `workers`.
+Moduły z repozytoriami: `providers`, `pricing-tiers`, `working-hours`, `stations`, `workers`, `notification-preferences`.
+
+#### Anti-pattern: podwójna rejestracja modułu w AppModule
+
+Jeśli moduł B jest importowany wewnątrz modułu A, **nie importuj B ponownie w AppModule**. NestJS tworzy osobny scope dla każdego importu — duplikacja skutkuje podwójną rejestracją kontrolerów (dwa zestawy routerów tego samego endpointu) i duplikacją providerów.
+
+```
+// ❌ NIE
+AppModule imports: [..., NotificationPreferencesModule, PushSubscriptionsModule]
+NotificationPreferencesModule imports: [PushSubscriptionsModule]  // zarejestrowany 2×
+
+// ✅ TAK
+AppModule imports: [..., NotificationPreferencesModule]
+NotificationPreferencesModule imports: [PushSubscriptionsModule]  // raz, we właściwym module
+```
+
+Symptom: brak błędów kompilacji, ale dwa razy ten sam endpoint widoczny w Swagger UI lub dwie instancje tego samego serwisu działające niezależnie.
+
+Moduł `notification-preferences` jest niestandardowy — zawiera dodatkowo `NotificationDispatcherService` (nasłuchuje na eventy domenowe), `SmsChannelService` i `EmailChannelService` (kanały wysyłki) oraz czyste builderów szablonów w `templates/notification-templates.ts`. Szczegóły: `docs/system-powiadomien.md`.
 
 #### Wyjątek: złożone zapytania wielotabelowe w serwisie
 
@@ -334,6 +550,31 @@ export class BookingsService {
 ```
 
 Standardowe CRUD zapytania (findMany, create, update) zawsze idą przez repository — nawet jeśli dotyczą wielu tabel przez `include`.
+
+#### Wyjątek: moduł `admin/`
+
+Serwisy w `apps/api/src/admin/` wstrzykują `PrismaService` bezpośrednio — **nie** korzystają z repozytoriów domenowych. Powód: admin operuje na encjach z wielu domen jednocześnie (Provider + User + Session w jednej transakcji), a tworzenie dedykowanego repozytorium tylko dla operacji administracyjnych sugerowałoby własność, której nie ma.
+
+```ts
+// ✅ TAK — AdminProvidersService bezpośrednio przez PrismaService
+@Injectable()
+export class AdminProvidersService {
+  constructor(private readonly prisma: PrismaService) {}
+
+  async confirmDeletion(id: string) {
+    await this.prisma.$transaction([
+      this.prisma.provider.update({ ... }),
+      this.prisma.session.updateMany({ ... }),  // inna domena
+      this.prisma.user.update({ ... }),         // inna domena
+    ]);
+  }
+}
+
+// ❌ NIE — nie wstrzykuj ProvidersRepository do AdminProvidersService
+constructor(private readonly providersRepo: ProvidersRepository) {}
+```
+
+Nowe serwisy admin dodawaj do `apps/api/src/admin/` i rejestruj je w `AdminModule` — nie twórz osobnych modułów NestJS dla operacji czysto administracyjnych.
 
 ### 5.2. Krok po kroku
 
@@ -368,6 +609,223 @@ Standardowe CRUD zapytania (findMany, create, update) zawsze idą przez reposito
 
 7. Sprawdź TypeScript
    └─ cd apps/api && npx tsc --noEmit
+```
+
+### 5.3. Wzorzec: kolejka asynchronicznych wniosków (admin queue)
+
+Używany gdy użytkownik składa wniosek wymagający ręcznej akcji admina — i nie ma potrzeby natychmiastowej zmiany głównego statusu encji. Przykłady: zamówienie kopii danych RODO (`DataExportRequest`), odwołanie od opinii, wniosek o refund.
+
+**Kiedy stosować ten wzorzec zamiast zmiany statusu Provider:**
+
+- Wniosek dotyczy danych, nie stanu konta
+- Provider może złożyć wiele wniosków (historia)
+- Chcesz oddzielić lifecyle wniosku od lifecyle encji głównej
+
+#### Struktura modelu Prisma
+
+```prisma
+enum XxxStatus {
+  PENDING
+  COMPLETED
+  CANCELLED
+}
+
+model XxxRequest {
+  id          String    @id @default(uuid())
+  providerId  String
+  status      XxxStatus @default(PENDING)
+  requestedAt DateTime  @default(now())
+  completedAt DateTime?
+
+  provider Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+
+  @@index([providerId])
+  @@index([status, requestedAt])
+  @@map("xxx_requests")
+}
+```
+
+Dodaj relację `xxxRequests XxxRequest[]` do modelu `Provider`.
+
+#### API
+
+| Endpoint                                    | Kto      | Opis                                           |
+| ------------------------------------------- | -------- | ---------------------------------------------- |
+| `POST /v1/providers/me/xxx-requests`        | Provider | Tworzy wniosek; 409 jeśli już `PENDING`        |
+| `GET /v1/admin/xxx-requests`                | Admin    | Lista `PENDING`, posortowana `requestedAt asc` |
+| `PATCH /v1/admin/xxx-requests/:id/complete` | Admin    | Oznacza jako zrealizowany                      |
+| `PATCH /v1/admin/xxx-requests/:id/cancel`   | Admin    | Anuluje wniosek                                |
+
+Serwis i kontroler admin trafiają do `apps/api/src/admin/` i `AdminModule` — bez osobnego modułu NestJS.
+
+#### ErrorCode
+
+```ts
+XXX_REQUEST_NOT_FOUND = 'XXX_REQUEST_NOT_FOUND',
+XXX_REQUEST_ALREADY_PENDING = 'XXX_REQUEST_ALREADY_PENDING',
+```
+
+#### FE — idempotentny przycisk
+
+Kluczowa zasada: kod `XXX_ALREADY_PENDING` (409) traktuj jako **sukces**, nie błąd. User kliknął drugi raz — stan i tak jest prawidłowy.
+
+```ts
+async function handleRequest() {
+  setLoading(true);
+  try {
+    await requestXxx();
+    setOrdered(true);
+  } catch (err) {
+    if (err instanceof ApiError && err.code === 'XXX_REQUEST_ALREADY_PENDING') {
+      setOrdered(true); // ← sukces, nie błąd
+    } else {
+      setError(err instanceof ApiError ? err.message : 'Błąd sieci.');
+    }
+  } finally {
+    setLoading(false);
+  }
+}
+```
+
+Przycisk po złożeniu wniosku: `disabled={ordered}`, ikona checkmark zamiast tekstu, komunikat potwierdzający pod opisem.
+
+#### schema.d.ts
+
+Dodaj DTO ręcznie (wzorzec z sekcji 3.1) jeśli generator nie jest dostępny:
+
+```ts
+XxxRequestDto: {
+  id: string;
+  providerId: string;
+  providerName: string;
+  /** @enum {string} */
+  status: 'PENDING' | 'COMPLETED' | 'CANCELLED';
+  /** Format: date-time */
+  requestedAt: string;
+  completedAt: string | null;
+};
+XxxPage: {
+  data: components['schemas']['XxxRequestDto'][];
+  total: number;
+};
+```
+
+### 5.4. Wzorzec: soft/hard delete
+
+Używany gdy encja może być już powiązana z historycznymi danymi (rezerwacje, faktury) — jej usunięcie z bazy złamałoby referencje. Zamiast tego encja jest ukrywana (`deletedAt`) lub usuwana całkowicie w zależności od historii.
+
+**Kiedy stosować:**
+
+- Encja może być powiązana z przeszłymi rezerwacjami/transakcjami przez providera (np. `Service`, `Addon`)
+- Chcesz zachować spójność historycznych danych przy jednoczesnym ukryciu encji przed użytkownikiem
+- Encja nigdy nie wróci do aktywnego stanu po usunięciu (w odróżnieniu od np. `ProviderStatus`)
+
+#### Schemat Prisma
+
+```prisma
+model Service {
+  enabled   Boolean   @default(true)
+  deletedAt DateTime?
+  // ...
+}
+```
+
+#### Repository — metoda delete
+
+```ts
+// services.repository.ts
+async deleteService(id: string, providerId: string): Promise<boolean> {
+  const soft = await this.providerHasActiveBookings(providerId);
+  if (soft) {
+    await this.prisma.service.updateMany({
+      where: { id, providerId },
+      data: { deletedAt: new Date(), enabled: false },
+    });
+    return false; // soft delete
+  }
+  await this.prisma.service.deleteMany({ where: { id, providerId } });
+  return true; // hard delete
+}
+
+private async providerHasActiveBookings(providerId: string): Promise<boolean> {
+  const count = await this.prisma.booking.count({
+    where: { providerId, status: { in: [BookingStatus.CONFIRMED, BookingStatus.IN_PROGRESS, BookingStatus.COMPLETED] } },
+  });
+  return count > 0;
+}
+```
+
+#### Krytyczna zasada: `replaceAll` musi filtrować soft-deleted
+
+Operacje bulk (replace all / full sync) **muszą** filtrować `deletedAt: null` przy `deleteMany` — w przeciwnym razie niszczą soft-deleted rekordy których nigdy nie da się odtworzyć:
+
+```ts
+// ✅ TAK — nie dotykaj soft-deleted
+await tx.service.deleteMany({ where: { providerId, deletedAt: null } });
+
+// ❌ NIE — usuwa również soft-deleted rekordy z historycznymi danymi
+await tx.service.deleteMany({ where: { providerId } });
+```
+
+To samo dotyczy `findAll` — zwracaj tylko aktywne rekordy:
+
+```ts
+// ✅ TAK
+findAll(providerId: string) {
+  return this.prisma.service.findMany({ where: { providerId, deletedAt: null }, ... });
+}
+```
+
+#### Controller — endpoint DELETE (204)
+
+```ts
+@Delete('services/:id')
+@HttpCode(204)
+@ApiCookieAuth('access_token')
+@ApiResponse({ status: 204 })
+async deleteService(@CurrentUser() user: JwtPayload, @Param('id') id: string): Promise<void> {
+  const provider = await this.providersService.getMyProvider(user.sub);
+  await this.service.deleteService(id, provider.id);
+}
+```
+
+#### FE — natychmiastowe usunięcie + potwierdzenie
+
+Delete jest commit-owany natychmiastowo (nie przez „Zapisz" button), więc FE:
+
+1. Pokazuje modal z potwierdzeniem (z informacją o soft delete przy rezerwacjach)
+2. Wywołuje `DELETE /v1/.../services/:id` bezpośrednio
+3. Usuwa rekord z lokalnego state **bez** oznaczania `dirty = true` — stan już jest zsynchronizowany z DB
+
+```ts
+// use-xxx-page.ts
+const removeService = useCallback((id: string) => {
+  setState((prev) => ({
+    ...prev,
+    services: prev.services.filter((s) => s.id !== id),
+  }));
+  // Nie wywołuj setDirty(true) — delete już trafił do bazy
+}, []);
+```
+
+#### Pułapka: równoległe transakcje i cascade delete
+
+Gdy encja A ma FK do encji B z `onDelete: Cascade` (np. `ServiceAddonLink` → `Addon`), **nie uruchamiaj** replaceAll dla A i B równolegle (`Promise.all`). Równoległe transakcje powodują race condition:
+
+1. TX-B (replace addons): `DELETE addons` → **cascade usuwa ServiceAddonLinks** → `INSERT addons`
+2. TX-A (replace services): `INSERT ServiceAddonLinks` → TX-B cascade usuwa je ← **lub** TX-A odczytuje puste addonLinks po cascade delete z TX-B
+
+Efekt: serwis zwraca usługi z pustymi `addonIds`, mimo że zostały poprawnie ustawione chwilę wcześniej.
+
+**Zasada:** zapisuj wpierw encje referencjonowane (bez FK), potem encje referencjonujące:
+
+```ts
+// ✅ TAK — addony najpierw, usługi po nich (usługi FK→addony przez ServiceAddonLink)
+const updatedAddons = await api.upsertAddons(...);
+const updatedServices = await api.upsertServices(...);
+
+// ❌ NIE — równoległa transakcja może wyczyścić addonIds przez cascade delete
+const [updatedServices, updatedAddons] = await Promise.all([api.upsertServices(...), api.upsertAddons(...)]);
 ```
 
 ---
@@ -455,6 +913,48 @@ import { Heading, Text } from '@opony/design-system-web';
 | `mono`    | `boolean`                                                                       | Czcionka mono (JetBrains Mono) — zamiast `font-family:` w CSS |
 
 > **`TextColor`** obejmuje: `primary | secondary | muted | accent | warning | danger`. Dla `success` prop `color` nie istnieje — jedynym wyjątkiem od reguły „no color in CSS" jest ten przypadek: zachowaj `color: var(--success)` w CSS module dla danego elementu.
+
+#### Zakaz: inline `style={}` z typografią na DS komponentach
+
+Reguła „no typography in CSS module" obowiązuje **równie mocno** dla inline `style={}` w JSX. Oba zapisy są zabronione:
+
+```tsx
+// ❌ NIE — CSS module
+// .label { font-size: 11px; color: var(--text-muted); }
+<Text variant="nano" className={styles.label}>...</Text>
+
+// ❌ NIE — inline style (równoznaczne naruszenie)
+<Text variant="nano" style={{ fontSize: '11px', color: 'var(--text-muted)' }}>...</Text>
+
+// ❌ NIE — zły wariant + override rozmiaru przez style
+<Heading variant="display" style={{ fontSize: '11px' }}>Sekcja</Heading>
+
+// ✅ TAK — właściwy wariant, żadnych overrides
+<Text variant="nano" as="span" weight="bold" color="secondary">Sekcja</Text>
+```
+
+Wybierz właściwy wariant DS zamiast nadpisywać styl złego wariantu.
+
+#### Wzorzec: kolory spoza TextColor (purple, teal, success…)
+
+Gdy potrzebujesz koloru tokenu który nie jest w `TextColor` (np. `var(--purple)`, `var(--teal)`), owiń DS komponent w `<span>` z CSS klasą ustawiającą kolor. **Nie używaj** `style={{ color: ... }}` na DS komponencie ani `color:` w klasie doklejonej do DS komponentu.
+
+```tsx
+// ❌ NIE — inline style z kolorem na DS Text
+<Text variant="nano" style={{ color: 'var(--purple)' }}>Dopłaty</Text>
+
+// ❌ NIE — color w klasie bezpośrednio na DS Text
+// .label { color: var(--purple); }
+<Text variant="nano" className={styles.label}>Dopłaty</Text>
+
+// ✅ TAK — wrapper span z CSS klasą, DS Text bez inline styles
+<span className={styles.purpleWrap}>
+  <Text variant="nano" as="span" weight="bold">Dopłaty</Text>
+</span>
+// .purpleWrap { color: var(--purple); }  ← color na wrapperze, nie na DS komponencie
+```
+
+Wyjątek: `color: var(--success)` w CSS module bezpośrednio na elemencie (udokumentowany wyżej) pozostaje dopuszczalny ze względu na historyczną spójność. Dla nowego kodu prefer wrapper span.
 
 #### Heading — warianty
 
@@ -599,6 +1099,50 @@ Elementy o podwójnej roli (pudełko + tekst z typografią) — np. numerki sekc
 }
 ```
 
+#### Wzorzec: multi-state status chip (np. „W składzie" / „Wydany")
+
+Status chipy z kilkoma stanami kolorystycznymi i tekstem słownym są częstym źródłem naruszeń — bo naturalnym impulsem jest wpisanie `font-size`, `font-weight`, `text-transform`, `letter-spacing` bezpośrednio do CSS klasy chipu.
+
+```tsx
+// ❌ NIE — raw span, cała typografia w CSS → naruszenie reguły
+// .statusChip { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+// .statusInDepot { background: var(--success-muted); color: var(--success); border: ... }
+<span className={`${styles.statusChip} ${styles.statusInDepot}`}>W składzie</span>
+```
+
+```tsx
+// ✅ TAK — kontener CSS odpowiada wyłącznie za geometrię i kolor tła/ramki;
+//          DS <Text> dostarcza typografię i kolor tekstu
+<span className={`${styles.statusChip} ${styles.statusInDepot}`}>
+  <Text variant="nano" as="span" weight="bold" mono color="accent">
+    W składzie
+  </Text>
+</span>
+```
+
+```css
+/* ✅ TAK — CSS tylko geometria: padding, border-radius, background, border */
+/* Brak font-size / font-weight / text-transform / letter-spacing / color na tekście */
+.statusChip {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+.statusInDepot {
+  background: var(--success-muted);
+  border: 1px solid var(--success-border);
+}
+.statusPickedUp {
+  background: var(--bg);
+  border: 1px solid var(--border);
+}
+```
+
+Uwaga: DS `variant="nano"` zawiera już `uppercase`, `letter-spacing` i odpowiedni `font-size` — nie dodawaj tych wartości do CSS chipu.
+
+Kolor tekstu pochodzi z `color` prop na `<Text>` (`accent`, `secondary`, `warning`, `danger`). Dla koloru `success` (niedostępnego w `TextColor`) użyj `color="accent"` jako najbliższego odpowiednika lub wzorca wrapper-span opisanego wyżej.
+
 #### Wyjątek: dekoracyjne pseudoelementy CSS (`::after` / `::before`)
 
 Reguła „no typography in CSS" dotyczy **elementów DOM z treścią w JSX**. Pseudoelementy CSS (`::after`/`::before` z `content:`) są generowane wyłącznie przez CSS, nie mają odpowiednika komponentu DS i podlegają wyjątkowi — mogą zawierać `font-family`, `font-size`, `letter-spacing` itp.:
@@ -643,6 +1187,87 @@ Reguła „każdy tekst = DS `<Text>`" obowiązuje bezwzględnie dla:
 Komórki wewnętrzne siatki (`.bookingTime`, `.monthChipName`, `.hourCell` w kalendarzu) to świadomy wyjątek analogiczny do pseudoelementów — po stronie JSX. Wzorzec referencyjny: `_components/WeekView.tsx`, `DayView.tsx`, `MonthView.tsx` (booking chips, day number, hour labels) vs. ich sidebar (wyłącznie DS `<Text>`).
 
 > **Dla reviewerów:** W komponencie data-dense rozróżniaj sidebar/wrapper (musi używać `<Text>`) od komórek samej siatki (wyjątek dozwolony). Flaguj naruszenie tylko gdy typografia jest poza siatką — np. w legendzie, nagłówku, stopce.
+
+#### Wyjątek: kompaktowe pola numeryczne w wierszach siatki usług
+
+Pola cena/czas w wierszach siatki (np. `ServiceVariantExpanded`, `RimTierRow`, `SubServiceRow`, `SurchargeRow`) mają ograniczoną szerokość (≤44px) i wymagają mono + bold + tight padding, których DS `<Input>` nie obsługuje w tak małej komórce. Raw `<input>` jest dopuszczalny **tylko jeśli**:
+
+1. Szerokość komórki wynosi ≤44px (price cell) lub ≤28px (duration cell).
+2. Typ to `number` (nie `text` — dla pól tekstowych nazw zawsze DS `<Input>`).
+3. Element jest zagnieżdżony bezpośrednio w cell-kontenerze siatki (nie jako standalone form field).
+4. Plik `.tsx` zawiera komentarz `/* raw <input> — [powód] */` bezpośrednio przed tagiem.
+
+```tsx
+// ✅ TAK — 36px price cell w siatce usług, z komentarzem
+/* raw <input> — DS Input nie pasuje do 36px cell embed z custom mono stylem */
+<input
+  className={styles.priceCellInput}
+  type="number"
+  value={sub.pricePln ?? ''}
+  onChange={(e) => onChange({ ...sub, pricePln: e.target.value })}
+  aria-label="Cena pod-usługi"
+/>
+
+// ❌ NIE — pole tekstowe nazwy (full-width, DS <Input> pasuje)
+<input className={styles.nameInput} type="text" placeholder="Nazwa usługi…" />
+
+// ❌ NIE — brak komentarza uzasadniającego
+<input className={styles.addSizeInput} type="text" maxLength={4} />
+```
+
+Pola tekstowe (`type="text"`) do wprowadzania nazw, opisów lub etykiet zawsze używają DS `<Input>`, nawet w zwartych layoutach.
+
+#### Wyjątek: klikalne chipy z kaskadą kolorów hover/selected
+
+Interaktywne `<button>` działające jako chip (np. selektor rozmiaru felgi, wybór wariantu) często mają wszystkie elementy potomne zmieniające kolor jednocześnie przez kaskadę CSS — zarówno przy `:hover`, jak i przy klasie stanu selekcji (np. `.rimChipSelected .rimPrice`). W takim przypadku `font-size`, `font-weight` na kontenerze `<button>` lub `<span>` wewnątrz są dopuszczalne — **pod warunkiem że**:
+
+1. Element jest `<button>` (nie statyczny `<span>` / `<div>`) — kaskada kolorów jest potrzebna do obsługi stanów interakcji.
+2. Kolor potomków zmienia się przez CSS cascade z rodzica (np. `button:hover { color: var(--accent) }` działa na wszystkich `<span>` wewnątrz).
+3. Zastąpienie `<span>` przez `<Text color="muted">` **złamałoby** stan hover — `color` prop DS ustawia `color` inline i blokuje kaskadę.
+4. Plik `.module.css` zawiera komentarz `/* hover cascade — DS Text.color zablokuje kaskadę */` przy klasie kontenera.
+
+```tsx
+// ✅ TAK — chip <button> z kaskadą kolorów; <Text> złamałby hover/selected kaskadę
+<button className={`${styles.rimChip} ${isSelected ? styles.rimChipSelected : ''}`}>
+  {tier.label}
+  <span className={styles.rimPrice}>{tier.pricePln} zł</span> {/* kolor z kaskady */}
+  <span className={styles.rimDur}>{tier.durationMinutes} min</span>
+</button>
+```
+
+```css
+/* ✅ TAK — hover cascade — DS Text.color zablokuje kaskadę */
+.rimChip {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+.rimChip:hover {
+  color: var(--accent);
+} /* kaskaduje na rimPrice i rimDur */
+.rimChipSelected {
+  color: var(--accent);
+}
+.rimPrice {
+  font-size: 10px;
+  font-weight: 400;
+} /* rozmiar dekoracyjny, kolor z kaskady */
+.rimDur {
+  font-size: 9px;
+}
+```
+
+```tsx
+// ❌ NIE — statyczny chip (nie klikalny) — tutaj reguła obowiązuje
+<span className={styles.statusChip}>
+  <Text variant="nano" as="span" weight="bold">
+    W składzie
+  </Text>
+</span>
+```
+
+> **Dla reviewerów:** Flaguj naruszenie tylko na statycznych kontenerach (`<span>`, `<div>`, `<p>`) i na `<button>` bez stanów hover/selected opartych na color cascade. Klikalne chipy z CSS hover cascade + wieloma potomnymi elementami tekstowymi to świadomy wyjątek — sprawdź czy plik CSS ma wymagany komentarz.
 
 #### CSS Modules + noUncheckedIndexedAccess
 
@@ -727,6 +1352,22 @@ Zamiast CSS w panelu-app dla konkretnego użycia. Rozszerzenie DS jest wielokrot
 | `<label className={styles.label}>...</label>` | `<FieldLabel htmlFor="id" required>...</FieldLabel>` |
 
 DS `Input` i `Textarea` są `forwardRef` → działają bezpośrednio z `{...register('field')}` z RHF.
+
+#### Toggle w klikalnym kontenerze — stop propagation
+
+`<Toggle>` renderuje się jako `<label>` → klik na toggle propaguje do rodzica. Gdy Toggle znajduje się wewnątrz klikalnego headera (accordion, wiersz tabeli), otocz go wrapperem zatrzymującym propagację:
+
+```tsx
+// ✅ TAK — wrapper zatrzymuje propagację, Toggle działa poprawnie
+<span onClick={(e) => e.stopPropagation()}>
+  <Toggle size="sm" checked={enabled} onChange={() => onToggle()} />
+</span>
+
+// ❌ NIE — klik toggle otwiera/zamyka accordion
+<Toggle size="sm" checked={enabled} onChange={() => onToggle()} />
+```
+
+**Nigdy** nie implementuj własnego toggle przez `<button role="switch">` z ręcznym CSS — DS `<Toggle>` już istnieje i obsługuje focus, dostępność, rozmiary `sm`/`md` oraz stan `disabled`.
 
 ### Czego DS celowo nie ma — i co robić zamiast
 
@@ -1140,16 +1781,26 @@ Sprawdzanie roli jest **pierwszą** regułą po null-check — admin nie potrzeb
 
 Możliwe wartości `status` (`ProviderStatus`):
 
-| Wartość            | Znaczenie                                                                                         |
-| ------------------ | ------------------------------------------------------------------------------------------------- |
-| `PENDING_NIP`      | Onboarding niezakończony — traktowany jak `PENDING_DOCS` w routingu (oba → `/onboarding/zdjecia`) |
-| `PENDING_DOCS`     | Onboarding niezakończony — brak dokumentów                                                        |
-| `PENDING_APPROVAL` | Czeka na ręczną weryfikację przez admina                                                          |
-| `APPROVED`         | Aktywny — dostęp do dashboardu                                                                    |
-| `SUSPENDED`        | Zawieszony przez admina                                                                           |
-| `REJECTED`         | Odrzucony — nie może korzystać z panelu                                                           |
+| Wartość            | Znaczenie                                                                                         | Routing                   |
+| ------------------ | ------------------------------------------------------------------------------------------------- | ------------------------- |
+| `PENDING_NIP`      | Onboarding niezakończony — traktowany jak `PENDING_DOCS` w routingu (oba → `/onboarding/zdjecia`) | `/onboarding/zdjecia`     |
+| `PENDING_DOCS`     | Onboarding niezakończony — brak dokumentów                                                        | `/onboarding/zdjecia`     |
+| `PENDING_APPROVAL` | Czeka na ręczną weryfikację przez admina                                                          | `/onboarding/weryfikacja` |
+| `APPROVED`         | Aktywny — dostęp do dashboardu                                                                    | `/dashboard`              |
+| `SUSPENDED`        | Zawieszony przez admina (lub po potwierdzeniu usunięcia)                                          | `/onboarding/weryfikacja` |
+| `REJECTED`         | Odrzucony — nie może korzystać z panelu                                                           | `/onboarding/weryfikacja` |
+| `PENDING_DELETION` | Złożył wniosek o usunięcie konta — czeka na potwierdzenie admina                                  | `/onboarding/weryfikacja` |
 
 Typ w kodzie: `AuthUser.status?: ProviderStatus` z `lib/auth.tsx`.
+
+**Gdy dodajesz nową wartość `ProviderStatus`:** zaktualizuj wszystkie cztery miejsca naraz:
+
+1. `apps/api/prisma/schema.prisma` — enum `ProviderStatus`
+2. `packages/api-client/src/schema.d.ts` — union w `ProviderResponseDto.status`
+3. `apps/panel/lib/auth.tsx` — typ `ProviderStatus`
+4. `apps/panel/lib/hooks/use-dashboard.ts` — `STATUS_LABEL` (etykieta dla widoku warsztatu)
+
+Jeśli nowy status pojawia się w panelu admina, dodaj też wpis w `STATUS_LABELS` w `apps/panel/app/admin/providers/page.tsx` — kompilator TypeScript wymusi kompletność `Record<ProviderStatus, string>`, więc brak wpisu = błąd TS.
 
 ### 9.3.1. Nawigacja wewnętrzna — `<Link>` zamiast `<a>`
 
@@ -1184,9 +1835,14 @@ Ochrona tras działa na dwóch poziomach:
 
 **Warstwa 1 — Middleware (`middleware.ts`, edge)**
 
-Sprawdza samo istnienie cookie `access_token`. Brak cookie → natychmiastowy redirect do `/login` zanim React w ogóle się uruchomi. Chroni: `/dashboard/**`, `/register/**`, `/onboarding/**`.
+Sprawdza samo istnienie cookie `access_token`. Uruchamiany przed wysłaniem jakiegokolwiek HTML — eliminuje "flash" błędnej strony przy hard refresh.
 
-Middleware **nie waliduje JWT** — tylko sprawdza obecność cookie. Faktyczna walidość tokenu jest weryfikowana przez backend przy każdym API request.
+Matcher obejmuje:
+
+- `/dashboard/**`, `/admin/**`, `/register/**`, `/onboarding/**` — brak tokenu → redirect do `/login`
+- `/login` — obecność tokenu → redirect do `/dashboard` (reverse guard: zalogowany użytkownik nie widzi strony logowania)
+
+Middleware **nie waliduje JWT** — tylko sprawdza obecność cookie. Faktyczna ważność tokenu jest weryfikowana przez backend przy każdym API request.
 
 **Warstwa 2 — Hook (`lib/hooks/use-auth-guard.ts`, client)**
 
@@ -1200,7 +1856,12 @@ if (isLoading) return <Spinner />;
 
 Hook porównuje `canonicalRoute(user)` z przekazanym `pageRoute`. Jeśli się różnią → `router.replace(canonicalRoute(user))`.
 
-**Strona logowania** używa `canonicalRoute` bezpośrednio w `useLoginFlow` — przekierowuje zalogowanego użytkownika do jego kanonicznego celu.
+**Strona logowania** blokuje render w dwóch przypadkach — oba konieczne:
+
+1. `authLoading` — stan auth jeszcze nieznany (request do `/v1/auth/me` w toku)
+2. `isAuthenticated` — stan auth już znany, ale `useEffect` z redirectem jeszcze nie odpalił (jeden frame opóźnienia w React)
+
+Bez warunku `isAuthenticated` strona logowania renderuje się przez jeden frame przy nawigacji SPA do `/login` przez zalogowanego użytkownika. Middleware blokuje to przy hard refresh, ale nie przy klienckim `router.push('/login')`.
 
 ### 9.5. RBAC — Role-Based Access Control
 
@@ -1248,12 +1909,14 @@ await this.prisma.session.updateMany({
 **Kiedy unieważniać:**
 
 - Admin zatwierdza providera (`PENDING_APPROVAL → APPROVED`) — wymagany nowy JWT z aktualnym statusem, żeby routing trafił na `/dashboard`
+- Admin potwierdza usunięcie konta (`PENDING_DELETION → SUSPENDED`) — provider traci dostęp natychmiast; sesje są unieważniane razem ze zmianą statusu w jednej transakcji Prisma
 - Reset hasła / zmiana numeru telefonu (jeśli zaimplementowane)
 
 **Kiedy NIE unieważniać:**
 
 - Weryfikacja emaila — czysto informacyjna, nie zmienia routingu ani uprawnień
 - Aktualizacja danych firmy (nazwa, opis, zdjęcia)
+- Sam wniosek o usunięcie (`APPROVED → PENDING_DELETION`) — status się zmienia, ale routing i uprawnienia pozostają takie same do momentu potwierdzenia przez admina; sesja może żyć dalej
 
 Po unieważnieniu: przy kolejnym API request `JwtAuthGuard` przyjmie token (jest jeszcze ważny przez 15 min), ale przy próbie odświeżenia (`/refresh`) backend znajdzie sesję jako `revokedAt != null` → zwróci 401 → interceptor wyloguje użytkownika.
 
@@ -1297,17 +1960,22 @@ Globalny `HttpExceptionFilter` (zarejestrowany w `main.ts`) gwarantuje jeden ksz
 
 Plik: `apps/api/src/common/errors/error-code.enum.ts`
 
-| Prefiks            | Zakres                                                                                        |
-| ------------------ | --------------------------------------------------------------------------------------------- |
-| `AUTH_*`           | Sesja, token, użytkownik (`AUTH_USER_NOT_FOUND`, `AUTH_UNAUTHORIZED`, …)                      |
-| `OTP_*`            | Kod SMS (`OTP_INVALID_OR_EXPIRED`, `OTP_RATE_LIMIT_EXCEEDED`)                                 |
-| `PROVIDER_*`       | Firma, status (`PROVIDER_NOT_FOUND`, `PROVIDER_ALREADY_EXISTS`, `PROVIDER_INVALID_STATUS`, …) |
-| `GUS_*`            | Weryfikacja CEIDG (`GUS_NIP_NOT_FOUND`, `GUS_INVALID_NIP`, `GUS_CONNECTION_ERROR`)            |
-| `PHOTO_*`          | Zdjęcia (`PHOTO_NOT_FOUND`, `PHOTO_ACCESS_DENIED`, `PHOTO_ADDITIONAL_LIMIT_EXCEEDED`)         |
-| `PRICING_TIER_*`   | Cennik (`PRICING_TIER_NOT_FOUND`, `PRICING_TIER_RANGE_CONFLICT`, …)                           |
-| `WORKING_HOURS_*`  | Godziny pracy (`WORKING_HOURS_MISSING_TIMES`, `WORKING_HOURS_INVALID_TIME_RANGE`)             |
-| `VALIDATION_ERROR` | Błąd walidacji DTO (class-validator)                                                          |
-| `INTERNAL_ERROR`   | Nieokreślony błąd serwera                                                                     |
+| Prefiks            | Zakres                                                                                                     |
+| ------------------ | ---------------------------------------------------------------------------------------------------------- |
+| `AUTH_*`           | Sesja, token, użytkownik (`AUTH_USER_NOT_FOUND`, `AUTH_UNAUTHORIZED`, …)                                   |
+| `OTP_*`            | Kod SMS (`OTP_INVALID_OR_EXPIRED`, `OTP_RATE_LIMIT_EXCEEDED`)                                              |
+| `PROVIDER_*`       | Firma, status (`PROVIDER_NOT_FOUND`, `PROVIDER_ALREADY_EXISTS`, `PROVIDER_INVALID_STATUS`, …)              |
+| `GUS_*`            | Weryfikacja CEIDG (`GUS_NIP_NOT_FOUND`, `GUS_INVALID_NIP`, `GUS_CONNECTION_ERROR`)                         |
+| `PHOTO_*`          | Zdjęcia (`PHOTO_NOT_FOUND`, `PHOTO_ACCESS_DENIED`, `PHOTO_ADDITIONAL_LIMIT_EXCEEDED`)                      |
+| `PRICING_TIER_*`   | Cennik (`PRICING_TIER_NOT_FOUND`, `PRICING_TIER_RANGE_CONFLICT`, …)                                        |
+| `WORKING_HOURS_*`  | Godziny pracy (`WORKING_HOURS_MISSING_TIMES`, `WORKING_HOURS_INVALID_TIME_RANGE`)                          |
+| `STATION_*`        | Stanowiska (`STATION_NOT_FOUND`, `STATION_ACCESS_DENIED`)                                                  |
+| `WORKER_*`         | Pracownicy (`WORKER_NOT_FOUND`, `WORKER_ACCESS_DENIED`, `WORKER_LEAVE_CONFLICT`, …)                        |
+| `BOOKING_*`        | Rezerwacje (`BOOKING_NOT_FOUND`, `BOOKING_OUTSIDE_HOURS`, `PROVIDER_PAUSED`, …)                            |
+| `REVIEW_*`         | Opinie (`REVIEW_NOT_FOUND`)                                                                                |
+| `DATA_EXPORT_*`    | Wnioski o dane RODO (`DATA_EXPORT_NOT_FOUND`, `DATA_EXPORT_ALREADY_PENDING`, `DATA_EXPORT_INVALID_STATUS`) |
+| `VALIDATION_ERROR` | Błąd walidacji DTO (class-validator)                                                                       |
+| `INTERNAL_ERROR`   | Nieokreślony błąd serwera                                                                                  |
 
 **Gdy dodajesz nowy błąd:** dodaj kod do enum, użyj `AppException`. Nie twórz jednorazowych stringów.
 
@@ -1366,6 +2034,36 @@ Husky uruchamia lint-staged automatycznie przy `git commit`:
 - `**/*.{json,md,yaml,yml}` → `prettier --write`
 
 Jeśli commit się nie udaje przez hook — nie używaj `--no-verify`. Napraw problem i spróbuj ponownie.
+
+### 11.1. Nowy pakiet/aplikacja — wymagany `.eslintrc.js` z `root: true`
+
+Każdy nowy `apps/*` lub `packages/*`, który ma własny skrypt `lint`, **musi** posiadać plik `.eslintrc.js` z polem `root: true`:
+
+```js
+/** @type {import("eslint").Linter.Config} */
+module.exports = {
+  root: true,
+  extends: ['@opony/eslint-config'],
+};
+```
+
+**Dlaczego to jest konieczne:** Główny `.eslintrc.js` (w katalogu głównym repozytorium) zawiera `ignorePatterns: ['apps/', 'packages/']` — jest to celowe, bo root-level ESLint służy wyłącznie do lint-staged. Bez `root: true` w konfiguracji pakietu ESLint przechodzi do katalogu nadrzędnego i dziedziczy ten wzorzec, co powoduje błąd:
+
+```
+You are linting "src", but all of the files matching the glob pattern "src" are ignored.
+```
+
+Bez `root: true` lint w CI zawiedzie nawet jeśli kod jest poprawny.
+
+### 11.2. Prisma generate — część skryptu build
+
+W `apps/api/package.json` skrypt `build` zawiera `prisma generate` jako pierwszy krok:
+
+```json
+"build": "prisma generate && tsc -p tsconfig.build.json"
+```
+
+**Nie uruchamiaj `prisma generate` osobno przed buildem** — dzieje się to automatycznie. W CI `pnpm build` (przez Turborepo) wywołuje ten skrypt. Gdyby `prisma generate` nie wchodziło w skład `build`, TypeScript nie miałby wygenerowanych typów Prismy i kompilacja zakończyłaby się błędami `Module '@prisma/client' has no exported member 'XxxStatus'`.
 
 ---
 
@@ -1721,6 +2419,7 @@ Historia wysłanych maili:
 | `SUBMISSION_RECEIVED` | `ProvidersService.submitForApproval()`                    | `EmailService.sendSubmissionReceived()`    |
 | `ACCOUNT_APPROVED`    | `AdminProvidersService.approveProvider()`                 | `EmailService.sendAccountApproved()`       |
 | `ACCOUNT_REJECTED`    | `AdminProvidersService.rejectProvider()`                  | `EmailService.sendAccountRejected()`       |
+| `EMAIL_CHANGE_OTP`    | `POST /v1/providers/me/email/request-otp`                 | `EmailChangeService.requestOtp()`          |
 
 ### 15.4. Endpoint weryfikacji emaila
 
@@ -1762,6 +2461,62 @@ PANEL_URL=http://localhost:3000   # URL panelu (dla redirectów weryfikacji)
 Mailpit działa lokalnie na `http://localhost:8025` (uruchamiany przez `pnpm docker:up`). Przechwytuje wszystkie wychodzące maile gdy `RESEND_API_KEY` jest placeholderem — sprawdź w WebUI czy mail dotarł.
 
 Flow weryfikacji możesz testować w Prisma Studio (`pnpm db:studio`): po `POST /v1/providers` znajdź rekord w tabeli `EmailVerificationToken`, skopiuj `tokenHash` i sprawdź że `emailVerifiedAt` na Providerze ustawia się po GET `/v1/auth/verify-email`.
+
+### 15.8. Zmiana emaila po rejestracji — wzorzec OTP
+
+Zmiana adresu email (po zalogowaniu) używa **6-cyfrowego kodu OTP** zamiast linku, bo user jest już uwierzytelniony — nie musi klikać z klienta pocztowego.
+
+```
+apps/api/src/email/
+  └─ email-change.service.ts   ← EmailChangeService
+```
+
+#### Model `EmailChangeToken`
+
+```prisma
+model EmailChangeToken {
+  id         String    @id @default(uuid())
+  providerId String
+  newEmail   String    @db.VarChar(254)
+  codeHash   String    @db.VarChar(200)   // bcrypt(code, 10)
+  expiresAt  DateTime                     // TTL 10 min
+  usedAt     DateTime?
+  attempts   Int       @default(0)        // max 3 prób, potem token invalid
+  createdAt  DateTime  @default(now())
+  provider   Provider  @relation(...)
+  @@map("email_change_tokens")
+}
+```
+
+#### Endpointy
+
+```
+POST  /v1/providers/me/email/request-otp  { newEmail }
+  → tworzy/reużywa token, wysyła EMAIL_CHANGE_OTP na newEmail
+  → rate limit: max 3 w ciągu 15 min na providera
+  → odpowiedź: { message, expiresIn, alreadySent }
+
+PATCH /v1/providers/me/email  { newEmail, code }
+  → bcrypt.compare(code, token.codeHash)
+  → transakcja: token.usedAt = now, provider.email = newEmail, provider.emailVerifiedAt = now
+  → odpowiedź: ProviderResponseDto (z nowym emailem)
+```
+
+#### Kluczowe zasady
+
+- Kod w dev: zawsze `000000` (jeśli `NODE_ENV !== 'production'`). Mailpit przechwytuje wysyłkę.
+- Nieprawidłowy kod inkrementuje `attempts`; przy `attempts >= 3` token jest traktowany jako wygasły (ErrorCode `EMAIL_CHANGE_OTP_INVALID`).
+- Sukces aktualizuje `emailVerifiedAt` — panel pokazuje badge "Zweryfikowany".
+- `email` jest usunięty z `UpdateProviderDto` — jedyna droga zmiany to ten flow.
+
+#### Strona FE (panel)
+
+```
+POST  requestEmailChangeOtp({ newEmail }) → apps/panel/api-data-access/providers.ts
+PATCH confirmEmailChange({ newEmail, code }) → apps/panel/api-data-access/providers.ts
+```
+
+Po `confirmEmailChange` wywołaj `mutateProvider()` (SWR mutate), żeby badge weryfikacji odświeżył się bez przeładowania.
 
 ---
 
@@ -1836,7 +2591,33 @@ const upload = useCallback(
 );
 ```
 
-### 15.3. Kiedy NIE używać SWR
+### 15.3. Warunkowe pobieranie — klucz `null`
+
+Gdy fetch powinien być pomijany (komponent opcjonalnie aktywny, brak wymaganego parametru), ustaw klucz SWR na `null`. SWR nie wykona żadnego requestu dopóki klucz jest `null`.
+
+```ts
+// ✅ TAK — hook przyjmuje null, fetch pominięty gdy brak kodu
+export function useBookingDetail(referenceCode: string | null) {
+  const { data, isLoading, mutate } = useSWR(
+    referenceCode ? ['booking-detail', referenceCode] : null,
+    () => bookingsApi.getDetail(referenceCode!),
+    { revalidateOnFocus: false },
+  );
+  return { booking: data ?? null, isLoading, mutate };
+}
+
+// ❌ NIE — pusty string '' jako klucz SWR wysyła request z pustym parametrem
+export function useBookingDetail(referenceCode: string) {
+  const { data } = useSWR(
+    ['booking-detail', referenceCode], // gdy referenceCode = '', wysyła GET /bookings/
+    () => bookingsApi.getDetail(referenceCode),
+  );
+}
+```
+
+Analogicznie dla hooków zależnych od widoku (np. `useBookings(weekStart: string | null)` — `null` gdy widok miesięczny jest aktywny i dane tygodniowe nie są potrzebne).
+
+### 15.3b. Kiedy NIE używać SWR
 
 | Przypadek                                | Zamiast SWR użyj                               |
 | ---------------------------------------- | ---------------------------------------------- |
@@ -1863,17 +2644,83 @@ mutate((key: unknown) => Array.isArray(key) && key[0] === 'booking-count');
 
 **Rejestr wszystkich kluczy SWR w `apps/panel`:**
 
-| Hook                    | Klucz                                       |
-| ----------------------- | ------------------------------------------- |
-| `use-bookings.ts`       | `['bookings', weekStart]`                   |
-| `use-bookings-month.ts` | `['bookings-month', ...weekStarts]`         |
-| `use-booking-admin.ts`  | `['booking-admin', JSON.stringify(params)]` |
-| `use-booking-detail.ts` | `['booking-detail', referenceCode]`         |
-| `use-availability.ts`   | `['availability', date, workerId]`          |
-| `useBookingStats()`     | `'booking-stats'`                           |
-| `useBookingTabCounts()` | `['booking-count', status]` (×5 statusów)   |
+| Hook                        | Klucz                                       |
+| --------------------------- | ------------------------------------------- |
+| `use-bookings.ts`           | `['bookings', weekStart]`                   |
+| `use-bookings-month.ts`     | `['bookings-month', ...weekStarts]`         |
+| `use-booking-admin.ts`      | `['booking-admin', JSON.stringify(params)]` |
+| `use-booking-detail.ts`     | `['booking-detail', referenceCode]`         |
+| `use-worker-task-detail.ts` | `['worker-task-detail', id]`                |
+| `use-availability.ts`       | `['availability', date, workerId]`          |
+| `useBookingStats()`         | `'booking-stats'`                           |
+| `useBookingTabCounts()`     | `['booking-count', status]` (×5 statusów)   |
 
 Gdy dodajesz nowy hook SWR — dopisz klucz do tej tabeli. Klucze są wymagane do poprawnego działania real-time invalidacji (§23).
+
+### 15.5. Wzorzec panelu bocznego (side detail panel)
+
+Panel boczny (`BookingDetailPanel`, `WorkerTaskDetailPanel`) to komponent wywoływany ze stanem `selectedId: string | null`. Zamknięty gdy `null`, otwarty gdy ID podane. Hook SWR wewnątrz panelu używa null-key pattern (§15.3) — fetch odpala się tylko gdy ID jest ustawione.
+
+```tsx
+// Strona nadrzędna — jeden stan per panel
+const [detailRefCode, setDetailRefCode] = useState<string | null>(null);
+const [detailTaskId, setDetailTaskId]   = useState<string | null>(null);
+
+// Panele są EKSKLUZYWNE — otwarcie jednego zamyka drugi
+function handleBookingClick(booking: Booking) {
+  setDetailTaskId(null);          // ← zamknij drugi panel
+  setDetailRefCode(booking.referenceCode);
+}
+
+function handleTaskClick(task: WorkerTask) {
+  setDetailRefCode(null);         // ← zamknij drugi panel
+  setDetailTaskId(task.id);
+}
+
+// Renderowanie — panel sam obsługuje null (zwraca null gdy id=null)
+<BookingDetailPanel
+  referenceCode={detailRefCode}
+  onClose={() => setDetailRefCode(null)}
+  onMutate={() => void mutate()}
+/>
+<WorkerTaskDetailPanel
+  taskId={detailTaskId}
+  onClose={() => setDetailTaskId(null)}
+  onMutate={() => void mutateTasks()}
+/>
+```
+
+**Dlaczego ekskluzywność jest ważna:** oba panele renderują `backdrop` (overlay z `onClick={onClose}`). Gdy dwa panele są otwarte jednocześnie, backdrop drugiego zamknie pierwszy — chaos z UX i nakładające się z-indeksy.
+
+**Anatomia panelu (wzorzec do kopiowania):**
+
+```tsx
+export function XxxDetailPanel({ id, onClose, onMutate }: Props) {
+  const { item, isLoading, mutate } = useXxxDetail(id);  // null-key SWR
+
+  // ESC zamyka panel
+  useEffect(() => {
+    if (id === null) return;
+    function onKey(e: KeyboardEvent) { if (e.key === 'Escape') onClose(); }
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [id, onClose]);
+
+  if (id === null) return null;  // nie renderuj nic gdy zamknięty
+
+  return (
+    <>
+      <div className={styles.backdrop} onClick={onClose} aria-hidden="true" />
+      <div role="dialog" aria-modal="true" className={styles.panel}>
+        {isLoading && <Spinner />}
+        {!isLoading && item && <PanelContent item={item} mutate={mutate} ... />}
+      </div>
+    </>
+  );
+}
+```
+
+CSS: panel jest `position: fixed; right: 0; top: 0; height: 100vh` z `z-index: 200`, backdrop `z-index: 199`. Te wartości muszą być spójne między wszystkimi panelami w aplikacji.
 
 ---
 
@@ -2090,16 +2937,18 @@ Katalog `apps/api/uploads/` jest w `.gitignore`. Na produkcji zastąp S3/CDN —
 
 ---
 
-## 20. Model usług — zamknięta lista
+## 20. Model usług — cennik providera
 
-Platforma definiuje dokładnie **4 usługi**. Provider nie może dodawać własnych — tylko włączać/wyłączać togglem i ustawiać ceny.
+> ⚠️ **Uwaga:** Sekcja zawiera fragmenty z wczesnego sprintu 1 (modele `PricingTier`, `ServiceConfig`, `SizeTier`), które zostały usunięte z schematu. Aktualna architektura usług używa modeli `Service`, `ServiceVariant`, `RimTier`, `ServiceSubLink`, `Addon` — patrz kod w `apps/api/src/services/`. Poniższa treść zostanie zaktualizowana w kolejnym sprincie.
 
-| ID usługi         | Nazwa                 | Opis                                                                                   |
-| ----------------- | --------------------- | -------------------------------------------------------------------------------------- |
-| `SEASONAL_SWAP`   | Sezonowa wymiana opon | Pakiet all-in: demontaż + montaż + wyważanie + wentyle. Klient nie wybiera składowych. |
-| `WHEEL_SWAP`      | Wymiana kół           | Zdjęcie/założenie kompletnych kół (bez wyważania).                                     |
-| `BALANCING`       | Wyważanie kół         | Samo wyważanie (bez demontażu).                                                        |
-| `PUNCTURE_REPAIR` | Naprawa opony         | Wulkanizacja uszkodzonej opony.                                                        |
+Usługi oferowane przez warsztat konfiguruje się w panelu `/dashboard/services`. Provider zarządza:
+
+- grupami usług (`Service`) z wariantami (`ServiceVariant`)
+- tiery cenowe per rozmiar felgi (`RimTier`)
+- pod-usługi (wliczone i opcjonalne)
+- addony
+
+Provider może też tworzyć **rezerwacje ręczne z usługą poza cennikiem** — patrz §27.
 
 ### SizeTier — warianty rozmiaru
 
@@ -2315,6 +3164,16 @@ type DaySchedule = {
 
 Pole `schedule` przechowuje pełną tablicę 7 elementów (jeden na każdy dzień tygodnia). Przy `open: false` pola `startTime`/`endTime` są ignorowane przez slot engine, ale powinny być przesyłane jako puste stringi.
 
+### Booking.stationId — FE workaround
+
+Pole `stationId` istnieje w modelu `Booking` (Prisma, backend DTO), ale może nie pojawiać się w wygenerowanym schemacie OpenAPI po regeneracji. Do czasu zsynchronizowania schematu używaj rzutowania:
+
+```ts
+const stationId = (booking as any).stationId as string | null;
+```
+
+Zawsze dodaj fallback dla wartości `null` — np. w swim lanes DayView pokaż wizytę we wszystkich kolumnach, gdy `stationId` jest niedostępny.
+
 ### WorkerLeave — isWorkerOnLeave
 
 `WorkersRepository` udostępnia metodę pomocniczą używaną przez slot engine:
@@ -2349,12 +3208,12 @@ Urlop pracownika to **twardy blok** — slot engine pomija pracownika dla całeg
 
 **Krytyczne wymagania implementacyjne:**
 
-| #   | Problem                                     | Wymaganie                                                                                                                                                                                               |
-| --- | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| T1  | Booking musi znać stanowisko                | Model `Booking` musi mieć `stationId` — bez tego slot engine nie sprawdzi kolizji per stanowisko                                                                                                        |
-| T2  | Race condition przy równoległych requestach | Użyj `SELECT FOR UPDATE` na wierszu stanowiska przy tworzeniu rezerwacji (PostgreSQL advisory lock lub transakcja z lock) — `unique(startAt)` nie wystarczy dla okien nakładających się                 |
-| T3  | Urlop dodany po istniejącej rezerwacji      | Przy dodawaniu `WorkerLeave` sprawdź istniejące `Booking` w zakresie dat — jeśli są i pracownik jest jedynym na stanowisku → zwróć error `WORKER_LEAVE_BOOKING_CONFLICT` z listą dotkniętych rezerwacji |
-| T4  | Obsługa DST                                 | Wszystkie operacje na datach muszą używać strefy `Europe/Warsaw` przez `luxon` lub `date-fns-tz`. Nigdy nie przechowuj ani nie porównuj naiwnych `Date()` UTC dla wyznaczania slotów                    |
+| #   | Problem                                     | Wymaganie                                                                                                                                                                                                    |
+| --- | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| T1  | Booking musi znać stanowisko                | Model `Booking` musi mieć `stationId` — bez tego slot engine nie sprawdzi kolizji per stanowisko                                                                                                             |
+| T2  | Race condition przy równoległych requestach | `createManual` używa `Prisma.TransactionIsolationLevel.Serializable` — PostgreSQL wykrywa konflikty równoległych transakcji i zwraca P2034, który mapuje na `BOOKING_SLOT_TAKEN` 409. Szczegóły w sekcji 23. |
+| T3  | Urlop dodany po istniejącej rezerwacji      | Przy dodawaniu `WorkerLeave` sprawdź istniejące `Booking` w zakresie dat — jeśli są i pracownik jest jedynym na stanowisku → zwróć error `WORKER_LEAVE_BOOKING_CONFLICT` z listą dotkniętych rezerwacji      |
+| T4  | Obsługa DST                                 | Wszystkie operacje na datach muszą używać strefy `Europe/Warsaw` przez `luxon` lub `date-fns-tz`. Nigdy nie przechowuj ani nie porównuj naiwnych `Date()` UTC dla wyznaczania slotów                         |
 
 Stare pola `slotMinutes`, `capacityBlocks`, `CapacityBlock[]` są zastąpione przez model Stanowisk i ich grafiki.
 
@@ -2378,8 +3237,37 @@ Dodaj do `apps/api/src/common/errors/error-code.enum.ts`:
 | `WORKER_LEAVE_CONFLICT`         | 409    | Daty urlopu nakładają się na istniejący urlop pracownika                                                    |
 | `WORKER_LEAVE_BOOKING_CONFLICT` | 409    | Dodanie urlopu koliduje z istniejącymi rezerwacjami — odpowiedź powinna zawierać listę `affectedBookingIds` |
 | `SERVICE_CONFIG_NOT_FOUND`      | 404    | Konfiguracja usługi nie istnieje                                                                            |
-| `BOOKING_SLOT_UNAVAILABLE`      | 409    | Wybrany slot jest już zajęty (race condition lub nieświeży cache)                                           |
+| `BOOKING_SLOT_TAKEN`            | 409    | Wybrany slot jest już zajęty — race condition lub pojemność wyczerpana                                      |
+| `BOOKING_VERSION_MISMATCH`      | 409    | `availabilityVersion` nie zgadza się z aktualnym stanem — klient musi odświeżyć dostępność                  |
 | `BOOKING_NOT_FOUND`             | 404    | Rezerwacja nie istnieje lub nie należy do klienta/providera                                                 |
+
+---
+
+## 23. Booking — mechanizm współbieżności (2 warstwy)
+
+`POST /v1/providers/me/bookings/manual` jest chroniony dwiema warstwami przed double-booking. Ochrona przed podwójnym kliknięciem leży po stronie UI (blokada przycisku przez `isLoading`).
+
+### Warstwa 1 — Serializable transaction (DB)
+
+```typescript
+await prisma.$transaction(async (tx) => {
+  const overlap = await tx.booking.count({ where: { startAt: { lt: endAt }, endAt: { gt: startAt }, ... } });
+  if (overlap >= capacity) throw AppException(BOOKING_SLOT_TAKEN, 409);
+  return bookingsRepository.createManualTx(tx, data);
+}, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+```
+
+PostgreSQL SERIALIZABLE wykrywa konflikt odczytu-zapisu między równoległymi transakcjami i zwraca kod `40001` (serialization_failure). Prisma mapuje to na `P2034` — catch blok zamienia to na `BOOKING_SLOT_TAKEN` 409.
+
+`skipAvailabilityCheck: true` omija warstwę 2 (recepcjonistka jawnie nadpisuje blokadę) — warstwa 1 (DB) jest zawsze aktywna.
+
+### Warstwa 2 — Availability version token (fast-check)
+
+`GET /v1/providers/me/bookings/availability` zwraca `version: string` — SHA-256 (pierwsze 8 hex) posortowanych ID + czasów aktywnych rezerwacji na dany dzień.
+
+Panel wysyła go jako `availabilityVersion` w body `createManual`. Przed wejściem do transakcji serwis sprawdza czy wersja się zgadza — jeśli nie, zwraca `BOOKING_VERSION_MISMATCH` 409 bez blokowania DB.
+
+Panel po otrzymaniu 409 (`BOOKING_SLOT_TAKEN` lub `BOOKING_VERSION_MISMATCH`) automatycznie odświeża dostępność (`mutateAvailability()`).
 
 ---
 
@@ -2389,57 +3277,72 @@ Dodaj do `apps/api/src/common/errors/error-code.enum.ts`:
 
 ```prisma
 model Booking {
-  id              String        @id @default(uuid())
+  id              String        @id @default(uuid()) @db.Uuid
   referenceCode   String        @unique @db.VarChar(10)
-  clientId        String
-  providerId      String
-  vehicleId       String?
-  pricingTierId   String?
-  stationId       String?       // stanowisko obsługujące rezerwację
+  clientId        String        @db.Uuid
+  providerId      String        @db.Uuid
+  vehicleId       String?       @db.Uuid
   status          BookingStatus @default(PENDING)
   startAt         DateTime
   endAt           DateTime
   // adres klienta (mobile provider)
-  addressLine     String?
-  addressCity     String?
-  addressLat      Decimal?
-  addressLng      Decimal?
-  // snapshot wymagań klienta — immutable po stworzeniu rezerwacji
-  serviceType     ServiceType?  // typ usługi: SEASONAL_SWAP | WHEEL_SWAP | BALANCING | PUNCTURE_REPAIR
-  sizeTier        SizeTier?     // rozmiar: S | M | L
-  tpmsRequired    Boolean       @default(false)  // czy klient wybrał obsługę TPMS
+  addressLine     String?       @db.VarChar(300)
+  addressCity     String?       @db.VarChar(100)
+  addressLat      Decimal?      @db.Decimal(9, 6)
+  addressLng      Decimal?      @db.Decimal(9, 6)
   // snapshot cen z momentu rezerwacji (immutable po created)
-  tireSize        String?
-  basePricePln    Decimal?
-  travelFeePln    Decimal?
-  totalPricePln   Decimal?
+  tireSize        String?       @db.VarChar(20)
+  basePricePln    Decimal?      @db.Decimal(10, 2)
+  travelFeePln    Decimal?      @db.Decimal(10, 2)
+  totalPricePln   Decimal?      @db.Decimal(10, 2)
   // notatki i powody
-  notes           String?
-  rejectReason    String?
-  cancelReason    String?
+  notes           String?       @db.Text
+  rejectReason    String?       @db.VarChar(500)
+  cancelReason    String?       @db.VarChar(500)
   // timestamps
   createdAt       DateTime      @default(now())
   confirmedAt     DateTime?
   startedAt       DateTime?
   completedAt     DateTime?
   cancelledAt     DateTime?
+  // rezerwacja ręczna (ManualBookingModal)
+  stationId             String?       @db.Uuid
+  workerId              String?       @db.Uuid
+  serviceName           String?       @db.VarChar(300)  // nazwa usługi (z cennika lub custom)
+  serviceDetails        Json?                            // { subServices: [{name, pricePln}] }
+  isManual              Boolean       @default(false)   // true = stworzona przez warsztat
+  isCustomService       Boolean       @default(false)   // true = poza cennikiem
+  customPricePln        Decimal?      @db.Decimal(10, 2)
+  customDurationMinutes Int?
+  reminderSentAt        DateTime?
 
-  client      User         @relation("ClientBookings", fields: [clientId], references: [id])
+  client      Client       @relation(fields: [clientId], references: [id])
   provider    Provider     @relation("ProviderBookings", fields: [providerId], references: [id])
   vehicle     Vehicle?     @relation("VehicleBookings", fields: [vehicleId], references: [id])
-  pricingTier PricingTier? @relation("TierBookings", fields: [pricingTierId], references: [id])
   station     Station?     @relation(fields: [stationId], references: [id])
+  worker      Worker?      @relation(fields: [workerId], references: [id], onDelete: SetNull)
   review      Review?
+  tireSets    TireSet[]
+  workerTasks WorkerTask[]
 
   @@index([providerId, startAt])
-  @@index([clientId, startAt(sort: Desc)])
+  @@index([clientId])
+  @@index([stationId])
+  @@index([providerId, isCustomService, serviceName])  // autocomplete usług custom
+  // UWAGA: partial unique index dodany w migracji SQL (nie w Prisma schema):
+  // CREATE UNIQUE INDEX bookings_no_double_booking
+  //   ON bookings (provider_id, start_at)
+  //   WHERE status IN ('PENDING','CONFIRMED','IN_PROGRESS');
   @@map("bookings")
 }
 ```
 
-**Pola `serviceType`, `sizeTier`, `tpmsRequired`** są immutable po stworzeniu rezerwacji — stanowią snapshot wymagań klienta w momencie bookingu. TPMS jest dostępne tylko dla `SEASONAL_SWAP` i `WHEEL_SWAP`; backend wymusza `tpmsRequired: false` dla `BALANCING` i `PUNCTURE_REPAIR`.
+**Kluczowe decyzje architektoniczne:**
 
-`totalPricePln` jest wyliczana i blokowana przy tworzeniu rezerwacji na podstawie `ServiceConfig` / `PricingTier` providera. Nie jest przeliczana po zmianach cennika.
+- `totalPricePln` — snapshot ceny z momentu tworzenia rezerwacji; nie jest przeliczana po zmianach cennika.
+- `serviceDetails` — JSON z tablicą `subServices`; patrz §27 po szczegóły struktury.
+- `isCustomService` — gdy `true`, usługa nie pochodzi z cennika (`Service`/`ServiceVariant`). `customPricePln` i `customDurationMinutes` są miarodajne tylko gdy `isCustomService = true`.
+- `isManual` — rezerwacja stworzona przez warsztat (nie przez klienta). Wszystkie custom są jednocześnie manual, ale nie odwrotnie.
 
 ### State machine — BookingStatus
 
@@ -2765,3 +3668,674 @@ Zadania renderowane są na siatce kalendarza (WeekView, DayView) obok rezerwacji
 ```
 
 Tekst wewnątrz bloku zadania — obowiązuje zasada DS: `<Text variant="nano">` z propsami `weight` i `color`, nigdy `font-size` w CSS module.
+
+---
+
+## 25. Model Client — CRM per provider
+
+### Architektura
+
+`Client` (tabela `clients`) to per-providerowy rekord klienta warsztatu — niezależny od konta `User`. Każda para `(providerId, phone)` jest unikalna:
+
+```prisma
+model Client {
+  id         String    @id @default(uuid())
+  providerId String
+  phone      String    @db.VarChar(20)
+  firstName  String?   @db.VarChar(100)
+  lastName   String?   @db.VarChar(100)
+  notes      String?
+  userId     String?   // null = "ghost client" (nie zalogowany w systemie)
+
+  provider Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  user     User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  bookings Booking[]
+  tireSets TireSet[]
+
+  @@unique([providerId, phone])   // klucz biznesowy
+  @@index([providerId, lastName])
+  @@map("clients")
+}
+```
+
+Kluczowe właściwości:
+
+- Ten sam klient fizyczny w dwóch warsztatach → **dwa osobne rekordy `Client`** (różne `providerId`).
+- `userId` jest opcjonalny — klient może istnieć zanim założy konto (ghost client).
+- Dane klienta widoczne w UI zawsze przez relację `client` — nigdy surowe pola `clientName`/`clientPhone` (te kolumny nie istnieją).
+
+### Wzorzec upsertClient
+
+Przy tworzeniu rezerwacji lub zestawu opon (operacja zapisu) zawsze upsertuj `Client` po kluczu biznesowym `(providerId, phone)`:
+
+```ts
+function splitName(fullName: string): { firstName: string; lastName: string | null } {
+  const [first, ...rest] = fullName.trim().split(/\s+/);
+  return { firstName: first ?? fullName, lastName: rest.join(' ') || null };
+}
+
+const { firstName, lastName } = splitName(dto.clientName);
+const client = await prisma.client.upsert({
+  where: { providerId_phone: { providerId, phone: dto.clientPhone } },
+  create: { providerId, phone: dto.clientPhone, firstName, lastName },
+  update: {}, // nie nadpisuj danych przy kolejnej rezerwacji
+  select: { id: true },
+});
+// → client.id trafia do booking.clientId / tireSet.clientId
+```
+
+`update: {}` jest celowy — istniejący klient zachowuje swoje dane (mogły zostać edytowane).
+
+### Ghost client → lazy-link (powiązanie z kontem User)
+
+Rezerwacja ręczna od operatora tworzy `Client` z `userId = null` (ghost). Gdy klient zaloguje się przez OTP na tym samym numerze telefonu, ghost recordy zostają powiązane z jego kontem:
+
+```ts
+// auth.service.ts — findOrCreateUser (wywoływane po verify-otp)
+void this.authRepository.linkClientsByPhone(phone, user.id);
+
+// auth.repository.ts
+async linkClientsByPhone(phone: string, userId: string): Promise<void> {
+  await this.prisma.client.updateMany({
+    where: { phone, userId: null },
+    data: { userId },
+  });
+}
+```
+
+Wywołanie jest fire-and-forget (`void`) — błąd linkowania nie blokuje logowania.
+
+### Multi-tenant isolation — 4 warstwy
+
+Aplikacja jest SaaS: klienci jednego warsztatu **nie mogą wyciec do innego**. Izolacja jest wymuszana na 4 poziomach:
+
+#### 1. `providerId` pochodzi zawsze z JWT
+
+```ts
+// controller
+@Get()
+list(@JwtPayload() payload: JwtPayloadDto) {
+  return this.service.list(payload.providerId);  // ← z tokenu, nie z body/query
+}
+```
+
+Nigdy nie przyjmuj `providerId` od klienta (body, query param). Jedyny wyjątek: admin endpoint z RBAC guard.
+
+#### 2. Repository zawsze wymaga `providerId`
+
+Każda metoda repository operująca na danych providera przyjmuje `providerId` jako obowiązkowy argument:
+
+```ts
+// ✅ poprawnie
+findById(providerId: string, id: string): Promise<TireSet | null> {
+  return this.prisma.tireSet.findFirst({ where: { id, providerId } });
+}
+
+// ❌ błąd — brak izolacji tenantów
+findById(id: string): Promise<TireSet | null> {
+  return this.prisma.tireSet.findUnique({ where: { id } });
+}
+```
+
+Reguła: **`findFirst({ where: { id, providerId } })` zamiast `findUnique({ where: { id } })`** dla każdego zasobu per-provider.
+
+#### 3. Ownership check przed mutacją
+
+Przed każdym `update`/`delete` zrób lookup z `providerId`. Jeśli rekord nie istnieje (lub należy do innego tenanta) → 404, nigdy 403 (nie ujawniaj, że rekord istnieje).
+
+```ts
+async update(providerId: string, id: string, dto: UpdateDto) {
+  const existing = await this.repo.findById(providerId, id);
+  if (!existing) throw new NotFoundException('Not found');
+  return this.repo.update(providerId, id, dto);
+}
+```
+
+#### 4. `userId` nie trafia do DTO
+
+`Client.userId` to wewnętrzne powiązanie do tabeli `users` — nie wystawiaj go w response DTO. DTO klienta zawiera tylko: `id`, `providerId`, `phone`, `firstName`, `lastName`, `notes`.
+
+```ts
+// ❌ nie rób tego
+@ApiProperty() userId?: string;
+
+// ✅ pomiń userId w DTO
+```
+
+### Wyszukiwanie klientów (autocomplete telefonu)
+
+Endpoint `GET /v1/providers/me/clients/search?q=` zwraca klientów pasujących do zapytania (telefon, imię, nazwisko) wyłącznie dla bieżącego providera:
+
+```ts
+// clients.repository.ts
+searchClients(providerId: string, q: string) {
+  return this.prisma.client.findMany({
+    where: {
+      providerId,
+      OR: [
+        { phone: { contains: q } },
+        { firstName: { contains: q, mode: 'insensitive' } },
+        { lastName: { contains: q, mode: 'insensitive' } },
+      ],
+    },
+    take: 10,
+    orderBy: { lastName: 'asc' },
+  });
+}
+```
+
+Hook panelowy: `useClientSearch(query)` — 220 ms debounce, wynik: `{ phone, name }[]`.
+
+---
+
+## 26. Moduł kalendarza — architektura FE
+
+### `calendar.utils.ts` — jedyne źródło stałych i helperów
+
+Wszystkie stałe siatki, helpery daty i helpery renderowania kalendarza żyją w jednym miejscu:
+
+```
+apps/panel/app/dashboard/calendar/calendar.utils.ts
+```
+
+**Nigdy** nie definiuj stałych siatki (`HOUR_START`, `PX_PER_HOUR` itp.) inline w `DayView.tsx` / `WeekView.tsx` / `MonthView.tsx` — prowadzi to do desynchronizacji i duplikacji. Gdy dodajesz nową logikę renderowania wspólną dla kilku widoków, dodaj ją tutaj.
+
+Kluczowe eksporty:
+
+| Eksport                                        | Typ                        | Opis                                   |
+| ---------------------------------------------- | -------------------------- | -------------------------------------- |
+| `HOUR_START` / `HOUR_END`                      | `number`                   | Zakres godzin siatki (6–20)            |
+| `PX_PER_HOUR`                                  | `number`                   | Piksele na godzinę (60)                |
+| `GRID_HEIGHT`                                  | `number`                   | Wysokość całej siatki w px             |
+| `getBookingStyle(startAt, endAt)`              | `{top, height}`            | Pozycja bloku rezerwacji na siatce     |
+| `getNowLineTop()`                              | `number`                   | Pozycja linii „teraz"                  |
+| `getStationHours(station, dayOfWeek)`          | `{open, startMin, endMin}` | Godziny stanowiska dla dnia tygodnia   |
+| `stationClosedZones(hours)`                    | `{top, height}[]`          | Strefy zamknięte jednego stanowiska    |
+| `stationUnionClosedZones(stations, dayOfWeek)` | `{zones, endTop}`          | Unia godzin wielu stanowisk (WeekView) |
+
+### Integracja grafiku stanowisk w kalendarzu
+
+DayView i WeekView wizualizują godziny stanowisk jako zaciemnione strefy poza godzinami pracy i linię końca zmiany.
+
+**DayView (swim lanes)**
+
+- 0 stanowisk → siatka bez shadeowania (identyczny widok jak przed integracją)
+- 1 stanowisko → pojedyncza kolumna + `stationClosedZones` nakłada `.stationClosedZone`
+- 2+ stanowisk → osobna kolumna per stanowisko (`.stationCol`) z nagłówkiem i rezerwacjami filtrowanymi po `stationId`
+
+**WeekView**
+
+Każdy dzień używa sumy godzin wszystkich stanowisk: `stationUnionClosedZones(stations, day.getDay())`. Zbyt wąska kolumna żeby pokazać swim lanes — renderuje tylko shading i linię.
+
+**CSS klasy i tokeny**
+
+Klasy `.stationClosedZone`, `.stationShiftEnd`, `.stationShiftEndLabel` są w `calendar.module.css`.
+
+Tokeny kolorów dla stref zamkniętych (`--cal-closed-stripe`, `--cal-closed-stripe-dark`) są **lokalne** — zdefiniowane w bloku `.main {}` wewnątrz `calendar.module.css`, **nie** w `global.css`. Nie szukaj ich w `global.css`.
+
+### DayTimeline — picker slotów w modalach
+
+```
+apps/panel/app/dashboard/_components/DayTimeline.tsx
+apps/panel/app/dashboard/_components/DayTimeline.module.css
+```
+
+Komponent do wizualnego wyboru slotu w modalach (np. ręczna rezerwacja). Cechy:
+
+- Zakres `TL_START_H=7` do `TL_END_H=20`, skala `PX_PER_MIN=2` (2 px/min)
+- Snap co 5 minut
+- Pokazuje istniejące rezerwacje dnia jako kolorowe bloki wg statusu
+- Hover ghost — podgląd nowej rezerwacji przed kliknięciem
+
+```tsx
+import { DayTimeline } from '../../_components/DayTimeline';
+
+<DayTimeline
+  slots={availableSlots} // TlSlot[] — dostępne sloty
+  bookings={dayBookings} // BookingBlock[] — istniejące wizyty (opcjonalne)
+  durationMinutes={60}
+  selectedTime="10:00"
+  date="2026-05-15"
+  onSelect={(time) => setTime(time)}
+/>;
+```
+
+Nie implementuj własnego pickera czasu w nowym modalu — użyj tego komponentu.
+
+---
+
+## 27. Wizyta ręczna — usługa poza cennikiem (custom service)
+
+### Kontekst i motywacja
+
+Warsztaty często wykonują usługi ad-hoc, których nie ma w cenniku — np. jednorazowa naprawa, mycie auta, dopełnienie powietrza. Funkcja „poza cennikiem" pozwala dodać taką usługę do ręcznej rezerwacji bez konieczności wcześniejszego konfigurowania jej w panelu usług.
+
+### Pola w modelu `Booking`
+
+```prisma
+isCustomService       Boolean       @default(false)
+customPricePln        Decimal?      @db.Decimal(10, 2)
+customDurationMinutes Int?
+```
+
+- `isCustomService = true` oznacza, że pole `serviceName` (String?) zawiera dowolną nazwę wpisaną przez warsztat — **nie jest to foreign key do `Service`/`ServiceVariant`**.
+- `customPricePln` i `customDurationMinutes` są miarodajne **tylko gdy `isCustomService = true`**. Gdy `false`, cena i czas wynikają z cennika (pole `totalPricePln`, `serviceDetails`).
+- `customDurationMinutes` jest wymagany przy tworzeniu custom service (walidacja: `@IsInt @IsPositive @Max(600)`). W UI pochodzi ze wspólnego stanu `durationMinutes` (patrz niżej) — domyślna wartość to 60 minut.
+- `customPricePln` jest opcjonalny — warsztat może nie wpisać ceny.
+
+### `serviceDetails` — struktura JSON
+
+Dla wizyt z cennika `serviceDetails` zawiera tablicę podusług:
+
+```json
+{
+  "subServices": [
+    {
+      "id": "uuid",
+      "name": "Wyważanie",
+      "pricePln": 20,
+      "durationMinutes": 15,
+      "isIncluded": true
+    }
+  ]
+}
+```
+
+Dla `isCustomService = true` pole `serviceDetails` jest `null` — nie ma podusług z cennika.
+
+### Indeks DB
+
+```sql
+CREATE INDEX "bookings_providerId_isCustomService_serviceName_idx"
+  ON "bookings" ("providerId", "isCustomService", "serviceName");
+```
+
+Używany przez endpoint autocomplete do szybkiego `groupBy` po `serviceName`.
+
+### API — endpoint autocomplete
+
+```
+GET /v1/providers/me/bookings/custom-services?q=mycie
+```
+
+Zwraca listę `CustomServiceSuggestionDto[]` — nazwy usług poza cennikiem, które już były używane przez ten warsztat, posortowane malejąco po liczbie użyć.
+
+```typescript
+class CustomServiceSuggestionDto {
+  name: string;
+  avgPricePln: number | null; // średnia cena z historii
+  avgDurationMinutes: number | null; // średni czas (zaokrąglony)
+  count: number; // ile razy użyta
+}
+```
+
+**Minimalna długość query**: 1 znak — egzekwowane przez hook frontendowy (`useCustomServiceSearch`). Backend akceptuje pusty string i zwraca wtedy do 8 najczęstszych usług custom warsztatu (`serviceName: { not: null }`).
+
+**Historia nie wygasa** — wszystkie zrealizowane wizyty poza cennikiem zasilają autocomplete.
+
+#### Izolacja między warsztatami (SECURITY)
+
+`providerId` pochodzi **wyłącznie z JWT** (`@CurrentUser()`) — nigdy z query parametrów. Implementacja w kontrolerze:
+
+```typescript
+@Get('custom-services')
+async getCustomServiceSuggestions(
+  @CurrentUser() user: JwtPayload,
+  @Query('q') q: string,
+): Promise<CustomServiceSuggestionDto[]> {
+  const provider = await this.providersService.getMyProvider(user.sub);
+  return this.service.getCustomServiceSuggestions(provider.id, q ?? '');
+}
+```
+
+Zapytanie w repozytorium zawsze filtruje po `providerId`:
+
+```typescript
+// q niepusty → filtruje po fragmencie nazwy; q pusty → zwraca wszystkie custom tego warsztatu
+where: {
+  providerId,
+  isCustomService: true,
+  serviceName: q ? { contains: q, mode: 'insensitive' } : { not: null },
+}
+```
+
+Nie dodawaj `providerId` jako parametru query — to by umożliwiało odczyt danych innego warsztatu.
+
+### Panel — `ManualBookingModal`
+
+#### Toggle z cennika / poza cennikiem
+
+```tsx
+<SegmentedControl
+  value={serviceMode}
+  onChange={handleModeChange}
+  options={[
+    { value: 'catalog', label: 'z cennika' },
+    { value: 'custom', label: 'poza cennikiem' },
+  ]}
+/>
+```
+
+`handleModeChange` resetuje stan obu trybów, żeby nie przenosić częściowych danych między nimi.
+
+#### Hook `useCustomServiceSearch`
+
+```
+apps/panel/lib/hooks/use-custom-service-search.ts
+```
+
+- Debounce: 220 ms
+- Minimalna długość: 1 znak (w przeciwnym razie czyści sugestie bez zapytania)
+- Czyści sugestie przy zmianie trybu (stan zewnętrzny `customServiceQuery` jest resetowany)
+
+```typescript
+const { suggestions, isLoading } = useCustomServiceSearch(customServiceQuery);
+```
+
+#### Zachowanie UI w trybie custom
+
+1. Input do wpisania nazwy usługi (dowolny tekst) — ten sam input steruje `customServiceName` i `customServiceQuery`.
+2. Pod inputem dropdown z sugestiami (klasy `.phoneDropdown` / `.phoneDropdownItem` — te same co dla autocomplete telefonu).
+3. Po wyborze sugestii: `customServiceName` ustawiany na `suggestion.name`, `customPricePln` na `suggestion.avgPricePln ?? undefined`. Czas trwania z sugestii jest **ignorowany** — użytkownik ustawia go przez kontrolki Od/Czas/Do (patrz niżej).
+4. Cena (opcjonalna) — natywny `<input type="number">` w sekcji podsumowania (klasa `.priceInput`), wyjątek od zasady DS.
+5. **Brak osobnego stanu `customDurationMinutes`** — czas trwania pochodzi ze wspólnego stanu `durationMinutes` (patrz „Wzorzec Od · Czas · Do" poniżej).
+
+#### Czas trwania i obliczanie `endAt`
+
+Oba tryby (catalog i custom) używają **jednego wspólnego stanu** `durationMinutes: number` (default 60). `endAt` jest zawsze pochodną:
+
+```typescript
+const endTimeStr = addMinutes(timeInput, durationMinutes); // HH:MM
+const endAt = new Date(`${date}T${endTimeStr}:00`).toISOString();
+```
+
+`DayTimeline` (ghost blok) i `endAt` w payload korzystają z tej samej wartości — czas jest więc widoczny w podglądzie kalendarza.
+
+W trybie catalog `durationMinutes` jest auto-syncowany z `totalDurationMinutes` (z cennika) przez `useEffect` gdy zmieni się `selectedVariantKey` lub `selectedRimKey`. Użytkownik może ręcznie zmienić `durationMinutes` po wyborze serwisu.
+
+#### Payload `createManual` w trybie custom
+
+```typescript
+{
+  serviceName: customServiceName,
+  isCustomService: true,
+  customDurationMinutes: durationMinutes, // wspólny stan — nie istnieje osobny state "customDurationMinutes"
+  customPricePln: customPricePln ?? undefined, // opcjonalne
+  // brak serviceVariantId, rimSize, subServiceIds
+}
+```
+
+#### Payload `createManual` w trybie catalog (bez zmian)
+
+```typescript
+{
+  serviceName: resolvedServiceType,  // np. "Wymiana opon — V2 (2 koła)" — sformatowany string
+  tireSize: resolvedTireSize,        // np. "17\"" — z wybranego RimTier
+  subServices: [{ name: string, pricePln: number | null }],  // tylko zaznaczone
+  totalPricePln: resolvedPrice,
+  isCustomService: false,
+  // brak serviceVariantId — wariant jest zakodowany w serviceName (string)
+}
+```
+
+### Wzorzec Od · Czas · Do — powiązane kontrolki czasu
+
+`ManualBookingModal` zawiera trójkę zsynchronizowanych kontrolek czasu w jednej karcie (`.timeRangeGroup`):
+
+```
+┌─────────────────────────────────────────────────────┐
+│  Godziny wizyty  ℹ                                  │
+│  [Od: 10:00]  →  [Czas (min): ◀ 60 ▶]  →  [Do: 11:00] │
+└─────────────────────────────────────────────────────┘
+```
+
+**Reguły synchronizacji:**
+
+| Zmienione pole | Co się przelicza                                 |
+| -------------- | ------------------------------------------------ |
+| **Od**         | Do przesuwa się (duration stays)                 |
+| **Czas (min)** | Do przesuwa się (Od stays)                       |
+| **Do**         | Od cofa się o `durationMinutes` (duration stays) |
+
+Implementacja opiera się na dwóch helperach:
+
+```typescript
+// obsługuje ujemne minuty przez modulo 1440 (wrap przez północ)
+function addMinutes(timeHHMM: string, minutes: number): string {
+  const total = ((hh * 60 + mm) + minutes + 1440) % 1440;
+  ...
+}
+
+// używane gdy user zmienia pole "Do" → liczy nową wartość "Od"
+function diffMinutes(startHHMM: string, endHHMM: string): number { ... }
+```
+
+**Reset modalu:** `resetForm()` jest wywoływany w `useEffect` przy `isOpen → true` żeby zawsze czyścić stan (w tym `durationMinutes`) po poprzedniej wizycie. Nie polegaj na `onClose` — modal może być zamknięty przez kliknięcie poza obszar.
+
+**Reużycie wzorca:** jeśli dodajesz nowy modal z wyborem czasu wizyty, nie implementuj własnych kontrolek — wyciągnij ten wzorzec jako osobny komponent.
+
+### Detekcja konfliktów w UI
+
+Konflikty czasowe są wykrywane **bezpośrednio z `dayBookings`**, nie z `availability.slots`:
+
+```typescript
+const conflictBookings = dayBookings.filter(
+  (b) => b.startAt < endAt && b.endAt > startAt, // strict inequalities
+);
+```
+
+**Dlaczego nie `availability.slots`?** Backend generuje sloty z inkluzywną granicą końcową — slot `09:45–10:00` jest oznaczany jako zajęty nawet gdy booking kończy się dokładnie o 10:00. To powodowało fałszywe alarmy przy stykających się rezerwacjach (A kończy się o 10:00, nowa zaczyna o 10:00). Strict inequalities na rzeczywistych ISO timestampach eliminują ten problem.
+
+`overlapMinutes` (czas zakładki) liczony jest z rzeczywistych timestampów:
+
+```typescript
+const overlapMinutes = conflictBookings.reduce((sum, b) => {
+  const start = Math.max(new Date(startAt).getTime(), new Date(b.startAt).getTime());
+  const end = Math.min(new Date(endAt).getTime(), new Date(b.endAt).getTime());
+  return sum + Math.round((end - start) / 60_000);
+}, 0);
+```
+
+### Reguły przy rozszerzaniu
+
+- Nie dodawaj pola `customServiceId` — custom service to wolny tekst, nie encja.
+- Nie reużywaj `serviceDetails` JSON do przechowywania custom service — to pole jest zarezerwowane dla podusług z cennika.
+- Nowe pola na custom service (np. `customNotes`) dodaj do `Booking` z prefiksem `custom*` i guard `isCustomService = true`.
+- Autocomplete jest read-only — historia powstaje jako efekt uboczny zapisanych rezerwacji, nie przez osobny endpoint `POST`.
+
+---
+
+## 28. Strona szczegółów wizyty — architektura i zasady
+
+### Plik
+
+`apps/panel/app/dashboard/bookings/[referenceCode]/page.tsx`
+
+### Struktura UI
+
+```
+Topbar (breadcrumb + status pill)
+StatusHero (status, kod, kiedy, czas trwania)
+TwoCol:
+  ColLeft (scrolluje):
+    Usługa        — nazwa, badge z/poza cennikiem, podusługi
+    Przypisanie   — pracownik + stanowisko (tylko jeśli ustawione)
+    Klient        — avatar, liczba wizyt, numer telefonu
+    Miejsce       — adres (tylko mobile provider)
+    Pojazd        — nickname + rozmiar opon
+    Notatki       — notatki wewnętrzne warsztatu (badge "Wewnętrzne")
+    Skład opon    — link do składu (tylko jeśli hasTireSetsInDepot)
+    Historia      — timeline zdarzeń statusowych
+  ColRight (sticky):
+    Karta cen     — base/custom + podusługi + dojazd + total
+    Karta akcji   — przyciski zależne od statusu
+```
+
+### `BookingDetailResponseDto` — pola kluczowe
+
+| Pole                  | Źródło                        | Uwagi                              |
+| --------------------- | ----------------------------- | ---------------------------------- |
+| `service.name`        | `Booking.serviceName`         | null dla rezerwacji bez nazwy      |
+| `service.subServices` | `Booking.serviceDetails` JSON | tablica `{name, pricePln}`         |
+| `isCustomService`     | `Booking.isCustomService`     | guard dla pól `custom*`            |
+| `customPricePln`      | `Booking.customPricePln`      | cena custom (nie `basePricePln`)   |
+| `workerName`          | `Booking.worker.name`         | null jeśli brak przypisania        |
+| `stationName`         | `Booking.station.name`        | null jeśli brak przypisania        |
+| `hasTireSetsInDepot`  | licznik `TireSet[]`           | wyliczany w serwisie, nie w Prisma |
+
+`findDetailByReferenceCode` w repozytorium musi includować `worker` i `station`:
+
+```typescript
+include: {
+  client: { select: { phone: true, firstName: true, lastName: true } },
+  vehicle: { select: { nickname: true, tireSize: true } },
+  worker: { select: { name: true } },
+  station: { select: { name: true } },
+}
+```
+
+### Logika akcji
+
+No-show pojawia się warunkowo — tylko gdy czas wizyty już minął:
+
+```typescript
+const showNoShow =
+  (status === 'CONFIRMED' || status === 'IN_PROGRESS') && new Date(booking.startAt) < new Date();
+```
+
+Rescue modal (zmień termin) pre-filluje pola z aktualnych `startAt`/`endAt` i wywołuje `bookingsApi.reschedule`.
+
+### Zasady UI panelu operacyjnego
+
+**Nie dodawaj przycisków których nie można obsłużyć z przeglądarki.**
+
+Odrzucone jako bezużyteczne w panelu webowym:
+
+- „Zadzwoń" — numer telefonu pokazuj jako tekst, nie CTA
+- „Udostępnij" — nie ma odbiorcy ani formatu
+- „Drukuj zlecenie" — brak szablonu wydruku
+- „Dodaj do kalendarza" — panel jest kalendarzem; import do Google Cal nie jest funkcją panelu
+
+Ogólna zasada: każdy przycisk musi mieć działający handler lub nie istnieje.
+
+**Nie duplikuj tej samej informacji w dwóch miejscach tego samego widoku.**
+
+StatusHero zajmuje całą szerokość ekranu i pokazuje status wizualnie — dodatkowy badge statusu w topbarze jest redundantny. Podobnie: subtitle nagłówka sekcji nie powinien powtarzać danych widocznych w treści tej samej sekcji (np. liczba rezerwacji klienta w nagłówku karty klienta i w treści karty).
+
+### Znane hardcoded wartości — nie szukaj ich w API
+
+| Element                                | Stan                       | Uwaga                                                                                                                        |
+| -------------------------------------- | -------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| Badge „Zweryfikowany" w karcie klienta | hardcoded, zawsze widoczny | `BookingClientDto` nie ma pola `isVerified`; weryfikacja telefonem jest implicit przez sam fakt istnienia klienta w systemie |
+
+---
+
+## 29. Nawigacja powrotna z kontekstem (back navigation)
+
+Gdy użytkownik trafia na stronę szczegółową z konkretnego kontekstu (np. kalendarza), przycisk Wstecz powinien wrócić do tego kontekstu — nie zawsze do listy.
+
+### Wzorzec: `?from=X&date=Y`
+
+Strona źródłowa (np. `BookingDetailPanel` w kalendarzu) dokłada query params do linka:
+
+```tsx
+// BookingDetailPanel.tsx — link "Pełne szczegóły"
+href={`/dashboard/bookings/${booking.referenceCode}?from=calendar&date=${calendarDate}`}
+// calendarDate = currentDate.toISOString().slice(0, 10)  // "YYYY-MM-DD"
+```
+
+Strona docelowa czyta params i dostosowuje przycisk Wstecz oraz breadcrumb:
+
+```typescript
+// [referenceCode]/page.tsx
+const searchParams = useSearchParams();
+const fromCalendar = searchParams.get('from') === 'calendar';
+const calendarDate = searchParams.get('date');
+const backHref = fromCalendar
+  ? `/dashboard/calendar${calendarDate ? `?date=${calendarDate}` : ''}`
+  : '/dashboard/bookings';
+```
+
+Strona docelowa (kalendarz) na mount czyta `?date=` i odtwarza pozycję:
+
+```typescript
+// calendar/page.tsx
+const [currentDate, setCurrentDate] = useState<Date>(() => {
+  const dateParam = searchParams.get('date');
+  if (dateParam) {
+    const parsed = new Date(dateParam);
+    if (!isNaN(parsed.getTime())) {
+      parsed.setHours(0, 0, 0, 0);
+      return parsed;
+    }
+  }
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  return d;
+});
+```
+
+### Rozszerzanie wzorca
+
+Przy dodawaniu nowego kontekstu (np. `?from=depot`):
+
+1. Dodaj param w komponencie źródłowym
+2. Dodaj case w `backHref` na stronie docelowej
+3. Dodaj breadcrumb label dla nowego kontekstu
+
+---
+
+## 30. CSS — pułapka `overflow: hidden` na kartach z kolorowym paskiem
+
+### Problem
+
+Częsty wzorzec: karta z zaokrąglonymi rogami ma pionowy pasek koloru po lewej stronie, zrealizowany przez `::before` z `position: absolute`:
+
+```css
+/* ❌ NIE RÓB TAK */
+.card {
+  border-radius: 14px;
+  position: relative;
+  overflow: hidden; /* potrzebne żeby przyciąć ::before do rogów */
+}
+.card::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: var(--accent);
+}
+```
+
+`overflow: hidden` tworzy nowy BFC i **przycina cienie dzieci** (`box-shadow`), może powodować wizualne ucięcie zawartości karty oraz utrudnia obliczanie wysokości przez grid/flex.
+
+### Rozwiązanie
+
+Użyj `border-left` — przeglądarka respektuje `border-radius` na narożnikach, więc nie potrzeba `overflow: hidden`:
+
+```css
+/* ✅ TAK */
+.card {
+  border-radius: 14px;
+  border: 1px solid var(--accent-border);
+  border-left: 4px solid var(--accent);
+  padding-left: 26px; /* kompensata szerszego border-left */
+  /* brak overflow: hidden */
+}
+```
+
+Dla wariantów statusowych zmień tylko kolor lewego bordera:
+
+```css
+.cardPending {
+  border-left-color: var(--warning);
+}
+.cardSuccess {
+  border-left-color: var(--success);
+}
+.cardDanger {
+  border-left-color: var(--danger);
+}
+```

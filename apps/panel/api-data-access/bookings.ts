@@ -16,10 +16,13 @@ export type BookingStatus =
 // isManual is present in BookingResponseDto backend DTO but not yet in generated schema
 export type Booking = Omit<BookingBase, 'status'> & { status: BookingStatus; isManual: boolean };
 
-type BookingDetailBase = components['schemas']['BookingDetailResponseDto'];
 export type BookingClient = components['schemas']['BookingClientDto'];
 export type BookingVehicle = components['schemas']['BookingVehicleDto'];
-export type BookingDetail = Omit<BookingDetailBase, 'status'> & { status: BookingStatus };
+export type BookingService = components['schemas']['BookingServiceDto'];
+export type BookingSubService = components['schemas']['BookingSubServiceDto'];
+export type BookingDetail = Omit<components['schemas']['BookingDetailResponseDto'], 'status'> & {
+  status: BookingStatus;
+};
 
 export type StatusAction = 'confirm' | 'start' | 'complete' | 'cancel' | 'reject' | 'no_show';
 
@@ -88,24 +91,38 @@ export const bookingsApi = {
     api.patch<void>('/v1/providers/me/bookings/bulk-status', { ids, action }),
   createManual: (payload: ManualBookingPayload) =>
     api.post<Booking>('/v1/providers/me/bookings/manual', payload),
+  reschedule: (referenceCode: string, startAt: string, endAt: string, notifyClient: boolean) =>
+    api.patch<Booking>(`/v1/providers/me/bookings/${referenceCode}/reschedule`, {
+      startAt,
+      endAt,
+      notifyClient,
+    }),
+  updateNotes: (referenceCode: string, notes: string | null) =>
+    api.patch<void>(`/v1/providers/me/bookings/${referenceCode}/notes`, { notes }),
+  editBooking: (
+    referenceCode: string,
+    payload: {
+      totalPricePln?: number | null;
+      subServices?: { name: string; pricePln?: number | null }[];
+      clientNote?: string | null;
+    },
+  ) => api.patch<void>(`/v1/providers/me/bookings/${referenceCode}/edit`, payload),
+  searchClients: (q: string) =>
+    api.get<components['schemas']['ClientSearchResultDto'][]>(
+      `/v1/providers/me/bookings/clients?q=${encodeURIComponent(q)}`,
+    ),
+  getCustomServiceSuggestions: (q: string) =>
+    api.get<components['schemas']['CustomServiceSuggestionDto'][]>(
+      `/v1/providers/me/bookings/custom-services?q=${encodeURIComponent(q)}`,
+    ),
   getAvailability: (date: string, workerId?: string) => {
     const qs = workerId ? `?date=${date}&workerId=${workerId}` : `?date=${date}`;
-    return api.get<AvailabilityResponse>(`/v1/providers/me/availability${qs}`);
+    return api.get<AvailabilityResponse>(`/v1/providers/me/bookings/availability${qs}`);
   },
 };
 
-export interface ManualBookingPayload {
-  clientName: string;
-  clientPhone: string;
-  startAt: string;
-  endAt: string;
-  tireSize?: string;
-  totalPricePln?: number;
-  serviceType?: string;
-  workerId?: string;
-  notes?: string;
-  autoConfirm?: boolean;
-}
+export type ManualBookingPayload = components['schemas']['CreateManualBookingDto'];
+export type CustomServiceSuggestion = components['schemas']['CustomServiceSuggestionDto'];
 
 export interface AvailabilitySlot {
   startAt: string;
@@ -118,4 +135,5 @@ export interface AvailabilityResponse {
   slots: AvailabilitySlot[];
   slotMinutes: number;
   isClosedDay: boolean;
+  version: string;
 }

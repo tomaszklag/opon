@@ -1,0 +1,23 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  width: 100%;
+}
+
+.addBtn {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 12px;
+  border-radius: 9px;
+  border: 1px dashed var(--accent-border);
+  background: transparent;
+  color: var(--accent);
+  cursor: pointer;
+}
+
+.addBtn:hover {
+  background: var(--accent-muted);
+}

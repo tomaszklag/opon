@@ -95,15 +95,6 @@
   scrollbar-width: thin;
 }
 
-.formScroll::-webkit-scrollbar {
-  width: 6px;
-}
-
-.formScroll::-webkit-scrollbar-thumb {
-  background: var(--border);
-  border-radius: 3px;
-}
-
 .formInner {
   width: 100%;
   max-width: 820px;

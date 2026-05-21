@@ -1,0 +1,117 @@
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  overflow: hidden;
+}
+
+.hdr {
+  padding: 9px 13px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.selector {
+  padding: 7px 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.body {
+  padding: 9px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.divider {
+  height: 1px;
+  background: var(--border);
+  margin: 4px 0;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 8px;
+  border-radius: 5px;
+}
+
+.rowBase {
+  background: var(--bg);
+  border: 1px solid var(--border);
+}
+
+.rowOpt {
+  background: var(--accent-muted);
+  border: 1px solid var(--accent-border);
+}
+
+.rowLabel {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.rowMeta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.total {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 7px 10px;
+  background: var(--accent-muted);
+  border: 1px solid var(--accent-border);
+  border-radius: 7px;
+}
+
+.emptyHint {
+  padding: 8px 0;
+  text-align: center;
+}
+
+.rowSub {
+  background: transparent;
+  border: 1px dashed var(--border);
+}
+
+.rowDisabled {
+  opacity: 0.5;
+  text-decoration: line-through;
+}
+
+
+.disabledNotice {
+  padding: 5px 8px;
+  border-radius: 5px;
+  background: var(--warning-muted);
+  border: 1px solid var(--warning-border);
+}
+
+.totalDisabled {
+  opacity: 0.5;
+}
+
+.sectionLabel {
+  padding: 0 2px;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+}
+
+
+.variantGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.rowWheel {
+  padding-left: 8px;
+  opacity: 0.65;
+}

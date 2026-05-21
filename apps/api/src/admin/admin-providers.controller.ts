@@ -57,4 +57,28 @@ export class AdminProvidersController {
   rejectProvider(@Param('id', ParseUUIDPipe) id: string, @Body() body: RejectProviderDto) {
     return this.service.rejectProvider(id, body.reason);
   }
+
+  // ── PATCH /v1/admin/providers/:id/confirm-deletion ────────────────────────
+
+  @Patch(':id/confirm-deletion')
+  @ApiOperation({ summary: 'Potwierdź usunięcie konta (PENDING_DELETION → usuwa dane)' })
+  @ApiResponse({ status: 200, description: 'Konto usunięte' })
+  @ApiResponse({ status: 400, description: 'Firma nie oczekuje na usunięcie' })
+  @ApiResponse({ status: 403, description: 'Brak uprawnień' })
+  @ApiResponse({ status: 404, description: 'Firma nie istnieje' })
+  confirmDeletion(@Param('id', ParseUUIDPipe) id: string) {
+    return this.service.confirmDeletion(id);
+  }
+
+  // ── PATCH /v1/admin/providers/:id/cancel-deletion ─────────────────────────
+
+  @Patch(':id/cancel-deletion')
+  @ApiOperation({ summary: 'Anuluj wniosek o usunięcie (PENDING_DELETION → APPROVED)' })
+  @ApiResponse({ status: 200, description: 'Wniosek anulowany' })
+  @ApiResponse({ status: 400, description: 'Firma nie oczekuje na usunięcie' })
+  @ApiResponse({ status: 403, description: 'Brak uprawnień' })
+  @ApiResponse({ status: 404, description: 'Firma nie istnieje' })
+  cancelDeletion(@Param('id', ParseUUIDPipe) id: string) {
+    return this.service.cancelDeletion(id);
+  }
 }
