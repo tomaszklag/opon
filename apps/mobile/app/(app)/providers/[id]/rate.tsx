@@ -33,7 +33,7 @@ function BackButton() {
 }
 
 export default function RateScreen() {
-  const { id, bookingId } = useLocalSearchParams<{ id: string; bookingId: string }>();
+  const { bookingId } = useLocalSearchParams<{ id: string; bookingId: string }>();
   const router = useRouter();
   const { show: showToast } = useToast();
 

@@ -1,5 +1,12 @@
 import React, { useState } from 'react';
-import { View, TextInput, StyleSheet, ViewStyle, Pressable } from 'react-native';
+import {
+  View,
+  TextInput,
+  StyleSheet,
+  ViewStyle,
+  Pressable,
+  type TextInputProps,
+} from 'react-native';
 import { t } from '../tokens.native';
 import { Text } from '../typography/Text';
 
@@ -13,7 +20,7 @@ interface InputProps {
   secureTextEntry?: boolean;
   keyboardType?: 'default' | 'phone-pad' | 'numeric' | 'email-address';
   autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
-  autoComplete?: string;
+  autoComplete?: TextInputProps['autoComplete'];
   leftIcon?: React.ReactNode;
   rightIcon?: React.ReactNode;
   onRightIconPress?: () => void;
@@ -83,7 +90,7 @@ export const Input = React.forwardRef<TextInput, InputProps>(function InputCompo
           secureTextEntry={secureTextEntry}
           keyboardType={keyboardType}
           autoCapitalize={autoCapitalize}
-          autoComplete={autoComplete as any}
+          autoComplete={autoComplete}
           editable={!disabled}
           multiline={multiline}
           numberOfLines={numberOfLines}

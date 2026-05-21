@@ -67,7 +67,6 @@ function calcAverage(reviews: AppReview[]): string {
 
 export default function ReviewsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const router = useRouter();
 
   const { data: reviews, isLoading, isError, refetch } = useReviews(id);
 

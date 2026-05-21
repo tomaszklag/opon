@@ -1,9 +1,4 @@
-import {
-  colors,
-  spacing as rawSpacing,
-  radius as rawRadius,
-  shadow as rawShadow,
-} from '@opony/design-tokens';
+import { colors, spacing as rawSpacing, radius as rawRadius } from '@opony/design-tokens';
 
 const px = (v: string): number => parseInt(v, 10);
 
