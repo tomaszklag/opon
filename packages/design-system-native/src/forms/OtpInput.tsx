@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef } from 'react';
 import { View, TextInput, StyleSheet, Pressable } from 'react-native';
 import { t } from '../tokens.native';
 
