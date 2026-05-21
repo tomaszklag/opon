@@ -22,6 +22,8 @@ function toServiceDto(s: DbService): ServiceResponseDto {
       rimSizes: v.rimSizes,
       pricePln: Number(v.pricePln),
       durationMinutes: v.durationMinutes,
+      pricePerWheelPln: v.pricePerWheelPln !== null ? Number(v.pricePerWheelPln) : null,
+      durationPerWheelMinutes: v.durationPerWheelMinutes,
       sortOrder: v.sortOrder,
     })),
     subServiceIds: s.subLinks.map((l) => l.subId),

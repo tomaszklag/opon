@@ -2035,6 +2035,36 @@ Husky uruchamia lint-staged automatycznie przy `git commit`:
 
 Jeśli commit się nie udaje przez hook — nie używaj `--no-verify`. Napraw problem i spróbuj ponownie.
 
+### 11.1. Nowy pakiet/aplikacja — wymagany `.eslintrc.js` z `root: true`
+
+Każdy nowy `apps/*` lub `packages/*`, który ma własny skrypt `lint`, **musi** posiadać plik `.eslintrc.js` z polem `root: true`:
+
+```js
+/** @type {import("eslint").Linter.Config} */
+module.exports = {
+  root: true,
+  extends: ['@opony/eslint-config'],
+};
+```
+
+**Dlaczego to jest konieczne:** Główny `.eslintrc.js` (w katalogu głównym repozytorium) zawiera `ignorePatterns: ['apps/', 'packages/']` — jest to celowe, bo root-level ESLint służy wyłącznie do lint-staged. Bez `root: true` w konfiguracji pakietu ESLint przechodzi do katalogu nadrzędnego i dziedziczy ten wzorzec, co powoduje błąd:
+
+```
+You are linting "src", but all of the files matching the glob pattern "src" are ignored.
+```
+
+Bez `root: true` lint w CI zawiedzie nawet jeśli kod jest poprawny.
+
+### 11.2. Prisma generate — część skryptu build
+
+W `apps/api/package.json` skrypt `build` zawiera `prisma generate` jako pierwszy krok:
+
+```json
+"build": "prisma generate && tsc -p tsconfig.build.json"
+```
+
+**Nie uruchamiaj `prisma generate` osobno przed buildem** — dzieje się to automatycznie. W CI `pnpm build` (przez Turborepo) wywołuje ten skrypt. Gdyby `prisma generate` nie wchodziło w skład `build`, TypeScript nie miałby wygenerowanych typów Prismy i kompilacja zakończyłaby się błędami `Module '@prisma/client' has no exported member 'XxxStatus'`.
+
 ---
 
 ## 12. Testowanie

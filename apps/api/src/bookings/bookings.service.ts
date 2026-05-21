@@ -542,7 +542,7 @@ export class BookingsService {
     if (!booking) {
       throw new AppException(ErrorCode.BOOKING_NOT_FOUND, 'Rezerwacja nie istnieje.', 404);
     }
-    const editableStatuses = [
+    const editableStatuses: BookingStatus[] = [
       BookingStatus.PENDING,
       BookingStatus.CONFIRMED,
       BookingStatus.IN_PROGRESS,
