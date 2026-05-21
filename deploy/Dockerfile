@@ -16,6 +16,7 @@ RUN pnpm install --frozen-lockfile --filter=@opony/api...
 # ── Stage 2: build ──────────────────────────────────────────────
 FROM deps AS builder
 
+COPY tsconfig.base.json ./
 COPY apps/api/ ./apps/api/
 
 RUN pnpm --filter=@opony/api build
