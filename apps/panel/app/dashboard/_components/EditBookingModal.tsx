@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Modal, Button, FieldLabel, Input, Textarea, Text } from '@opony/design-system-web';
 import { bookingsApi } from '../../../api-data-access/bookings';
-import { IconXClose } from '../../components/icons';
+import { IconXClose } from '../../../components/icons';
 import styles from './EditBookingModal.module.css';
 
 interface SubServiceRow {

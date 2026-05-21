@@ -499,7 +499,10 @@ export default function BookingDetailPage({ params }: PageProps) {
         onSuccess={() => void mutate()}
         referenceCode={referenceCode}
         initialTotalPricePln={booking.totalPricePln ?? null}
-        initialSubServices={booking.service.subServices}
+        initialSubServices={booking.service.subServices.map((s) => ({
+          name: s.name,
+          pricePln: s.pricePln ?? null,
+        }))}
         initialClientNote={booking.clientNote ?? null}
       />
 

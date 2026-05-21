@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Button, Heading, SegmentedControl, Spinner, Text } from '@opony/design-system-web';
 import { useAuthGuard } from '../../../lib/hooks/use-auth-guard';
@@ -44,7 +44,7 @@ import { RescheduleConfirmModal } from './_components/RescheduleConfirmModal';
 import { BookingTopbarActions } from '../_components/BookingTopbarActions';
 import styles from './calendar.module.css';
 
-export default function CalendarPage() {
+function CalendarPageContent() {
   const { isLoading: authLoading } = useAuthGuard('/dashboard');
   const searchParams = useSearchParams();
 
@@ -440,5 +440,13 @@ export default function CalendarPage() {
         </>
       )}
     </main>
+  );
+}
+
+export default function CalendarPage() {
+  return (
+    <Suspense fallback={null}>
+      <CalendarPageContent />
+    </Suspense>
   );
 }
