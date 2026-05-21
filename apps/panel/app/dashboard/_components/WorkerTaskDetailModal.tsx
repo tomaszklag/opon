@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import useSWR from 'swr';
 import { Modal, Button, Text, Spinner } from '@opony/design-system-web';
 import { toast } from '@opony/design-system-web';
@@ -131,6 +131,7 @@ function DetailContent({
   useEffect(() => {
     setNotes(task.notes ?? '');
     setNotesChanged(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [task.id]);
 
   async function saveNotes() {

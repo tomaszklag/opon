@@ -29,7 +29,7 @@ export default function DashboardNav() {
   const pathname = usePathname();
   const router = useRouter();
   const { logout } = useAuth();
-  const { user } = useAuthGuard('/dashboard');
+  useAuthGuard('/dashboard');
 
   useEffect(() => {
     document.body.style.overflow = 'hidden';

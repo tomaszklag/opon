@@ -62,11 +62,6 @@ const CANCELLED_STATUSES = new Set([
   'REJECTED',
 ]);
 
-function formatSlotTime(iso: string): string {
-  const d = new Date(iso);
-  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-}
-
 function pluralConflicts(n: number): string {
   if (n === 1) return 'rezerwację';
   if (n >= 2 && n <= 4) return 'rezerwacje';
@@ -114,12 +109,6 @@ function addMinutes(timeHHMM: string, minutes: number): string {
   const [hh, mm] = timeHHMM.split(':').map(Number);
   const total = ((hh ?? 0) * 60 + (mm ?? 0) + minutes + 1440) % 1440;
   return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
-}
-
-function diffMinutes(startHHMM: string, endHHMM: string): number {
-  const [sh, sm] = startHHMM.split(':').map(Number);
-  const [eh, em] = endHHMM.split(':').map(Number);
-  return (eh ?? 0) * 60 + (em ?? 0) - (sh ?? 0) * 60 - (sm ?? 0);
 }
 
 export function ManualBookingModal({

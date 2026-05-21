@@ -31,7 +31,7 @@ function formatDatetime(iso: string): string {
 export function RescheduleConfirmModal({
   booking,
   newStartAt,
-  newEndAt,
+  newEndAt: _newEndAt,
   isLoading,
   onConfirm,
   onCancel,

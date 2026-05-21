@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import { Button, Heading, Modal, Spinner, Text } from '@opony/design-system-web';
 import { useAuthGuard } from '../../../lib/hooks/use-auth-guard';
 import { useNavigationGuard } from '../../../lib/hooks/use-navigation-guard';

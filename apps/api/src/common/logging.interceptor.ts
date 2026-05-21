@@ -14,11 +14,11 @@ export class LoggingInterceptor implements NestInterceptor {
         next: () => {
           const res = context.switchToHttp().getResponse<Response>();
           const ms = Date.now() - start;
-          console.log(`[HTTP] ${method} ${path} ${res.statusCode} +${ms}ms`);
+          console.info(`[HTTP] ${method} ${path} ${res.statusCode} +${ms}ms`);
         },
         error: (err: { status?: number }) => {
           const ms = Date.now() - start;
-          console.log(`[HTTP] ${method} ${path} ${err.status ?? 500} +${ms}ms`);
+          console.info(`[HTTP] ${method} ${path} ${err.status ?? 500} +${ms}ms`);
         },
       }),
     );

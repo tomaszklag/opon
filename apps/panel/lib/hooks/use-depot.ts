@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 import {
   depotApi,
-  type TireSet,
   type TireSetDetail,
   type TireSetPage,
   type DepotStats,

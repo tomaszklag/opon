@@ -24,7 +24,6 @@ import {
   formatTime,
   formatDayDate,
   getBookingStyle,
-  isCancelledOrDone,
   timeAgo,
   matchesFilter,
   visitCountLabel,

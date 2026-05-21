@@ -176,7 +176,7 @@ export function AddLeaveModal({
         setApiError(err instanceof Error ? err.message : 'Błąd zapisywania nieobecności');
       }
     },
-    [form, editingLeave, onAddLeave, onUpdateLeave, onClose],
+    [form, editingLeave, onAddLeave, onUpdateLeave, onClose, dateRangeInvalid],
   );
 
   const workerOptions = workers.map((w) => ({ value: w.id, label: w.name }));

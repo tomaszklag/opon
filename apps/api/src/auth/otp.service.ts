@@ -72,7 +72,7 @@ export class OtpService {
     return randomInt(100_000, 1_000_000).toString();
   }
 
-  private async sendSms(phone: string, code: string): Promise<void> {
+  private async sendSms(phone: string, _code: string): Promise<void> {
     // TODO Sprint 2: integracja Twilio
     this.logger.warn(`sendSms() wywołany dla ${phone} — produkcja wymaga Twilio`);
   }

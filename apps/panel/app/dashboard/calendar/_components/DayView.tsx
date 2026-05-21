@@ -14,7 +14,6 @@ import {
   PX_PER_HOUR,
   GRID_HEIGHT,
   HOUR_START,
-  HOUR_END,
   DAY_ABBR,
   FilterType,
   FILTER_LABELS,
@@ -631,12 +630,14 @@ export function DayView({
               className={`${styles.dayViewColMulti} ${todayDay ? styles.today : ''} ${isDayOff ? styles.closed : ''}`}
             >
               {stationHoursMap.map(({ station, ...hours }, idx) => {
+                type BookingWithStation = Booking & { stationId?: string };
                 const stationBookings = visibleBookings.filter(
-                  (b) => (b as any).stationId === station.id,
+                  (b) => (b as BookingWithStation).stationId === station.id,
                 );
                 // Fallback: if no booking has stationId, show all in every lane
                 const bookingsToShow =
-                  stationBookings.length === 0 && visibleBookings.some((b) => !(b as any).stationId)
+                  stationBookings.length === 0 &&
+                  visibleBookings.some((b) => !(b as BookingWithStation).stationId)
                     ? visibleBookings
                     : stationBookings;
 

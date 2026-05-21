@@ -19,7 +19,6 @@ import { CreateTireSetDto } from './dto/create-tire-set.dto';
 import { UpdateTireSetDto } from './dto/update-tire-set.dto';
 import { DepotListQueryDto } from './dto/depot-list-query.dto';
 import { UpsertDepotSlotsDto } from './dto/upsert-depot-slots.dto';
-import { TireSetResponseDto } from './dto/tire-set-response.dto';
 import { TireSetDetailResponseDto } from './dto/tire-set-detail-response.dto';
 import { TireSetPageResponseDto } from './dto/tire-set-page-response.dto';
 import { DepotStatsResponseDto } from './dto/depot-stats-response.dto';

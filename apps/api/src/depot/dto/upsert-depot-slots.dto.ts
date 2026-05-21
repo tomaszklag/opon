@@ -1,5 +1,5 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsString, IsInt, IsOptional, Min, Max } from 'class-validator';
+import { ApiProperty } from '@nestjs/swagger';
+import { IsString, IsInt, Min, Max } from 'class-validator';
 
 export class UpsertDepotSlotsDto {
   @ApiProperty({ description: 'Section label, e.g. "A"' })
