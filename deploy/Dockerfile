@@ -1,12 +1,14 @@
 # ── Stage 1: install all dependencies ──────────────────────────
 FROM node:22-alpine AS deps
 
+RUN apk add --no-cache openssl
 RUN npm install -g pnpm@10.33.2
 
 WORKDIR /app
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/api/package.json ./apps/api/
+COPY apps/api/prisma/ ./apps/api/prisma/
 COPY packages/ ./packages/
 
 RUN pnpm install --frozen-lockfile --filter=@opony/api...
@@ -21,6 +23,7 @@ RUN pnpm --filter=@opony/api build
 # ── Stage 3: production image ───────────────────────────────────
 FROM node:22-alpine AS runner
 
+RUN apk add --no-cache openssl
 RUN npm install -g pnpm@10.33.2
 
 WORKDIR /app
@@ -29,8 +32,8 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/api/package.json ./apps/api/
 COPY packages/ ./packages/
 
-# Full install so prisma CLI is available for migrations
-RUN pnpm install --frozen-lockfile --filter=@opony/api...
+# --ignore-scripts skips postinstall (prisma generate) — schema isn't here yet
+RUN pnpm install --frozen-lockfile --filter=@opony/api... --ignore-scripts
 
 # Copy compiled output + prisma schema/migrations
 COPY --from=builder /app/apps/api/dist ./apps/api/dist

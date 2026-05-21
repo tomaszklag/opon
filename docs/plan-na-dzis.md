@@ -24,3 +24,5 @@ dodać przypisanie enuma typu samochodu do usługi. Będzie to przydatne w celu 
 teraz jak mam popup do dodawania zadania dla pracownika, to wybór godziny powinien być tym samym komponentem z linią czasu co w popupie dodawania rezerwacji
 
 3. PR — kiedy zdecydujesz, robimy jeden zbiorczy PR z całego sprint_2_mobile.
+
+url db: postgresql://postgres:eOMfyJyGtrsRhtpxvkFsbvnHksZZJzAn@postgres.railway.internal:5432/railway
