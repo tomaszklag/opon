@@ -14,7 +14,7 @@ import {
 @Injectable()
 export class EmailService {
   private readonly logger = new Logger(EmailService.name);
-  private readonly resend: Resend;
+  private readonly resend: Resend | null;
   private readonly fromEmail: string;
 
   constructor(
@@ -22,7 +22,12 @@ export class EmailService {
     private readonly config: ConfigService,
   ) {
     const apiKey = this.config.get<string>('RESEND_API_KEY', '');
-    this.resend = new Resend(apiKey);
+    if (apiKey && apiKey !== 'placeholder') {
+      this.resend = new Resend(apiKey);
+    } else {
+      this.resend = null;
+      this.logger.warn('RESEND_API_KEY not configured — email sending disabled');
+    }
     this.fromEmail = this.config.get<string>('RESEND_FROM_EMAIL', 'noreply@opony.app');
   }
 
@@ -102,6 +107,11 @@ export class EmailService {
     html: string,
   ): Promise<void> {
     let error: string | null = null;
+
+    if (!this.resend) {
+      this.logger.warn(`Email sending skipped [${type}] to ${to} — Resend not configured`);
+      return;
+    }
 
     try {
       const result = await this.resend.emails.send({
